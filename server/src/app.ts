@@ -33,7 +33,7 @@ app.use(cors({
 }));
 
 const sessionConfig: session.SessionOptions = {
-  secret: env.SESSION_SECRET,
+  secret: env.SESSION_SECRET ?? 'default-session-secret-set-SESSION_SECRET-in-production',
   resave: false,
   saveUninitialized: env.NODE_ENV !== 'production',
   cookie: {
