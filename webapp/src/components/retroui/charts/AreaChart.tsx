@@ -25,10 +25,10 @@ export interface AreaChartProps<T extends Record<string, unknown>> {
 
 const COLORS = ['var(--primary)', 'var(--accent)', 'var(--primary-hover)'];
 
-type TooltipPayload = { name: string; value: number; dataKey: string; color: string }[];
+type TooltipPayloadItem = { name: string; value: number; dataKey: string; color: string };
 type ChartTooltipProps = {
   active?: boolean;
-  payload?: TooltipPayload;
+  payload?: readonly TooltipPayloadItem[] | TooltipPayloadItem[];
   label?: string;
   categoryLabel?: string;
 };
