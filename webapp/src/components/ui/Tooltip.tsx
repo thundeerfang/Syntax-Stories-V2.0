@@ -1,0 +1,81 @@
+'use client';
+
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { cn } from '@/lib/utils';
+
+export interface TooltipProps {
+  content: React.ReactNode;
+  children: React.ReactNode;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+  className?: string;
+}
+
+const OFFSET = 8;
+
+export function Tooltip({ content, children, side = 'top', className }: TooltipProps) {
+  const [visible, setVisible] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const triggerRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    if (side === 'top') {
+      setPos({ x: rect.left + rect.width / 2, y: rect.top - OFFSET });
+    } else if (side === 'bottom') {
+      setPos({ x: rect.left + rect.width / 2, y: rect.bottom + OFFSET });
+    } else if (side === 'left') {
+      setPos({ x: rect.left - OFFSET, y: rect.top + rect.height / 2 });
+    } else {
+      setPos({ x: rect.right + OFFSET, y: rect.top + rect.height / 2 });
+    }
+  };
+
+  const handleMouseEnter = () => {
+    setVisible(true);
+    updatePosition();
+  };
+
+  const handleMouseLeave = () => setVisible(false);
+
+  const transform =
+    side === 'top'
+      ? 'translate(-50%, -100%)'
+      : side === 'bottom'
+        ? 'translate(-50%, 0)'
+        : side === 'left'
+          ? 'translate(-100%, -50%)'
+          : 'translate(0, -50%)';
+
+  const tooltipEl =
+    visible &&
+    typeof document !== 'undefined' &&
+    createPortal(
+      <div
+        className="fixed z-[100] max-w-xs border-2 border-border bg-card px-3 py-2 text-sm text-card-foreground shadow-md pointer-events-none"
+        style={{
+          left: pos.x,
+          top: pos.y,
+          transform,
+        }}
+        role="tooltip"
+      >
+        {content}
+      </div>,
+      document.body
+    );
+
+  return (
+    <div
+      ref={triggerRef}
+      className={cn('inline-flex', className)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onMouseMove={updatePosition}
+    >
+      {children}
+      {tooltipEl}
+    </div>
+  );
+}
