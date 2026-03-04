@@ -15,6 +15,7 @@ export function registerX(passportInstance: passport.PassportStatic): void {
       consumerSecret: env.X_CONSUMER_SECRET!,
       callbackURL,
       includeEmail: true,
+      passReqToCallback: true,
     },
     async (...args: unknown[]) => {
       const [req, accessToken, _tokenSecret, profile, done] = args as [

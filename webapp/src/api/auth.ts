@@ -7,6 +7,8 @@ function getAuthBase(): string {
   return base ? `${base.replace(/\/$/, '')}/auth` : '/auth';
 }
 
+const AUTH_FETCH_TIMEOUT_MS = 28000; // 28s – avoid infinite "Sending..." when backend is cold or slow
+
 async function authFetch<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
   const url = path.startsWith('http')
     ? path
@@ -21,7 +23,19 @@ async function authFetch<T>(path: string, options?: RequestInit & { token?: stri
   };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...restOptions, headers });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), AUTH_FETCH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...restOptions, headers, signal: controller.signal });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Request timed out. If the server is waking up, try again in a moment.');
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
   const text = await res.text().catch(() => '');
 
   if (!res.ok) {

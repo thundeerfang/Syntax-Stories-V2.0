@@ -181,8 +181,19 @@ async function storeTwoFactorSetupSecret(userId: string, secret: string): Promis
   await redis.setEx(key, TWO_FA_SETUP_TTL_SECONDS, secret);
 }
 
+function isEmailConfigured(): boolean {
+  return !!(env.EMAIL_USER && (env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS));
+}
+
 export async function sendOtp(req: Request, res: Response): Promise<void> {
   try {
+    if (!isEmailConfigured()) {
+      res.status(503).json({
+        message: 'Email is not configured. Cannot send login code.',
+        success: false,
+      });
+      return;
+    }
     const { email } = req.body as { email: string };
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await UserModel.findOne({ email: normalizedEmail });
@@ -223,6 +234,13 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
 
 export async function signupEmail(req: Request, res: Response): Promise<void> {
   try {
+    if (!isEmailConfigured()) {
+      res.status(503).json({
+        message: 'Email is not configured. Cannot send verification code.',
+        success: false,
+      });
+      return;
+    }
     const { fullName, email } = req.body as { fullName: string; email: string };
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedFullName = fullName?.trim() || 'User';
