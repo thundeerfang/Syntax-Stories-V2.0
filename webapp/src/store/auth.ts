@@ -11,11 +11,13 @@ type AuthState = {
   token: string | null;
   isLoading: boolean;
   isHydrated: boolean;
+  twoFactor: { challengeToken: string; email: string } | null;
   setHydrated: () => void;
   setAuth: (user: AuthUser | null, token: string | null) => void;
   sendLoginOtp: (email: string) => Promise<void>;
   signUp: (fullName: string, email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<void>;
+  verifyTwoFactor: (token: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -26,6 +28,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isLoading: true,
       isHydrated: false,
+      twoFactor: null,
       setHydrated: () => set({ isLoading: false, isHydrated: true }),
       setAuth: (user, token) => set({ user, token }),
       sendLoginOtp: async (email: string) => {
@@ -33,9 +36,11 @@ export const useAuthStore = create<AuthState>()(
         try {
           await authApi.sendOtp({ email });
           set({ isLoading: false });
-        } catch {
+        } catch (err) {
           set({ isLoading: false });
-          throw new Error('Failed to send code');
+          const message =
+            err instanceof Error ? err.message : 'Failed to send code';
+          throw new Error(message);
         }
       },
       signUp: async (fullName: string, email: string) => {
@@ -43,20 +48,44 @@ export const useAuthStore = create<AuthState>()(
         try {
           await authApi.signupEmail({ fullName, email });
           set({ isLoading: false });
-        } catch {
+        } catch (err) {
           set({ isLoading: false });
-          throw new Error('Sign up failed');
+          const message =
+            err instanceof Error ? err.message : 'Sign up failed';
+          throw new Error(message);
         }
       },
       verifyCode: async (email: string, code: string) => {
         set({ isLoading: true });
         try {
           const res = await authApi.verifyOtp({ email, code });
+          if (res.twoFactorRequired && res.challengeToken) {
+            set({ twoFactor: { challengeToken: res.challengeToken, email }, isLoading: false });
+            return;
+          }
+          if (!res.accessToken) throw new Error('Login failed');
           const user = normalizeUser(res.user);
-          set({ user, token: res.accessToken, isLoading: false });
-        } catch {
+          set({ user, token: res.accessToken, isLoading: false, twoFactor: null });
+        } catch (err) {
           set({ isLoading: false });
-          throw new Error('Invalid code');
+          const message =
+            err instanceof Error ? err.message : 'Invalid code';
+          throw new Error(message);
+        }
+      },
+      verifyTwoFactor: async (token: string) => {
+        const tf = get().twoFactor;
+        if (!tf?.challengeToken) throw new Error('2FA challenge missing');
+        set({ isLoading: true });
+        try {
+          const res = await authApi.verifyTwoFactorLogin({ challengeToken: tf.challengeToken, token });
+          const user = normalizeUser(res.user);
+          set({ user, token: res.accessToken, isLoading: false, twoFactor: null });
+        } catch (err) {
+          set({ isLoading: false });
+          const message =
+            err instanceof Error ? err.message : 'Invalid 2FA code';
+          throw new Error(message);
         }
       },
       logout: async () => {
@@ -66,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           /* ignore */
         }
-        set({ user: null, token: null });
+        set({ user: null, token: null, twoFactor: null });
       },
     }),
     {

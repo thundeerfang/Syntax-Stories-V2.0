@@ -11,6 +11,8 @@ import { hasFacebookConfig, hasXConfig } from './passport/index';
 import { env } from './config/env';
 import { getRedis } from './config/redis';
 import { RedisStore } from 'connect-redis';
+import { UserModel } from './models/User';
+import { createAuthChallenge } from './utils/authChallenge';
 
 const app = express();
 
@@ -53,45 +55,81 @@ app.use(passport.session());
 app.use('/api', routes);
 app.use('/auth', authRoutes);
 
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-app.get(
-  '/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/' }),
-  (req, res) => {
-    const payload = req.user as { user?: { _id: string; googleId?: string }; token?: string };
-    const user = payload?.user;
-    if (!user?._id) return res.redirect(env.FRONTEND_URL + '/');
-    const token = signAccessToken({ _id: user._id, googleId: user.googleId });
-    res.redirect(`${env.FRONTEND_URL}/google-callback?token=${token}&userId=${user._id}&googleId=${user.googleId ?? ''}`);
-  }
-);
+app.get('/auth/google/login', passport.authenticate('google', { scope: ['profile', 'email'], state: 'login' }));
+app.get('/auth/google/signup', passport.authenticate('google', { scope: ['profile', 'email'], state: 'signup' }));
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], state: 'login' }));
+app.get('/auth/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, async (err: unknown, userObj?: unknown) => {
+    if (err) {
+      const msg = err instanceof Error ? err.message : 'Google auth failed';
+      return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+    }
+    const u = userObj as { _id?: string; googleId?: string } | undefined;
+    if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('Google auth failed')}`);
+    const dbUser = await UserModel.findById(u._id).lean();
+    if (dbUser?.twoFactorEnabled) {
+      try {
+        const { challengeToken } = await createAuthChallenge(String(u._id));
+        return res.redirect(`${env.FRONTEND_URL}/google-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+      } catch {
+        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+      }
+    }
+    const token = signAccessToken({ _id: u._id, googleId: u.googleId });
+    return res.redirect(`${env.FRONTEND_URL}/google-callback?token=${token}&userId=${u._id}&googleId=${u.googleId ?? ''}`);
+  })(req, res, next);
+});
 
-app.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
-app.get(
-  '/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: '/' }),
-  (req, res) => {
-    const payload = req.user as { user?: { _id: string; gitId?: string }; token?: string };
-    const user = payload?.user;
-    if (!user?._id) return res.redirect(env.FRONTEND_URL + '/');
-    const token = signAccessToken({ _id: user._id, gitId: user.gitId });
-    res.redirect(`${env.FRONTEND_URL}/github-callback?token=${token}&userId=${user._id}&gitId=${user.gitId ?? ''}`);
-  }
-);
+app.get('/auth/github/login', passport.authenticate('github', { scope: ['user:email'], state: 'login' }));
+app.get('/auth/github/signup', passport.authenticate('github', { scope: ['user:email'], state: 'signup' }));
+app.get('/auth/github', passport.authenticate('github', { scope: ['user:email'], state: 'login' }));
+app.get('/auth/github/callback', (req, res, next) => {
+  passport.authenticate('github', { session: false }, async (err: unknown, userObj?: unknown) => {
+    if (err) {
+      const msg = err instanceof Error ? err.message : 'GitHub auth failed';
+      return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+    }
+    const u = userObj as { _id?: string; gitId?: string } | undefined;
+    if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('GitHub auth failed')}`);
+    const dbUser = await UserModel.findById(u._id).lean();
+    if (dbUser?.twoFactorEnabled) {
+      try {
+        const { challengeToken } = await createAuthChallenge(String(u._id));
+        return res.redirect(`${env.FRONTEND_URL}/github-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+      } catch {
+        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+      }
+    }
+    const token = signAccessToken({ _id: u._id, gitId: u.gitId });
+    return res.redirect(`${env.FRONTEND_URL}/github-callback?token=${token}&userId=${u._id}&gitId=${u.gitId ?? ''}`);
+  })(req, res, next);
+});
 
 if (hasFacebookConfig) {
-  app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'] }));
-  app.get(
-    '/auth/facebook/callback',
-    passport.authenticate('facebook', { failureRedirect: '/' }),
-    (req, res) => {
-      const payload = req.user as { user?: { _id: string; facebookId?: string }; token?: string };
-      const user = payload?.user;
-      if (!user?._id) return res.redirect(env.FRONTEND_URL + '/');
-      const token = signAccessToken({ _id: user._id, facebookId: user.facebookId });
-      res.redirect(`${env.FRONTEND_URL}/facebook-callback?token=${token}&userId=${user._id}&facebookId=${user.facebookId ?? ''}`);
-    }
-  );
+  app.get('/auth/facebook/login', passport.authenticate('facebook', { scope: ['email'], state: 'login' }));
+  app.get('/auth/facebook/signup', passport.authenticate('facebook', { scope: ['email'], state: 'signup' }));
+  app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'], state: 'login' }));
+  app.get('/auth/facebook/callback', (req, res, next) => {
+    passport.authenticate('facebook', { session: false }, async (err: unknown, userObj?: unknown) => {
+      if (err) {
+        const msg = err instanceof Error ? err.message : 'Facebook auth failed';
+        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+      }
+      const u = userObj as { _id?: string; facebookId?: string } | undefined;
+      if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('Facebook auth failed')}`);
+      const dbUser = await UserModel.findById(u._id).lean();
+      if (dbUser?.twoFactorEnabled) {
+        try {
+          const { challengeToken } = await createAuthChallenge(String(u._id));
+          return res.redirect(`${env.FRONTEND_URL}/facebook-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+        } catch {
+          return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+        }
+      }
+      const token = signAccessToken({ _id: u._id, facebookId: u.facebookId });
+      return res.redirect(`${env.FRONTEND_URL}/facebook-callback?token=${token}&userId=${u._id}&facebookId=${u.facebookId ?? ''}`);
+    })(req, res, next);
+  });
 } else {
   app.get('/auth/facebook', (_req, res) =>
     res.status(501).json({ message: 'Facebook login not configured.', success: false })
@@ -99,18 +137,30 @@ if (hasFacebookConfig) {
 }
 
 if (hasXConfig) {
-  app.get('/auth/x', passport.authenticate('twitter'));
-  app.get(
-    '/auth/x/callback',
-    passport.authenticate('twitter', { failureRedirect: '/' }),
-    (req, res) => {
-      const payload = req.user as { user?: { _id: string; xId?: string }; token?: string };
-      const user = payload?.user;
-      if (!user?._id) return res.redirect(env.FRONTEND_URL + '/');
-      const token = signAccessToken({ _id: user._id, xId: user.xId });
-      res.redirect(`${env.FRONTEND_URL}/x-callback?token=${token}&userId=${user._id}&xId=${user.xId ?? ''}`);
-    }
-  );
+  app.get('/auth/x/login', passport.authenticate('twitter', { state: 'login' }));
+  app.get('/auth/x/signup', passport.authenticate('twitter', { state: 'signup' }));
+  app.get('/auth/x', passport.authenticate('twitter', { state: 'login' }));
+app.get('/auth/x/callback', (req, res, next) => {
+    passport.authenticate('twitter', { session: false }, async (err: unknown, userObj?: unknown) => {
+      if (err) {
+        const msg = err instanceof Error ? err.message : 'X auth failed';
+        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+      }
+      const u = userObj as { _id?: string; xId?: string } | undefined;
+      if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('X auth failed')}`);
+      const dbUser = await UserModel.findById(u._id).lean();
+      if (dbUser?.twoFactorEnabled) {
+        try {
+          const { challengeToken } = await createAuthChallenge(String(u._id));
+          return res.redirect(`${env.FRONTEND_URL}/x-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+        } catch {
+          return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+        }
+      }
+      const token = signAccessToken({ _id: u._id, xId: u.xId });
+      return res.redirect(`${env.FRONTEND_URL}/x-callback?token=${token}&userId=${u._id}&xId=${u.xId ?? ''}`);
+    })(req, res, next);
+  });
 } else {
   app.get('/auth/x', (_req, res) =>
     res.status(501).json({ message: 'X (Twitter) login not configured.', success: false })

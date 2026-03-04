@@ -142,7 +142,7 @@ const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 export function AuthDialog() {
   const { isOpen, initialView, close } = useAuthDialogStore();
-  const { sendLoginOtp, signUp, verifyCode, isLoading } = useAuth();
+  const { sendLoginOtp, signUp, verifyCode, verifyTwoFactor, isLoading, twoFactor } = useAuth();
   const [step, setStep] = useState<Step>('welcome');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -169,8 +169,10 @@ export function AuthDialog() {
       setVerifyEmail(email);
       setStepBeforeVerify('login-email');
       setStep('verify-email');
-    } catch {
-      toast.error('Failed to send code. Please try again.');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to send code. Please try again.';
+      toast.error(message);
     }
   };
 
@@ -181,8 +183,10 @@ export function AuthDialog() {
       setVerifyEmail(signupEmail);
       setStepBeforeVerify('signup');
       setStep('verify-email');
-    } catch {
-      toast.error('Sign up failed. Please try again.');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Sign up failed. Please try again.';
+      toast.error(message);
     }
   };
 
@@ -190,9 +194,31 @@ export function AuthDialog() {
     e.preventDefault();
     try {
       await verifyCode(verifyEmail, code);
+      if (!twoFactor) {
+        if (stepBeforeVerify === 'signup' || stepBeforeVerify === 'signup-email') {
+          toast.success('Account created successfully.');
+        } else {
+          toast.success('Signed in successfully.');
+        }
+        close();
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Invalid code. Please try again.';
+      toast.error(message);
+    }
+  };
+
+  const handleVerifyTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await verifyTwoFactor(code);
+      toast.success('Signed in successfully.');
       close();
-    } catch {
-      toast.error('Invalid code. Please try again.');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Invalid 2FA code. Please try again.';
+      toast.error(message);
     }
   };
 
@@ -205,11 +231,11 @@ export function AuthDialog() {
             Welcome_back.
           </h2>
           <div className="mt-6 space-y-3">
-            <SocialButton icon={GoogleIcon} label="Sign in with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google` : undefined} />
-            <SocialButton icon={FacebookIcon} label="Sign in with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook` : undefined} />
-            <SocialButton icon={GithubIcon} label="Sign in with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github` : undefined} />
+            <SocialButton icon={GoogleIcon} label="Sign in with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/login` : undefined} />
+            <SocialButton icon={FacebookIcon} label="Sign in with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/login` : undefined} />
+            <SocialButton icon={GithubIcon} label="Sign in with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/login` : undefined} />
             <SocialButton icon={AppleIcon} label="Sign in with Apple" />
-            <SocialButton icon={XIcon} label="Sign in with X" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x` : undefined} />
+            <SocialButton icon={XIcon} label="Sign in with X" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/login` : undefined} />
           </div>
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
@@ -299,9 +325,10 @@ export function AuthDialog() {
           </button>
           <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-foreground uppercase">Create_Account</h2>
           <div className="mt-6 space-y-3">
-            <SocialButton icon={GoogleIcon} label="Sign up with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google` : undefined} />
-            <SocialButton icon={FacebookIcon} label="Sign up with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook` : undefined} />
-            <SocialButton icon={GithubIcon} label="Sign up with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github` : undefined} />
+            <SocialButton icon={GoogleIcon} label="Sign up with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/signup` : undefined} />
+            <SocialButton icon={FacebookIcon} label="Sign up with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/signup` : undefined} />
+            <SocialButton icon={GithubIcon} label="Sign up with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/signup` : undefined} />
+            <SocialButton icon={XIcon} label="Sign up with X" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/signup` : undefined} />
           </div>
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
@@ -403,10 +430,10 @@ export function AuthDialog() {
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sent to:</p>
             <p className="text-xs font-black break-all text-foreground">{verifyEmail}</p>
           </div>
-          <form onSubmit={handleVerifyCode} className="mt-6 space-y-4">
+          <form onSubmit={twoFactor ? handleVerifyTwoFactor : handleVerifyCode} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="auth-verify-code" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Verification Code
+                {twoFactor ? 'Authenticator Code' : 'Verification Code'}
               </label>
               <input
                 id="auth-verify-code"
@@ -418,7 +445,7 @@ export function AuthDialog() {
               />
             </div>
             <Button type="submit" className="w-full py-6 text-xs font-black uppercase tracking-widest" disabled={isLoading}>
-              Verify & Enter
+              {twoFactor ? 'Verify 2FA & Enter' : 'Verify & Enter'}
             </Button>
           </form>
           <div className="mt-8 pt-6 border-t-2 border-border">

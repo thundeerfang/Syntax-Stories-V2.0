@@ -2,7 +2,6 @@ import passport from 'passport';
 import { Strategy as FacebookStrategy } from 'passport-facebook';
 import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
-import { signAccessToken } from '../config/jwt';
 import { env } from '../config/env';
 
 export const hasFacebookConfig = !!(env.FACEBOOK_APP_ID && env.FACEBOOK_APP_SECRET);
@@ -17,20 +16,33 @@ export function registerFacebook(passportInstance: passport.PassportStatic): voi
         clientSecret: env.FACEBOOK_APP_SECRET!,
         callbackURL,
         profileFields: ['id', 'displayName', 'emails'],
+        passReqToCallback: true,
       },
-      async (accessToken, _refreshToken, profile, done) => {
+      async (req, accessToken, _refreshToken, profile, done) => {
         try {
+          const flow = String((req.query as Record<string, unknown>)?.state ?? 'login');
           const email = profile.emails?.[0]?.value;
           if (!email) return done(new Error('Email not available from Facebook'), undefined);
 
-          const existingUser = await UserModel.findOne({ email }).select('+facebookToken');
-          if (existingUser) {
-            existingUser.facebookId = profile.id;
+          if (flow === 'login') {
+            const existingUser = await UserModel.findOne({ facebookId: profile.id }).select('+facebookToken');
+            if (!existingUser || !existingUser.isFacebookAccount) {
+              return done(
+                new Error('No account is linked to this Facebook. Please sign up or link Facebook from settings.'),
+                undefined
+              );
+            }
             existingUser.facebookToken = accessToken;
-            existingUser.isFacebookAccount = true;
             await existingUser.save();
-            const token = signAccessToken({ _id: existingUser._id, sessionId: existingUser._id });
-            return done(null, { _id: existingUser._id, token, facebookId: existingUser.facebookId });
+            return done(null, { _id: existingUser._id, facebookId: existingUser.facebookId });
+          }
+
+          const existingByEmail = await UserModel.findOne({ email });
+          if (existingByEmail) {
+            return done(
+              new Error('An account with this email already exists. Please sign in, then link Facebook from settings.'),
+              undefined
+            );
           }
 
           const randomNumber = Math.floor(1000 + Math.random() * 9000);
@@ -55,8 +67,7 @@ export function registerFacebook(passportInstance: passport.PassportStatic): voi
           });
           newUser.subscription = subscription._id;
           await newUser.save();
-          const token = signAccessToken({ _id: newUser._id, sessionId: newUser._id });
-          done(null, { _id: newUser._id, token, facebookId: newUser.facebookId });
+          done(null, { _id: newUser._id, facebookId: newUser.facebookId });
         } catch (err) {
           done(err as Error, undefined);
         }
