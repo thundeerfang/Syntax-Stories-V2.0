@@ -29,8 +29,8 @@ type TooltipPayloadItem = { name: string; value: number; dataKey: string; color:
 type ChartTooltipProps = {
   active?: boolean;
   payload?: readonly TooltipPayloadItem[] | TooltipPayloadItem[];
-  label?: string;
-  categoryLabel?: string;
+  label?: string | number;
+  categoryLabel?: string | number;
 };
 
 function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }: ChartTooltipProps) {
