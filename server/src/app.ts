@@ -35,9 +35,17 @@ const allowedOrigins =
 function allowOrigin(origin: string | undefined): boolean {
   if (!origin) return true;
   if (!allowedOrigins?.length) return false;
+  const originHost = (() => {
+    try {
+      return new URL(origin).hostname;
+    } catch {
+      return origin;
+    }
+  })();
   for (const allowed of allowedOrigins) {
     if (allowed.startsWith('*.')) {
-      if (origin.endsWith(allowed.slice(1))) return true; // e.g. *.vercel.app matches https://xxx.vercel.app
+      const suffix = allowed.slice(1); // e.g. ".vercel.app"
+      if (originHost === suffix.slice(1) || originHost.endsWith(suffix)) return true;
     } else if (origin === allowed) return true;
   }
   return false;
