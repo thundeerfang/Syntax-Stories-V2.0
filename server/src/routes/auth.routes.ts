@@ -7,6 +7,13 @@ import {
   logout,
   me,
   disconnectProvider,
+  setupTwoFactor,
+  enableTwoFactor,
+  disableTwoFactor,
+  initQrLogin,
+  approveQrLogin,
+  pollQrLogin,
+  verifyTwoFactorLogin,
 } from '../controllers/auth.controller';
 import {
   idempotency,
@@ -29,6 +36,15 @@ router.post('/refresh', rateLimitRefresh, refresh);
 router.post('/logout', verifyToken, logout);
 router.get('/me', verifyToken, me);
 router.post('/disconnect/:provider', verifyToken, disconnectProvider);
+router.post('/2fa/setup', verifyToken, setupTwoFactor);
+router.post('/2fa/enable', verifyToken, enableTwoFactor);
+router.post('/2fa/disable', verifyToken, disableTwoFactor);
+router.post('/2fa/verify-login', verifyTwoFactorLogin);
+router.post('/qr-login/init', initQrLogin);
+router.post('/qr-login/approve', verifyToken, approveQrLogin);
+router.post('/qr-login/poll', pollQrLogin);
+
+
 router.get('/status', (_req, res) => {
   res.status(200).json({
     success: true,

@@ -6,11 +6,8 @@ const sendOtpSchema = Joi.object({
 });
 
 const signupEmailSchema = Joi.object({
-  firstName: Joi.string().min(1).max(50).required().trim(),
-  lastName: Joi.string().min(1).max(50).required().trim(),
+  fullName: Joi.string().min(2).max(100).required().trim(),
   email: Joi.string().email().required().lowercase().trim(),
-  gender: Joi.string().max(30).trim().allow('', null),
-  job: Joi.string().max(100).trim().allow('', null),
 });
 
 const verifyOtpSchema = Joi.object({

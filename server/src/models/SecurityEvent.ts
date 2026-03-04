@@ -7,6 +7,8 @@ export const SECURITY_EVENT_TYPES = [
   'session_created',
   'session_revoked',
   'provider_disconnect',
+  'twofa_enabled',
+  'twofa_disabled',
   'account_locked',
   'account_unlocked',
   'oauth_login',

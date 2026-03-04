@@ -2,13 +2,12 @@ import passport from 'passport';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
-import { signAccessToken } from '../config/jwt';
 import { env } from '../config/env';
 
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/github/callback` : '';
 
 interface GitHubProfile {
-  _json?: { email?: string };
+  _json?: { email?: string; name?: string };
   emails?: Array<{ value: string; primary?: boolean }>;
   displayName?: string;
   username?: string;
@@ -22,10 +21,18 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
       clientSecret: env.GITHUB_CLIENT_SECRET ?? '',
       callbackURL,
       scope: ['user:email'],
+      passReqToCallback: true,
     },
     async (...args: unknown[]) => {
-      const [accessToken, _refreshToken, profile, done] = args as [string, string, GitHubProfile, (err: Error | null, user?: unknown) => void];
+      const [req, accessToken, _refreshToken, profile, done] = args as [
+        { query?: Record<string, unknown> },
+        string,
+        string,
+        GitHubProfile,
+        (err: Error | null, user?: unknown) => void,
+      ];
       try {
+        const flow = String(req?.query?.state ?? 'login');
         const email =
           profile._json?.email ??
           profile.emails?.find((e) => e.primary)?.value;
@@ -33,21 +40,34 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
           return done(new Error('Email is required but not available from GitHub'), undefined);
         }
 
-        const existingUser = await UserModel.findOne({ email }).select('+githubToken');
-        if (existingUser) {
-          existingUser.gitId = String(profile.id) + Math.floor(10 ** 12 + Math.random() * 9 * 10 ** 12);
+        if (flow === 'login') {
+          const existingUser = await UserModel.findOne({ gitId: String(profile.id) }).select('+githubToken');
+          if (!existingUser || !existingUser.isGitAccount) {
+            return done(
+              new Error('No account is linked to this GitHub. Please sign up or link GitHub from settings.'),
+              undefined
+            );
+          }
           existingUser.githubToken = accessToken;
-          existingUser.isGitAccount = true;
           await existingUser.save();
-          const token = signAccessToken({ _id: existingUser._id, sessionId: existingUser._id });
-          return done(null, { _id: existingUser._id, token, gitId: existingUser.gitId });
+          return done(null, { _id: existingUser._id, gitId: existingUser.gitId });
+        }
+
+        const existingByEmail = await UserModel.findOne({ email });
+        if (existingByEmail) {
+          return done(
+            new Error('An account with this email already exists. Please sign in, then link GitHub from settings.'),
+            undefined
+          );
         }
 
         const randomNumber = Math.floor(1000 + Math.random() * 9000);
+        const fullName =
+          (profile._json?.name ?? profile.displayName ?? profile.username)?.trim() || 'User';
         const newUser = new UserModel({
-          fullName: profile.displayName ?? profile.username ?? 'User',
+          fullName,
           username: (profile.username ?? 'user') + randomNumber,
-          gitId: String(profile.id) + Math.floor(10 ** 12 + Math.random() * 9 * 10 ** 12),
+          gitId: String(profile.id),
           email,
           profileImg: '/uploads/waumti9zvnnmgayfxbmv',
           bio: 'Welcome to Syntax Stories 🧑🏻‍💻',
@@ -67,8 +87,7 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
         });
         newUser.subscription = subscription._id;
         await newUser.save();
-        const token = signAccessToken({ _id: newUser._id, sessionId: newUser._id });
-        done(null, { _id: newUser._id, token, gitId: newUser.gitId });
+        done(null, { _id: newUser._id, gitId: newUser.gitId });
       } catch (err) {
         done(err as Error, undefined);
       }

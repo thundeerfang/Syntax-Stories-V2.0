@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import { UserModel } from '../models/User';
 import { SessionModel } from '../models/Session';
 import { SecurityEventModel } from '../models/SecurityEvent';
@@ -10,19 +12,37 @@ import { signAccessToken } from '../config/jwt';
 import { getRedis } from '../config/redis';
 import { env } from '../config/env';
 import type { AuthUser } from '../middlewares/auth';
+import { createAuthChallenge, consumeAuthChallenge } from '../utils/authChallenge';
 
 const transporter = nodemailer.createTransport({
-  service: 'Gmail',
+  host: env.EMAIL_HOST,
+  port: env.EMAIL_PORT,
+  secure: env.EMAIL_PORT === 465,
   auth: {
     user: env.EMAIL_USER,
     pass: env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS,
   },
 });
 
+function getEmailErrorMessage(err: unknown): string {
+  const code = (err as { code?: string })?.code;
+  if (code === 'EAUTH') {
+    return 'Email not configured. For Gmail, use an App Password (see https://support.google.com/mail/?p=InvalidSecondFactor) and set EMAIL_APP_PASSWORD in .env.';
+  }
+  return (err as Error)?.message ?? 'Failed to send email.';
+}
+
 const OTP_PREFIX = 'otp:email:';
 const OTP_TTL = (authConfig.OTP_TTL_SECONDS || 600) * 1000;
+const OTP_ATTEMPT_PREFIX = 'otp:attempts:';
+const OTP_ATTEMPT_LIMIT = 10;
+const OTP_ATTEMPT_BLOCK_SECONDS = 5 * 60;
 const INTENT_PREFIX = 'intent:user:';
 const INTENT_TTL_SECONDS = 5 * 60;
+const TWO_FA_SETUP_PREFIX = '2fa:setup:';
+const TWO_FA_SETUP_TTL_SECONDS = 10 * 60;
+const QR_LOGIN_PREFIX = 'qr:login:';
+const QR_LOGIN_TTL_SECONDS = 5 * 60;
 
 const ALLOWED_INTENT_ACTIONS = ['delete_account'] as const;
 type IntentAction = (typeof ALLOWED_INTENT_ACTIONS)[number];
@@ -107,7 +127,7 @@ async function storeOtp(
 
 async function getOtp(
   email: string
-): Promise<{ code: string; fullName?: string; gender?: string; job?: string } | null> {
+): Promise<{ code: string; fullName?: string } | null> {
   const redis = getRedis();
   const key = OTP_PREFIX + email.toLowerCase().trim();
   if (!redis) return null;
@@ -117,8 +137,6 @@ async function getOtp(
     return JSON.parse(value) as {
       code: string;
       fullName?: string;
-      gender?: string;
-      job?: string;
     };
   } catch {
     return null;
@@ -147,10 +165,34 @@ async function storeIntent(
   return { token: rawToken, expiresIn: INTENT_TTL_SECONDS };
 }
 
+async function getTwoFactorSetupSecret(userId: string): Promise<string | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  const key = TWO_FA_SETUP_PREFIX + userId;
+  return (await redis.get(key)) ?? null;
+}
+
+async function storeTwoFactorSetupSecret(userId: string, secret: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) {
+    throw new Error('Redis required for 2FA setup');
+  }
+  const key = TWO_FA_SETUP_PREFIX + userId;
+  await redis.setEx(key, TWO_FA_SETUP_TTL_SECONDS, secret);
+}
+
 export async function sendOtp(req: Request, res: Response): Promise<void> {
   try {
     const { email } = req.body as { email: string };
     const normalizedEmail = email.toLowerCase().trim();
+    const existing = await UserModel.findOne({ email: normalizedEmail });
+    if (!existing) {
+      res.status(404).json({
+        message: 'No account found with this email. Please sign up first.',
+        success: false,
+      });
+      return;
+    }
     const code = generateOtpCode();
     await storeOtp(normalizedEmail, { code });
     await transporter.sendMail({
@@ -172,28 +214,18 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
     const message =
       (err as Error).message === 'Redis required for OTP'
         ? 'Service temporarily unavailable. Try again later.'
-        : 'Internal Server Error 💀';
+        : (err as { code?: string }).code === 'EAUTH'
+          ? getEmailErrorMessage(err)
+          : 'Internal Server Error 💀';
     res.status(500).json({ message, success: false });
   }
 }
 
 export async function signupEmail(req: Request, res: Response): Promise<void> {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      gender,
-      job,
-    } = req.body as {
-      firstName: string;
-      lastName: string;
-      email: string;
-      gender?: string;
-      job?: string;
-    };
+    const { fullName, email } = req.body as { fullName: string; email: string };
     const normalizedEmail = email.toLowerCase().trim();
-    const fullName = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ').trim() || 'User';
+    const normalizedFullName = fullName?.trim() || 'User';
     const existing = await UserModel.findOne({ email: normalizedEmail });
     if (existing) {
       res.status(409).json({
@@ -205,9 +237,7 @@ export async function signupEmail(req: Request, res: Response): Promise<void> {
     const code = generateOtpCode();
     await storeOtp(normalizedEmail, {
       code,
-      fullName,
-      gender: gender?.trim() || undefined,
-      job: job?.trim() || undefined,
+      fullName: normalizedFullName,
     });
     await transporter.sendMail({
       from: env.EMAIL_USER ?? 'noreply@syntaxstories.com',
@@ -228,7 +258,9 @@ export async function signupEmail(req: Request, res: Response): Promise<void> {
     const message =
       (err as Error).message === 'Redis required for OTP'
         ? 'Service temporarily unavailable.'
-        : 'Internal Server Error 💀';
+        : (err as { code?: string }).code === 'EAUTH'
+          ? getEmailErrorMessage(err)
+          : 'Internal Server Error 💀';
     res.status(500).json({ message, success: false });
   }
 }
@@ -237,9 +269,42 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
   try {
     const { email, code } = req.body as { email: string; code: string };
     const normalizedEmail = email.toLowerCase().trim();
+    const redis = getRedis();
+
+    // Per-email throttle: if too many bad codes, block for a short period
+    if (redis) {
+      const attemptKey = OTP_ATTEMPT_PREFIX + normalizedEmail;
+      const attemptRaw = await redis.get(attemptKey);
+      const attempts = attemptRaw ? parseInt(attemptRaw, 10) || 0 : 0;
+      if (attempts >= OTP_ATTEMPT_LIMIT) {
+        res.status(429).json({
+          message: 'Too many invalid codes. Please wait 5 minutes before trying again.',
+          success: false,
+        });
+        return;
+      }
+    }
+
     const stored = await getOtp(normalizedEmail);
     if (!stored || stored.code !== code) {
       await logSecurityEvent(null, 'login_failure', req, { email: normalizedEmail, reason: 'invalid_otp' });
+
+       // Increment failed-attempt counter for this email
+      if (redis) {
+        const attemptKey = OTP_ATTEMPT_PREFIX + normalizedEmail;
+        const count = await redis.incr(attemptKey);
+        if (count === 1) {
+          await redis.expire(attemptKey, OTP_ATTEMPT_BLOCK_SECONDS);
+        }
+        if (count >= OTP_ATTEMPT_LIMIT) {
+          res.status(429).json({
+            message: 'Too many invalid codes. Please wait 5 minutes before trying again.',
+            success: false,
+          });
+          return;
+        }
+      }
+
       res.status(401).json({
         message: 'Invalid or expired code. Request a new one.',
         success: false,
@@ -247,7 +312,14 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       return;
     }
     await deleteOtp(normalizedEmail);
+
+    // Successful verification: clear failed-attempt counter if present
+    if (redis) {
+      const attemptKey = OTP_ATTEMPT_PREFIX + normalizedEmail;
+      await redis.del(attemptKey);
+    }
     let user = await UserModel.findOne({ email: normalizedEmail });
+    let isNewUser = false;
     if (stored.fullName && !user) {
       const randomNumber = Math.floor(1000 + Math.random() * 9000);
       const username =
@@ -256,8 +328,6 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
         fullName: stored.fullName,
         username,
         email: normalizedEmail,
-        gender: stored.gender,
-        job: stored.job,
         isGoogleAccount: false,
         isGitAccount: false,
         isFacebookAccount: false,
@@ -266,6 +336,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
         emailVerified: true,
       });
       await user.save();
+      isNewUser = true;
       const subscription = await SubscriptionModel.create({
         userId: user._id,
         plan: 'free',
@@ -280,6 +351,28 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       res.status(400).json({ message: 'No account found. Sign up first.', success: false });
       return;
     }
+
+    // 2FA: if enabled, require authenticator code before issuing tokens
+    if (user.twoFactorEnabled) {
+      try {
+        const { challengeToken, expiresIn } = await createAuthChallenge(String(user._id));
+        res.status(200).json({
+          success: true,
+          twoFactorRequired: true,
+          challengeToken,
+          expiresIn,
+          isNewUser,
+          message: 'Two-factor authentication required.',
+        });
+        return;
+      } catch {
+        res.status(503).json({
+          success: false,
+          message: 'Two-factor authentication temporarily unavailable. Try again later.',
+        });
+        return;
+      }
+    }
     const refreshToken = generateRefreshToken();
     const session = await createSession(String(user._id), req, refreshToken);
     const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
@@ -290,6 +383,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       refreshToken,
       expiresIn: authConfig.ACCESS_TOKEN_EXPIRY,
       sessionId: session._id,
+      isNewUser,
       user: {
         _id: user._id,
         fullName: user.fullName,
@@ -301,6 +395,62 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function verifyTwoFactorLogin(req: Request, res: Response): Promise<void> {
+  try {
+    const { challengeToken, token } = req.body as { challengeToken?: string; token?: string };
+    if (!challengeToken || !token) {
+      res.status(400).json({ success: false, message: 'challengeToken and token are required' });
+      return;
+    }
+
+    const challenge = await consumeAuthChallenge(challengeToken);
+    if (!challenge?.userId) {
+      res.status(400).json({ success: false, message: 'Invalid or expired 2FA challenge' });
+      return;
+    }
+
+    const dbUser = await UserModel.findById(challenge.userId).select('+twoFactorSecret');
+    if (!dbUser || !dbUser.twoFactorEnabled || !dbUser.twoFactorSecret) {
+      res.status(400).json({ success: false, message: 'Two-factor authentication is not enabled' });
+      return;
+    }
+
+    const isValid = speakeasy.totp.verify({
+      secret: dbUser.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+    if (!isValid) {
+      res.status(401).json({ success: false, message: 'Invalid 2FA code' });
+      return;
+    }
+
+    const refreshToken = generateRefreshToken();
+    const session = await createSession(String(dbUser._id), req, refreshToken);
+    const accessToken = signAccessToken({ _id: String(dbUser._id), sessionId: String(session._id) });
+
+    res.status(200).json({
+      success: true,
+      message: 'Signed in successfully 🚀',
+      accessToken,
+      refreshToken,
+      expiresIn: authConfig.ACCESS_TOKEN_EXPIRY,
+      sessionId: session._id,
+      user: {
+        _id: dbUser._id,
+        fullName: dbUser.fullName,
+        username: dbUser.username,
+        email: dbUser.email,
+        profileImg: dbUser.profileImg,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Internal Server Error 💀' });
   }
 }
 
@@ -392,8 +542,146 @@ export async function me(req: Request, res: Response): Promise<void> {
         profileImg: found.profileImg,
         isGoogleAccount: found.isGoogleAccount,
         isGitAccount: found.isGitAccount,
+        twoFactorEnabled: found.twoFactorEnabled,
       },
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function setupTwoFactor(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+
+    const dbUser = await UserModel.findById(user._id);
+    if (!dbUser) {
+      res.status(404).json({ message: 'User not found', success: false });
+      return;
+    }
+
+    const secret = speakeasy.generateSecret({
+      length: 20,
+      name: `Syntax Stories (${dbUser.email})`,
+      issuer: 'Syntax Stories',
+    });
+
+    await storeTwoFactorSetupSecret(String(dbUser._id), secret.base32);
+    const otpauthUrl = secret.otpauth_url ?? '';
+    const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
+
+    res.status(200).json({
+      success: true,
+      otpauthUrl,
+      qrCodeDataUrl,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function enableTwoFactor(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+
+    const { token } = req.body as { token?: string };
+    if (!token) {
+      res.status(400).json({ message: '2FA token is required', success: false });
+      return;
+    }
+
+    const setupSecret = await getTwoFactorSetupSecret(String(user._id));
+    if (!setupSecret) {
+      res.status(400).json({ message: '2FA setup not initialized or expired', success: false });
+      return;
+    }
+
+    const isValid = speakeasy.totp.verify({
+      secret: setupSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!isValid) {
+      res.status(401).json({ message: 'Invalid 2FA code', success: false });
+      return;
+    }
+
+    const dbUser = await UserModel.findByIdAndUpdate(
+      user._id,
+      { twoFactorEnabled: true, twoFactorSecret: setupSecret },
+      { new: true }
+    );
+
+    const redis = getRedis();
+    if (redis) {
+      await redis.del(TWO_FA_SETUP_PREFIX + user._id);
+    }
+
+    if (!dbUser) {
+      res.status(404).json({ message: 'User not found', success: false });
+      return;
+    }
+
+    await logSecurityEvent(String(user._id), 'twofa_enabled', req, {});
+
+    res.status(200).json({ success: true, message: 'Two-factor authentication enabled.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function disableTwoFactor(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+
+    const { token } = req.body as { token?: string };
+    if (!token) {
+      res.status(400).json({ message: '2FA token is required', success: false });
+      return;
+    }
+
+    const dbUser = await UserModel.findById(user._id).select('+twoFactorSecret');
+    if (!dbUser || !dbUser.twoFactorEnabled || !dbUser.twoFactorSecret) {
+      res.status(400).json({ message: 'Two-factor authentication is not enabled', success: false });
+      return;
+    }
+
+    const isValid = speakeasy.totp.verify({
+      secret: dbUser.twoFactorSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
+
+    if (!isValid) {
+      res.status(401).json({ message: 'Invalid 2FA code', success: false });
+      return;
+    }
+
+    dbUser.twoFactorEnabled = false;
+    dbUser.twoFactorSecret = undefined;
+    await dbUser.save();
+
+    await logSecurityEvent(String(user._id), 'twofa_disabled', req, {});
+
+    res.status(200).json({ success: true, message: 'Two-factor authentication disabled.' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error 💀', success: false });
@@ -713,6 +1001,106 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
     res.status(200).json({
       success: true,
       message: `Disconnected from ${provider}. You have been logged out everywhere. Your email and account are unchanged.`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function initQrLogin(_req: Request, res: Response): Promise<void> {
+  try {
+    const redis = getRedis();
+    if (!redis) {
+      res.status(503).json({ message: 'Service temporarily unavailable', success: false });
+      return;
+    }
+    const token = crypto.randomBytes(24).toString('hex');
+    const key = QR_LOGIN_PREFIX + token;
+    await redis.setEx(key, QR_LOGIN_TTL_SECONDS, JSON.stringify({ approved: false }));
+    res.status(201).json({ success: true, qrToken: token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function approveQrLogin(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+    const { qrToken } = req.body as { qrToken?: string };
+    if (!qrToken) {
+      res.status(400).json({ message: 'qrToken is required', success: false });
+      return;
+    }
+    const redis = getRedis();
+    if (!redis) {
+      res.status(503).json({ message: 'Service temporarily unavailable', success: false });
+      return;
+    }
+    const key = QR_LOGIN_PREFIX + qrToken;
+    const existing = await redis.get(key);
+    if (!existing) {
+      res.status(400).json({ message: 'QR login session not found or expired', success: false });
+      return;
+    }
+    await redis.setEx(
+      key,
+      QR_LOGIN_TTL_SECONDS,
+      JSON.stringify({ approved: true, userId: String(user._id) })
+    );
+    res.status(200).json({ success: true, message: 'QR login approved' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function pollQrLogin(req: Request, res: Response): Promise<void> {
+  try {
+    const { qrToken } = req.body as { qrToken?: string };
+    if (!qrToken) {
+      res.status(400).json({ message: 'qrToken is required', success: false });
+      return;
+    }
+    const redis = getRedis();
+    if (!redis) {
+      res.status(503).json({ message: 'Service temporarily unavailable', success: false });
+      return;
+    }
+    const key = QR_LOGIN_PREFIX + qrToken;
+    const value = await redis.get(key);
+    if (!value) {
+      res.status(404).json({ success: false, message: 'QR login session not found or expired' });
+      return;
+    }
+    const parsed = JSON.parse(value) as { approved?: boolean; userId?: string };
+    if (!parsed.approved || !parsed.userId) {
+      res.status(200).json({ success: true, pending: true });
+      return;
+    }
+
+    // Create a session and tokens for the approved user
+    const userId = parsed.userId;
+    const fakeReq = req as Request;
+    const refreshToken = generateRefreshToken();
+    const session = await createSession(userId, fakeReq, refreshToken);
+    const accessToken = signAccessToken({ _id: userId, sessionId: String(session._id) });
+
+    await redis.del(key);
+    await logSecurityEvent(userId, 'session_created', req, { source: 'qr_login' });
+
+    res.status(200).json({
+      success: true,
+      pending: false,
+      accessToken,
+      refreshToken,
+      expiresIn: authConfig.ACCESS_TOKEN_EXPIRY,
+      sessionId: session._id,
     });
   } catch (err) {
     console.error(err);

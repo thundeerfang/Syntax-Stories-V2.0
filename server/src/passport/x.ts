@@ -2,7 +2,6 @@ import passport from 'passport';
 import { Strategy as TwitterStrategy } from 'passport-twitter';
 import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
-import { signAccessToken } from '../config/jwt';
 import { env } from '../config/env';
 
 export const hasXConfig = !!(env.X_CONSUMER_KEY && env.X_CONSUMER_SECRET);
@@ -18,19 +17,35 @@ export function registerX(passportInstance: passport.PassportStatic): void {
       includeEmail: true,
     },
     async (...args: unknown[]) => {
-      const [accessToken, _tokenSecret, profile, done] = args as [string, string, passport.Profile, (err: Error | null, user?: unknown) => void];
+      const [req, accessToken, _tokenSecret, profile, done] = args as [
+        { query?: Record<string, unknown> },
+        string,
+        string,
+        passport.Profile,
+        (err: Error | null, user?: unknown) => void,
+      ];
       try {
+        const flow = String(req?.query?.state ?? 'login');
         const email = profile.emails?.[0]?.value ?? profile.username + '@twitter.placeholder';
-        const existingUser = await UserModel.findOne({
-          $or: [{ email }, { xId: profile.id }],
-        }).select('+xToken');
-        if (existingUser) {
-          existingUser.xId = profile.id;
+        if (flow === 'login') {
+          const existingUser = await UserModel.findOne({ xId: profile.id }).select('+xToken');
+          if (!existingUser || !existingUser.isXAccount) {
+            return done(
+              new Error('No account is linked to this X. Please sign up or link X from settings.'),
+              undefined
+            );
+          }
           existingUser.xToken = accessToken;
-          existingUser.isXAccount = true;
           await existingUser.save();
-          const tokenPayload = signAccessToken({ _id: existingUser._id, sessionId: existingUser._id });
-          return done(null, { _id: existingUser._id, token: tokenPayload, xId: existingUser.xId });
+          return done(null, { _id: existingUser._id, xId: existingUser.xId });
+        }
+
+        const existingByEmail = await UserModel.findOne({ email });
+        if (existingByEmail) {
+          return done(
+            new Error('An account with this email already exists. Please sign in, then link X from settings.'),
+            undefined
+          );
         }
 
         const randomNumber = Math.floor(1000 + Math.random() * 9000);
@@ -55,8 +70,7 @@ export function registerX(passportInstance: passport.PassportStatic): void {
         });
         newUser.subscription = subscription._id;
         await newUser.save();
-        const tokenPayload = signAccessToken({ _id: newUser._id, sessionId: newUser._id });
-        done(null, { _id: newUser._id, token: tokenPayload, xId: newUser.xId });
+        done(null, { _id: newUser._id, xId: newUser.xId });
       } catch (err) {
         done(err as Error, undefined);
       }

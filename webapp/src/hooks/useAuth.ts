@@ -10,9 +10,11 @@ export function useAuth() {
       token: s.token,
       isAuthenticated: !!s.token,
       isLoading: s.isLoading,
+      twoFactor: s.twoFactor,
       sendLoginOtp: s.sendLoginOtp,
       signUp: s.signUp,
       verifyCode: s.verifyCode,
+      verifyTwoFactor: s.verifyTwoFactor,
       logout: s.logout,
     }))
   );

@@ -7,7 +7,7 @@ function getAuthBase(): string {
   return base ? `${base.replace(/\/$/, '')}/auth` : '/auth';
 }
 
-function authFetch<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
+async function authFetch<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
   const url = path.startsWith('http')
     ? path
     : typeof window !== 'undefined'
@@ -20,10 +20,22 @@ function authFetch<T>(path: string, options?: RequestInit & { token?: string }):
     ...restOptions?.headers,
   };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  return fetch(url, { ...restOptions, headers }).then(async (res) => {
-    if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
-    return res.json() as Promise<T>;
-  });
+
+  const res = await fetch(url, { ...restOptions, headers });
+  const text = await res.text().catch(() => '');
+
+  if (!res.ok) {
+    try {
+      const data = text ? (JSON.parse(text) as { message?: string; error?: Array<{ message?: string }> }) : null;
+      const detail = data?.error?.[0]?.message;
+      throw new Error(detail || data?.message || res.statusText || 'Request failed');
+    } catch {
+      throw new Error(text || res.statusText || 'Request failed');
+    }
+  }
+
+  if (!text) return {} as T;
+  return JSON.parse(text) as T;
 }
 
 export interface SendOtpPayload {
@@ -67,6 +79,24 @@ export interface AccountResponse {
 export interface VerifyOtpResponse {
   message: string;
   success: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: string;
+  twoFactorRequired?: boolean;
+  challengeToken?: string;
+  isNewUser?: boolean;
+  user: {
+    _id: string;
+    fullName: string;
+    username: string;
+    email: string;
+    profileImg?: string;
+  };
+}
+
+export interface VerifyTwoFactorLoginResponse {
+  success: boolean;
+  message: string;
   accessToken: string;
   refreshToken?: string;
   expiresIn?: string;
@@ -98,6 +128,12 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
 
+  verifyTwoFactorLogin: (data: { challengeToken: string; token: string }) =>
+    authFetch<VerifyTwoFactorLoginResponse>(`${getAuthBase()}/2fa/verify-login`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   logout: (accessToken: string) =>
     authFetch<{ message: string; success: boolean }>(`${getAuthBase()}/logout`, {
       method: 'POST',
@@ -105,7 +141,7 @@ export const authApi = {
     }),
 
   getAccount: (accessToken: string) =>
-    authFetch<AccountResponse>(`${getAuthBase()}/account`, {
+    authFetch<AccountResponse>(`${getAuthBase()}/me`, {
       method: 'GET',
       token: accessToken,
     }),
