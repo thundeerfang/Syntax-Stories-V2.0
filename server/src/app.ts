@@ -32,6 +32,8 @@ const allowedOrigins =
         .map((o) => o.trim())
         .filter(Boolean)
     : null;
+// For redirects use only the first URL (comma-separated list would produce invalid redirect URLs)
+const redirectBaseUrl = (env.FRONTEND_URL ?? '').split(',')[0]?.trim() ?? (env.FRONTEND_URL ?? '');
 function allowOrigin(origin: string | undefined): boolean {
   if (!origin) return true;
   if (!allowedOrigins?.length) return false;
@@ -94,21 +96,21 @@ app.get('/auth/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false }, async (err: unknown, userObj?: unknown) => {
     if (err) {
       const msg = err instanceof Error ? err.message : 'Google auth failed';
-      return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+      return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent(msg)}`);
     }
     const u = userObj as { _id?: string; googleId?: string } | undefined;
-    if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('Google auth failed')}`);
+    if (!u?._id) return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('Google auth failed')}`);
     const dbUser = await UserModel.findById(u._id).lean();
     if (dbUser?.twoFactorEnabled) {
       try {
         const { challengeToken } = await createAuthChallenge(String(u._id));
-        return res.redirect(`${env.FRONTEND_URL}/google-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+        return res.redirect(`${redirectBaseUrl}/google-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
       } catch {
-        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+        return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
       }
     }
     const token = signAccessToken({ _id: u._id, googleId: u.googleId });
-    return res.redirect(`${env.FRONTEND_URL}/google-callback?token=${token}&userId=${u._id}&googleId=${u.googleId ?? ''}`);
+    return res.redirect(`${redirectBaseUrl}/google-callback?token=${token}&userId=${u._id}&googleId=${u.googleId ?? ''}`);
   })(req, res, next);
 });
 
@@ -119,21 +121,21 @@ app.get('/auth/github/callback', (req, res, next) => {
   passport.authenticate('github', { session: false }, async (err: unknown, userObj?: unknown) => {
     if (err) {
       const msg = err instanceof Error ? err.message : 'GitHub auth failed';
-      return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+      return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent(msg)}`);
     }
     const u = userObj as { _id?: string; gitId?: string } | undefined;
-    if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('GitHub auth failed')}`);
+    if (!u?._id) return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('GitHub auth failed')}`);
     const dbUser = await UserModel.findById(u._id).lean();
     if (dbUser?.twoFactorEnabled) {
       try {
         const { challengeToken } = await createAuthChallenge(String(u._id));
-        return res.redirect(`${env.FRONTEND_URL}/github-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+        return res.redirect(`${redirectBaseUrl}/github-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
       } catch {
-        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+        return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
       }
     }
     const token = signAccessToken({ _id: u._id, gitId: u.gitId });
-    return res.redirect(`${env.FRONTEND_URL}/github-callback?token=${token}&userId=${u._id}&gitId=${u.gitId ?? ''}`);
+    return res.redirect(`${redirectBaseUrl}/github-callback?token=${token}&userId=${u._id}&gitId=${u.gitId ?? ''}`);
   })(req, res, next);
 });
 
@@ -145,21 +147,21 @@ if (hasFacebookConfig) {
     passport.authenticate('facebook', { session: false }, async (err: unknown, userObj?: unknown) => {
       if (err) {
         const msg = err instanceof Error ? err.message : 'Facebook auth failed';
-        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+        return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent(msg)}`);
       }
       const u = userObj as { _id?: string; facebookId?: string } | undefined;
-      if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('Facebook auth failed')}`);
+      if (!u?._id) return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('Facebook auth failed')}`);
       const dbUser = await UserModel.findById(u._id).lean();
       if (dbUser?.twoFactorEnabled) {
         try {
           const { challengeToken } = await createAuthChallenge(String(u._id));
-          return res.redirect(`${env.FRONTEND_URL}/facebook-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+          return res.redirect(`${redirectBaseUrl}/facebook-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
         } catch {
-          return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+          return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
         }
       }
       const token = signAccessToken({ _id: u._id, facebookId: u.facebookId });
-      return res.redirect(`${env.FRONTEND_URL}/facebook-callback?token=${token}&userId=${u._id}&facebookId=${u.facebookId ?? ''}`);
+      return res.redirect(`${redirectBaseUrl}/facebook-callback?token=${token}&userId=${u._id}&facebookId=${u.facebookId ?? ''}`);
     })(req, res, next);
   });
 } else {
@@ -176,21 +178,21 @@ app.get('/auth/x/callback', (req, res, next) => {
     passport.authenticate('twitter', { session: false }, async (err: unknown, userObj?: unknown) => {
       if (err) {
         const msg = err instanceof Error ? err.message : 'X auth failed';
-        return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(msg)}`);
+        return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent(msg)}`);
       }
       const u = userObj as { _id?: string; xId?: string } | undefined;
-      if (!u?._id) return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('X auth failed')}`);
+      if (!u?._id) return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('X auth failed')}`);
       const dbUser = await UserModel.findById(u._id).lean();
       if (dbUser?.twoFactorEnabled) {
         try {
           const { challengeToken } = await createAuthChallenge(String(u._id));
-          return res.redirect(`${env.FRONTEND_URL}/x-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+          return res.redirect(`${redirectBaseUrl}/x-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
         } catch {
-          return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+          return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
         }
       }
       const token = signAccessToken({ _id: u._id, xId: u.xId });
-      return res.redirect(`${env.FRONTEND_URL}/x-callback?token=${token}&userId=${u._id}&xId=${u.xId ?? ''}`);
+      return res.redirect(`${redirectBaseUrl}/x-callback?token=${token}&userId=${u._id}&xId=${u.xId ?? ''}`);
     })(req, res, next);
   });
 } else {
