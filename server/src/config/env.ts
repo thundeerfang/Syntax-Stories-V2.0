@@ -29,9 +29,9 @@ export const env = {
   FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID,
   FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET,
 
-  // X (Twitter) OAuth
-  X_CONSUMER_KEY: process.env.X_CONSUMER_KEY ?? process.env.TWITTER_CONSUMER_KEY,
-  X_CONSUMER_SECRET: process.env.X_CONSUMER_SECRET ?? process.env.TWITTER_CONSUMER_SECRET,
+  // X (Twitter) OAuth — X Developer Portal may show "Client ID" / "Client Secret" (same as consumer key/secret for OAuth 1.0a)
+  X_CONSUMER_KEY: process.env.X_CONSUMER_KEY ?? process.env.X_CLIENT_ID ?? process.env.TWITTER_CONSUMER_KEY,
+  X_CONSUMER_SECRET: process.env.X_CONSUMER_SECRET ?? process.env.X_CLIENT_SECRET ?? process.env.TWITTER_CONSUMER_SECRET,
 
   // JWT (refresh 30d = logged in 30 days in browser)
   JWT_ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY ?? '15m',

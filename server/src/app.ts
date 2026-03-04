@@ -24,16 +24,40 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(express.json());
-// In production use only FRONTEND_URL; never allow all origins (true) in production
+// In production allow FRONTEND_URL (comma-separated; use *.example.com to allow any origin ending with .example.com, e.g. Vercel previews)
+const allowedOrigins =
+  env.NODE_ENV === 'production'
+    ? (env.FRONTEND_URL ?? '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean)
+    : null;
+function allowOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (!allowedOrigins?.length) return false;
+  for (const allowed of allowedOrigins) {
+    if (allowed.startsWith('*.')) {
+      if (origin.endsWith(allowed.slice(1))) return true; // e.g. *.vercel.app matches https://xxx.vercel.app
+    } else if (origin === allowed) return true;
+  }
+  return false;
+}
 app.use(cors({
-  origin: env.NODE_ENV === 'production' ? (env.FRONTEND_URL ?? false) : (env.FRONTEND_URL ?? true),
+  origin:
+    env.NODE_ENV === 'production'
+      ? allowedOrigins?.length
+        ? (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+            cb(null, allowOrigin(origin));
+          }
+        : false
+      : (env.FRONTEND_URL ?? true),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Idempotency-Key', 'X-Intent-Token'],
 }));
 
 const sessionConfig: session.SessionOptions = {
-  secret: env.SESSION_SECRET ?? 'default-session-secret-set-SESSION_SECRET-in-production',
+  secret: env.SESSION_SECRET as string,
   resave: false,
   saveUninitialized: env.NODE_ENV !== 'production',
   cookie: {
