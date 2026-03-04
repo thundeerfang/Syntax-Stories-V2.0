@@ -34,7 +34,13 @@
   (required so TypeScript compiles and `dist/` exists before start).
 - **Start Command:** `npm start`
 
-Set env vars (e.g. `MONGODB_URI`, `REDIS_URL`, `FRONTEND_URL`, JWT keys, OAuth secrets) in the Render dashboard.
+Set env vars (e.g. `MONGODB_URI`, `REDIS_URL`, `FRONTEND_URL`, OAuth secrets) in the Render dashboard.
+
+**JWT PEM keys on Render:** Add them as **Secret Files** (Dashboard → Service → Environment → Secret Files). Create two files:
+- `privateKey.pem` — paste your private key contents
+- `publicKey.pem` — paste your public key contents  
+
+The app reads from `/etc/secrets/` at runtime, then falls back to `server/keys/` for local dev.
 
 ## Endpoints
 
