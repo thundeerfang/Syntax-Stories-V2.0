@@ -1,0 +1,11 @@
+# Render Blueprint – backend only. Use Root Directory: server when creating the service if not using this file.
+# Build must run `npm run build` so dist/ exists before start.
+services:
+  - type: web
+    name: syntax-stories-api
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
