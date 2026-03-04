@@ -31,7 +31,7 @@
 
 - **Root Directory:** `server` (if the repo root is the monorepo root).
 - **Build Command:** `npm install && npm run build`  
-  (required so TypeScript compiles and `dist/` exists before start).
+  (TypeScript and @types are in dependencies so the build works on Render when NODE_ENV=production.)
 - **Start Command:** `npm start`
 
 Set env vars (e.g. `MONGODB_URI`, `REDIS_URL`, `FRONTEND_URL`, OAuth secrets) in the Render dashboard.
