@@ -13,16 +13,20 @@ export async function connectRedis(): Promise<RedisClient | null> {
   }
   try {
     const client = createClient({ url });
-    client.on('error', (err) => console.error('Redis error:', err.message));
+    client.on('error', (err) => {
+      console.error('[Redis] Connection error:', (err as Error).message);
+      process.exit(1);
+    });
     await client.connect();
     redisClient = client;
     redisReady = true;
     console.log('[Redis] Connected');
     return client;
   } catch (err) {
-    console.warn('  ⚠ Redis connection failed:', (err as Error).message);
-    return null;
+    console.error('[Redis] Connection failed:', (err as Error).message);
+    process.exit(1);
   }
+  return null;
 }
 
 export function getRedis(): RedisClient | null {

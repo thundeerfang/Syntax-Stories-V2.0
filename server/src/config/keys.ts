@@ -1,10 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 
+// Render Secret Files are mounted at /etc/secrets/<filename>
+const RENDER_SECRETS_DIR = '/etc/secrets';
+const privateKeyPem = 'privateKey.pem';
+const publicKeyPem = 'publicKey.pem';
+
 // From dist/config/keys.js, keys live in server/keys/
 const keysDir = path.resolve(__dirname, '..', '..', 'keys');
-const privateKeyPath = path.join(keysDir, 'privateKey.pem');
-const publicKeyPath = path.join(keysDir, 'publicKey.pem');
 
 function readKey(filePath: string): string | null {
   try {
@@ -14,8 +17,14 @@ function readKey(filePath: string): string | null {
   }
 }
 
-export const privateKey = readKey(privateKeyPath);
-export const publicKey = readKey(publicKeyPath);
+function loadKey(filename: string): string | null {
+  const fromSecrets = readKey(path.join(RENDER_SECRETS_DIR, filename));
+  if (fromSecrets) return fromSecrets;
+  return readKey(path.join(keysDir, filename));
+}
+
+export const privateKey = loadKey(privateKeyPem);
+export const publicKey = loadKey(publicKeyPem);
 
 if (!privateKey || !publicKey) {
   console.warn(
