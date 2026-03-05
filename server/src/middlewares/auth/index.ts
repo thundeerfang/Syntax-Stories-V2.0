@@ -2,6 +2,7 @@ export {
   sendOtpValidation,
   signupEmailValidation,
   verifyOtpValidation,
+  updateProfileValidation,
 } from './authValidation';
 export { verifyToken, type AuthUser } from './verifyToken';
 export {

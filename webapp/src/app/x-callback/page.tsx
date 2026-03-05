@@ -4,6 +4,7 @@ import { useEffect, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi, normalizeUser } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
+import { TerminalLoaderPage } from '@/components/loader';
 import { toast } from 'sonner';
 
 function XCallbackInner() {
@@ -80,7 +81,7 @@ function XCallbackInner() {
           </button>
         </form>
       ) : (
-        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Signing you in...</p>
+        <TerminalLoaderPage pageName="auth" />
       )}
     </div>
   );
@@ -88,7 +89,7 @@ function XCallbackInner() {
 
 export default function XCallbackPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center"><p className="text-sm text-muted-foreground">Loading...</p></div>}>
+    <Suspense fallback={<TerminalLoaderPage pageName="auth" />}>
       <XCallbackInner />
     </Suspense>
   );

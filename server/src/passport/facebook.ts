@@ -3,6 +3,7 @@ import { Strategy as FacebookStrategy } from 'passport-facebook';
 import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
+import { getRedis } from '../config/redis';
 
 export const hasFacebookConfig = !!(env.FACEBOOK_APP_ID && env.FACEBOOK_APP_SECRET);
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/facebook/callback` : '';
@@ -23,6 +24,30 @@ export function registerFacebook(passportInstance: passport.PassportStatic): voi
           const flow = String((req.query as Record<string, unknown>)?.state ?? 'login');
           const email = profile.emails?.[0]?.value;
           if (!email) return done(new Error('Email not available from Facebook'), undefined);
+
+          if (flow.startsWith('link:')) {
+            const linkKey = flow.slice(5);
+            const redis = getRedis();
+            if (!redis) return done(new Error('Linking unavailable'), undefined);
+            const userId = await redis.get(`link:${linkKey}`);
+            if (!userId) return done(new Error('Link expired or invalid'), undefined);
+            const user = await UserModel.findById(userId).select('+facebookToken');
+            if (!user) return done(new Error('User not found'), undefined);
+            const accountEmail = (user.email ?? '').toLowerCase();
+            const providerEmail = (email ?? '').toLowerCase();
+            if (accountEmail !== providerEmail) {
+              return done(
+                new Error(`Use the same email as your account (${user.email}) to connect Facebook.`),
+                undefined
+              );
+            }
+            user.facebookId = profile.id;
+            user.facebookToken = accessToken;
+            user.isFacebookAccount = true;
+            await user.save();
+            await redis.del(`link:${linkKey}`);
+            return done(null, { _id: user._id, facebookId: user.facebookId });
+          }
 
           if (flow === 'login') {
             const existingUser = await UserModel.findOne({ facebookId: profile.id }).select('+facebookToken');

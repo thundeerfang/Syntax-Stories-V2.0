@@ -3,6 +3,7 @@ import { Strategy as GitHubStrategy } from 'passport-github2';
 import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
+import { getRedis } from '../config/redis';
 
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/github/callback` : '';
 
@@ -38,6 +39,30 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
           profile.emails?.find((e) => e.primary)?.value;
         if (!email) {
           return done(new Error('Email is required but not available from GitHub'), undefined);
+        }
+
+        if (flow.startsWith('link:')) {
+          const linkKey = flow.slice(5);
+          const redis = getRedis();
+          if (!redis) return done(new Error('Linking unavailable'), undefined);
+          const userId = await redis.get(`link:${linkKey}`);
+          if (!userId) return done(new Error('Link expired or invalid'), undefined);
+          const user = await UserModel.findById(userId).select('+githubToken');
+          if (!user) return done(new Error('User not found'), undefined);
+          const accountEmail = (user.email ?? '').toLowerCase();
+          const providerEmail = (email ?? '').toLowerCase();
+          if (accountEmail !== providerEmail) {
+            return done(
+              new Error(`Use the same email as your account (${user.email}) to connect GitHub.`),
+              undefined
+            );
+          }
+          user.gitId = String(profile.id);
+          user.githubToken = accessToken;
+          user.isGitAccount = true;
+          await user.save();
+          await redis.del(`link:${linkKey}`);
+          return done(null, { _id: user._id, gitId: user.gitId });
         }
 
         if (flow === 'login') {

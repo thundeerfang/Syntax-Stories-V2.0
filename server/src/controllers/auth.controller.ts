@@ -43,6 +43,11 @@ const TWO_FA_SETUP_PREFIX = '2fa:setup:';
 const TWO_FA_SETUP_TTL_SECONDS = 10 * 60;
 const QR_LOGIN_PREFIX = 'qr:login:';
 const QR_LOGIN_TTL_SECONDS = 5 * 60;
+const EMAIL_CHANGE_PREFIX = 'emailchange:';
+const EMAIL_CHANGE_TTL_SEC = 600; // 10 min
+
+/** Session duration and sliding window: extend session by this much on each refresh so active users stay logged in */
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const ALLOWED_INTENT_ACTIONS = ['delete_account'] as const;
 type IntentAction = (typeof ALLOWED_INTENT_ACTIONS)[number];
@@ -83,7 +88,7 @@ async function createSession(
   refreshToken: string
 ): Promise<InstanceType<typeof SessionModel>> {
   const { ip, userAgent } = getClientMeta(req);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days in browser
+  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   const session = await SessionModel.create({
     userId,
     refreshTokenHash: hashToken(refreshToken),
@@ -497,7 +502,9 @@ export async function refresh(req: Request, res: Response): Promise<void> {
       res.status(401).json({ message: 'Account disabled or not found', success: false });
       return;
     }
+    // Sliding expiry: extend session on each refresh so active users stay logged in
     session.lastActiveAt = new Date();
+    session.expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
     await session.save();
     const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
     res.status(200).json({
@@ -542,6 +549,28 @@ export async function logout(req: Request, res: Response): Promise<void> {
   }
 }
 
+/** Revoke session by refresh token only (no JWT). Use when token expired and client clears state. */
+export async function revokeSessionByRefreshToken(req: Request, res: Response): Promise<void> {
+  try {
+    const refreshTokenRaw = (req.body as { refreshToken?: string }).refreshToken;
+    if (!refreshTokenRaw || typeof refreshTokenRaw !== 'string') {
+      res.status(400).json({ message: 'refreshToken required', success: false });
+      return;
+    }
+    const refreshTokenHash = hashToken(refreshTokenRaw);
+    const session = await SessionModel.findOne({ refreshTokenHash });
+    if (session) {
+      session.revoked = true;
+      await session.save();
+      await logSecurityEvent(String(session.userId), 'session_revoked', req, { sessionId: session._id });
+    }
+    res.status(200).json({ message: 'Session revoked', success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
 export async function me(req: Request, res: Response): Promise<void> {
   try {
     const user = (req as Request & { user: AuthUser }).user;
@@ -550,6 +579,7 @@ export async function me(req: Request, res: Response): Promise<void> {
       res.status(404).json({ message: 'User not found', success: false });
       return;
     }
+    const f = found as { createdAt?: Date };
     res.status(200).json({
       success: true,
       user: {
@@ -558,9 +588,26 @@ export async function me(req: Request, res: Response): Promise<void> {
         username: found.username,
         email: found.email,
         profileImg: found.profileImg,
+        coverBanner: found.coverBanner,
+        bio: found.bio,
+        job: found.job,
+        linkedin: found.linkedin,
+        instagram: found.instagram,
+        github: found.github,
+        youtube: found.youtube,
+        stackAndTools: found.stackAndTools,
+        mySetup: found.mySetup,
+        workExperiences: found.workExperiences,
+        education: found.education,
+        projects: found.projects,
+        openSourceContributions: found.openSourceContributions,
         isGoogleAccount: found.isGoogleAccount,
         isGitAccount: found.isGitAccount,
+        isFacebookAccount: found.isFacebookAccount,
+        isXAccount: found.isXAccount,
+        isAppleAccount: found.isAppleAccount,
         twoFactorEnabled: found.twoFactorEnabled,
+        createdAt: f.createdAt,
       },
     });
   } catch (err) {
@@ -846,6 +893,12 @@ export async function listSecurityEvents(req: Request, res: Response): Promise<v
   }
 }
 
+const UPDATE_PROFILE_KEYS = [
+  'fullName', 'username', 'bio', 'profileImg', 'coverBanner', 'job',
+  'linkedin', 'instagram', 'github', 'youtube',
+  'stackAndTools', 'mySetup', 'workExperiences', 'education', 'projects', 'openSourceContributions',
+] as const;
+
 export async function updateProfile(req: Request, res: Response): Promise<void> {
   try {
     const user = (req as Request & { user?: AuthUser }).user;
@@ -854,20 +907,32 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const updates = (req.body ?? {}) as Partial<{
-      fullName: string;
-      bio: string;
-      job: string;
-      linkedin: string;
-      instagram: string;
-      github: string;
-      profileImg: string;
-    }>;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const updates: Record<string, unknown> = {};
+    for (const key of UPDATE_PROFILE_KEYS) {
+      if (body[key] !== undefined) updates[key] = body[key];
+    }
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ message: 'No valid fields to update', success: false });
+      return;
+    }
+
+    if (typeof updates.username === 'string') {
+      const existing = await UserModel.findOne({
+        username: updates.username.trim().toLowerCase(),
+        _id: { $ne: user._id },
+      });
+      if (existing) {
+        res.status(409).json({ message: 'Username is already taken. Choose another.', success: false });
+        return;
+      }
+      updates.username = (updates.username as string).trim().toLowerCase();
+    }
 
     const updated = await UserModel.findByIdAndUpdate(user._id, updates, {
       new: true,
       runValidators: true,
-      projection: { twoFactorSecret: 0 },
+      projection: { twoFactorSecret: 0, googleToken: 0, githubToken: 0, facebookToken: 0, xToken: 0, appleToken: 0 },
     }).lean();
 
     if (!updated) {
@@ -883,14 +948,27 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         username: updated.username,
         email: updated.email,
         profileImg: updated.profileImg,
+        coverBanner: updated.coverBanner,
         bio: updated.bio,
         job: updated.job,
         linkedin: updated.linkedin,
         instagram: updated.instagram,
         github: updated.github,
+        youtube: updated.youtube,
+        stackAndTools: updated.stackAndTools,
+        mySetup: updated.mySetup,
+        workExperiences: updated.workExperiences,
+        education: updated.education,
+        projects: updated.projects,
+        openSourceContributions: updated.openSourceContributions,
       },
     });
   } catch (err) {
+    const code = (err as { code?: number })?.code;
+    if (code === 11000) {
+      res.status(409).json({ message: 'Username is already taken. Choose another.', success: false });
+      return;
+    }
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error 💀', success: false });
   }
@@ -960,6 +1038,192 @@ export async function deleteAccount(req: Request, res: Response): Promise<void> 
     res.status(200).json({
       success: true,
       message: 'Account deleted (deactivated) successfully',
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+const LINK_PREFIX = 'link:';
+const LINK_TTL_SEC = 300; // 5 min
+
+const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x'] as const;
+type LinkProvider = (typeof LINK_PROVIDERS)[number];
+
+export async function linkRequest(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+    const provider = (req.body?.provider as string)?.toLowerCase();
+    if (!provider || !LINK_PROVIDERS.includes(provider as LinkProvider)) {
+      res.status(400).json({
+        message: 'Invalid provider. Use: google, github, facebook, x',
+        success: false,
+      });
+      return;
+    }
+    const redis = getRedis();
+    if (!redis) {
+      res.status(503).json({ message: 'Account linking is temporarily unavailable', success: false });
+      return;
+    }
+    const linkKey = crypto.randomBytes(16).toString('hex');
+    const key = LINK_PREFIX + linkKey;
+    await redis.setEx(key, LINK_TTL_SEC, String(user._id));
+    const base = (env.BACKEND_URL || '').replace(/\/$/, '');
+    if (!base) {
+      res.status(500).json({ message: 'Server misconfiguration', success: false });
+      return;
+    }
+    res.status(200).json({
+      success: true,
+      redirectUrl: `${base}/auth/${provider}/link?k=${linkKey}`,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function initEmailChange(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+    if (!isEmailConfigured()) {
+      res.status(503).json({ message: 'Email change is not available.', success: false });
+      return;
+    }
+    const newEmailRaw = (req.body as { newEmail?: string }).newEmail;
+    const newEmail = typeof newEmailRaw === 'string' ? newEmailRaw.toLowerCase().trim() : '';
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      res.status(400).json({ message: 'Valid new email is required.', success: false });
+      return;
+    }
+    const doc = await UserModel.findById(user._id).select('email');
+    if (!doc) {
+      res.status(404).json({ message: 'User not found', success: false });
+      return;
+    }
+    const currentEmail = (doc.email ?? '').toLowerCase();
+    if (newEmail === currentEmail) {
+      res.status(400).json({ message: 'New email must be different from current email.', success: false });
+      return;
+    }
+    const existing = await UserModel.findOne({ email: newEmail });
+    if (existing) {
+      res.status(409).json({ message: 'An account already exists with this email.', success: false });
+      return;
+    }
+    const redis = getRedis();
+    if (!redis) {
+      res.status(503).json({ message: 'Email change temporarily unavailable.', success: false });
+      return;
+    }
+    const code = generateOtpCode();
+    const key = EMAIL_CHANGE_PREFIX + String(user._id);
+    await redis.setEx(key, EMAIL_CHANGE_TTL_SEC, JSON.stringify({ code, newEmail }));
+
+    const from = env.EMAIL_USER ?? 'noreply@syntaxstories.com';
+    await transporter.sendMail({
+      from,
+      to: currentEmail,
+      subject: 'Verify your email change – Syntax Stories',
+      html: `<p>Your verification code: <strong>${code}</strong>. Valid for 10 minutes.</p>`,
+    });
+    await transporter.sendMail({
+      from,
+      to: newEmail,
+      subject: 'Verify your new email – Syntax Stories',
+      html: `<p>Your verification code: <strong>${code}</strong>. Valid for 10 minutes.</p>`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent to your current and new email.',
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+export async function verifyEmailChange(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+    const code = (req.body as { code?: string }).code?.trim() ?? '';
+    if (!code || !/^\d{6}$/.test(code)) {
+      res.status(400).json({ message: 'Valid 6-digit code is required.', success: false });
+      return;
+    }
+    const redis = getRedis();
+    if (!redis) {
+      res.status(503).json({ message: 'Email change temporarily unavailable.', success: false });
+      return;
+    }
+    const key = EMAIL_CHANGE_PREFIX + String(user._id);
+    const raw = await redis.get(key);
+    if (!raw) {
+      res.status(400).json({ message: 'Code expired or invalid. Request a new code.', success: false });
+      return;
+    }
+    let payload: { code: string; newEmail: string };
+    try {
+      payload = JSON.parse(raw) as { code: string; newEmail: string };
+    } catch {
+      res.status(400).json({ message: 'Invalid request. Try again.', success: false });
+      return;
+    }
+    if (payload.code !== code) {
+      res.status(401).json({ message: 'Invalid code.', success: false });
+      return;
+    }
+    await redis.del(key);
+
+    const doc = await UserModel.findById(user._id).select('email');
+    if (!doc) {
+      res.status(404).json({ message: 'User not found', success: false });
+      return;
+    }
+    const newEmail = payload.newEmail.toLowerCase().trim();
+    await UserModel.findByIdAndUpdate(user._id, {
+      $set: {
+        email: newEmail,
+        emailVerified: true,
+        isGoogleAccount: false,
+        isGitAccount: false,
+        isFacebookAccount: false,
+        isXAccount: false,
+        isAppleAccount: false,
+      },
+      $unset: {
+        googleId: 1,
+        googleToken: 1,
+        gitId: 1,
+        githubToken: 1,
+        facebookId: 1,
+        facebookToken: 1,
+        xId: 1,
+        xToken: 1,
+        appleId: 1,
+        appleToken: 1,
+      },
+    });
+    await logSecurityEvent(String(user._id), 'login_success', req, { metadata: { email_change: true, newEmail } });
+
+    res.status(200).json({
+      success: true,
+      message: 'Email updated. All OAuth providers have been unlinked. You can link them again with your new email.',
     });
   } catch (err) {
     console.error(err);

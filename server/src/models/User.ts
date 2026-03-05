@@ -1,16 +1,51 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface IWorkExperience {
+  company: string;
+  role: string;
+  startDate?: string;
+  endDate?: string;
+  description?: string;
+}
+export interface IEducation {
+  school: string;
+  degree?: string;
+  field?: string;
+  startYear?: number;
+  endYear?: number;
+}
+export interface IProject {
+  name: string;
+  url?: string;
+  description?: string;
+}
+export interface IOpenSourceContribution {
+  repo?: string;
+  description?: string;
+  url?: string;
+}
+
 export interface IUser extends Document {
   fullName: string;
   username: string;
   email: string;
   profileImg?: string;
+  coverBanner?: string;
   gender?: string;
   job?: string;
   bio?: string;
   linkedin?: string;
   instagram?: string;
   github?: string;
+  youtube?: string;
+  /** Tech stack (e.g. ["React", "Node.js"]) */
+  stackAndTools?: string[];
+  /** My setup description */
+  mySetup?: string;
+  workExperiences?: IWorkExperience[];
+  education?: IEducation[];
+  projects?: IProject[];
+  openSourceContributions?: IOpenSourceContribution[];
   isGoogleAccount: boolean;
   isGitAccount: boolean;
   isFacebookAccount: boolean;
@@ -44,6 +79,7 @@ const UserSchema = new Schema<IUser>(
       type: String,
       default: 'https://res.cloudinary.com/dr2bxpjjz/image/upload/v1737041910/uploads/waumti9zvnnmgayfxbmv.png',
     },
+    coverBanner: { type: String },
     gender: { type: String },
     job: { type: String },
     bio: {
@@ -53,6 +89,45 @@ const UserSchema = new Schema<IUser>(
     linkedin: { type: String },
     instagram: { type: String },
     github: { type: String },
+    youtube: { type: String },
+    stackAndTools: { type: [String], default: [] },
+    mySetup: { type: String },
+    workExperiences: {
+      type: [{
+        company: String,
+        role: String,
+        startDate: String,
+        endDate: String,
+        description: String,
+      }],
+      default: [],
+    },
+    education: {
+      type: [{
+        school: String,
+        degree: String,
+        field: String,
+        startYear: Number,
+        endYear: Number,
+      }],
+      default: [],
+    },
+    projects: {
+      type: [{
+        name: String,
+        url: String,
+        description: String,
+      }],
+      default: [],
+    },
+    openSourceContributions: {
+      type: [{
+        repo: String,
+        description: String,
+        url: String,
+      }],
+      default: [],
+    },
     isGoogleAccount: { type: Boolean, default: false },
     isGitAccount: { type: Boolean, default: false },
     isFacebookAccount: { type: Boolean, default: false },

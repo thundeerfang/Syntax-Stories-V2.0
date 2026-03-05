@@ -3,6 +3,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
+import { getRedis } from '../config/redis';
 
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/google/callback` : '';
 
@@ -17,9 +18,34 @@ export function registerGoogle(passportInstance: passport.PassportStatic): void 
       },
       async (req, accessToken, _refreshToken, profile, done) => {
         try {
-          const flow = String((req.query as Record<string, unknown>)?.state ?? 'login'); // "login" | "signup"
+          const flow = String((req.query as Record<string, unknown>)?.state ?? 'login'); // "login" | "signup" | "link:key"
           const email = profile.emails?.[0]?.value;
           if (!email) return done(new Error('Email not provided by Google'), undefined);
+
+          // Link: add Google to existing account (same email only)
+          if (flow.startsWith('link:')) {
+            const linkKey = flow.slice(5);
+            const redis = getRedis();
+            if (!redis) return done(new Error('Linking unavailable'), undefined);
+            const userId = await redis.get(`link:${linkKey}`);
+            if (!userId) return done(new Error('Link expired or invalid'), undefined);
+            const user = await UserModel.findById(userId).select('+googleToken');
+            if (!user) return done(new Error('User not found'), undefined);
+            const accountEmail = (user.email ?? '').toLowerCase();
+            const providerEmail = (email ?? '').toLowerCase();
+            if (accountEmail !== providerEmail) {
+              return done(
+                new Error(`Use the same email as your account (${user.email}) to connect Google.`),
+                undefined
+              );
+            }
+            user.googleId = profile.id;
+            user.googleToken = accessToken;
+            user.isGoogleAccount = true;
+            await user.save();
+            await redis.del(`link:${linkKey}`);
+            return done(null, { _id: user._id, googleId: user.googleId });
+          }
 
           if (flow === 'login') {
             const existingUser = await UserModel.findOne({ googleId: profile.id }).select('+googleToken');

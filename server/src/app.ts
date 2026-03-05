@@ -1,8 +1,10 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
 import routes from './routes/index';
+import uploadRoutes from './routes/upload.routes';
 import { signAccessToken } from './config/jwt';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middlewares';
@@ -86,12 +88,29 @@ app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/api', routes);
+app.use('/api/upload', uploadRoutes);
 app.use('/auth', authRoutes);
 
 app.get('/auth/google/login', passport.authenticate('google', { scope: ['profile', 'email'], state: 'login' }));
 app.get('/auth/google/signup', passport.authenticate('google', { scope: ['profile', 'email'], state: 'signup' }));
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], state: 'login' }));
+app.get('/auth/google/link', async (req, res, next) => {
+  const k = req.query.k as string;
+  if (!k?.trim()) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+  }
+  const redis = getRedis();
+  if (!redis) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+  }
+  const userId = await redis.get(`link:${k}`);
+  if (!userId) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'], state: `link:${k}` })(req, res, next);
+});
 app.get('/auth/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false }, async (err: unknown, userObj?: unknown) => {
     if (err) {
@@ -117,6 +136,21 @@ app.get('/auth/google/callback', (req, res, next) => {
 app.get('/auth/github/login', passport.authenticate('github', { scope: ['user:email'], state: 'login' }));
 app.get('/auth/github/signup', passport.authenticate('github', { scope: ['user:email'], state: 'signup' }));
 app.get('/auth/github', passport.authenticate('github', { scope: ['user:email'], state: 'login' }));
+app.get('/auth/github/link', async (req, res, next) => {
+  const k = req.query.k as string;
+  if (!k?.trim()) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+  }
+  const redis = getRedis();
+  if (!redis) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+  }
+  const userId = await redis.get(`link:${k}`);
+  if (!userId) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+  }
+  passport.authenticate('github', { scope: ['user:email'], state: `link:${k}` })(req, res, next);
+});
 app.get('/auth/github/callback', (req, res, next) => {
   passport.authenticate('github', { session: false }, async (err: unknown, userObj?: unknown) => {
     if (err) {
@@ -143,6 +177,21 @@ if (hasFacebookConfig) {
   app.get('/auth/facebook/login', passport.authenticate('facebook', { scope: ['email'], state: 'login' }));
   app.get('/auth/facebook/signup', passport.authenticate('facebook', { scope: ['email'], state: 'signup' }));
   app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'], state: 'login' }));
+  app.get('/auth/facebook/link', async (req, res, next) => {
+    const k = req.query.k as string;
+    if (!k?.trim()) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+    }
+    const redis = getRedis();
+    if (!redis) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+    }
+    const userId = await redis.get(`link:${k}`);
+    if (!userId) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+    }
+    passport.authenticate('facebook', { scope: ['email'], state: `link:${k}` })(req, res, next);
+  });
   app.get('/auth/facebook/callback', (req, res, next) => {
     passport.authenticate('facebook', { session: false }, async (err: unknown, userObj?: unknown) => {
       if (err) {
@@ -174,6 +223,21 @@ if (hasXConfig) {
   app.get('/auth/x/login', passport.authenticate('twitter', { state: 'login' }));
   app.get('/auth/x/signup', passport.authenticate('twitter', { state: 'signup' }));
   app.get('/auth/x', passport.authenticate('twitter', { state: 'login' }));
+  app.get('/auth/x/link', async (req, res, next) => {
+    const k = req.query.k as string;
+    if (!k?.trim()) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+    }
+    const redis = getRedis();
+    if (!redis) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+    }
+    const userId = await redis.get(`link:${k}`);
+    if (!userId) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+    }
+    passport.authenticate('twitter', { state: `link:${k}` })(req, res, next);
+  });
 app.get('/auth/x/callback', (req, res, next) => {
     passport.authenticate('twitter', { session: false }, async (err: unknown, userObj?: unknown) => {
       if (err) {

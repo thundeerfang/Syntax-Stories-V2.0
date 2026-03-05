@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Edit3,
   Plus,
@@ -9,10 +10,10 @@ import {
   Monitor,
   Users,
   Award,
-  CreditCard,
   Github,
-  Twitter,
-  Globe,
+  Linkedin,
+  Instagram,
+  Youtube,
   Eye,
   Briefcase,
   GraduationCap,
@@ -30,24 +31,44 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Switch, AreaChart } from '@/components/retroui';
 import { useSidebar } from '@/hooks/useSidebar';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { useAuthStore } from '@/store/auth';
 import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
 import { FollowersFollowingDialog } from '@/components/profile/dialog';
+import { getSkillIconUrl } from '@/lib/skillIcons';
+import { TerminalLoaderPage } from '@/components/loader';
 
-const PUBLIC_PROFILE_URL = 'https://daily.dev/harshitkushwah';
+function formatJoinedDate(createdAt: string | undefined): string {
+  if (!createdAt) return '';
+  try {
+    const d = new Date(createdAt);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return '';
+  }
+}
 
 type ActivityTab = 'posts' | 'replies' | 'upvoted';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { isOpen } = useSidebar();
+  const { user, token, isHydrated, shouldBlock } = useRequireAuth();
   const [activityTab, setActivityTab] = useState<ActivityTab>('posts');
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [profileUrlCopied, setProfileUrlCopied] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
+  const publicProfileUrl = useMemo(() => {
+    if (typeof window === 'undefined' || !user?.username) return '';
+    return `${window.location.origin}/u/${user.username}`;
+  }, [user?.username]);
+
   const copyProfileUrl = async () => {
+    const url = publicProfileUrl || (typeof window !== 'undefined' ? window.location.origin + '/profile' : '');
     try {
-      await navigator.clipboard.writeText(PUBLIC_PROFILE_URL);
+      await navigator.clipboard.writeText(url);
       setProfileUrlCopied(true);
       toast.success('Link copied to clipboard');
       setTimeout(() => setProfileUrlCopied(false), 2000);
@@ -55,6 +76,15 @@ export default function ProfilePage() {
       toast.error('Failed to copy link');
     }
   };
+
+  const joinedLabel = useMemo(() => {
+    const str = formatJoinedDate(user?.createdAt);
+    return str ? `Joined ${str}` : '';
+  }, [user?.createdAt]);
+
+  if (!isHydrated || shouldBlock) {
+    return <TerminalLoaderPage pageName="profile" />;
+  }
 
   // Reusable Section Header (hide Add button in preview mode)
   const SectionHeader = ({ icon: Icon, title, showAdd = true }: { icon: any; title: string; showAdd?: boolean }) => (
@@ -79,13 +109,19 @@ export default function ProfilePage() {
           
           {/* HEADER SECTION */}
           <section className="border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)] overflow-hidden">
-            {/* Gradient Cover restored */}
-            <div className="h-48 relative border-b-4 border-border gradient-auto" />
+            {/* Cover: user cover or gradient */}
+            <div className="h-48 relative border-b-4 border-border overflow-hidden">
+              {user?.coverBanner ? (
+                <img src={user.coverBanner} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full gradient-auto" />
+              )}
+            </div>
 
             <div className="px-6 pb-8 pt-24 md:pt-32 relative bg-card">
               <div className="absolute -top-14 left-6 size-28 md:size-36 border-4 border-border bg-muted shadow-[6px_6px_0px_0px_var(--primary)] overflow-hidden">
                 <img
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=Harshit"
+                  src={user?.profileImg || user?.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
                   alt="Avatar"
                   className="w-full h-full object-cover"
                 />
@@ -93,9 +129,14 @@ export default function ProfilePage() {
 
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                  <h1 className="text-4xl font-black uppercase tracking-tighter italic">Harshit Kushwah</h1>
+                  <h1 className="text-4xl font-black uppercase tracking-tighter italic">{user?.fullName || user?.name || 'Profile'}</h1>
                   <p className="text-primary font-bold flex items-center gap-2 mt-1 uppercase text-xs tracking-widest">
-                    @harshitkushwah <span className="size-1.5 bg-border rounded-full" /> Joined Jan 16, 2025
+                    {user?.username ? `@${user.username}` : ''}
+                    {joinedLabel && (
+                      <>
+                        <span className="size-1.5 bg-border rounded-full" /> {joinedLabel}
+                      </>
+                    )}
                   </p>
                 </div>
                 {!isPreviewMode && (
@@ -192,56 +233,168 @@ export default function ProfilePage() {
           </div>
           )}
 
-          {/* DYNAMIC SECTIONS */}
+          {/* DYNAMIC SECTIONS — data from backend */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
               <SectionHeader icon={Monitor} title="Stack & Tools" />
-              <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">Add your tech stack</p>
-              </div>
+              {user?.stackAndTools?.length ? (
+                <div className="flex flex-wrap gap-4 items-center">
+                  {user.stackAndTools.map((t, i) => {
+                    const iconUrl = getSkillIconUrl(t);
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1.5" title={t}>
+                        {iconUrl && (
+                          <img
+                            src={iconUrl}
+                            alt={t}
+                            className="w-14 h-14 object-contain"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        )}
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground">{t}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Add your tech stack</p>
+                  {!isPreviewMode && (
+                    <Link href="/settings" className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline">
+                      <Plus className="size-3" /> Add
+                    </Link>
+                  )}
+                </div>
+              )}
             </section>
             <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
               <SectionHeader icon={Monitor} title="My Setup" />
-              <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">Share your setup</p>
-              </div>
+              {user?.mySetup ? (
+                <p className="text-sm font-medium whitespace-pre-wrap">{user.mySetup}</p>
+              ) : (
+                <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Share your setup</p>
+                  {!isPreviewMode && (
+                    <Link href="/settings" className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline">
+                      <Plus className="size-3" /> Add
+                    </Link>
+                  )}
+                </div>
+              )}
             </section>
           </div>
 
           <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
             <SectionHeader icon={Briefcase} title="Work Experiences" />
-            <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add work experience</p>
-            </div>
+            {user?.workExperiences?.length ? (
+              <ul className="space-y-3">
+                {user.workExperiences.map((w, i) => (
+                  <li key={i} className="p-3 border-2 border-border bg-muted/5">
+                    <p className="font-bold text-sm">{w.role}{w.company ? ` at ${w.company}` : ''}</p>
+                    {(w.startDate || w.endDate) && (
+                      <p className="text-[10px] text-muted-foreground uppercase">{[w.startDate, w.endDate].filter(Boolean).join(' – ')}</p>
+                    )}
+                    {w.description && <p className="text-xs mt-1 text-muted-foreground">{w.description}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add work experience</p>
+                {!isPreviewMode && (
+                  <Link href="/settings" className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline">
+                    <Plus className="size-3" /> Add
+                  </Link>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
             <SectionHeader icon={GraduationCap} title="Education" />
-            <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add education</p>
-            </div>
+            {user?.education?.length ? (
+              <ul className="space-y-3">
+                {user.education.map((e, i) => (
+                  <li key={i} className="p-3 border-2 border-border bg-muted/5">
+                    <p className="font-bold text-sm">{e.school}</p>
+                    {(e.degree || e.field) && (
+                      <p className="text-[10px] text-muted-foreground uppercase">{[e.degree, e.field].filter(Boolean).join(' · ')}</p>
+                    )}
+                    {(e.startYear || e.endYear) && (
+                      <p className="text-[10px] text-muted-foreground">{[e.startYear, e.endYear].filter(Boolean).join(' – ')}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add education</p>
+                {!isPreviewMode && (
+                  <Link href="/settings" className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline">
+                    <Plus className="size-3" /> Add
+                  </Link>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
             <SectionHeader icon={FolderGit2} title="Projects" />
-            <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add your projects</p>
-            </div>
+            {user?.projects?.length ? (
+              <ul className="space-y-3">
+                {user.projects.map((p, i) => (
+                  <li key={i} className="p-3 border-2 border-border bg-muted/5">
+                    {p.url ? (
+                      <a href={p.url} target="_blank" rel="noopener noreferrer" className="font-bold text-sm text-primary hover:underline">{p.name}</a>
+                    ) : (
+                      <p className="font-bold text-sm">{p.name}</p>
+                    )}
+                    {p.description && <p className="text-xs mt-1 text-muted-foreground">{p.description}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add your projects</p>
+                {!isPreviewMode && (
+                  <Link href="/settings" className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline">
+                    <Plus className="size-3" /> Add
+                  </Link>
+                )}
+              </div>
+            )}
           </section>
 
-          {/* OPEN SOURCE Restored */}
+          {/* OPEN SOURCE */}
           <section className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] overflow-hidden">
-            <div className="p-6 flex flex-col md:flex-row items-center gap-6">
+            <div className="p-6 flex flex-col md:flex-row items-start gap-6">
               <div className="size-14 border-4 border-border flex items-center justify-center shrink-0 bg-primary/10">
                 <Code2 className="size-7 text-primary" />
               </div>
-              <div className="flex-1 text-center md:text-left">
+              <div className="flex-1 min-w-0">
                 <h2 className="text-sm font-black uppercase tracking-widest">Open Source</h2>
                 <p className="text-[10px] text-muted-foreground mt-1 uppercase font-bold">Contribute and share your open source work.</p>
-                {!isPreviewMode && (
-                  <button className="mt-3 px-4 py-2 border-2 border-border font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all shadow-[3px_3px_0px_0px_var(--border)] active:shadow-none">
-                    Add contribution
-                  </button>
+                {user?.openSourceContributions?.length ? (
+                  <ul className="mt-3 space-y-2">
+                    {user.openSourceContributions.map((c, i) => (
+                      <li key={i} className="p-2 border-2 border-border bg-muted/5">
+                        {c.repo && <p className="font-bold text-xs">{c.repo}</p>}
+                        {c.description && <p className="text-[10px] text-muted-foreground">{c.description}</p>}
+                        {c.url && (
+                          <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-primary hover:underline">View</a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-bold text-muted-foreground mt-2">Add contributions</p>
+                    {!isPreviewMode && (
+                      <Link href="/settings" className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline">
+                        <Plus className="size-3" /> Add contribution
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -290,7 +443,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* 3. PUBLIC PROFILE URL — owner only; hidden in preview */}
+          {/* 3. PUBLIC PROFILE URL + SOCIAL LINKS — from backend */}
           {!isPreviewMode && (
           <div className="border-4 border-border bg-card p-5 shadow-[4px_4px_0px_0px_var(--border)] space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-widest">Public Profile</h3>
@@ -301,7 +454,9 @@ export default function ProfilePage() {
                 onClick={copyProfileUrl}
                 className="flex-1 min-w-0 flex items-center justify-between gap-2 bg-muted/30 border-2 border-border p-3 hover:bg-muted/50 transition-colors text-left group"
               >
-                <span className="text-[10px] font-bold truncate text-foreground">{PUBLIC_PROFILE_URL}</span>
+                <span className="text-[10px] font-bold truncate text-foreground">
+                  {publicProfileUrl || (typeof window !== 'undefined' ? `${window.location.origin}/profile` : '/profile')}
+                </span>
                 <span className={cn(
                   'shrink-0 flex items-center gap-1.5 px-2 py-1 border-2 border-border text-[9px] font-black uppercase',
                   profileUrlCopied ? 'bg-primary text-primary-foreground border-primary' : 'bg-card group-hover:border-primary'
@@ -311,16 +466,27 @@ export default function ProfilePage() {
                 </span>
               </button>
             </div>
-            <div className="flex gap-3 items-center justify-center pt-1">
-              <a href="#" aria-label="GitHub" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                <Github className="size-4 text-foreground" />
-              </a>
-              <a href="#" aria-label="Twitter" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                <Twitter className="size-4 text-foreground" />
-              </a>
-              <a href="#" aria-label="Website" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                <Globe className="size-4 text-foreground" />
-              </a>
+            <div className="flex gap-3 items-center justify-center pt-1 flex-wrap">
+              {user?.linkedin && (
+                <a href={user.linkedin.startsWith('http') ? user.linkedin : `https://${user.linkedin}`} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
+                  <Linkedin className="size-4 text-foreground" />
+                </a>
+              )}
+              {user?.github && (
+                <a href={user.github.startsWith('http') ? user.github : `https://${user.github}`} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
+                  <Github className="size-4 text-foreground" />
+                </a>
+              )}
+              {user?.instagram && (
+                <a href={user.instagram.startsWith('http') ? user.instagram : `https://${user.instagram}`} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
+                  <Instagram className="size-4 text-foreground" />
+                </a>
+              )}
+              {user?.youtube && (
+                <a href={user.youtube.startsWith('http') ? user.youtube : `https://${user.youtube}`} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
+                  <Youtube className="size-4 text-foreground" />
+                </a>
+              )}
             </div>
           </div>
           )}

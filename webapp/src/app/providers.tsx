@@ -1,11 +1,11 @@
 'use client';
 
 import { type ReactNode } from 'react';
+import { AuthProvider } from '@/context/AuthContext';
 
 /**
- * App providers. State is managed by Zustand stores (auth, theme, sidebar).
- * No provider wrappers needed.
+ * App providers. AuthProvider exposes auth state for protected pages and account dropdown.
  */
 export function Providers({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <AuthProvider>{children}</AuthProvider>;
 }
