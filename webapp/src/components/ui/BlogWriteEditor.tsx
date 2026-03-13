@@ -27,6 +27,11 @@ export interface ParagraphBlock extends BlockBase {
 
 export type Block = ParagraphBlock | BlockBase & { payload?: any };
 
+// Simple helper matching the older API: create a paragraph in default section "s-1"
+export function createBlock(type: BlockType): Block {
+  return createBlockInSection(type, 's-1');
+}
+
 export function createBlockInSection(type: BlockType, sectionId: string): Block {
   const id = `b-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   if (type === 'paragraph') {

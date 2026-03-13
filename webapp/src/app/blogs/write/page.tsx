@@ -131,6 +131,7 @@ export default function WriteBlogPage() {
                currentUserUsername={user?.username}
                isSidebarOpen={isOpen}
                maxWidthClassName="max-w-full"
+               activeSectionId="s-1"
              />
           </div>
         </div>
@@ -214,3 +215,4 @@ export default function WriteBlogPage() {
     </div>
   );
 }
+
