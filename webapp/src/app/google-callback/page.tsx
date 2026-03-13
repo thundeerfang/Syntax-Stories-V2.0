@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense, useState } from 'react';
+import { useEffect, Suspense, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi, normalizeUser } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
@@ -13,14 +13,18 @@ function GoogleCallbackInner() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const handledRef = useRef(false);
 
   useEffect(() => {
+    if (handledRef.current) return;
     const token = searchParams.get('token');
+    const refreshToken = searchParams.get('refreshToken');
     const twoFactorRequired = searchParams.get('twoFactorRequired');
     const challengeToken = searchParams.get('challengeToken');
     const error = searchParams.get('error');
 
     if (error) {
+      handledRef.current = true;
       toast.error(error);
       router.replace('/login');
       return;
@@ -28,14 +32,16 @@ function GoogleCallbackInner() {
 
     if (!token) {
       if (twoFactorRequired && challengeToken) return;
+      handledRef.current = true;
       router.replace('/login');
       return;
     }
+    handledRef.current = true;
     authApi
       .getAccount(token)
       .then((res) => {
         const user = normalizeUser(res.user);
-        setAuth(user, token);
+        setAuth(user, token, refreshToken ?? undefined);
         router.replace('/');
       })
       .catch(() => router.replace('/'));
@@ -51,7 +57,7 @@ function GoogleCallbackInner() {
     try {
       const res = await authApi.verifyTwoFactorLogin({ challengeToken, token: code });
       const user = normalizeUser(res.user);
-      setAuth(user, res.accessToken);
+      setAuth(user, res.accessToken, res.refreshToken ?? undefined);
       toast.success('Signed in successfully.');
       router.replace('/');
     } catch (err) {

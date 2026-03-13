@@ -95,10 +95,11 @@ export function GlobalLoaderOverlay() {
   useEffect(() => {
     const name = pathnameToPageName(pathname);
     const isInitial = prevPathRef.current === null;
+    const isAuthCallback = pathname.includes('-callback');
     prevPathRef.current = pathname;
     setPageName(name);
     setExiting(false);
-    if (isInitial) return;
+    if (isInitial || isAuthCallback) return;
     const timeouts: ReturnType<typeof setTimeout>[] = [];
     const hide = () => {
       const elapsed = Date.now() - shownAtRef.current;
@@ -113,10 +114,20 @@ export function GlobalLoaderOverlay() {
     return () => timeouts.forEach(clearTimeout);
   }, [pathname]);
 
+  useEffect(() => {
+    if (show) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [show]);
+
   if (!show) return null;
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md transition-opacity duration-300 ease-out ${exiting ? 'opacity-0' : 'opacity-100 loader-overlay-in'}`}
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md transition-opacity duration-300 ease-out overflow-hidden ${exiting ? 'opacity-0' : 'opacity-100 loader-overlay-in'}`}
       aria-live="polite"
       aria-busy="true"
     >

@@ -4,6 +4,7 @@ import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
+import { writeAuditLog } from '../utils/auditLog';
 
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/github/callback` : '';
 
@@ -62,6 +63,10 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
           user.isGitAccount = true;
           await user.save();
           await redis.del(`link:${linkKey}`);
+          void writeAuditLog(req as import('express').Request, 'oauth_connected', {
+            actorId: String(user._id),
+            metadata: { provider: 'github' },
+          });
           return done(null, { _id: user._id, gitId: user.gitId });
         }
 

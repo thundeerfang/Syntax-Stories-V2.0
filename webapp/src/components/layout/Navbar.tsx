@@ -13,7 +13,7 @@ import { NotificationsDropdown } from './NotificationsDropdown';
 import { AccountDropdown } from './AccountDropdown';
 import { cn } from '@/lib/utils';
 import { FireLottie, RocketLottie } from '@/components/ui';
-import { Sun, Moon, Menu, X, Search, Command } from 'lucide-react';
+import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
 
 const navLinks = [
   { href: '/', label: 'HOME' },
@@ -157,6 +157,16 @@ export function Navbar() {
             </button>
 
             <div className="flex items-center gap-2">
+              {isAuthenticated && (
+                <Link
+                  href="/blogs/write"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-2 border-2 border-border bg-background text-foreground hover:border-primary hover:text-primary font-bold text-[11px] uppercase tracking-tight transition-all active:translate-y-0.5"
+                  title="Write a blog post"
+                >
+                  <PenLine className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+                  <span className="hidden sm:inline">Write</span>
+                </Link>
+              )}
               <NotificationsDropdown />
               
               <button

@@ -1,22 +1,21 @@
 'use client';
 
 import { AboutGetStarted } from './AboutGetStarted';
-import { 
-  Cpu, 
-  Layers, 
-  Zap, 
-  Terminal, 
-  Globe, 
-  Github, 
-  Twitter, 
-  Star,
+import { DEVELOPERS } from '@/lib/assets';
+import {
+  Cpu,
+  Layers,
+  Zap,
+  Terminal,
+  Globe,
+  Github,
+  Twitter,
   CheckCircle2,
   Database,
   Box,
   BrainCircuit,
-  Workflow
+  Workflow,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function AboutPage() {
   const techStack = [
@@ -37,12 +36,6 @@ export default function AboutPage() {
   const plans = [
     { name: 'Hobby', price: '$0', features: ['Markdown Editor', '5 Articles/mo', 'Community Access'] },
     { name: 'Pro', price: '$12', features: ['AI Co-writer', 'Custom Domains', 'Analytics', 'No Ads'] },
-  ];
-
-  const developers = [
-    { name: 'Alex Rivera', role: 'Full Stack', img: 'https://i.pravatar.cc/150?u=1' },
-    { name: 'Sarah Chen', role: 'AI Engineer', img: 'https://i.pravatar.cc/150?u=2' },
-    { name: 'Jordan Smith', role: 'UI/UX Lead', img: 'https://i.pravatar.cc/150?u=3' },
   ];
 
   return (
@@ -146,10 +139,10 @@ export default function AboutPage() {
       <section className="space-y-12">
         <h2 className="text-3xl font-black uppercase italic text-center">Meet the Architects</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-          {developers.map((dev) => (
+          {DEVELOPERS.map((dev) => (
             <div key={dev.name} className="group">
               <div className="relative inline-block border-4 border-border shadow-[8px_8px_0px_0px_var(--primary)] overflow-hidden mb-4">
-                <img src={dev.img} alt={dev.name} className="w-48 h-48 object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                <img src={dev.img} alt={dev.name} className="w-48 h-48 object-cover" />
               </div>
               <h3 className="text-xl font-black uppercase italic">{dev.name}</h3>
               <p className="text-primary font-black text-[10px] uppercase tracking-widest">{dev.role}</p>

@@ -4,6 +4,7 @@ import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
+import { writeAuditLog } from '../utils/auditLog';
 
 export const hasXConfig = !!(env.X_CONSUMER_KEY && env.X_CONSUMER_SECRET);
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/x/callback` : '';
@@ -50,6 +51,10 @@ export function registerX(passportInstance: passport.PassportStatic): void {
           user.isXAccount = true;
           await user.save();
           await redis.del(`link:${linkKey}`);
+          void writeAuditLog(req as import('express').Request, 'oauth_connected', {
+            actorId: String(user._id),
+            metadata: { provider: 'x' },
+          });
           return done(null, { _id: user._id, xId: user.xId });
         }
         if (flow === 'login') {

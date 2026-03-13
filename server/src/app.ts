@@ -5,7 +5,6 @@ import helmet from 'helmet';
 import session from 'express-session';
 import routes from './routes/index';
 import uploadRoutes from './routes/upload.routes';
-import { signAccessToken } from './config/jwt';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middlewares';
 import passport from './passport/index';
@@ -15,6 +14,9 @@ import { getRedis } from './config/redis';
 import { RedisStore } from 'connect-redis';
 import { UserModel } from './models/User';
 import { createAuthChallenge } from './utils/authChallenge';
+import { createSessionAndTokens } from './controllers/auth.controller';
+import { writeAuditLog } from './utils/auditLog';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 
@@ -26,6 +28,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(express.json());
+app.use(cookieParser());
 // In production allow FRONTEND_URL (comma-separated; use *.example.com to allow any origin ending with .example.com, e.g. Vercel previews)
 const allowedOrigins =
   env.NODE_ENV === 'production'
@@ -128,8 +131,20 @@ app.get('/auth/google/callback', (req, res, next) => {
         return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
       }
     }
-    const token = signAccessToken({ _id: u._id, googleId: u.googleId });
-    return res.redirect(`${redirectBaseUrl}/google-callback?token=${token}&userId=${u._id}&googleId=${u.googleId ?? ''}`);
+    const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+    void writeAuditLog(req, 'session_created', {
+      actorId: String(u._id),
+      metadata: {
+        sessionId: String(session._id),
+        deviceName: session.deviceName,
+        source: 'google',
+        expiresAt: session.expiresAt?.toISOString?.(),
+      },
+    });
+    void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'google' } });
+    void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'google' } });
+    const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), googleId: u.googleId ?? '' });
+    return res.redirect(`${redirectBaseUrl}/google-callback?${params.toString()}`);
   })(req, res, next);
 });
 
@@ -168,8 +183,20 @@ app.get('/auth/github/callback', (req, res, next) => {
         return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
       }
     }
-    const token = signAccessToken({ _id: u._id, gitId: u.gitId });
-    return res.redirect(`${redirectBaseUrl}/github-callback?token=${token}&userId=${u._id}&gitId=${u.gitId ?? ''}`);
+    const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+    void writeAuditLog(req, 'session_created', {
+      actorId: String(u._id),
+      metadata: {
+        sessionId: String(session._id),
+        deviceName: session.deviceName,
+        source: 'github',
+        expiresAt: session.expiresAt?.toISOString?.(),
+      },
+    });
+    void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'github' } });
+    void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'github' } });
+    const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), gitId: u.gitId ?? '' });
+    return res.redirect(`${redirectBaseUrl}/github-callback?${params.toString()}`);
   })(req, res, next);
 });
 
@@ -209,8 +236,20 @@ if (hasFacebookConfig) {
           return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
         }
       }
-      const token = signAccessToken({ _id: u._id, facebookId: u.facebookId });
-      return res.redirect(`${redirectBaseUrl}/facebook-callback?token=${token}&userId=${u._id}&facebookId=${u.facebookId ?? ''}`);
+      const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+      void writeAuditLog(req, 'session_created', {
+        actorId: String(u._id),
+        metadata: {
+          sessionId: String(session._id),
+          deviceName: session.deviceName,
+          source: 'facebook',
+          expiresAt: session.expiresAt?.toISOString?.(),
+        },
+      });
+      void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'facebook' } });
+      void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'facebook' } });
+      const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), facebookId: u.facebookId ?? '' });
+      return res.redirect(`${redirectBaseUrl}/facebook-callback?${params.toString()}`);
     })(req, res, next);
   });
 } else {
@@ -255,8 +294,20 @@ app.get('/auth/x/callback', (req, res, next) => {
           return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
         }
       }
-      const token = signAccessToken({ _id: u._id, xId: u.xId });
-      return res.redirect(`${redirectBaseUrl}/x-callback?token=${token}&userId=${u._id}&xId=${u.xId ?? ''}`);
+      const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+      void writeAuditLog(req, 'session_created', {
+        actorId: String(u._id),
+        metadata: {
+          sessionId: String(session._id),
+          deviceName: session.deviceName,
+          source: 'x',
+          expiresAt: session.expiresAt?.toISOString?.(),
+        },
+      });
+      void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'x' } });
+      void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'x' } });
+      const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), xId: u.xId ?? '' });
+      return res.redirect(`${redirectBaseUrl}/x-callback?${params.toString()}`);
     })(req, res, next);
   });
 } else {

@@ -13,6 +13,7 @@ import { getRedis } from '../config/redis';
 import { env } from '../config/env';
 import type { AuthUser } from '../middlewares/auth';
 import { createAuthChallenge, consumeAuthChallenge } from '../utils/authChallenge';
+import { writeAuditLog } from '../utils/auditLog';
 
 const transporter = nodemailer.createTransport({
   host: env.EMAIL_HOST,
@@ -98,6 +99,17 @@ async function createSession(
     expiresAt,
   });
   return session;
+}
+
+/** Create a session and return access + refresh tokens and session. Used by OAuth callbacks so the client can refresh when access token expires. */
+export async function createSessionAndTokens(
+  userId: string,
+  req: Request
+): Promise<{ accessToken: string; refreshToken: string; session: InstanceType<typeof SessionModel> }> {
+  const refreshToken = generateRefreshToken();
+  const session = await createSession(userId, req, refreshToken);
+  const accessToken = signAccessToken({ _id: userId, sessionId: String(session._id) });
+  return { accessToken, refreshToken, session };
 }
 
 async function logSecurityEvent(
@@ -311,6 +323,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     const stored = await getOtp(normalizedEmail);
     if (!stored || stored.code !== code) {
       await logSecurityEvent(null, 'login_failure', req, { email: normalizedEmail, reason: 'invalid_otp' });
+      void writeAuditLog(req, 'login_failure', { metadata: { email: normalizedEmail, reason: 'invalid_otp' } });
 
        // Increment failed-attempt counter for this email
       if (redis) {
@@ -368,6 +381,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       user.subscription = subscription._id;
       await user.save();
       await logSecurityEvent(String(user._id), 'login_success', req, { source: 'signup_email' });
+      void writeAuditLog(req, 'user_signup', { actorId: String(user._id), metadata: { source: 'email' } });
     } else if (user) {
       await logSecurityEvent(String(user._id), 'login_success', req, { source: 'otp' });
     } else {
@@ -399,6 +413,20 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     const refreshToken = generateRefreshToken();
     const session = await createSession(String(user._id), req, refreshToken);
     const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
+    const source = isNewUser ? 'signup_email' : 'otp';
+    void writeAuditLog(req, 'session_created', {
+      actorId: String(user._id),
+      metadata: {
+        sessionId: String(session._id),
+        deviceName: session.deviceName,
+        source,
+        expiresAt: session.expiresAt?.toISOString?.(),
+      },
+    });
+    void writeAuditLog(req, 'user_signin', {
+      actorId: String(user._id),
+      metadata: { source },
+    });
     res.status(200).json({
       message: 'Signed in successfully 🚀',
       success: true,
@@ -455,7 +483,16 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
     const refreshToken = generateRefreshToken();
     const session = await createSession(String(dbUser._id), req, refreshToken);
     const accessToken = signAccessToken({ _id: String(dbUser._id), sessionId: String(session._id) });
-
+    void writeAuditLog(req, 'session_created', {
+      actorId: String(dbUser._id),
+      metadata: {
+        sessionId: String(session._id),
+        deviceName: session.deviceName,
+        source: '2fa',
+        expiresAt: session.expiresAt?.toISOString?.(),
+      },
+    });
+    void writeAuditLog(req, 'user_signin', { actorId: String(dbUser._id), metadata: { source: '2fa' } });
     res.status(200).json({
       success: true,
       message: 'Signed in successfully 🚀',
@@ -529,6 +566,8 @@ export async function logout(req: Request, res: Response): Promise<void> {
         session.revoked = true;
         await session.save();
         await logSecurityEvent(user._id, 'session_revoked', req, { sessionId });
+        void writeAuditLog(req, 'user_signout', { actorId: String(user._id), metadata: { sessionId } });
+        void writeAuditLog(req, 'session_revoked', { actorId: String(user._id), metadata: { sessionId } });
       }
     } else {
       const refreshToken = (req.body as { refreshToken?: string }).refreshToken;
@@ -539,6 +578,8 @@ export async function logout(req: Request, res: Response): Promise<void> {
           session.revoked = true;
           await session.save();
           await logSecurityEvent(user._id, 'session_revoked', req, { sessionId: session._id });
+          void writeAuditLog(req, 'user_signout', { actorId: String(user._id), metadata: { sessionId: session._id } });
+          void writeAuditLog(req, 'session_revoked', { actorId: String(user._id), metadata: { sessionId: session._id } });
         }
       }
     }
@@ -563,6 +604,10 @@ export async function revokeSessionByRefreshToken(req: Request, res: Response): 
       session.revoked = true;
       await session.save();
       await logSecurityEvent(String(session.userId), 'session_revoked', req, { sessionId: session._id });
+      void writeAuditLog(req, 'session_revoked', {
+        actorId: String(session.userId),
+        metadata: { sessionId: String(session._id) },
+      });
     }
     res.status(200).json({ message: 'Session revoked', success: true });
   } catch (err) {
@@ -591,16 +636,18 @@ export async function me(req: Request, res: Response): Promise<void> {
         coverBanner: found.coverBanner,
         bio: found.bio,
         job: found.job,
+        portfolioUrl: (found as any).portfolioUrl,
         linkedin: found.linkedin,
         instagram: found.instagram,
         github: found.github,
         youtube: found.youtube,
         stackAndTools: found.stackAndTools,
-        mySetup: found.mySetup,
         workExperiences: found.workExperiences,
         education: found.education,
+        certifications: found.certifications,
         projects: found.projects,
         openSourceContributions: found.openSourceContributions,
+        mySetup: (found as any).mySetup,
         isGoogleAccount: found.isGoogleAccount,
         isGitAccount: found.isGitAccount,
         isFacebookAccount: found.isFacebookAccount,
@@ -700,6 +747,7 @@ export async function enableTwoFactor(req: Request, res: Response): Promise<void
     }
 
     await logSecurityEvent(String(user._id), 'twofa_enabled', req, {});
+    void writeAuditLog(req, 'twofa_enabled', { actorId: String(user._id) });
 
     res.status(200).json({ success: true, message: 'Two-factor authentication enabled.' });
   } catch (err) {
@@ -745,6 +793,7 @@ export async function disableTwoFactor(req: Request, res: Response): Promise<voi
     await dbUser.save();
 
     await logSecurityEvent(String(user._id), 'twofa_disabled', req, {});
+    void writeAuditLog(req, 'twofa_disabled', { actorId: String(user._id) });
 
     res.status(200).json({ success: true, message: 'Two-factor authentication disabled.' });
   } catch (err) {
@@ -895,8 +944,8 @@ export async function listSecurityEvents(req: Request, res: Response): Promise<v
 
 const UPDATE_PROFILE_KEYS = [
   'fullName', 'username', 'bio', 'profileImg', 'coverBanner', 'job',
-  'linkedin', 'instagram', 'github', 'youtube',
-  'stackAndTools', 'mySetup', 'workExperiences', 'education', 'projects', 'openSourceContributions',
+  'portfolioUrl', 'linkedin', 'instagram', 'github', 'youtube',
+  'stackAndTools', 'workExperiences', 'education', 'certifications', 'projects', 'openSourceContributions', 'mySetup',
 ] as const;
 
 export async function updateProfile(req: Request, res: Response): Promise<void> {
@@ -917,6 +966,15 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Load current profile for sections that are being updated (for audit diff)
+    type ProfileSections = { education?: unknown[]; workExperiences?: unknown[]; projects?: unknown[]; certifications?: unknown[]; openSourceContributions?: unknown[]; stackAndTools?: string[]; mySetup?: unknown[] };
+    const profileSectionKeys = ['education', 'workExperiences', 'projects', 'certifications', 'openSourceContributions', 'stackAndTools', 'mySetup'] as const;
+    let currentProfile: ProfileSections | null = null;
+    if (profileSectionKeys.some((k) => updates[k] !== undefined)) {
+      const doc = await UserModel.findById(user._id).select(profileSectionKeys.join(' ')).lean();
+      if (doc) currentProfile = doc as ProfileSections;
+    }
+
     if (typeof updates.username === 'string') {
       const existing = await UserModel.findOne({
         username: updates.username.trim().toLowerCase(),
@@ -927,6 +985,96 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         return;
       }
       updates.username = (updates.username as string).trim().toLowerCase();
+    }
+
+    // Auto-generate workId for work experiences that don't have one
+    const workExperiences = updates.workExperiences as Array<{ workId?: string; [k: string]: unknown }> | undefined;
+    if (Array.isArray(workExperiences) && workExperiences.length > 0) {
+      const current = await UserModel.findById(user._id).select('workExperiences').lean();
+      const existingIds = (current?.workExperiences ?? [])
+        .map((we: { workId?: string }) => (we.workId ?? '').trim())
+        .filter(Boolean)
+        .map((id) => parseInt(id, 10))
+        .filter((n) => !Number.isNaN(n));
+      let nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+      for (const we of workExperiences) {
+        const id = (we.workId ?? '').trim();
+        if (!id) {
+          we.workId = String(nextNum);
+          nextNum += 1;
+        } else {
+          const n = parseInt(id, 10);
+          if (!Number.isNaN(n) && n >= nextNum) nextNum = n + 1;
+        }
+      }
+      updates.workExperiences = workExperiences;
+    }
+
+    // Auto-generate eduId / refCode for education entries
+    const education = updates.education as Array<{ eduId?: string; refCode?: string; [k: string]: unknown }> | undefined;
+    if (Array.isArray(education) && education.length > 0) {
+      const current = await UserModel.findById(user._id).select('education').lean();
+      const existingIds = (current?.education ?? [])
+        .map((ed: { eduId?: string }) => (ed.eduId ?? '').trim())
+        .filter(Boolean)
+        .map((id) => parseInt(id, 10))
+        .filter((n) => !Number.isNaN(n));
+      let nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+      const year = new Date().getFullYear();
+      for (const ed of education) {
+        const id = (ed.eduId ?? '').trim();
+        if (!id) {
+          ed.eduId = String(nextNum);
+          nextNum += 1;
+        } else {
+          const n = parseInt(id, 10);
+          if (!Number.isNaN(n) && n >= nextNum) nextNum = n + 1;
+        }
+        // Always refresh refCode so it reflects latest update year
+        ed.refCode = `${year}_EDU_DOC`;
+      }
+      updates.education = education;
+    }
+
+    // Auto-generate certId / certValType for certifications
+    const certifications = updates.certifications as Array<{ certId?: string; certValType?: string; [k: string]: unknown }> | undefined;
+    if (Array.isArray(certifications) && certifications.length > 0) {
+      const current = await UserModel.findById(user._id).select('certifications').lean();
+      const existingIds = (current?.certifications ?? [])
+        .map((c: { certId?: string }) => (c.certId ?? '').trim())
+        .filter(Boolean)
+        .map((id) => parseInt(id, 10))
+        .filter((n) => !Number.isNaN(n));
+      let nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+      const year = new Date().getFullYear();
+      const yearSuffix = String(year).slice(-2);
+      const baseValType = `A-${yearSuffix}`;
+
+      for (const cert of certifications) {
+        const id = (cert.certId ?? '').trim();
+        if (!id) {
+          cert.certId = String(nextNum);
+          nextNum += 1;
+        } else {
+          const n = parseInt(id, 10);
+          if (!Number.isNaN(n) && n >= nextNum) nextNum = n + 1;
+        }
+        if (!cert.certValType || !String(cert.certValType).trim()) {
+          cert.certValType = baseValType;
+        }
+      }
+      updates.certifications = certifications;
+    }
+
+    // Set prjLog (last updated year log) for each project
+    const projects = updates.projects as Array<{ prjLog?: string; [k: string]: unknown }> | undefined;
+    if (Array.isArray(projects) && projects.length > 0) {
+      const year = new Date().getFullYear();
+      const logValue = `${year}_prd_log`;
+      for (const p of projects) {
+        p.prjLog = logValue;
+      }
+      updates.projects = projects;
     }
 
     const updated = await UserModel.findByIdAndUpdate(user._id, updates, {
@@ -940,6 +1088,150 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Audit log: diff profile sections and log add/update/remove
+    const actorId = String(user._id);
+    const updatedProfile = updated as ProfileSections & { _id: unknown };
+    if (currentProfile) {
+      const log = (action: string, targetType: string, metadata: Record<string, unknown>) => {
+        void writeAuditLog(req, action, { actorId, targetType, targetId: actorId, metadata });
+      };
+      // stackAndTools: array of strings
+      if (updates.stackAndTools !== undefined) {
+        const oldList = (currentProfile.stackAndTools ?? []) as string[];
+        const newList = (updatedProfile.stackAndTools ?? []) as string[];
+        for (const t of newList) {
+          if (!oldList.includes(t)) log('stack_tool_added', 'profile', { tool: t });
+        }
+        for (const t of oldList) {
+          if (!newList.includes(t)) log('stack_tool_removed', 'profile', { tool: t });
+        }
+      }
+      // education: match by eduId
+      if (updates.education !== undefined) {
+        const oldE = (currentProfile.education ?? []) as Array<{ eduId?: string }>;
+        const newE = (updatedProfile.education ?? []) as Array<{ eduId?: string }>;
+        const oldIds = new Set(oldE.map((e) => (e.eduId ?? '').trim()).filter(Boolean));
+        const newIds = new Set(newE.map((e) => (e.eduId ?? '').trim()).filter(Boolean));
+        for (const e of newE) {
+          const id = (e.eduId ?? '').trim();
+          if (!id) continue;
+          if (!oldIds.has(id)) log('education_added', 'education', { eduId: id, school: (e as { school?: string }).school });
+          else {
+            const prev = oldE.find((x) => (x.eduId ?? '').trim() === id);
+            if (prev && JSON.stringify(prev) !== JSON.stringify(e)) log('education_updated', 'education', { eduId: id });
+          }
+        }
+        for (const id of oldIds) {
+          if (!newIds.has(id)) log('education_removed', 'education', { eduId: id });
+        }
+      }
+      // workExperiences: match by workId
+      if (updates.workExperiences !== undefined) {
+        const oldW = (currentProfile.workExperiences ?? []) as Array<{ workId?: string }>;
+        const newW = (updatedProfile.workExperiences ?? []) as Array<{ workId?: string }>;
+        const oldIds = new Set(oldW.map((w) => (w.workId ?? '').trim()).filter(Boolean));
+        const newIds = new Set(newW.map((w) => (w.workId ?? '').trim()).filter(Boolean));
+        for (const w of newW) {
+          const id = (w.workId ?? '').trim();
+          if (!id) continue;
+          if (!oldIds.has(id)) log('work_added', 'work', { workId: id, company: (w as { company?: string }).company });
+          else {
+            const prev = oldW.find((x) => (x.workId ?? '').trim() === id);
+            if (prev && JSON.stringify(prev) !== JSON.stringify(w)) log('work_updated', 'work', { workId: id });
+          }
+        }
+        for (const id of oldIds) {
+          if (!newIds.has(id)) log('work_removed', 'work', { workId: id });
+        }
+      }
+      // certifications: match by certId
+      if (updates.certifications !== undefined) {
+        const oldC = (currentProfile.certifications ?? []) as Array<{ certId?: string }>;
+        const newC = (updatedProfile.certifications ?? []) as Array<{ certId?: string }>;
+        const oldIds = new Set(oldC.map((c) => (c.certId ?? '').trim()).filter(Boolean));
+        const newIds = new Set(newC.map((c) => (c.certId ?? '').trim()).filter(Boolean));
+        for (const c of newC) {
+          const id = (c.certId ?? '').trim();
+          if (!id) continue;
+          if (!oldIds.has(id)) log('certification_added', 'certification', { certId: id, name: (c as { name?: string }).name });
+          else {
+            const prev = oldC.find((x) => (x.certId ?? '').trim() === id);
+            if (prev && JSON.stringify(prev) !== JSON.stringify(c)) log('certification_updated', 'certification', { certId: id });
+          }
+        }
+        for (const id of oldIds) {
+          if (!newIds.has(id)) log('certification_removed', 'certification', { certId: id });
+        }
+      }
+      // projects: by index (no stable id)
+      if (updates.projects !== undefined) {
+        const oldP = (currentProfile.projects ?? []) as unknown[];
+        const newP = (updatedProfile.projects ?? []) as unknown[];
+        if (newP.length > oldP.length) {
+          for (let i = oldP.length; i < newP.length; i++) {
+            const p = newP[i] as { title?: string };
+            log('project_added', 'project', { index: i, title: p?.title });
+          }
+        }
+        if (newP.length < oldP.length) {
+          for (let i = newP.length; i < oldP.length; i++) {
+            log('project_removed', 'project', { index: i });
+          }
+        }
+        const minLen = Math.min(oldP.length, newP.length);
+        for (let i = 0; i < minLen; i++) {
+          if (JSON.stringify(oldP[i]) !== JSON.stringify(newP[i])) {
+            log('project_updated', 'project', { index: i, title: (newP[i] as { title?: string })?.title });
+          }
+        }
+      }
+      // openSourceContributions: match by repositoryUrl or index
+      if (updates.openSourceContributions !== undefined) {
+        const oldO = (currentProfile.openSourceContributions ?? []) as Array<{ repositoryUrl?: string; title?: string }>;
+        const newO = (updatedProfile.openSourceContributions ?? []) as Array<{ repositoryUrl?: string; title?: string }>;
+        const oldKeys = new Set(oldO.map((o, i) => (o.repositoryUrl ?? '').trim() || `i:${i}`));
+        const newKeys = new Set(newO.map((o, i) => (o.repositoryUrl ?? '').trim() || `i:${i}`));
+        for (let i = 0; i < newO.length; i++) {
+          const o = newO[i];
+          const key = (o.repositoryUrl ?? '').trim() || `i:${i}`;
+          if (!oldKeys.has(key)) log('open_source_added', 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
+          else {
+            const prev = oldO.find((x, j) => ((x.repositoryUrl ?? '').trim() || `i:${j}`) === key);
+            if (prev && JSON.stringify(prev) !== JSON.stringify(o)) log('open_source_updated', 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
+          }
+        }
+        for (let i = 0; i < oldO.length; i++) {
+          const key = (oldO[i].repositoryUrl ?? '').trim() || `i:${i}`;
+          if (!newKeys.has(key)) log('open_source_removed', 'open_source', { repositoryUrl: oldO[i].repositoryUrl, title: oldO[i].title });
+        }
+      }
+      // mySetup: by index
+      if (updates.mySetup !== undefined) {
+        const oldM = (currentProfile.mySetup ?? []) as Array<{ label?: string; imageUrl?: string }>;
+        const newM = (updatedProfile.mySetup ?? []) as Array<{ label?: string; imageUrl?: string }>;
+        if (newM.length > oldM.length) {
+          for (let i = oldM.length; i < newM.length; i++) {
+            const m = newM[i];
+            log('my_setup_added', 'my_setup', { label: m?.label, index: i });
+          }
+        }
+        if (newM.length < oldM.length) {
+          for (let i = newM.length; i < oldM.length; i++) {
+            log('my_setup_removed', 'my_setup', { label: oldM[i]?.label, index: i });
+          }
+        }
+        const minLen = Math.min(oldM.length, newM.length);
+        for (let i = 0; i < minLen; i++) {
+          if (JSON.stringify(oldM[i]) !== JSON.stringify(newM[i])) {
+            log('my_setup_updated', 'my_setup', { label: newM[i]?.label, index: i });
+          }
+        }
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      void writeAuditLog(req, 'profile_updated', { actorId, targetType: 'profile', targetId: actorId, metadata: { keys: Object.keys(updates) } });
+    }
+
     res.status(200).json({
       success: true,
       user: {
@@ -951,16 +1243,18 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         coverBanner: updated.coverBanner,
         bio: updated.bio,
         job: updated.job,
+        portfolioUrl: (updated as any).portfolioUrl,
         linkedin: updated.linkedin,
         instagram: updated.instagram,
         github: updated.github,
         youtube: updated.youtube,
         stackAndTools: updated.stackAndTools,
-        mySetup: updated.mySetup,
         workExperiences: updated.workExperiences,
         education: updated.education,
+        certifications: updated.certifications,
         projects: updated.projects,
         openSourceContributions: updated.openSourceContributions,
+        mySetup: (updated as any).mySetup,
       },
     });
   } catch (err) {
@@ -1034,6 +1328,8 @@ export async function deleteAccount(req: Request, res: Response): Promise<void> 
     }
 
     await logSecurityEvent(String(user._id), 'account_locked', req, { reason: 'delete_account' });
+    void writeAuditLog(req, 'account_locked', { actorId: String(user._id), metadata: { reason: 'delete_account' } });
+    void writeAuditLog(req, 'account_deleted', { actorId: String(user._id), metadata: { reason: 'delete_account' } });
 
     res.status(200).json({
       success: true,
@@ -1126,27 +1422,28 @@ export async function initEmailChange(req: Request, res: Response): Promise<void
       res.status(503).json({ message: 'Email change temporarily unavailable.', success: false });
       return;
     }
-    const code = generateOtpCode();
+    const codeCurrent = generateOtpCode();
+    const codeNew = generateOtpCode();
     const key = EMAIL_CHANGE_PREFIX + String(user._id);
-    await redis.setEx(key, EMAIL_CHANGE_TTL_SEC, JSON.stringify({ code, newEmail }));
+    await redis.setEx(key, EMAIL_CHANGE_TTL_SEC, JSON.stringify({ codeCurrent, codeNew, newEmail }));
 
     const from = env.EMAIL_USER ?? 'noreply@syntaxstories.com';
     await transporter.sendMail({
       from,
       to: currentEmail,
       subject: 'Verify your email change – Syntax Stories',
-      html: `<p>Your verification code: <strong>${code}</strong>. Valid for 10 minutes.</p>`,
+      html: `<p>Your verification code for changing your email: <strong>${codeCurrent}</strong>. Valid for 10 minutes.</p>`,
     });
     await transporter.sendMail({
       from,
       to: newEmail,
       subject: 'Verify your new email – Syntax Stories',
-      html: `<p>Your verification code: <strong>${code}</strong>. Valid for 10 minutes.</p>`,
+      html: `<p>Your verification code for your new email: <strong>${codeNew}</strong>. Valid for 10 minutes.</p>`,
     });
 
     res.status(200).json({
       success: true,
-      message: 'Verification code sent to your current and new email.',
+      message: 'Verification codes sent to your current and new email.',
     });
   } catch (err) {
     console.error(err);
@@ -1161,9 +1458,15 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
       res.status(401).json({ message: 'Unauthorized', success: false });
       return;
     }
-    const code = (req.body as { code?: string }).code?.trim() ?? '';
-    if (!code || !/^\d{6}$/.test(code)) {
-      res.status(400).json({ message: 'Valid 6-digit code is required.', success: false });
+    const body = req.body as { currentCode?: string; newCode?: string };
+    const currentCode = (body.currentCode ?? '').trim();
+    const newCode = (body.newCode ?? '').trim();
+    if (!currentCode || !/^\d{6}$/.test(currentCode)) {
+      res.status(400).json({ message: 'Valid 6-digit code from your current email is required.', success: false });
+      return;
+    }
+    if (!newCode || !/^\d{6}$/.test(newCode)) {
+      res.status(400).json({ message: 'Valid 6-digit code from your new email is required.', success: false });
       return;
     }
     const redis = getRedis();
@@ -1174,18 +1477,18 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
     const key = EMAIL_CHANGE_PREFIX + String(user._id);
     const raw = await redis.get(key);
     if (!raw) {
-      res.status(400).json({ message: 'Code expired or invalid. Request a new code.', success: false });
+      res.status(400).json({ message: 'Codes expired or invalid. Request a new code.', success: false });
       return;
     }
-    let payload: { code: string; newEmail: string };
+    let payload: { codeCurrent: string; codeNew: string; newEmail: string };
     try {
-      payload = JSON.parse(raw) as { code: string; newEmail: string };
+      payload = JSON.parse(raw) as { codeCurrent: string; codeNew: string; newEmail: string };
     } catch {
       res.status(400).json({ message: 'Invalid request. Try again.', success: false });
       return;
     }
-    if (payload.code !== code) {
-      res.status(401).json({ message: 'Invalid code.', success: false });
+    if (payload.codeCurrent !== currentCode || payload.codeNew !== newCode) {
+      res.status(401).json({ message: 'Invalid code(s). Check both codes and try again.', success: false });
       return;
     }
     await redis.del(key);
@@ -1220,10 +1523,34 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
       },
     });
     await logSecurityEvent(String(user._id), 'login_success', req, { metadata: { email_change: true, newEmail } });
+    void writeAuditLog(req, 'email_change', { actorId: String(user._id), metadata: { newEmail } });
 
     res.status(200).json({
       success: true,
       message: 'Email updated. All OAuth providers have been unlinked. You can link them again with your new email.',
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+/** Cancel pending email change: invalidate codes so verify will fail with "expired or invalid". */
+export async function cancelEmailChange(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ message: 'Unauthorized', success: false });
+      return;
+    }
+    const redis = getRedis();
+    if (redis) {
+      const key = EMAIL_CHANGE_PREFIX + String(user._id);
+      await redis.del(key);
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Email change cancelled. Codes are invalid; request new codes to try again.',
     });
   } catch (err) {
     console.error(err);
@@ -1279,6 +1606,7 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
       { $set: { revoked: true } }
     );
     await logSecurityEvent(String(user._id), 'provider_disconnect', req, { provider });
+    void writeAuditLog(req, 'oauth_disconnected', { actorId: String(user._id), metadata: { provider } });
 
     res.status(200).json({
       success: true,
@@ -1375,6 +1703,16 @@ export async function pollQrLogin(req: Request, res: Response): Promise<void> {
 
     await redis.del(key);
     await logSecurityEvent(userId, 'session_created', req, { source: 'qr_login' });
+    void writeAuditLog(req, 'session_created', {
+      actorId: userId,
+      metadata: {
+        sessionId: String(session._id),
+        deviceName: session.deviceName,
+        source: 'qr_login',
+        expiresAt: session.expiresAt?.toISOString?.(),
+      },
+    });
+    void writeAuditLog(req, 'user_signin', { actorId: userId, metadata: { source: 'qr_login' } });
 
     res.status(200).json({
       success: true,

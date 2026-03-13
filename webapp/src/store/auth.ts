@@ -23,6 +23,8 @@ type AuthState = {
   verifyCode: (email: string, code: string) => Promise<void>;
   verifyTwoFactor: (token: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Used by auth API 401 retry: try refresh and return new access token or null. */
+  tryRefreshAndReturnNewToken: () => Promise<string | null>;
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -53,14 +55,17 @@ export const useAuthStore = create<AuthState>()(
                 set({ token: refreshed.accessToken });
                 const res = await authApi.getAccount(refreshed.accessToken);
                 set({ user: normalizeUser(res.user) });
-              } catch {
-                const rt = get().refreshToken;
-                try {
-                  if (rt) await authApi.revokeSession(rt);
-                } catch {
-                  /* ignore */
+              } catch (refreshErr) {
+                // Only clear state when refresh says session is invalid (401)
+                if (refreshErr instanceof AuthError && refreshErr.status === 401) {
+                  const rt = get().refreshToken;
+                  try {
+                    if (rt) await authApi.revokeSession(rt);
+                  } catch {
+                    /* ignore */
+                  }
+                  set({ user: null, token: null, refreshToken: null });
                 }
-                set({ user: null, token: null, refreshToken: null });
               }
             } else {
               set({ user: null, token: null, refreshToken: null });
@@ -152,6 +157,35 @@ export const useAuthStore = create<AuthState>()(
           /* ignore */
         }
         set({ user: null, token: null, refreshToken: null, twoFactor: null });
+      },
+      tryRefreshAndReturnNewToken: async () => {
+        const { refreshToken } = get();
+        if (!refreshToken) return null;
+        try {
+          const res = await authApi.refresh(refreshToken);
+          set({ token: res.accessToken });
+          // Re-fetch user so connected-accounts and OAuth flags stay correct after silent refresh
+          try {
+            const accountRes = await authApi.getAccount(res.accessToken);
+            set({ user: normalizeUser(accountRes.user) });
+          } catch {
+            /* keep existing user if /me fails after refresh */
+          }
+          return res.accessToken;
+        } catch (e) {
+          // Only clear auth state when refresh returns 401 (session invalid/expired).
+          // On network error, 5xx, or 429 we keep the user "logged in" so they can retry.
+          if (e instanceof AuthError && e.status === 401) {
+            const rt = get().refreshToken;
+            try {
+              if (rt) await authApi.revokeSession(rt);
+            } catch {
+              /* ignore */
+            }
+            set({ user: null, token: null, refreshToken: null });
+          }
+          return null;
+        }
       },
     }),
     {

@@ -4,6 +4,7 @@ import { UserModel } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
+import { writeAuditLog } from '../utils/auditLog';
 
 export const hasFacebookConfig = !!(env.FACEBOOK_APP_ID && env.FACEBOOK_APP_SECRET);
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/facebook/callback` : '';
@@ -46,6 +47,10 @@ export function registerFacebook(passportInstance: passport.PassportStatic): voi
             user.isFacebookAccount = true;
             await user.save();
             await redis.del(`link:${linkKey}`);
+            void writeAuditLog(req as import('express').Request, 'oauth_connected', {
+              actorId: String(user._id),
+              metadata: { provider: 'facebook' },
+            });
             return done(null, { _id: user._id, facebookId: user.facebookId });
           }
 

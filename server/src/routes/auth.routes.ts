@@ -10,6 +10,7 @@ import {
   linkRequest,
   initEmailChange,
   verifyEmailChange,
+  cancelEmailChange,
   disconnectProvider,
   setupTwoFactor,
   enableTwoFactor,
@@ -46,6 +47,7 @@ router.patch('/profile', verifyToken, updateProfileValidation, updateProfile);
 router.post('/link-request', verifyToken, linkRequest);
 router.post('/email-change/init', verifyToken, initEmailChange);
 router.post('/email-change/verify', verifyToken, verifyEmailChange);
+router.post('/email-change/cancel', verifyToken, cancelEmailChange);
 router.post('/disconnect/:provider', verifyToken, disconnectProvider);
 router.post('/2fa/setup', verifyToken, setupTwoFactor);
 router.post('/2fa/enable', verifyToken, enableTwoFactor);
