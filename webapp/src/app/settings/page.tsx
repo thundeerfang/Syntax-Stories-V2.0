@@ -1740,6 +1740,175 @@ function normalizeDomain(domain: string | undefined): string {
   return d ? `https://${d}` : '';
 }
 
+type WorkExpFilledPromo = { p: PromotionForm; idx: number };
+
+function getFilledWorkExpPromotions(form: WorkExpForm): WorkExpFilledPromo[] {
+  return form.promotions
+    .map((p, idx) => ({ p, idx }))
+    .filter(({ p }) => p.jobTitle.trim());
+}
+
+function collectWorkExpRequiredFieldErrors(form: WorkExpForm, startDateVal: string): Record<string, string> {
+  const err: Record<string, string> = {};
+  if (!form.jobTitle.trim()) err.jobTitle = 'Job title is required.';
+  if (!form.employmentType.trim()) err.employmentType = 'Employment type is required.';
+  if (!form.company.trim()) err.company = 'Company or organization is required.';
+  if (!startDateVal) err.startDate = 'Start date is required.';
+  if (!form.locationType.trim()) err.locationType = 'Work arrangement is required.';
+  if (form.skills.filter(Boolean).length < 1) err.skills = 'At least 1 skill is required.';
+  return err;
+}
+
+function workExpEndDateFieldErrors(form: WorkExpForm, startDateVal: string): Record<string, string> {
+  if (form.currentPosition) return {};
+  const endDateVal = monthYearToValue(form.endMonth, form.endYear);
+  if (!endDateVal) return { endDate: 'End date is required when not currently working here.' };
+  if (startDateVal && endDateVal < startDateVal) return { endDate: 'End date cannot be earlier than start date.' };
+  return {};
+}
+
+function workExpMidPromotionNeedsEndDate(isLastPromo: boolean, promoEnd: string): boolean {
+  return !isLastPromo && !promoEnd;
+}
+
+function workExpPromotionValidationError(filledPromos: WorkExpFilledPromo[]): string | null {
+  for (let j = 0; j < filledPromos.length; j++) {
+    const { p, idx } = filledPromos[j];
+    const promoStart = monthYearToValue(p.startMonth, p.startYear);
+    if (!promoStart) return `Promotion ${idx + 1}: start date is required.`;
+    const isLastPromo = j === filledPromos.length - 1;
+    const promoEnd = monthYearToValue(p.endMonth, p.endYear);
+    if (workExpMidPromotionNeedsEndDate(isLastPromo, promoEnd)) {
+      return `Promotion ${idx + 1}: end date is required (the previous role can’t be “Present” when you add a newer role).`;
+    }
+    if (promoEnd && promoEnd < promoStart) {
+      return `Promotion ${idx + 1}: end date cannot be earlier than start date.`;
+    }
+  }
+  return null;
+}
+
+function workExpJobEndAfterLatestPromotionMessage(form: WorkExpForm, filledPromos: WorkExpFilledPromo[]): string | undefined {
+  if (form.currentPosition || filledPromos.length === 0) return undefined;
+  const jobEnd = monthYearToValue(form.endMonth, form.endYear);
+  const latestPromoEnd = filledPromos
+    .map(({ p }) => monthYearToValue(p.endMonth, p.endYear))
+    .filter(Boolean)
+    .sort()
+    .pop();
+  if (!latestPromoEnd || !jobEnd || jobEnd >= latestPromoEnd) return undefined;
+  return 'Employment end date must be on/after the last promotion end date.';
+}
+
+function mapWorkExpPromotionsForSubmit(form: WorkExpForm) {
+  const trimmed = form.promotions.filter((p) => p.jobTitle.trim());
+  const count = trimmed.length;
+  return trimmed
+    .map((p, i) => {
+      const promoEndVal = monthYearToValue(p.endMonth, p.endYear);
+      const isLast = i === count - 1;
+      const currentPosition = isLast && !promoEndVal;
+      return {
+        jobTitle: p.jobTitle.trim(),
+        startDate: monthYearToValue(p.startMonth, p.startYear) || undefined,
+        endDate: currentPosition ? undefined : (promoEndVal || undefined),
+        currentPosition,
+        media: (p.mediaItems ?? [])
+          .filter((m) => m.url.trim())
+          .slice(0, 5)
+          .map((m) => ({
+            url: m.url.trim(),
+            title: m.title?.trim() || undefined,
+            altText: m.altText?.trim() || undefined,
+          })),
+      };
+    })
+    .slice(0, 5);
+}
+
+function buildWorkExperienceProfileEntry(
+  form: WorkExpForm,
+  startDateVal: string,
+  endDateVal: string | undefined,
+  promotionsVal: ReturnType<typeof mapWorkExpPromotionsForSubmit>
+) {
+  const locationStr = buildLocationString(form.locationCity, form.locationState, form.locationCountry);
+  return {
+    jobTitle: form.jobTitle.trim(),
+    employmentType: form.employmentType.trim() || undefined,
+    company: form.company.trim(),
+    companyDomain: form.companyDomain.trim() || undefined,
+    companyLogo: form.companyLogo.trim() || undefined,
+    currentPosition: form.currentPosition,
+    startDate: startDateVal,
+    endDate: endDateVal,
+    location: locationStr.trim().slice(0, 180) || undefined,
+    locationType: form.locationType.trim() || undefined,
+    description: form.description.trim().slice(0, 5000) || undefined,
+    skills: form.skills.filter(Boolean).slice(0, 10),
+    promotions: promotionsVal,
+    media: form.mediaItems
+      .filter((m) => m.url.trim())
+      .slice(0, 5)
+      .map((m) => ({
+        url: m.url.trim(),
+        title: m.title?.trim() || undefined,
+        altText: m.altText?.trim() || undefined,
+      })),
+  };
+}
+
+const SETTINGS_LOGO_ALLOWED_MIME = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/svg+xml',
+]);
+const SETTINGS_LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+type SettingsLogoUploadKind = 'company-logo' | 'school-logo' | 'org-logo';
+
+/** School / company / issuer logo uploads share validation, field name, and JSON shape. */
+async function postSettingsLogoUpload(
+  file: File,
+  token: string,
+  kind: SettingsLogoUploadKind,
+  applyUrl: (url: string) => void,
+  setUploading: (busy: boolean) => void
+): Promise<void> {
+  if (!SETTINGS_LOGO_ALLOWED_MIME.has(file.type)) {
+    toast.error('Logo must be JPEG, PNG, WebP, or SVG.');
+    return;
+  }
+  if (file.size > SETTINGS_LOGO_MAX_BYTES) {
+    toast.error('Logo must be under 2 MB.');
+    return;
+  }
+  setUploading(true);
+  try {
+    const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+    const fd = new FormData();
+    fd.append('logo', file);
+    const res = await fetch(`${apiBase}/api/upload/${kind}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json();
+    if (data.success && data.url) {
+      applyUrl(data.url);
+      toast.success('Logo uploaded.');
+    } else {
+      toast.error(data.message || 'Upload failed.');
+    }
+  } catch {
+    toast.error('Logo upload failed.');
+  } finally {
+    setUploading(false);
+  }
+}
+
 const LOCATION_TYPE_OPTIONS = [
   { value: '', label: 'Select work arrangement *' },
   { value: 'On-site', label: 'On-site' },
@@ -1912,94 +2081,29 @@ function WorkExperiencesContent() {
     }
   };
   const submitDialog = async () => {
-    const err: Record<string, string> = {};
-    if (!form.jobTitle.trim()) err.jobTitle = 'Job title is required.';
-    if (!form.employmentType.trim()) err.employmentType = 'Employment type is required.';
-    if (!form.company.trim()) err.company = 'Company or organization is required.';
     const startDateVal = monthYearToValue(form.startMonth, form.startYear);
-    if (!startDateVal) err.startDate = 'Start date is required.';
-    if (!form.currentPosition) {
-      const endDateVal = monthYearToValue(form.endMonth, form.endYear);
-      if (!endDateVal) err.endDate = 'End date is required when not currently working here.';
-      else if (startDateVal && endDateVal < startDateVal) err.endDate = 'End date cannot be earlier than start date.';
+    const err: Record<string, string> = {
+      ...collectWorkExpRequiredFieldErrors(form, startDateVal),
+      ...workExpEndDateFieldErrors(form, startDateVal),
+    };
+    const filledPromos = getFilledWorkExpPromotions(form);
+    const promoToast = workExpPromotionValidationError(filledPromos);
+    if (promoToast) {
+      toast.error(promoToast);
+      return;
     }
-    if (!form.locationType.trim()) err.locationType = 'Work arrangement is required.';
-    if (form.skills.filter(Boolean).length < 1) err.skills = 'At least 1 skill is required.';
-    const filledPromos = form.promotions
-      .map((p, idx) => ({ p, idx }))
-      .filter(({ p }) => p.jobTitle.trim());
-    for (let j = 0; j < filledPromos.length; j++) {
-      const { p, idx } = filledPromos[j];
-      const promoStart = monthYearToValue(p.startMonth, p.startYear);
-      if (!promoStart) {
-        toast.error(`Promotion ${idx + 1}: start date is required.`);
-        return;
-      }
-      const isLastPromo = j === filledPromos.length - 1;
-      const promoEnd = monthYearToValue(p.endMonth, p.endYear);
-      if (!isLastPromo && !promoEnd) {
-        toast.error(`Promotion ${idx + 1}: end date is required (the previous role can’t be “Present” when you add a newer role).`);
-        return;
-      }
-      if (promoEnd && promoEnd < promoStart) {
-        toast.error(`Promotion ${idx + 1}: end date cannot be earlier than start date.`);
-        return;
-      }
-    }
-    if (!form.currentPosition && filledPromos.length > 0) {
-      const jobEnd = monthYearToValue(form.endMonth, form.endYear);
-      const latestPromoEnd = filledPromos
-        .map(({ p }) => monthYearToValue(p.endMonth, p.endYear))
-        .filter(Boolean)
-        .sort()
-        .pop();
-      if (latestPromoEnd && jobEnd && jobEnd < latestPromoEnd) {
-        err.endDate = 'Employment end date must be on/after the last promotion end date.';
-      }
-    }
+    const jobVsPromoEnd = workExpJobEndAfterLatestPromotionMessage(form, filledPromos);
+    if (jobVsPromoEnd) err.endDate = jobVsPromoEnd;
+
     if (Object.keys(err).length) {
       setFieldErrors(err);
       toast.error('Please fix the errors below.');
       return;
     }
     setFieldErrors({});
-    const locationStr = buildLocationString(form.locationCity, form.locationState, form.locationCountry);
     const endDateVal = form.currentPosition ? undefined : monthYearToValue(form.endMonth, form.endYear) || undefined;
-    const promotionsVal = form.promotions
-      .filter((p) => p.jobTitle.trim())
-      .map((p, i) => {
-        const endDateVal = monthYearToValue(p.endMonth, p.endYear);
-        const isLast = i === form.promotions.filter((x) => x.jobTitle.trim()).length - 1;
-        const currentPosition = isLast && !endDateVal;
-        return {
-          jobTitle: p.jobTitle.trim(),
-          startDate: monthYearToValue(p.startMonth, p.startYear) || undefined,
-          endDate: currentPosition ? undefined : (endDateVal || undefined),
-          currentPosition,
-          media: (p.mediaItems ?? []).filter((m) => m.url.trim()).slice(0, 5).map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined, altText: m.altText?.trim() || undefined })),
-        };
-      })
-      .slice(0, 5);
-    const entry = {
-      jobTitle: form.jobTitle.trim(),
-      employmentType: form.employmentType.trim() || undefined,
-      company: form.company.trim(),
-      companyDomain: form.companyDomain.trim() || undefined,
-      companyLogo: form.companyLogo.trim() || undefined,
-      currentPosition: form.currentPosition,
-      startDate: startDateVal,
-      endDate: endDateVal,
-      location: locationStr.trim().slice(0, 180) || undefined,
-      locationType: form.locationType.trim() || undefined,
-      description: form.description.trim().slice(0, 5000) || undefined,
-      skills: form.skills.filter(Boolean).slice(0, 10),
-      promotions: promotionsVal,
-      media: form.mediaItems.filter((m) => m.url.trim()).slice(0, 5).map((m) => ({
-        url: m.url.trim(),
-        title: m.title?.trim() || undefined,
-        altText: m.altText?.trim() || undefined,
-      })),
-    };
+    const promotionsVal = mapWorkExpPromotionsForSubmit(form);
+    const entry = buildWorkExperienceProfileEntry(form, startDateVal, endDateVal, promotionsVal);
     const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
     setSaving(true);
     try {
@@ -2013,33 +2117,15 @@ function WorkExperiencesContent() {
     }
   };
 
-  const handleLogoUpload = async (file: File) => {
+  const handleLogoUpload = (file: File) => {
     if (!token) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
-    if (!allowed.includes(file.type)) { toast.error('Logo must be JPEG, PNG, WebP, or SVG.'); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error('Logo must be under 2 MB.'); return; }
-    setLogoUploading(true);
-    try {
-      const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-      const fd = new FormData();
-      fd.append('logo', file);
-      const res = await fetch(`${apiBase}/api/upload/company-logo`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      const data = await res.json();
-      if (data.success && data.url) {
-        setForm((f) => ({ ...f, companyLogo: data.url }));
-        toast.success('Logo uploaded.');
-      } else {
-        toast.error(data.message || 'Upload failed.');
-      }
-    } catch {
-      toast.error('Logo upload failed.');
-    } finally {
-      setLogoUploading(false);
-    }
+    void postSettingsLogoUpload(
+      file,
+      token,
+      'company-logo',
+      (url) => setForm((f) => ({ ...f, companyLogo: url })),
+      setLogoUploading
+    );
   };
 
   const addSkill = (skill: string) => {
@@ -2797,39 +2883,15 @@ function EducationContent() {
     finally { setSaving(false); }
   };
 
-  const handleSchoolLogoUpload = async (file: File) => {
+  const handleSchoolLogoUpload = (file: File) => {
     if (!token) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
-    if (!allowed.includes(file.type)) {
-      toast.error('Logo must be JPEG, PNG, WebP, or SVG.');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Logo must be under 2 MB.');
-      return;
-    }
-    setSchoolLogoUploading(true);
-    try {
-      const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-      const fd = new FormData();
-      fd.append('logo', file);
-      const res = await fetch(`${apiBase}/api/upload/school-logo`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      const data = await res.json();
-      if (data.success && data.url) {
-        setForm((f) => ({ ...f, schoolLogo: data.url }));
-        toast.success('Logo uploaded.');
-      } else {
-        toast.error(data.message || 'Upload failed.');
-      }
-    } catch {
-      toast.error('Logo upload failed.');
-    } finally {
-      setSchoolLogoUploading(false);
-    }
+    void postSettingsLogoUpload(
+      file,
+      token,
+      'school-logo',
+      (url) => setForm((f) => ({ ...f, schoolLogo: url })),
+      setSchoolLogoUploading
+    );
   };
 
   return (
@@ -3124,29 +3186,15 @@ function CertificationsContent() {
     const s = skill.trim();
     if (s && !form.skills.includes(s) && form.skills.length < 30) setForm((f) => ({ ...f, skills: [...f.skills, s] }));
   };
-  const handleCertLogoUpload = async (file: File) => {
+  const handleCertLogoUpload = (file: File) => {
     if (!token) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
-    if (!allowed.includes(file.type)) { toast.error('Logo must be JPEG, PNG, WebP, or SVG.'); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error('Logo must be under 2 MB.'); return; }
-    setCertLogoUploading(true);
-    try {
-      const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-      const fd = new FormData();
-      fd.append('logo', file);
-      const res = await fetch(`${apiBase}/api/upload/org-logo`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const data = await res.json();
-      if (data.success && data.url) {
-        setForm((f) => ({ ...f, issuerLogo: data.url }));
-        toast.success('Logo uploaded.');
-      } else {
-        toast.error(data.message || 'Upload failed.');
-      }
-    } catch {
-      toast.error('Logo upload failed.');
-    } finally {
-      setCertLogoUploading(false);
-    }
+    void postSettingsLogoUpload(
+      file,
+      token,
+      'org-logo',
+      (url) => setForm((f) => ({ ...f, issuerLogo: url })),
+      setCertLogoUploading
+    );
   };
 
   const submitDialog = async () => {
