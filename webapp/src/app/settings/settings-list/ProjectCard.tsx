@@ -49,19 +49,19 @@ export function ProjectCard({
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   return (
-    <div key={index} className="group relative ss-settings-card">
+    <div key={index} className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
       {/* Archive-style Industrial Frame */}
-      <div className="ss-card-border relative border-[3px] border-border bg-card">
+      <div className="ss-card-border relative border-[3px] border-border bg-card overflow-hidden">
         
         {/* Hardware Corner Brackets */}
         <div className="absolute -top-[3px] -left-[3px] size-4 border-t-[3px] border-l-[3px] border-primary z-20" />
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-20" />
 
         {/* Technical Header — reduced padding */}
-        <div className="ss-card-header flex items-center justify-between border-b-[3px] border-border bg-muted/30 px-3 py-1.5 relative z-10">
-          <div className="flex items-center gap-3">
+        <div className="ss-card-header flex items-center justify-between border-b-[3px] border-border bg-muted/30 px-3 py-1.5 relative z-10 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 shrink">
             <Archive className="size-3.5 text-primary" />
-            <span className="text-[10px] font-black font-mono tracking-widest text-foreground uppercase">
+            <span className="text-[10px] font-black font-mono tracking-widest text-foreground uppercase truncate">
               {isPub ? 'PUB_ID' : 'PRJ_ID'}: <span className="text-primary">#{String(index + 1).padStart(2, '0')}</span>
             </span>
           </div>
@@ -76,7 +76,7 @@ export function ProjectCard({
         </div>
 
         {/* Main Body */}
-        <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10">
+        <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10 min-w-0">
           
           {/* Content Type Icon Viewport — reduced size */}
           <div className="ss-card-logo-box relative size-12 shrink-0 border-2 border-border bg-background flex items-center justify-center overflow-hidden">
@@ -129,11 +129,11 @@ export function ProjectCard({
             </div>
 
             {/* Technical Metadata Row */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
               {dateRange && (
-                <div className="flex items-center gap-2 px-2 py-1 bg-muted border border-border text-[9px] font-mono font-bold text-muted-foreground">
-                  <Calendar className="size-3 text-primary" />
-                  DATE: {dateRange}
+                <div className="flex items-center gap-2 px-2 py-1 bg-muted border border-border text-[9px] font-mono font-bold text-muted-foreground shrink-0">
+                  <Calendar className="size-3 text-primary shrink-0" />
+                  <span className="break-words">DATE: {dateRange}</span>
                 </div>
               )}
               {e.publicationUrl && (
@@ -147,10 +147,10 @@ export function ProjectCard({
                     href={e.publicationUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ss-link-pill flex items-center gap-2 px-2 py-1 border border-primary/30 text-[9px] font-mono font-bold text-primary"
+                    className="ss-link-pill flex items-center gap-2 px-2 py-1 border border-primary/30 text-[9px] font-mono font-bold text-primary min-w-0 overflow-hidden"
                   >
-                    <ExternalLink className="size-3" />
-                    LIVE_REPOSITORY
+                    <ExternalLink className="size-3 shrink-0" />
+                    <span className="truncate">LIVE_REPOSITORY</span>
                   </a>
                 </HoverCard>
               )}
@@ -158,7 +158,7 @@ export function ProjectCard({
 
             {/* SUMMARY_LOG: 2 lines collapsed; click to expand with 4-line scroll */}
             {e.description && (
-              <div className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5">
+              <div className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5 w-full">
                 <button
                   type="button"
                   onClick={() => setIsSummaryExpanded((v) => !v)}
@@ -173,15 +173,15 @@ export function ProjectCard({
                       onClick={(ev) => ev.stopPropagation()}
                       role="presentation"
                     >
-                      <p className="text-[11px] font-medium text-muted-foreground break-words">
-                        <span className="text-primary font-bold mr-2">SUMMARY_LOG:</span>
-                        <span className="break-words">{e.description}</span>
+                      <p className="text-[11px] font-medium text-muted-foreground break-words break-all">
+                        <span className="text-primary font-bold mr-2 shrink-0">SUMMARY_LOG:</span>
+                        <span className="break-words break-all">{e.description}</span>
                       </p>
                     </div>
                   ) : (
-                    <p className="text-[11px] font-medium text-muted-foreground leading-snug break-words line-clamp-2 [line-height:1.375rem] py-1.5">
-                      <span className="text-primary font-bold mr-2">SUMMARY_LOG:</span>
-                      <span className="break-words">{e.description}</span>
+                    <p className="text-[11px] font-medium text-muted-foreground leading-snug break-words break-all line-clamp-2 [line-height:1.375rem] py-1.5">
+                      <span className="text-primary font-bold mr-2 shrink-0">SUMMARY_LOG:</span>
+                      <span className="break-words break-all">{e.description}</span>
                     </p>
                   )}
                 </button>

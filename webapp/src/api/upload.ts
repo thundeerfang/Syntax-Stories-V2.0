@@ -9,6 +9,8 @@ function getApiBase(): string {
 export interface UploadResponse {
   success: boolean;
   url?: string;
+  /** Tiny JPEG data URL from Sharp — use with `next/image` `placeholder="blur"`. */
+  blurDataUrl?: string;
   message?: string;
 }
 

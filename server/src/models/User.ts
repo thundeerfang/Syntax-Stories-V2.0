@@ -1,5 +1,16 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+/** Default avatar URL stored in DB when user has no profile image (e.g. OAuth signup without photo). */
+export const DEFAULT_AVATAR_URL =
+  'https://res.cloudinary.com/dr2bxpjjz/image/upload/v1737041910/uploads/waumti9zvnnmgayfxbmv.png';
+
+/** Returns DEFAULT_AVATAR_URL when profileImg is missing or a relative/broken path (e.g. old OAuth placeholder). */
+export function normalizeProfileImg(profileImg: string | undefined): string {
+  if (!profileImg?.trim()) return DEFAULT_AVATAR_URL;
+  if (profileImg.startsWith('http://') || profileImg.startsWith('https://')) return profileImg;
+  return DEFAULT_AVATAR_URL;
+}
+
 export interface IWorkExperience {
   /** Auto-generated when added; used for WORK_ID display (e.g. "1", "2"). */
   workId?: string;
@@ -138,16 +149,19 @@ export interface IUser extends Document {
   isFacebookAccount: boolean;
   isXAccount: boolean;
   isAppleAccount: boolean;
+  isDiscordAccount: boolean;
   googleId?: string;
   gitId?: string;
   facebookId?: string;
   appleId?: string;
   xId?: string;
+  discordId?: string;
   googleToken?: string;
   githubToken?: string;
   facebookToken?: string;
   xToken?: string;
   appleToken?: string;
+  discordToken?: string;
   isActive: boolean;
   emailVerified: boolean;
   lastLoginAt?: Date;
@@ -292,7 +306,7 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     profileImg: {
       type: String,
-      default: 'https://res.cloudinary.com/dr2bxpjjz/image/upload/v1737041910/uploads/waumti9zvnnmgayfxbmv.png',
+      default: DEFAULT_AVATAR_URL,
     },
     coverBanner: { type: String },
     gender: { type: String },
@@ -318,16 +332,19 @@ const UserSchema = new Schema<IUser>(
     isFacebookAccount: { type: Boolean, default: false },
     isXAccount: { type: Boolean, default: false },
     isAppleAccount: { type: Boolean, default: false },
+    isDiscordAccount: { type: Boolean, default: false },
     googleId: { type: String, sparse: true },
     gitId: { type: String, sparse: true },
     facebookId: { type: String, sparse: true },
     appleId: { type: String, sparse: true },
     xId: { type: String, sparse: true },
+    discordId: { type: String, sparse: true },
     googleToken: { type: String, select: false },
     githubToken: { type: String, select: false },
     facebookToken: { type: String, select: false },
     xToken: { type: String, select: false },
     appleToken: { type: String, select: false },
+    discordToken: { type: String, select: false },
     isActive: { type: Boolean, default: true },
     emailVerified: { type: Boolean, default: false },
     lastLoginAt: { type: Date },

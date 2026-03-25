@@ -213,6 +213,7 @@ export interface AuthUser {
   isFacebookAccount?: boolean;
     isXAccount?: boolean;
   isAppleAccount?: boolean;
+  isDiscordAccount?: boolean;
   createdAt?: string;
 }
 
@@ -243,6 +244,7 @@ export interface AccountResponse {
     isFacebookAccount?: boolean;
     isXAccount?: boolean;
     isAppleAccount?: boolean;
+    isDiscordAccount?: boolean;
     twoFactorEnabled?: boolean;
     createdAt?: string;
   };
@@ -269,6 +271,30 @@ export type UpdateProfilePayload = Partial<{
   openSourceContributions: OpenSourceContribution[];
   mySetup: SetupItem[];
 }>;
+
+export type ParseCvMissingFieldKey =
+  | 'bio'
+  | 'linkedin'
+  | 'github'
+  | 'stackAndTools'
+  | 'workExperiences'
+  | 'education'
+  | 'certifications';
+
+export type IncompleteItemHint = { index: number; title?: string; missing: string[] };
+
+export type IncompleteItemHints = {
+  workExperiences?: IncompleteItemHint[];
+  education?: IncompleteItemHint[];
+  certifications?: IncompleteItemHint[];
+};
+
+export interface ParseCvResponse {
+  success: boolean;
+  extracted: Partial<UpdateProfilePayload>;
+  missingFields: ParseCvMissingFieldKey[];
+  incompleteItemHints?: IncompleteItemHints;
+}
 
 export interface VerifyOtpResponse {
   message: string;
@@ -360,6 +386,24 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
 
+  /** Parse CV/Resume PDF and return extracted profile + missing field keys. Does not update profile. */
+  parseCv: async (accessToken: string, file: File) => {
+    const path = `${getAuthBase()}/parse-cv`;
+    const url =
+      path.startsWith('http')
+        ? path
+        : typeof window !== 'undefined'
+          ? `${window.location.origin}${path}`
+          : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${path}`;
+    const formData = new FormData();
+    formData.append('pdf', file);
+    const headers: HeadersInit = { Authorization: `Bearer ${accessToken}` };
+    const res = await fetch(url, { method: 'POST', body: formData, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.message as string) || 'Failed to parse PDF');
+    return data as ParseCvResponse;
+  },
+
   disconnectProvider: (accessToken: string, provider: string) =>
     authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/disconnect/${provider}`, {
       method: 'POST',
@@ -367,7 +411,7 @@ export const authApi = {
     }),
 
   /** Get redirect URL to link an OAuth provider to the current account. Call then set window.location = redirectUrl. */
-  getLinkRedirectUrl: (accessToken: string, provider: 'google' | 'github' | 'facebook' | 'x') =>
+  getLinkRedirectUrl: (accessToken: string, provider: 'google' | 'github' | 'facebook' | 'x' | 'discord') =>
     authFetch<{ success: boolean; redirectUrl?: string; message?: string }>(`${getAuthBase()}/link-request`, {
       method: 'POST',
       token: accessToken,
@@ -422,6 +466,7 @@ export function normalizeUser(backendUser: AccountResponse['user']): AuthUser {
     mySetup: backendUser.mySetup as SetupItem[] | undefined,
     isGoogleAccount: backendUser.isGoogleAccount,
     isGitAccount: backendUser.isGitAccount,
+    isDiscordAccount: backendUser.isDiscordAccount,
     isFacebookAccount: backendUser.isFacebookAccount,
     isXAccount: backendUser.isXAccount,
     isAppleAccount: backendUser.isAppleAccount,

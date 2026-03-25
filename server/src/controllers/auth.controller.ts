@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
-import { UserModel } from '../models/User';
+import { UserModel, normalizeProfileImg } from '../models/User';
 import { SessionModel } from '../models/Session';
 import { SecurityEventModel } from '../models/SecurityEvent';
 import { SubscriptionModel } from '../models/Subscription';
@@ -369,6 +369,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
         isFacebookAccount: false,
         isXAccount: false,
         isAppleAccount: false,
+        isDiscordAccount: false,
         emailVerified: true,
       });
       await user.save();
@@ -440,7 +441,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
         fullName: user.fullName,
         username: user.username,
         email: user.email,
-        profileImg: user.profileImg,
+        profileImg: normalizeProfileImg(user.profileImg),
       },
     });
   } catch (err) {
@@ -505,7 +506,7 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
         fullName: dbUser.fullName,
         username: dbUser.username,
         email: dbUser.email,
-        profileImg: dbUser.profileImg,
+        profileImg: normalizeProfileImg(dbUser.profileImg),
       },
     });
   } catch (err) {
@@ -632,7 +633,7 @@ export async function me(req: Request, res: Response): Promise<void> {
         fullName: found.fullName,
         username: found.username,
         email: found.email,
-        profileImg: found.profileImg,
+        profileImg: normalizeProfileImg(found.profileImg),
         coverBanner: found.coverBanner,
         bio: found.bio,
         job: found.job,
@@ -653,6 +654,7 @@ export async function me(req: Request, res: Response): Promise<void> {
         isFacebookAccount: found.isFacebookAccount,
         isXAccount: found.isXAccount,
         isAppleAccount: found.isAppleAccount,
+        isDiscordAccount: (found as { isDiscordAccount?: boolean }).isDiscordAccount ?? false,
         twoFactorEnabled: found.twoFactorEnabled,
         createdAt: f.createdAt,
       },
@@ -1080,7 +1082,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     const updated = await UserModel.findByIdAndUpdate(user._id, updates, {
       new: true,
       runValidators: true,
-      projection: { twoFactorSecret: 0, googleToken: 0, githubToken: 0, facebookToken: 0, xToken: 0, appleToken: 0 },
+      projection: { twoFactorSecret: 0, googleToken: 0, githubToken: 0, facebookToken: 0, xToken: 0, appleToken: 0, discordToken: 0 },
     }).lean();
 
     if (!updated) {
@@ -1239,7 +1241,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         fullName: updated.fullName,
         username: updated.username,
         email: updated.email,
-        profileImg: updated.profileImg,
+        profileImg: normalizeProfileImg(updated.profileImg),
         coverBanner: updated.coverBanner,
         bio: updated.bio,
         job: updated.job,
@@ -1265,6 +1267,35 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     }
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+  }
+}
+
+/** Parse CV/Resume PDF and return extracted profile data + missing fields. Does not update user. */
+export async function parseCv(req: Request, res: Response): Promise<void> {
+  try {
+    const file = (req as Request & { file?: Express.Multer.File & { buffer?: Buffer } }).file;
+    const buffer = file?.buffer ?? (file as unknown as { buffer?: Buffer })?.buffer;
+    if (!buffer) {
+      res.status(400).json({ success: false, message: 'No PDF file uploaded' });
+      return;
+    }
+    // pdf-parse v1.1.1 works in Node.js (v2 uses pdfjs-dist with browser-only APIs like DOMMatrix)
+    const pdfParse = (await import('pdf-parse')).default as (buf: Buffer) => Promise<{ text: string }>;
+    const { text } = await pdfParse(buffer);
+    const { parseCvFromText } = await import('../utils/parseCvFromPdf');
+    const { extracted, missingFields, incompleteItemHints } = parseCvFromText(text ?? '');
+    res.status(200).json({
+      success: true,
+      extracted,
+      missingFields,
+      incompleteItemHints: incompleteItemHints ?? {},
+    });
+  } catch (err) {
+    console.error('parseCv error:', err);
+    res.status(500).json({
+      success: false,
+      message: (err as Error).message || 'Failed to parse PDF',
+    });
   }
 }
 
@@ -1344,7 +1375,7 @@ export async function deleteAccount(req: Request, res: Response): Promise<void> 
 const LINK_PREFIX = 'link:';
 const LINK_TTL_SEC = 300; // 5 min
 
-const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x'] as const;
+const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord'] as const;
 type LinkProvider = (typeof LINK_PROVIDERS)[number];
 
 export async function linkRequest(req: Request, res: Response): Promise<void> {
@@ -1357,7 +1388,7 @@ export async function linkRequest(req: Request, res: Response): Promise<void> {
     const provider = (req.body?.provider as string)?.toLowerCase();
     if (!provider || !LINK_PROVIDERS.includes(provider as LinkProvider)) {
       res.status(400).json({
-        message: 'Invalid provider. Use: google, github, facebook, x',
+        message: 'Invalid provider. Use: google, github, facebook, x, discord',
         success: false,
       });
       return;
@@ -1508,6 +1539,7 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
         isFacebookAccount: false,
         isXAccount: false,
         isAppleAccount: false,
+        isDiscordAccount: false,
       },
       $unset: {
         googleId: 1,
@@ -1520,6 +1552,8 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
         xToken: 1,
         appleId: 1,
         appleToken: 1,
+        discordId: 1,
+        discordToken: 1,
       },
     });
     await logSecurityEvent(String(user._id), 'login_success', req, { metadata: { email_change: true, newEmail } });
@@ -1558,7 +1592,7 @@ export async function cancelEmailChange(req: Request, res: Response): Promise<vo
   }
 }
 
-const DISCONNECT_PROVIDERS = ['google', 'github', 'facebook', 'x'] as const;
+const DISCONNECT_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord'] as const;
 type DisconnectProvider = (typeof DISCONNECT_PROVIDERS)[number];
 
 export async function disconnectProvider(req: Request, res: Response): Promise<void> {
@@ -1570,11 +1604,11 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
     }
     const provider = (req.params.provider as string)?.toLowerCase();
     if (!provider || !DISCONNECT_PROVIDERS.includes(provider as DisconnectProvider)) {
-      res.status(400).json({ message: 'Invalid provider. Use: google, github, facebook, x', success: false });
+      res.status(400).json({ message: 'Invalid provider. Use: google, github, facebook, x, discord', success: false });
       return;
     }
 
-    const doc = await UserModel.findById(user._id).select('+googleToken +githubToken +facebookToken +xToken');
+    const doc = await UserModel.findById(user._id).select('+googleToken +githubToken +facebookToken +xToken +discordToken');
     if (!doc) {
       res.status(404).json({ message: 'User not found', success: false });
       return;
@@ -1598,6 +1632,10 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
       unset.xId = 1;
       unset.xToken = 1;
       set.isXAccount = false;
+    } else if (provider === 'discord') {
+      unset.discordId = 1;
+      unset.discordToken = 1;
+      set.isDiscordAccount = false;
     }
 
     await UserModel.findByIdAndUpdate(user._id, { $unset: unset, $set: set });

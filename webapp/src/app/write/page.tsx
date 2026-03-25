@@ -12,16 +12,18 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { BlogWriteEditor, Block, createBlock } from '@/components/ui/BlogWriteEditor';
+import { BlogWriteEditor, Block, createBlock, createBlockInSection } from '@/components/ui/BlogWriteEditor';
 
 const TITLE_MAX = 300;
+/** Single section for /write (no section UI); must match how editor filters blocks. */
+const WRITE_DEFAULT_SECTION_ID = 's-1';
 
 export default function WriteBlogPage() {
   const { user, token, shouldBlock } = useRequireAuth();
   const { isOpen } = useSidebar();
   const [title, setTitle] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
-  const [blocks, setBlocks] = useState<Block[]>(() => [createBlock('paragraph')]);
+  const [blocks, setBlocks] = useState<Block[]>(() => [createBlockInSection('paragraph', WRITE_DEFAULT_SECTION_ID)]);
   const [submitting, setSubmitting] = useState(false);
   const [submitAction, setSubmitAction] = useState<'draft' | 'published' | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
@@ -41,7 +43,7 @@ export default function WriteBlogPage() {
       const content = JSON.stringify(blocks);
       await blogApi.createPost({ title, content, thumbnailUrl: thumbnailUrl.trim() || undefined, status }, token);
       toast.success(status === 'published' ? 'POST_LIVE' : 'DRAFT_SYNCED');
-      if (status === 'published') { setTitle(''); setBlocks([createBlock('paragraph')]); }
+      if (status === 'published') { setTitle(''); setBlocks([createBlockInSection('paragraph', WRITE_DEFAULT_SECTION_ID)]); }
     } catch (e) {
       toast.error('FATAL: UPLOAD_FAILED');
     } finally {
@@ -131,6 +133,7 @@ export default function WriteBlogPage() {
                currentUserUsername={user?.username}
                isSidebarOpen={isOpen}
                maxWidthClassName="max-w-full"
+               activeSectionId={WRITE_DEFAULT_SECTION_ID}
              />
           </div>
         </div>

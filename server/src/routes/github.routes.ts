@@ -15,10 +15,44 @@ type GitHubRepo = {
   forks_count: number;
   updated_at: string;
   created_at: string;
-  owner: { login: string };
+  owner: { login: string; avatar_url?: string };
   archived?: boolean;
   fork?: boolean;
 };
+
+/** Public: fetch repo info by owner/repo (no auth). For blog block URL paste. */
+router.get('/repo-info/:owner/:repo', async (req: Request, res: Response) => {
+  try {
+    const owner = encodeURIComponent(String(req.params.owner || '').trim());
+    const repo = encodeURIComponent(String(req.params.repo || '').trim());
+    if (!owner || !repo) {
+      res.status(400).json({ success: false, message: 'Invalid owner or repo.' });
+      return;
+    }
+    const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (!ghRes.ok) {
+      const text = await ghRes.text().catch(() => '');
+      res.status(ghRes.status).json({ success: false, message: 'Repo not found or not public.', detail: text });
+      return;
+    }
+    const repoData = (await ghRes.json()) as GitHubRepo;
+    res.json({
+      success: true,
+      repo: {
+        name: repoData.name,
+        full_name: repoData.full_name,
+        html_url: repoData.html_url,
+        description: repoData.description ?? '',
+        owner: repoData.owner?.login ?? '',
+        avatar_url: repoData.owner?.avatar_url ?? null,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+  }
+});
 
 function monthYearFromIso(iso: string): string {
   const d = new Date(iso);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Globe } from 'lucide-react';
 
 function normalizeDomain(domain: string | undefined): string {
   if (!domain?.trim()) return '';
@@ -23,6 +23,7 @@ export function LinkPreviewCardContent({ domain, title }: LinkPreviewCardContent
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
 
   useEffect(() => {
     if (!url) {
@@ -33,9 +34,10 @@ export function LinkPreviewCardContent({ domain, title }: LinkPreviewCardContent
     let cancelled = false;
     setLoading(true);
     setFailed(false);
+    setFaviconError(false);
     setScreenshotUrl(null);
     const apiUrl = `${MICROLINK_API}/?url=${encodeURIComponent(url)}&screenshot=true&meta=false`;
-    fetch(apiUrl, { signal: AbortSignal.timeout(4000) })
+    fetch(apiUrl, { signal: AbortSignal.timeout(7000) })
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
@@ -63,11 +65,16 @@ export function LinkPreviewCardContent({ domain, title }: LinkPreviewCardContent
         className="flex items-center gap-2 p-2 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
         onClick={(e) => e.stopPropagation()}
       >
-        <img
-          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(displayDomain)}&sz=32`}
-          alt=""
-          className="size-4 shrink-0"
-        />
+        {faviconError || !displayDomain ? (
+          <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        ) : (
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(displayDomain)}&sz=32`}
+            alt=""
+            className="size-4 shrink-0"
+            onError={() => setFaviconError(true)}
+          />
+        )}
         <div className="min-w-0 flex-1">
           {title && <p className="text-xs font-black truncate leading-tight">{title}</p>}
           <p className={title ? 'text-[10px] font-bold text-muted-foreground truncate leading-tight' : 'text-xs font-bold truncate leading-tight'}>

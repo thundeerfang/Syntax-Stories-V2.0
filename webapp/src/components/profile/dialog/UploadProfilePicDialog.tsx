@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Camera } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
+import { ImageDropzone } from '@/components/ui/ImageDropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { uploadAvatar, type CropArea } from '@/api/upload';
@@ -12,10 +13,9 @@ export interface UploadProfilePicDialogProps {
   open: boolean;
   onClose: () => void;
   token: string;
-  onSuccess: (url: string) => void;
+  onSuccess: (result: { url: string; blurDataUrl?: string }) => void;
 }
 
-const ACCEPT = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const MAX_MB = 5;
 
 export function UploadProfilePicDialog({
@@ -24,9 +24,7 @@ export function UploadProfilePicDialog({
   token,
   onSuccess,
 }: UploadProfilePicDialogProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -42,7 +40,6 @@ export function UploadProfilePicDialog({
     setCroppedAreaPixels(null);
     setProgress(0);
     setUploading(false);
-    setDragOver(false);
   };
 
   const handleFile = (file: File | null) => {
@@ -82,7 +79,7 @@ export function UploadProfilePicDialog({
     try {
       const data = await uploadAvatar(token, selectedFile, cropArea, (p) => setProgress(p));
       if (data.url) {
-        onSuccess(data.url);
+        onSuccess({ url: data.url, blurDataUrl: data.blurDataUrl });
         toast.success('Profile photo updated.');
         resetState();
         onClose();
@@ -92,26 +89,6 @@ export function UploadProfilePicDialog({
       setUploading(false);
     }
   };
-
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    handleFile(file ?? null);
-    e.target.value = '';
-  };
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    handleFile(file ?? null);
-  };
-
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const onDragLeave = () => setDragOver(false);
 
   return (
     <Dialog
@@ -131,32 +108,21 @@ export function UploadProfilePicDialog({
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
         JPEG, PNG, GIF or WebP. Max {MAX_MB}MB.
       </p>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPT}
-        onChange={onInputChange}
-        className="hidden"
-        aria-hidden
-      />
       {!imageUrl && (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => inputRef.current?.click()}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+        <ImageDropzone
+          disabled={uploading}
+          maxSizeBytes={MAX_MB * 1024 * 1024}
           className={cn(
-            'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
-            dragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/20 hover:bg-muted/30',
+            'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+            'border-border bg-muted/20 hover:bg-muted/30',
             uploading && 'pointer-events-none opacity-70'
           )}
+          dragActiveClassName="border-primary bg-primary/5"
+          onFile={(f) => handleFile(f)}
         >
           <p className="text-sm font-bold text-foreground">Drop an image here or click to browse</p>
           <p className="text-[10px] text-muted-foreground mt-1">Profile photo will be updated</p>
-        </div>
+        </ImageDropzone>
       )}
 
       {imageUrl && (

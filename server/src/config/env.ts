@@ -11,11 +11,18 @@ export const env = {
   FRONTEND_URL: process.env.FRONTEND_URL,
   BACKEND_URL: (process.env.BACKEND_URL || '').replace(/\/$/, ''),
 
-  // Email (OTP)
+  // Email (OTP) — SMTP (e.g. Gmail) or HTTP API (e.g. Resend: POST https://api.resend.com/emails)
   EMAIL_USER: process.env.EMAIL_USER as string | undefined,
   EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS,
   EMAIL_HOST: process.env.EMAIL_HOST,
   EMAIL_PORT: parseInt(process.env.EMAIL_PORT ?? '587', 10),
+  /** When using API, verified sender (e.g. onboarding@resend.dev). Falls back to EMAIL_USER. */
+  EMAIL_FROM: process.env.EMAIL_FROM as string | undefined,
+  EMAIL_API_URL: process.env.EMAIL_API_URL as string | undefined,
+  EMAIL_API_KEY: process.env.EMAIL_API_KEY as string | undefined,
+  /** bearer = Authorization: Bearer <key>. header = custom header (see EMAIL_API_HEADER_NAME). */
+  EMAIL_API_AUTH: (process.env.EMAIL_API_AUTH ?? 'bearer') as 'bearer' | 'header',
+  EMAIL_API_HEADER_NAME: process.env.EMAIL_API_HEADER_NAME as string | undefined,
 
   // Google OAuth
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLOUD_COMPUTING ?? process.env.GOOGLE_CLIENT_ID,
@@ -32,6 +39,10 @@ export const env = {
   // X (Twitter) OAuth — X Developer Portal may show "Client ID" / "Client Secret" (same as consumer key/secret for OAuth 1.0a)
   X_CONSUMER_KEY: process.env.X_CONSUMER_KEY ?? process.env.X_CLIENT_ID ?? process.env.TWITTER_CONSUMER_KEY,
   X_CONSUMER_SECRET: process.env.X_CONSUMER_SECRET ?? process.env.X_CLIENT_SECRET ?? process.env.TWITTER_CONSUMER_SECRET,
+
+  // Discord OAuth2 (https://discord.com/developers/applications)
+  DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
+  DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
 
   // JWT (7d = stay logged in 7 days; refresh to get new access token when expired)
   JWT_ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY ?? '7d',

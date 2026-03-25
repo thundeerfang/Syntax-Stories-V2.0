@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { Request, Response } from 'express';
-import { UserModel } from '../models/User';
+import { UserModel, normalizeProfileImg } from '../models/User';
 import { FollowModel } from '../models/Follow';
 import type { AuthUser } from '../middlewares/auth';
 import { getRedis } from '../config/redis';
@@ -35,9 +35,10 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
       followingCount = fic;
       await UserModel.updateOne({ _id: user._id }, { $set: { followersCount: fc, followingCount: fic } });
     }
+    const profileImg = normalizeProfileImg((user as { profileImg?: string }).profileImg);
     res.status(200).json({
       success: true,
-      user: { ...user, id: String(user._id) },
+      user: { ...user, id: String(user._id), profileImg },
       followersCount: followersCount ?? 0,
       followingCount: followingCount ?? 0,
     });
@@ -121,7 +122,7 @@ export async function getFollowers(req: Request, res: Response): Promise<void> {
     const slice = hasMore ? follows.slice(0, limit) : follows;
     const list = slice.map((f) => {
       const u = f.follower as unknown as { _id: mongoose.Types.ObjectId; username: string; fullName: string; profileImg?: string };
-      return { id: String(u._id), username: u.username, fullName: u.fullName, profileImg: u.profileImg };
+      return { id: String(u._id), username: u.username, fullName: u.fullName, profileImg: normalizeProfileImg(u.profileImg) };
     });
     const nextCursor = hasMore && slice.length > 0
       ? (slice[slice.length - 1] as { createdAt: Date }).createdAt?.toISOString() ?? null
@@ -167,7 +168,7 @@ export async function getFollowing(req: Request, res: Response): Promise<void> {
     const slice = hasMore ? follows.slice(0, limit) : follows;
     const list = slice.map((f) => {
       const u = f.following as unknown as { _id: mongoose.Types.ObjectId; username: string; fullName: string; profileImg?: string };
-      return { id: String(u._id), username: u.username, fullName: u.fullName, profileImg: u.profileImg };
+      return { id: String(u._id), username: u.username, fullName: u.fullName, profileImg: normalizeProfileImg(u.profileImg) };
     });
     const nextCursor = hasMore && slice.length > 0
       ? (slice[slice.length - 1] as { createdAt: Date }).createdAt?.toISOString() ?? null
@@ -407,6 +408,38 @@ export async function unfollowUser(req: Request, res: Response): Promise<void> {
       });
     }
     res.status(200).json({ success: true, message: 'Unfollowed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+const SEARCH_USER_LIMIT = 10;
+
+/** GET /api/follow/search?q=... - search users by username for mentions (public) */
+export async function searchUsers(req: Request, res: Response): Promise<void> {
+  try {
+    const q = (req.query?.q as string)?.trim();
+    if (!q || q.length < 1) {
+      res.status(200).json({ success: true, list: [] });
+      return;
+    }
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(safe, 'i');
+    const users = await UserModel.find({
+      isActive: true,
+      $or: [{ username: regex }, { fullName: regex }],
+    })
+      .select(FOLLOWED_FIELDS)
+      .limit(SEARCH_USER_LIMIT)
+      .lean();
+    const list = users.map((u) => ({
+      id: String(u._id),
+      username: u.username,
+      fullName: u.fullName,
+      profileImg: normalizeProfileImg(u.profileImg),
+    }));
+    res.status(200).json({ success: true, list });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error' });

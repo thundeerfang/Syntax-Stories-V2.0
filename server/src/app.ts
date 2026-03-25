@@ -8,7 +8,7 @@ import uploadRoutes from './routes/upload.routes';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middlewares';
 import passport from './passport/index';
-import { hasFacebookConfig, hasXConfig } from './passport/index';
+import { hasFacebookConfig, hasXConfig, hasDiscordConfig } from './passport/index';
 import { env } from './config/env';
 import { getRedis } from './config/redis';
 import { RedisStore } from 'connect-redis';
@@ -200,6 +200,73 @@ app.get('/auth/github/callback', (req, res, next) => {
   })(req, res, next);
 });
 
+if (hasDiscordConfig) {
+  app.get('/auth/discord/login', passport.authenticate('discord', { state: 'login' }));
+  app.get('/auth/discord/signup', passport.authenticate('discord', { state: 'signup' }));
+  app.get('/auth/discord', passport.authenticate('discord', { state: 'login' }));
+  app.get('/auth/discord/link', async (req, res, next) => {
+    const k = req.query.k as string;
+    if (!k?.trim()) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+    }
+    const redis = getRedis();
+    if (!redis) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+    }
+    const userId = await redis.get(`link:${k}`);
+    if (!userId) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+    }
+    passport.authenticate('discord', { state: `link:${k}` })(req, res, next);
+  });
+  app.get('/auth/discord/callback', (req, res, next) => {
+    passport.authenticate('discord', { session: false }, async (err: unknown, userObj?: unknown) => {
+      if (err) {
+        const msg = err instanceof Error ? err.message : 'Discord auth failed';
+        return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent(msg)}`);
+      }
+      const u = userObj as { _id?: string; discordId?: string } | undefined;
+      if (!u?._id) return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('Discord auth failed')}`);
+      const dbUser = await UserModel.findById(u._id).lean();
+      if (dbUser?.twoFactorEnabled) {
+        try {
+          const { challengeToken } = await createAuthChallenge(String(u._id));
+          return res.redirect(`${redirectBaseUrl}/discord-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+        } catch {
+          return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+        }
+      }
+      const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+      void writeAuditLog(req, 'session_created', {
+        actorId: String(u._id),
+        metadata: {
+          sessionId: String(session._id),
+          deviceName: session.deviceName,
+          source: 'discord',
+          expiresAt: session.expiresAt?.toISOString?.(),
+        },
+      });
+      void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'discord' } });
+      void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'discord' } });
+      const params = new URLSearchParams({
+        token: accessToken,
+        refreshToken,
+        userId: String(u._id),
+        discordId: u.discordId ?? '',
+      });
+      return res.redirect(`${redirectBaseUrl}/discord-callback?${params.toString()}`);
+    })(req, res, next);
+  });
+} else {
+  const discordRedirectBase = redirectBaseUrl || 'http://localhost:3000';
+  app.get('/auth/discord/login', (_req, res) => {
+    res.redirect(`${discordRedirectBase}/login?error=${encodeURIComponent('Discord OAuth is not configured (set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, BACKEND_URL).')}`);
+  });
+  app.get('/auth/discord/signup', (_req, res) => {
+    res.redirect(`${discordRedirectBase}/login?error=${encodeURIComponent('Discord OAuth is not configured (set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, BACKEND_URL).')}`);
+  });
+}
+
 if (hasFacebookConfig) {
   app.get('/auth/facebook/login', passport.authenticate('facebook', { scope: ['email'], state: 'login' }));
   app.get('/auth/facebook/signup', passport.authenticate('facebook', { scope: ['email'], state: 'signup' }));
@@ -318,7 +385,7 @@ app.get('/auth/x/callback', (req, res, next) => {
 
 app.get('/auth/apple', (_req, res) => {
   res.status(501).json({
-    message: 'Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, X, or email OTP.',
+    message: 'Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, Discord, X, or email OTP.',
     success: false,
   });
 });

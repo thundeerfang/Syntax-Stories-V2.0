@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as GitHubStrategy } from 'passport-github2';
-import { UserModel } from '../models/User';
+import { UserModel, DEFAULT_AVATAR_URL } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
@@ -9,7 +9,7 @@ import { writeAuditLog } from '../utils/auditLog';
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/github/callback` : '';
 
 interface GitHubProfile {
-  _json?: { email?: string; name?: string };
+  _json?: { email?: string; name?: string; avatar_url?: string };
   emails?: Array<{ value: string; primary?: boolean }>;
   displayName?: string;
   username?: string;
@@ -94,12 +94,16 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
         const randomNumber = Math.floor(1000 + Math.random() * 9000);
         const fullName =
           (profile._json?.name ?? profile.displayName ?? profile.username)?.trim() || 'User';
+        const avatarUrl = profile._json?.avatar_url;
+        const profileImg =
+          typeof avatarUrl === 'string' && avatarUrl.startsWith('http') ? avatarUrl : DEFAULT_AVATAR_URL;
+
         const newUser = new UserModel({
           fullName,
           username: (profile.username ?? 'user') + randomNumber,
           gitId: String(profile.id),
           email,
-          profileImg: '/uploads/waumti9zvnnmgayfxbmv',
+          profileImg,
           bio: 'Welcome to Syntax Stories 🧑🏻‍💻',
           github: `https://github.com/${profile.username}`,
           githubToken: accessToken,
@@ -108,6 +112,7 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
           isFacebookAccount: false,
           isXAccount: false,
           isAppleAccount: false,
+          isDiscordAccount: false,
         });
         await newUser.save();
         const subscription = await SubscriptionModel.create({

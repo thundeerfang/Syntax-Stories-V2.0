@@ -5,6 +5,7 @@ function getApiBase(): string {
 
 export interface CreatePostPayload {
   title: string;
+  summary?: string;
   content: string;
   thumbnailUrl?: string;
   status?: 'draft' | 'published';
@@ -14,11 +15,17 @@ export interface BlogPostResponse {
   _id: string;
   title: string;
   slug: string;
+  summary?: string;
   content: string;
   thumbnailUrl?: string;
   status: 'draft' | 'published';
   createdAt: string;
   updatedAt: string;
+}
+
+export interface GetDraftResponse {
+  success: boolean;
+  draft: BlogPostResponse | null;
 }
 
 export const blogApi = {
@@ -44,5 +51,31 @@ export const blogApi = {
     const data = (await r.json().catch(() => ({}))) as { success?: boolean; message?: string; posts?: BlogPostResponse[] };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return data as { success: boolean; posts: BlogPostResponse[] };
+  },
+
+  getDraft: async (accessToken: string): Promise<GetDraftResponse> => {
+    const r = await fetch(`${getApiBase()}/api/blog/draft`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const data = (await r.json().catch(() => ({}))) as GetDraftResponse & { message?: string };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return data as GetDraftResponse;
+  },
+
+  saveDraft: async (
+    payload: { title: string; summary?: string; content: string; thumbnailUrl?: string },
+    accessToken: string
+  ): Promise<{ success: boolean; post: BlogPostResponse }> => {
+    const r = await fetch(`${getApiBase()}/api/blog/draft`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = (await r.json().catch(() => ({}))) as { success?: boolean; message?: string; post?: BlogPostResponse };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return data as { success: boolean; post: BlogPostResponse };
   },
 };

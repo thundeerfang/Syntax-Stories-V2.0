@@ -58,11 +58,22 @@ import {
   Clock,
 } from 'lucide-react';
 import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
+import { OptimizedRemoteImage } from '@/components/ui/OptimizedRemoteImage';
 import { cn } from '@/lib/utils';
+import {
+  settingsBtnPrimary,
+  settingsBtnShadowLg,
+  settingsBtnShadowSm,
+  settingsBtnSecondary,
+  settingsBtnSecondaryCompact,
+  settingsBtnSecondaryWide,
+  settingsBtnIconFab,
+} from './buttonStyles';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
+import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
 import { UploadProfilePicDialog, UploadCoverDialog, UploadMediaDialog, MediaFullViewDialog } from '@/components/profile/dialog';
 import { FormDialog } from '@/components/ui/FormDialog';
 import { RetroAccordion } from '@/components/ui/RetroAccordion';
@@ -122,7 +133,7 @@ function SettingsSectionEmptyState({
       <button
         type="button"
         onClick={onAdd}
-        className="mt-6 flex items-center gap-2 px-4 py-2.5 border-2 border-primary bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wide shadow-[2px_2px_0px_0px_var(--border)] hover:opacity-90 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
+        className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'mt-6 px-4 py-2.5 text-[10px] font-bold tracking-wide')}
       >
         <Plus className="size-3.5" /> {addLabel}
       </button>
@@ -166,9 +177,9 @@ const accordionVariants = {
 };
 
 const FormSection = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <div className="space-y-4 pt-6 border-t-2 border-border/50 first:border-t-0 first:pt-0">
+  <div className="space-y-4 pt-6 border-t-2 border-border/50 first:border-t-0 first:pt-0 min-w-0">
     {title ? <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{title}</h3> : null}
-    <div className="grid gap-4">{children}</div>
+    <div className="grid gap-4 min-w-0">{children}</div>
   </div>
 );
 
@@ -274,7 +285,9 @@ function EditProfileContent() {
   const [username, setUsername] = useState(user?.username ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [profileImg, setProfileImg] = useState(user?.profileImg ?? '');
+  const [profileImgBlurDataUrl, setProfileImgBlurDataUrl] = useState<string | null>(null);
   const [coverBanner, setCoverBanner] = useState(user?.coverBanner ?? '');
+  const [coverBannerBlurDataUrl, setCoverBannerBlurDataUrl] = useState<string | null>(null);
   const [portfolioUrl, setPortfolioUrl] = useState((user as any)?.portfolioUrl ?? '');
   const [linkedin, setLinkedin] = useState(user?.linkedin ?? '');
   const [github, setGithub] = useState(user?.github ?? '');
@@ -303,7 +316,9 @@ function EditProfileContent() {
     setUsername(user?.username ?? '');
     setBio(user?.bio ?? '');
     setProfileImg(user?.profileImg ?? '');
+    setProfileImgBlurDataUrl(null);
     setCoverBanner(user?.coverBanner ?? '');
+    setCoverBannerBlurDataUrl(null);
     setPortfolioUrl((user as any)?.portfolioUrl ?? '');
     setLinkedin(user?.linkedin ?? '');
     setGithub(user?.github ?? '');
@@ -328,19 +343,21 @@ function EditProfileContent() {
     return () => doc.removeEventListener('selectionchange', onSelectionChange);
   }, [updateFormatState]);
 
-  const handleCoverUploadSuccess = async (url: string) => {
-    setCoverBanner(url);
+  const handleCoverUploadSuccess = async (result: { url: string; blurDataUrl?: string }) => {
+    setCoverBanner(result.url);
+    setCoverBannerBlurDataUrl(result.blurDataUrl ?? null);
     try {
-      await updateProfile({ coverBanner: url });
+      await updateProfile({ coverBanner: result.url });
     } catch {
       // already set in state; user can Save again if needed
     }
   };
 
-  const handleProfilePicUploadSuccess = async (url: string) => {
-    setProfileImg(url);
+  const handleProfilePicUploadSuccess = async (result: { url: string; blurDataUrl?: string }) => {
+    setProfileImg(result.url);
+    setProfileImgBlurDataUrl(result.blurDataUrl ?? null);
     try {
-      await updateProfile({ profileImg: url });
+      await updateProfile({ profileImg: result.url });
     } catch {
       // already set in state; user can Save again if needed
     }
@@ -510,14 +527,19 @@ function EditProfileContent() {
     <div className="space-y-8">
       {/* Overlapping header with cover + avatar + edit icons */}
       <section className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] overflow-hidden">
-        <div className="relative h-40 w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+        <div className="relative h-40 w-full overflow-hidden border-b-4 border-border">
           {coverBanner ? (
-            <img
+            <OptimizedRemoteImage
               src={coverBanner}
               alt="Cover"
-              className="w-full h-full object-cover"
+              fill
+              sizes="100vw"
+              blurDataUrl={coverBannerBlurDataUrl}
+              className="object-cover"
             />
-          ) : null}
+          ) : (
+            <div className="h-full w-full gradient-auto" />
+          )}
           <button
             type="button"
             onClick={() => setCoverDialogOpen(true)}
@@ -530,17 +552,20 @@ function EditProfileContent() {
         <div className="px-5 pb-4 pt-0">
           <div className="flex items-end gap-4 -mt-10">
             <div className="relative">
-              <div className="size-20 md:size-24 border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] bg-muted overflow-hidden">
-                <img
+              <div className="relative size-20 md:size-24 border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] bg-muted overflow-hidden">
+                <OptimizedRemoteImage
                   src={profileImg || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
                   alt="Avatar"
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="96px"
+                  blurDataUrl={profileImg ? profileImgBlurDataUrl : null}
+                  className="object-cover"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setProfilePicDialogOpen(true)}
-                className="absolute -right-1 -bottom-1 inline-flex items-center justify-center size-7 bg-primary text-primary-foreground border-2 border-border shadow-[2px_2px_0px_0px_var(--border)] hover:brightness-110 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                className={cn(settingsBtnIconFab, 'absolute -right-1 -bottom-1 size-7')}
                 aria-label="Edit profile photo"
               >
                 <Camera className="size-3.5" />
@@ -779,7 +804,7 @@ function EditProfileContent() {
         <button type="button" onClick={() => refreshUser()} className="px-5 py-2.5 font-bold text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-2 border-transparent hover:border-border">
           Reset
         </button>
-        <button type="button" onClick={handleSave} disabled={saving} className="px-6 py-2.5 bg-primary text-primary-foreground border-2 border-border font-black text-[11px] uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-60">
+        <button type="button" onClick={handleSave} disabled={saving} className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-6 py-2.5 text-[11px] tracking-widest disabled:opacity-60')}>
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
@@ -896,7 +921,7 @@ function SecurityEmailContent() {
               type="button"
               onClick={handleSendCode}
               disabled={sending || !newEmail}
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground border-2 border-black font-black text-xs uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all disabled:opacity-50"
+              className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-6 py-3 text-xs tracking-widest')}
             >
               {sending ? 'Processing...' : 'Request Verification Codes'}
               <ChevronDown className="-rotate-90 size-4" />
@@ -945,14 +970,14 @@ function SecurityEmailContent() {
                 type="button"
                 onClick={handleVerify}
                 disabled={verifying}
-                className="flex-1 py-4 bg-primary text-primary-foreground border-2 border-black font-black text-sm uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50"
+                className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'flex-1 py-4 text-sm tracking-widest')}
               >
                 {verifying ? 'Verifying Identity...' : 'Confirm Email Change'}
               </button>
               <button
                 type="button"
                 onClick={handleCancelEmailChange}
-                className="px-6 py-4 border-2 border-border font-black text-xs uppercase tracking-widest hover:bg-muted transition-colors"
+                className={settingsBtnSecondaryWide}
               >
                 Cancel
               </button>
@@ -993,14 +1018,11 @@ function ConnectedAccountsContent() {
 
   const handleConnect = async (id: string) => {
     if (!token) return;
-    if (id === 'apple') {
-      if (apiBase) window.location.href = `${apiBase}/auth/apple`;
-      return;
-    }
     setLinkingProvider(id);
     try {
-      const data = await authApi.getLinkRedirectUrl(token, id as 'google' | 'github' | 'facebook' | 'x');
+      const data = await authApi.getLinkRedirectUrl(token, id as 'google' | 'github' | 'facebook' | 'x' | 'discord');
       if (data.redirectUrl) {
+        markOAuthNavigationPending();
         window.location.href = data.redirectUrl;
         return;
       }
@@ -1017,7 +1039,7 @@ function ConnectedAccountsContent() {
     { id: 'github', label: 'GitHub Source', linked: user?.isGitAccount, color: '#24292F' },
     { id: 'x', label: 'X (Twitter)', linked: user?.isXAccount, color: '#000000' },
     { id: 'facebook', label: 'Meta / FB', linked: user?.isFacebookAccount, color: '#1877F2' },
-    { id: 'apple', label: 'Apple', linked: user?.isAppleAccount, color: '#000000' },
+    { id: 'discord', label: 'Discord', linked: user?.isDiscordAccount, color: '#5865F2' },
   ] as const;
 
   return (
@@ -1330,7 +1352,7 @@ function StackAndToolsContent() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground border-2 border-border font-black text-xs uppercase tracking-[0.15em] shadow-[4px_4px_0px_0px_var(--border)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all disabled:opacity-50"
+          className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-8 py-3 text-xs tracking-[0.15em]')}
         >
           {saving ? 'SYNCING...' : 'COMMIT ARSENAL'}
           <Check className="size-4" />
@@ -1479,7 +1501,7 @@ function MySetupContent() {
               type="button"
               disabled={!canSaveDraft || (items.length >= 5 && editIndex === null)}
               onClick={onAddOrUpdate}
-              className="w-full md:w-auto px-10 py-3 bg-primary text-primary-foreground border-2 border-border font-black text-xs uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all disabled:opacity-50"
+              className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'w-full md:w-auto px-10 py-3 text-xs tracking-widest')}
             >
               {saving ? 'PROCESSING...' : editIndex !== null ? 'UPDATE COMPONENT' : 'MOUNT COMPONENT'}
             </button>
@@ -1860,6 +1882,8 @@ const LOCATION_TYPE_OPTIONS = [
 
 function WorkExperiencesContent() {
   const { user, updateProfile, token } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [mediaPageByKey, setMediaPageByKey] = useState<Record<string, number>>({});
   const list = (user?.workExperiences ?? []).map((w) => {
     const mediaItems: MediaItem[] = (w.media && w.media.length > 0)
@@ -1998,6 +2022,17 @@ function WorkExperiencesContent() {
     setPromoFullViewMedia(null);
     setDialogOpen(true);
   };
+  const openedEditFromUrlRef = useRef(false);
+  useEffect(() => {
+    if (openedEditFromUrlRef.current || list.length === 0) return;
+    const edit = searchParams.get('edit');
+    if (edit == null) return;
+    const idx = parseInt(edit, 10);
+    if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
+    openedEditFromUrlRef.current = true;
+    openEdit(idx);
+    router.replace('/settings?section=work-experiences', { scroll: false });
+  }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
     setSaving(true);
@@ -2256,7 +2291,7 @@ function WorkExperiencesContent() {
               <button
                 type="button"
                 onClick={() => setDialogOpen(false)}
-                className="px-5 py-2.5 border-2 border-border bg-background font-bold text-xs uppercase tracking-wide hover:bg-muted/50 transition-colors"
+                className={settingsBtnSecondary}
               >
                 Cancel
               </button>
@@ -2264,7 +2299,7 @@ function WorkExperiencesContent() {
                 type="button"
                 onClick={submitDialog}
                 disabled={saving || !hasFormChanged}
-                className="px-6 py-2.5 border-2 border-primary shadow-[4px_4px_0px_0px_var(--border)] active:shadow-none active:translate-x-1 active:translate-y-1 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wide hover:opacity-90 disabled:opacity-50 transition-all"
+                className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-6 py-2.5 text-xs tracking-wide')}
               >
                 {saving ? 'Processing…' : hasFormChanged ? 'Confirm changes' : 'Save Milestone'}
               </button>
@@ -2461,7 +2496,7 @@ function WorkExperiencesContent() {
                           <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
                           <Input placeholder="e.g. Certificate" value={promoLinkTitle} onChange={(e) => setPromoLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
                           <div className="flex gap-2">
-                            <button type="button" onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase">Cancel</button>
+                            <button type="button" onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }} className={settingsBtnSecondaryCompact}>Cancel</button>
                             <button
                               type="button"
                               onClick={() => {
@@ -2471,7 +2506,7 @@ function WorkExperiencesContent() {
                                   setPromoLinkUrl(''); setPromoLinkTitle(''); setPromoMediaLinkIndex(null);
                                 } else toast.error('Enter a valid URL.');
                               }}
-                              className="px-3 py-1.5 border-2 border-primary bg-primary text-primary-foreground text-[10px] font-bold uppercase"
+                              className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}
                             >
                               Add link
                             </button>
@@ -2696,7 +2731,7 @@ function WorkExperiencesContent() {
                             toast.error('Enter a valid URL.');
                           }
                         }}
-                        className="px-3 py-1.5 border-2 border-primary bg-primary text-primary-foreground text-[10px] font-bold uppercase"
+                        className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}
                       >
                         Add link
                       </button>
@@ -2826,6 +2861,8 @@ const EDUCATION_DEFAULT: EducationForm = {
 
 function EducationContent() {
   const { user, updateProfile, token } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const list = (user?.education ?? []).map((e) => {
     const start = valueToMonthYear(e.startDate ?? '');
     const end = valueToMonthYear(e.endDate ?? '');
@@ -2860,6 +2897,17 @@ function EducationContent() {
   const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
   const openAdd = () => { setForm(EDUCATION_DEFAULT); setInitialForm(EDUCATION_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
   const openEdit = (i: number) => { const next = { ...EDUCATION_DEFAULT, ...list[i] }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openedEditFromUrlRefEd = useRef(false);
+  useEffect(() => {
+    if (openedEditFromUrlRefEd.current || list.length === 0) return;
+    const edit = searchParams.get('edit');
+    if (edit == null) return;
+    const idx = parseInt(edit, 10);
+    if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
+    openedEditFromUrlRefEd.current = true;
+    openEdit(idx);
+    router.replace('/settings?section=education', { scroll: false });
+  }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((e) => ({
       school: e.school,
@@ -3011,8 +3059,8 @@ function EducationContent() {
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className="px-5 py-2.5 border-2 border-border bg-background font-bold text-xs uppercase tracking-wide hover:bg-muted/50 transition-colors">Cancel</button>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className="px-5 py-2.5 border-2 border-primary shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wide hover:opacity-90 disabled:opacity-50 transition-all">{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Cancel</button>
+              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
             </div>
           </div>
         }
@@ -3161,6 +3209,8 @@ const CERT_DEFAULT: CertForm = { name: '', issuingOrganization: '', issuerLogo: 
 
 function CertificationsContent() {
   const { user, updateProfile, token } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const list = (user?.certifications ?? []).map((c) => {
     const issue = valueToMonthYear(c.issueDate ?? '');
     const exp = valueToMonthYear(c.expirationDate ?? '');
@@ -3208,6 +3258,17 @@ function CertificationsContent() {
 
   const openAdd = () => { setForm(CERT_DEFAULT); setInitialForm(CERT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
   const openEdit = (i: number) => { const next = { ...CERT_DEFAULT, ...list[i] }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openedEditFromUrlRefCert = useRef(false);
+  useEffect(() => {
+    if (openedEditFromUrlRefCert.current || list.length === 0) return;
+    const edit = searchParams.get('edit');
+    if (edit == null) return;
+    const idx = parseInt(edit, 10);
+    if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
+    openedEditFromUrlRefCert.current = true;
+    openEdit(idx);
+    router.replace('/settings?section=certifications', { scroll: false });
+  }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((c) => ({
       name: c.name,
@@ -3358,8 +3419,8 @@ function CertificationsContent() {
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className="px-5 py-2.5 border-2 border-border bg-background font-bold text-xs uppercase tracking-wide hover:bg-muted/50 transition-colors">Cancel</button>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className="px-5 py-2.5 border-2 border-primary shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wide hover:opacity-90 disabled:opacity-50 transition-all">{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Cancel</button>
+              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
             </div>
           </div>
         }
@@ -3510,8 +3571,8 @@ function CertificationsContent() {
                     <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
                     <Input placeholder="e.g. Certificate" value={certLinkTitle} onChange={(e) => setCertLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase">Cancel</button>
-                      <button type="button" onClick={() => { const u = certLinkUrl.trim(); if (u && (u.startsWith('http://') || u.startsWith('https://'))) { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url: u, title: certLinkTitle.trim() || undefined }].slice(0, 5) })); setCertLinkUrl(''); setCertLinkTitle(''); setCertShowLinkForm(false); } else toast.error('Enter a valid URL.'); }} className="px-3 py-1.5 border-2 border-primary bg-primary text-primary-foreground text-[10px] font-bold uppercase">Add link</button>
+                      <button type="button" onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }} className={settingsBtnSecondaryCompact}>Cancel</button>
+                      <button type="button" onClick={() => { const u = certLinkUrl.trim(); if (u && (u.startsWith('http://') || u.startsWith('https://'))) { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url: u, title: certLinkTitle.trim() || undefined }].slice(0, 5) })); setCertLinkUrl(''); setCertLinkTitle(''); setCertShowLinkForm(false); } else toast.error('Enter a valid URL.'); }} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}>Add link</button>
                     </div>
                   </div>
                 )}
@@ -3551,6 +3612,8 @@ const PROJECT_DEFAULT: ProjectForm = {
 
 function ProjectsContent() {
   const { user, updateProfile, token } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const fullProjects = user?.projects ?? [];
   const isGithubProject = (p: unknown) => (p as { source?: string }).source === 'github';
   const githubProjects = fullProjects.filter(isGithubProject);
@@ -3601,6 +3664,17 @@ function ProjectsContent() {
 
   const openAdd = () => { setForm(PROJECT_DEFAULT); setInitialForm(PROJECT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
   const openEdit = (i: number) => { const item = list[i]; const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openedEditFromUrlRefProj = useRef(false);
+  useEffect(() => {
+    if (openedEditFromUrlRefProj.current || list.length === 0) return;
+    const edit = searchParams.get('edit');
+    if (edit == null) return;
+    const idx = parseInt(edit, 10);
+    if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
+    openedEditFromUrlRefProj.current = true;
+    openEdit(idx);
+    router.replace('/settings?section=projects', { scroll: false });
+  }, [list.length]);
   const toApi = (p: typeof list[0]) => ({
     type: p.type,
     title: p.title,
@@ -3736,8 +3810,8 @@ function ProjectsContent() {
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className="px-5 py-2.5 border-2 border-border bg-background font-bold text-xs uppercase tracking-wide hover:bg-muted/50 transition-colors">Cancel</button>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className="px-5 py-2.5 border-2 border-primary shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wide hover:opacity-90 disabled:opacity-50 transition-all">{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Cancel</button>
+              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
             </div>
           </div>
         }
@@ -3804,8 +3878,8 @@ function ProjectsContent() {
                     <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
                     <Input placeholder="e.g. Screenshot" value={projLinkTitle} onChange={(e) => setProjLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase">Cancel</button>
-                      <button type="button" onClick={() => { const u = projLinkUrl.trim(); if (u && (u.startsWith('http://') || u.startsWith('https://'))) { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url: u, title: projLinkTitle.trim() || undefined }].slice(0, 5) })); setProjLinkUrl(''); setProjLinkTitle(''); setProjShowLinkForm(false); } else toast.error('Enter a valid URL.'); }} className="px-3 py-1.5 border-2 border-primary bg-primary text-primary-foreground text-[10px] font-bold uppercase">Add link</button>
+                      <button type="button" onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }} className={settingsBtnSecondaryCompact}>Cancel</button>
+                      <button type="button" onClick={() => { const u = projLinkUrl.trim(); if (u && (u.startsWith('http://') || u.startsWith('https://'))) { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url: u, title: projLinkTitle.trim() || undefined }].slice(0, 5) })); setProjLinkUrl(''); setProjLinkTitle(''); setProjShowLinkForm(false); } else toast.error('Enter a valid URL.'); }} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}>Add link</button>
                     </div>
                   </div>
                 )}
@@ -3976,8 +4050,8 @@ function OpenSourceContent() {
               {user?.isGitAccount ? 'Uses your linked GitHub token' : 'GitHub not linked'}
             </p>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className="px-5 py-2.5 border-2 border-border bg-background font-bold text-xs uppercase tracking-wide hover:bg-muted/50 transition-colors">Close</button>
-              <button type="button" onClick={() => void fetchRepos()} disabled={!user?.isGitAccount || loading} className="px-5 py-2.5 border-2 border-primary shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wide hover:opacity-90 disabled:opacity-50 transition-all">{loading ? 'Loading…' : 'Refresh'}</button>
+              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Close</button>
+              <button type="button" onClick={() => void fetchRepos()} disabled={!user?.isGitAccount || loading} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{loading ? 'Loading…' : 'Refresh'}</button>
             </div>
           </div>
         }
@@ -4023,7 +4097,7 @@ function OpenSourceContent() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <a href={r.html_url} target="_blank" rel="noopener noreferrer" className="px-3 py-2 border-2 border-border bg-card text-[10px] font-black uppercase tracking-widest hover:bg-muted/30">View</a>
-                          <button type="button" onClick={() => void addRepo(r.full_name)} disabled={saving || already} className="px-3 py-2 border-2 border-primary bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50">{already ? 'Added' : 'Add'}</button>
+                          <button type="button" onClick={() => void addRepo(r.full_name)} disabled={saving || already} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-2 text-[10px] tracking-widest')}>{already ? 'Added' : 'Add'}</button>
                         </div>
                       </div>
                     );

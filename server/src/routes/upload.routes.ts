@@ -5,6 +5,16 @@ import multer from 'multer';
 import sharp from 'sharp';
 import { verifyToken } from '../middlewares/auth';
 import { MAX_FILE_SIZE_BYTES, checkImageResolution } from '../config/uploadValidation';
+import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder';
+
+async function tryBlurDataUrl(imagePath: string): Promise<string | undefined> {
+  try {
+    return await jpegBlurDataUrlFromFile(imagePath);
+  } catch (e) {
+    console.warn('blur placeholder generation failed', e);
+    return undefined;
+  }
+}
 
 const router = Router();
 
@@ -169,7 +179,8 @@ router.post('/avatar', verifyToken, uploadAvatar.single('avatar'), async (req: R
 
     const pathSegment = `uploads/avatars/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
-    res.status(201).json({ success: true, url });
+    const blurDataUrl = await tryBlurDataUrl(outputPath);
+    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to process image' });
@@ -213,7 +224,8 @@ router.post('/cover', verifyToken, uploadCover.single('cover'), async (req: Requ
 
     const pathSegment = `uploads/covers/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
-    res.status(201).json({ success: true, url });
+    const blurDataUrl = await tryBlurDataUrl(outputPath);
+    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to process image' });
@@ -259,7 +271,8 @@ router.post('/media', verifyToken, uploadMedia.single('media'), async (req: Requ
 
     const pathSegment = `uploads/media/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
-    res.status(201).json({ success: true, url });
+    const blurDataUrl = await tryBlurDataUrl(outputPath);
+    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to process image' });
@@ -304,7 +317,8 @@ router.post('/company-logo', verifyToken, uploadLogo.single('logo'), async (req:
 
     const pathSegment = `uploads/logos/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
-    res.status(201).json({ success: true, url });
+    const blurDataUrl = await tryBlurDataUrl(outputPath);
+    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to process logo' });
@@ -347,7 +361,8 @@ router.post('/school-logo', verifyToken, uploadSchoolLogo.single('logo'), async 
 
     const pathSegment = `uploads/school-logos/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
-    res.status(201).json({ success: true, url });
+    const blurDataUrl = await tryBlurDataUrl(outputPath);
+    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to process school logo' });
@@ -390,7 +405,8 @@ router.post('/org-logo', verifyToken, uploadOrgLogo.single('logo'), async (req: 
 
     const pathSegment = `uploads/org-logos/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
-    res.status(201).json({ success: true, url });
+    const blurDataUrl = await tryBlurDataUrl(outputPath);
+    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to process organization logo' });

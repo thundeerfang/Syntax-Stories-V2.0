@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { UserModel } from '../models/User';
+import { UserModel, DEFAULT_AVATAR_URL } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
@@ -75,19 +75,24 @@ export function registerGoogle(passportInstance: passport.PassportStatic): void 
           }
 
           const randomNumber = Math.floor(1000 + Math.random() * 9000);
+          const photoUrl = (profile as { photos?: Array<{ value?: string }> }).photos?.[0]?.value;
+          const profileImg =
+            typeof photoUrl === 'string' && photoUrl.startsWith('http') ? photoUrl : DEFAULT_AVATAR_URL;
+
           const newUser = new UserModel({
             fullName: profile.displayName ?? 'User',
             googleId: profile.id,
             googleToken: accessToken,
             username: (profile.displayName ?? 'user').trim().replace(/\s+/g, '').toLowerCase() + randomNumber,
             email,
-            profileImg: '/uploads/waumti9zvnnmgayfxbmv',
+            profileImg,
             bio: 'Welcome to Syntax Stories 🧑🏻‍💻',
             isGoogleAccount: true,
             isGitAccount: false,
             isFacebookAccount: false,
             isXAccount: false,
             isAppleAccount: false,
+            isDiscordAccount: false,
           });
           await newUser.save();
           const subscription = await SubscriptionModel.create({

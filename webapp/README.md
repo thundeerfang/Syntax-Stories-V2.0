@@ -51,6 +51,8 @@ webapp/
 
    - `NEXT_PUBLIC_API_BASE_URL` (optional, for API)
    - `NEXT_PUBLIC_APP_NAME`
+   - `NEXT_PUBLIC_GIPHY_API_KEY` (optional – for GIF search in blog editor; get key at [GIPHY](https://developers.giphy.com/dashboard/))
+   - `NEXT_PUBLIC_UNSPLASH_ACCESS_KEY` (optional – for Unsplash photo search in blog editor; get key at [Unsplash](https://unsplash.com/oauth/applications))
 
 3. **Run**
 

@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as TwitterStrategy } from 'passport-twitter';
-import { UserModel } from '../models/User';
+import { UserModel, DEFAULT_AVATAR_URL } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
@@ -85,12 +85,16 @@ export function registerX(passportInstance: passport.PassportStatic): void {
           xToken: accessToken,
           username: (profile.username ?? 'user').toLowerCase() + randomNumber,
           email: email.includes('@twitter.placeholder') ? `x-${profile.id}@syntaxstories.placeholder` : email,
-          profileImg: profile.photos?.[0]?.value ?? 'https://res.cloudinary.com/dr2bxpjjz/image/upload/v1737041910/uploads/waumti9zvnnmgayfxbmv.png',
+          profileImg:
+            (typeof profile.photos?.[0]?.value === 'string' && profile.photos[0].value.startsWith('http'))
+              ? profile.photos[0].value
+              : DEFAULT_AVATAR_URL,
           isGoogleAccount: false,
           isGitAccount: false,
           isFacebookAccount: false,
           isXAccount: true,
           isAppleAccount: false,
+          isDiscordAccount: false,
         });
         await newUser.save();
         const subscription = await SubscriptionModel.create({

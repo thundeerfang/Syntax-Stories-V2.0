@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { getPublicProfile, getFollowCounts, getFollowers, getFollowing, followUser, unfollowUser, checkFollowing } from '../controllers/follow.controller';
+import { getPublicProfile, getFollowCounts, getFollowers, getFollowing, followUser, unfollowUser, checkFollowing, searchUsers } from '../controllers/follow.controller';
 import { verifyToken } from '../middlewares/auth';
 import { rateLimitFollowWrite } from '../middlewares/follow/rateLimitFollow';
 
 const router = Router();
 
+router.get('/search', searchUsers);
 router.get('/profile/:username', getPublicProfile);
 router.get('/counts/:username', getFollowCounts);
 router.get('/followers/:username', getFollowers);

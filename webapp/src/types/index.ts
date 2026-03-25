@@ -16,3 +16,12 @@ export interface Post {
   publishedAt: string;
   tags?: string[];
 }
+
+export type {
+  BlockType,
+  Block,
+  BlockBase,
+  BlogDraftPayload,
+  StoredDraftPayload,
+  BlogPostResponse,
+} from './blog';

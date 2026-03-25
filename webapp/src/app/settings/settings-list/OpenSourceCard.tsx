@@ -31,7 +31,7 @@ export function OpenSourceCard({
   const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   return (
-    <div key={(p as any).repoFullName ?? index} className="group relative ss-settings-card">
+    <div key={(p as any).repoFullName ?? index} className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
       {/* Industrial Sync Node Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card overflow-hidden">
         
@@ -40,8 +40,8 @@ export function OpenSourceCard({
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-20" />
 
         {/* Technical Header — reduced padding */}
-        <div className="ss-card-header flex items-center justify-between border-b-[3px] border-border bg-muted/30 px-3 py-1.5 relative z-10">
-          <div className="flex items-center gap-3">
+        <div className="ss-card-header flex items-center justify-between border-b-[3px] border-border bg-muted/30 px-3 py-1.5 relative z-10 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 shrink">
             <Github className="size-3.5 text-primary" />
             <span className="text-[10px] font-black font-mono tracking-widest text-foreground uppercase">
               REPO_ID: <span className="text-primary">#{String(index + 1).padStart(2, '0')}</span>
@@ -56,7 +56,7 @@ export function OpenSourceCard({
         </div>
 
         {/* Main Content Area — compact */}
-        <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10 overflow-hidden">
+        <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10 overflow-hidden min-w-0">
           
           {/* GitHub Icon Viewport — reduced size */}
           <div className="ss-card-logo-box relative size-12 shrink-0 border-2 border-border bg-black flex items-center justify-center overflow-hidden">
@@ -106,18 +106,18 @@ export function OpenSourceCard({
             </div>
 
             {/* Repository Info Tags — tighter */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex items-center gap-2 px-2 py-1 bg-muted border border-border text-[9px] font-mono font-bold text-muted-foreground uppercase">
-                <Hash className="size-3 text-primary" />
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              <div className="flex items-center gap-2 px-2 py-1 bg-muted border border-border text-[9px] font-mono font-bold text-muted-foreground uppercase shrink-0">
+                <Hash className="size-3 text-primary shrink-0" />
                 Branch: Main
               </div>
-              <div className="text-[9px] font-mono font-bold text-primary/60 truncate max-w-[200px]">
-                URI: {repoUrl.replace('https://', '')}
+              <div className="text-[9px] font-mono font-bold text-primary/60 min-w-0 overflow-hidden">
+                <span className="block truncate">URI: {repoUrl.replace('https://', '')}</span>
               </div>
             </div>
 
             {/* Description Block: 2 lines collapsed; click to expand with 4-line scroll */}
-            <div className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5">
+            <div className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5 w-full">
               <button
                 type="button"
                 onClick={() => setIsDescExpanded((v) => !v)}
@@ -132,15 +132,15 @@ export function OpenSourceCard({
                     onClick={(ev) => ev.stopPropagation()}
                     role="presentation"
                   >
-                    <p className="text-[11px] font-medium text-muted-foreground break-words">
-                      <span className="text-primary font-bold mr-2">REPO_DESC:</span>
-                      <span className="break-words">{p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}</span>
+                    <p className="text-[11px] font-medium text-muted-foreground break-words break-all">
+                      <span className="text-primary font-bold mr-2 shrink-0">REPO_DESC:</span>
+                      <span className="break-words break-all">{p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}</span>
                     </p>
                   </div>
                 ) : (
-                  <p className="text-[11px] font-medium text-muted-foreground leading-snug break-words line-clamp-2 [line-height:1.375rem] py-1.5">
-                    <span className="text-primary font-bold mr-2">REPO_DESC:</span>
-                    <span className="break-words">{p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}</span>
+                  <p className="text-[11px] font-medium text-muted-foreground leading-snug break-words break-all line-clamp-2 [line-height:1.375rem] py-1.5">
+                    <span className="text-primary font-bold mr-2 shrink-0">REPO_DESC:</span>
+                    <span className="break-words break-all">{p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}</span>
                   </p>
                 )}
               </button>

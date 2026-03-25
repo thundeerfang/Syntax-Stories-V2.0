@@ -170,11 +170,16 @@ export function Navbar() {
               <NotificationsDropdown />
               
               <button
+                type="button"
                 onClick={toggleTheme}
-                className="hidden sm:flex w-10 h-10 items-center justify-center border-2 border-border bg-background text-foreground hover:border-primary hover:text-primary transition-all active:translate-y-0.5"
-                aria-label="Toggle Theme"
+                className="relative hidden sm:flex items-center justify-center p-2 border-2 border-border bg-background text-foreground hover:border-primary hover:text-primary transition-all shadow-[2px_2px_0px_0px_var(--border)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {isDark ? <Moon className="h-4 w-4" strokeWidth={2.5} /> : <Sun className="h-4 w-4" strokeWidth={2.5} />}
+                {isDark ? (
+                  <Sun className="h-4 w-4 text-foreground" strokeWidth={2.5} />
+                ) : (
+                  <Moon className="h-4 w-4 text-foreground" strokeWidth={2.5} />
+                )}
               </button>
 
               <div className="h-8 w-[2px] bg-border mx-1 hidden sm:block" />

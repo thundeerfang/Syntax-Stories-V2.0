@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth';
@@ -8,7 +9,15 @@ import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
 import { Button, Dialog } from '@/components/ui';
 import { Mail, ArrowLeft, HelpCircle } from 'lucide-react';
-import { GoogleIcon, FacebookIcon, AppleIcon, XIcon, GithubIcon } from '@/components/icons/SocialProviderIcons';
+import {
+  GoogleIcon,
+  GithubIcon,
+  FacebookIcon,
+  XIcon,
+  ICON_DISCORD,
+} from '@/components/icons/SocialProviderIcons';
+import { cn } from '@/lib/utils';
+import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
 
 type Step = 'welcome' | 'login-email' | 'signup' | 'signup-email' | 'verify-email';
 
@@ -19,20 +28,43 @@ const PRIVACY_LINK = '/privacy';
 
 function SocialButton({
   icon: Icon,
+  iconSrc,
+  iconClassName,
   label,
   href,
+  onBeforeNavigate,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
+  iconSrc?: string;
+  iconClassName?: string;
   label: string;
   href?: string;
+  /** Runs after marking OAuth pending; use to close the dialog so loaders do not stack on the card. */
+  onBeforeNavigate?: () => void;
 }) {
+  const iconEl =
+    iconSrc != null ? (
+      <img src={iconSrc} alt="" className={cn('h-5 w-5 shrink-0 object-contain', iconClassName)} />
+    ) : Icon ? (
+      <Icon className="h-5 w-5 shrink-0" />
+    ) : null;
+
   if (href) {
+    const oauthStart = href.includes('/auth/');
     return (
       <a
         href={href}
-        className="w-full flex items-center justify-center gap-3 border-2 border-border bg-background py-3 px-4 text-xs font-black uppercase tracking-widest text-foreground hover:border-primary hover:bg-muted/50 transition-all active:scale-[0.98]"
+        onClick={
+          oauthStart
+            ? () => {
+                markOAuthNavigationPending();
+                onBeforeNavigate?.();
+              }
+            : undefined
+        }
+        className="w-full flex items-center justify-center gap-3 border-2 border-border bg-background py-3 px-4 text-xs font-black uppercase tracking-widest text-card-foreground hover:border-primary hover:bg-muted/50 transition-all active:scale-[0.98]"
       >
-        <Icon className="h-5 w-5 shrink-0" />
+        {iconEl}
         {label}
       </a>
     );
@@ -43,7 +75,7 @@ function SocialButton({
       disabled
       className="w-full flex items-center justify-center gap-3 border-2 border-border bg-background py-3 px-4 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 cursor-not-allowed"
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      {iconEl}
       {label}
     </button>
   );
@@ -75,15 +107,20 @@ function AuthFooter({
       </div>
       <p className="text-[9px] leading-relaxed font-medium uppercase tracking-[0.05em] text-muted-foreground/60 px-4">
         By continuing, you agree to our{' '}
-        <Link href={TERMS_LINK} className="underline decoration-muted-foreground/30 hover:text-foreground hover:decoration-primary transition-all">Terms</Link>
+        <Link href={TERMS_LINK} className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all">Terms</Link>
         {' '}&{' '}
-        <Link href={PRIVACY_LINK} className="underline decoration-muted-foreground/30 hover:text-foreground hover:decoration-primary transition-all">Privacy Policy</Link>.
+        <Link href={PRIVACY_LINK} className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all">Privacy Policy</Link>.
       </p>
     </div>
   );
 }
 
 const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+
+const authStepTransition = {
+  duration: 0.22,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
 
 // --- Main Component ---
 
@@ -105,6 +142,11 @@ export function AuthDialog() {
   const [code, setCode] = useState('');
   const [verifyEmail, setVerifyEmail] = useState('');
   const [stepBeforeVerify, setStepBeforeVerify] = useState<Step>('login-email');
+  const prefersReducedMotion = useReducedMotion();
+
+  const goToStep = useCallback((next: Step) => {
+    setStep(next);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -177,20 +219,42 @@ export function AuthDialog() {
     }
   };
 
+  const stepMotionTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : authStepTransition;
+
   return (
-    <Dialog open={isOpen} onClose={close} titleId="auth-dialog-title">
+    <Dialog
+      open={isOpen}
+      onClose={close}
+      titleId="auth-dialog-title"
+      panelClassName="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto ss-scrollbar-hide"
+      contentClassName="relative overflow-x-hidden p-5 sm:p-6"
+    >
+      <div className="relative">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={step}
+            role="region"
+            aria-live="polite"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={stepMotionTransition}
+            className="will-change-transform"
+          >
       {/* 1. WELCOME STEP */}
       {step === 'welcome' && (
         <>
-          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-foreground uppercase pr-10">
+          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-card-foreground uppercase pr-10">
             Welcome_back.
           </h2>
           <div className="mt-6 space-y-3">
-            <SocialButton icon={GoogleIcon} label="Sign in with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/login` : undefined} />
-            <SocialButton icon={FacebookIcon} label="Sign in with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/login` : undefined} />
-            <SocialButton icon={GithubIcon} label="Sign in with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/login` : undefined} />
-            <SocialButton icon={AppleIcon} label="Sign in with Apple" />
-            <SocialButton icon={XIcon} label="Sign in with X" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/login` : undefined} />
+            <SocialButton icon={GoogleIcon} label="Sign in with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/login` : undefined} onBeforeNavigate={close} />
+            <SocialButton icon={FacebookIcon} label="Sign in with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/login` : undefined} onBeforeNavigate={close} />
+            <SocialButton icon={GithubIcon} label="Sign in with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/login` : undefined} onBeforeNavigate={close} />
+            <SocialButton iconSrc={ICON_DISCORD} label="Sign in with Discord" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/discord/login` : undefined} onBeforeNavigate={close} />
+            <SocialButton icon={XIcon} label="Sign in with X" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/login` : undefined} onBeforeNavigate={close} />
           </div>
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
@@ -203,8 +267,8 @@ export function AuthDialog() {
           <Button
             type="button"
             variant="outline"
-            className="w-full py-6 text-xs font-black uppercase tracking-widest border-2"
-            onClick={() => setStep('login-email')}
+            className="w-full py-6 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
+            onClick={() => goToStep('login-email')}
           >
             <Mail className="mr-2 h-4 w-4" />
             Sign in with email
@@ -214,8 +278,8 @@ export function AuthDialog() {
               No account?{' '}
               <button
                 type="button"
-                className="text-foreground hover:text-primary underline decoration-2 underline-offset-4"
-                onClick={() => setStep('signup')}
+                className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
+                onClick={() => goToStep('signup')}
               >
                 Create one
               </button>
@@ -229,13 +293,13 @@ export function AuthDialog() {
         <>
           <button
             type="button"
-            onClick={() => setStep('welcome')}
+            onClick={() => goToStep('welcome')}
             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
-          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-foreground uppercase">Sign_in_with_email</h2>
+          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-card-foreground uppercase">Sign_in_with_email</h2>
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">We&apos;ll send you a secure code.</p>
           <form onSubmit={handleSendLoginOtp} className="mt-6 space-y-4">
             <div className="space-y-1.5">
@@ -249,7 +313,7 @@ export function AuthDialog() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:border-primary placeholder:text-muted-foreground/40 transition-colors"
+                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
               />
             </div>
             <Button type="submit" className="w-full py-6 text-xs font-black uppercase tracking-widest" disabled={isLoading}>
@@ -259,7 +323,7 @@ export function AuthDialog() {
           <AuthFooter>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Need an account?{' '}
-              <button type="button" className="text-foreground hover:text-primary underline decoration-2 underline-offset-4" onClick={() => setStep('signup')}>
+              <button type="button" className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4" onClick={() => goToStep('signup')}>
                 Sign up here
               </button>
             </p>
@@ -272,18 +336,19 @@ export function AuthDialog() {
         <>
           <button
             type="button"
-            onClick={() => setStep('welcome')}
+            onClick={() => goToStep('welcome')}
             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
-          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-foreground uppercase">Create_Account</h2>
+          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-card-foreground uppercase">Create_Account</h2>
           <div className="mt-6 space-y-3">
-            <SocialButton icon={GoogleIcon} label="Sign up with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/signup` : undefined} />
-            <SocialButton icon={FacebookIcon} label="Sign up with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/signup` : undefined} />
-            <SocialButton icon={GithubIcon} label="Sign up with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/signup` : undefined} />
-            <SocialButton icon={XIcon} label="Sign up with X" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/signup` : undefined} />
+            <SocialButton icon={GoogleIcon} label="Sign up with Google" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/signup` : undefined} onBeforeNavigate={close} />
+            <SocialButton icon={FacebookIcon} label="Sign up with Facebook" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/signup` : undefined} onBeforeNavigate={close} />
+            <SocialButton icon={GithubIcon} label="Sign up with GitHub" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/signup` : undefined} onBeforeNavigate={close} />
+            <SocialButton iconSrc={ICON_DISCORD} label="Sign up with Discord" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/discord/signup` : undefined} onBeforeNavigate={close} />
+            <SocialButton icon={XIcon} label="Sign up with X" href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/signup` : undefined} onBeforeNavigate={close} />
           </div>
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
@@ -296,8 +361,8 @@ export function AuthDialog() {
           <Button
             type="button"
             variant="outline"
-            className="w-full py-6 text-xs font-black uppercase tracking-widest border-2"
-            onClick={() => setStep('signup-email')}
+            className="w-full py-6 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
+            onClick={() => goToStep('signup-email')}
           >
             <Mail className="mr-2 h-4 w-4" />
             Sign up with email
@@ -305,7 +370,7 @@ export function AuthDialog() {
           <AuthFooter>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Already joined?{' '}
-              <button type="button" className="text-foreground hover:text-primary underline decoration-2 underline-offset-4" onClick={() => setStep('welcome')}>
+              <button type="button" className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4" onClick={() => goToStep('welcome')}>
                 Sign in
               </button>
             </p>
@@ -318,13 +383,13 @@ export function AuthDialog() {
         <>
           <button
             type="button"
-            onClick={() => setStep('signup')}
+            onClick={() => goToStep('signup')}
             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
-          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-foreground uppercase">Sign_up_with_email</h2>
+          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-card-foreground uppercase">Sign_up_with_email</h2>
           <form onSubmit={handleSignUp} className="mt-6 space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="auth-signup-name" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
@@ -337,7 +402,7 @@ export function AuthDialog() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:border-primary transition-colors"
+                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
               />
             </div>
             <div className="space-y-1.5">
@@ -351,7 +416,7 @@ export function AuthDialog() {
                 value={signupEmail}
                 onChange={(e) => setSignupEmail(e.target.value)}
                 required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest focus:outline-none focus:border-primary transition-colors"
+                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
               />
             </div>
             <Button type="submit" className="w-full py-6 text-xs font-black uppercase tracking-widest" disabled={isLoading}>
@@ -361,7 +426,7 @@ export function AuthDialog() {
           <AuthFooter>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Already joined?{' '}
-              <button type="button" className="text-foreground hover:text-primary underline decoration-2 underline-offset-4" onClick={() => setStep('welcome')}>
+              <button type="button" className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4" onClick={() => goToStep('welcome')}>
                 Sign in
               </button>
             </p>
@@ -374,16 +439,16 @@ export function AuthDialog() {
         <>
           <button
             type="button"
-            onClick={() => setStep(stepBeforeVerify)}
+            onClick={() => goToStep(stepBeforeVerify)}
             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
-          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-foreground uppercase">Check_Inbox</h2>
+          <h2 id="auth-dialog-title" className="text-xl font-black italic tracking-tighter text-card-foreground uppercase">Check_Inbox</h2>
           <div className="mt-2 p-3 bg-muted/50 border-l-4 border-primary">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sent to:</p>
-            <p className="text-xs font-black break-all text-foreground">{verifyEmail}</p>
+            <p className="text-xs font-black break-all text-card-foreground">{verifyEmail}</p>
           </div>
           <form onSubmit={twoFactor ? handleVerifyTwoFactor : handleVerifyCode} className="mt-6 space-y-4">
             <div className="space-y-1.5">
@@ -396,7 +461,7 @@ export function AuthDialog() {
                 placeholder="000000"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className="w-full border-2 border-border bg-background px-4 py-4 text-center text-lg font-black tracking-[0.5em] focus:outline-none focus:border-primary transition-colors"
+                className="w-full border-2 border-border bg-background px-4 py-4 text-center text-lg font-black tracking-[0.5em] text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
               />
             </div>
             <Button type="submit" className="w-full py-6 text-xs font-black uppercase tracking-widest" disabled={isLoading}>
@@ -406,11 +471,14 @@ export function AuthDialog() {
           <div className="mt-8 pt-6 border-t-2 border-border">
              <p className="text-[9px] text-center leading-tight font-medium uppercase tracking-widest text-muted-foreground/50">
                 Protected by reCAPTCHA.<br />
-                <Link href={PRIVACY_LINK} className="underline hover:text-foreground transition-colors">Google Privacy</Link> & <Link href={TERMS_LINK} className="underline hover:text-foreground transition-colors">Terms</Link> apply.
+                <Link href={PRIVACY_LINK} className="underline hover:text-card-foreground transition-colors">Google Privacy</Link> & <Link href={TERMS_LINK} className="underline hover:text-card-foreground transition-colors">Terms</Link> apply.
              </p>
           </div>
         </>
       )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </Dialog>
   );
 }

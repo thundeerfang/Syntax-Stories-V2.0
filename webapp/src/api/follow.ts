@@ -38,6 +38,15 @@ export interface PublicProfileUser {
 }
 
 export const followApi = {
+  searchUsers: (q: string) => {
+    const query = q.trim();
+    if (!query) return Promise.resolve({ success: true as const, list: [] as FollowUser[] });
+    return fetch(`${getApiBase()}/api/follow/search?q=${encodeURIComponent(query)}`).then((r) => {
+      if (!r.ok) throw new Error(r.statusText);
+      return r.json() as Promise<{ success: boolean; list: FollowUser[] }>;
+    });
+  },
+
   getPublicProfile: (username: string) =>
     fetch(`${getApiBase()}/api/follow/profile/${encodeURIComponent(username)}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);

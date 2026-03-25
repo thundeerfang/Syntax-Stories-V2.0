@@ -37,9 +37,11 @@ import { Switch, AreaChart } from '@/components/retroui';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
+import { authApi, type ParseCvMissingFieldKey, type IncompleteItemHints } from '@/api/auth';
+import type { CompleteItemDialogSection } from '@/components/profile/dialog';
 import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
-import { FollowersFollowingDialog } from '@/components/profile/dialog';
+import { FollowersFollowingDialog, MissingFieldsDialog } from '@/components/profile/dialog';
 import { getSkillIconUrl } from '@/lib/skillIcons';
 import { TerminalLoaderPage } from '@/components/loader';
 import { WorkExperienceCard } from '@/app/settings/settings-list/WorkExperienceCard';
@@ -102,10 +104,18 @@ export default function ProfilePage() {
   const router = useRouter();
   const { isOpen } = useSidebar();
   const { user, token, isHydrated, shouldBlock } = useRequireAuth();
+  const updateProfile = useAuthStore((s) => s.updateProfile);
   const [activityTab, setActivityTab] = useState<ActivityTab>('posts');
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [profileUrlCopied, setProfileUrlCopied] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [missingFieldsDialogOpen, setMissingFieldsDialogOpen] = useState(false);
+  const [missingFieldsList, setMissingFieldsList] = useState<ParseCvMissingFieldKey[]>([]);
+  const [incompleteItemHints, setIncompleteItemHints] = useState<IncompleteItemHints | null>(null);
+  /** Pending CV-extracted data: only saved when user clicks Save in the dialog; discarded on Skip. */
+  const [pendingCvExtracted, setPendingCvExtracted] = useState<Parameters<typeof updateProfile>[0] | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const [followCounts, setFollowCounts] = useState({ followersCount: 0, followingCount: 0 });
   const [overviewMetrics, setOverviewMetrics] = useState<ProfileOverviewMetrics | null>(null);
   const [timeSeries, setTimeSeries] = useState<ProfileTimePoint[]>([]);
@@ -253,13 +263,7 @@ export default function ProfilePage() {
     return s.replace(/\n/g, '<br>');
   };
 
-  if (!isHydrated || shouldBlock) {
-    return <TerminalLoaderPage pageName="profile" />;
-  }
-
-  const settingsUrl = (section: string) => `/settings?section=${encodeURIComponent(section)}`;
-
-  // Match settings: Projects = manual only; Open Source = GitHub repos from projects + openSourceContributions
+  // Match settings: Projects = manual only; Open Source = GitHub repos from projects + openSourceContributions (must run before any early return)
   const profileProjects = useMemo(() => {
     const full = user?.projects ?? [];
     const isGithub = (p: unknown) => (p as { source?: string }).source === 'github';
@@ -278,6 +282,12 @@ export default function ProfilePage() {
     }));
     return [...fromProjects, ...fromContributions].slice(0, 7);
   }, [profileProjects.github, user?.openSourceContributions]);
+
+  if (!isHydrated || shouldBlock) {
+    return <TerminalLoaderPage pageName="profile" />;
+  }
+
+  const settingsUrl = (section: string) => `/settings?section=${encodeURIComponent(section)}`;
 
   // Reusable Section Header (hide Add button in preview mode; Add links to settings tab when settingsSection provided)
   const SectionHeader = ({
@@ -493,6 +503,33 @@ export default function ProfilePage() {
           {/* AUTOFILL - hidden in preview (owner-only) */}
           {!isPreviewMode && (
           <div className="border-4 border-border bg-primary p-6 flex flex-col md:flex-row items-center gap-6 shadow-[8px_8px_0px_0px_var(--border)]">
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file || !token) return;
+                setPdfUploading(true);
+                try {
+                  const { extracted, missingFields, incompleteItemHints: hints } = await authApi.parseCv(token, file);
+                  setIncompleteItemHints(hints ?? null);
+                  setMissingFieldsList(missingFields);
+                  if (Object.keys(extracted).length > 0) {
+                    setPendingCvExtracted(extracted);
+                    setMissingFieldsDialogOpen(true);
+                  } else {
+                    toast.info('No profile data could be extracted from this PDF.');
+                  }
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Failed to parse PDF');
+                } finally {
+                  setPdfUploading(false);
+                }
+              }}
+            />
             <div className="size-16 bg-white border-4 border-border flex items-center justify-center shrink-0 -rotate-3">
               <FileText className="size-8 text-primary" />
             </div>
@@ -500,11 +537,100 @@ export default function ProfilePage() {
               <h3 className="text-lg font-black uppercase tracking-tight text-primary-foreground">Autofill your profile!</h3>
               <p className="text-xs font-bold text-primary-foreground/80 uppercase">Import details directly from your CV in seconds.</p>
             </div>
-            <button className="px-6 py-3 bg-white text-black border-4 border-border font-black text-xs uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
-              Upload PDF
+            <button
+              type="button"
+              disabled={pdfUploading}
+              onClick={() => pdfInputRef.current?.click()}
+              className="px-6 py-3 bg-white text-black border-4 border-border font-black text-xs uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-60 disabled:pointer-events-none"
+            >
+              {pdfUploading ? 'Parsing…' : 'Upload PDF'}
             </button>
           </div>
           )}
+
+          <MissingFieldsDialog
+            open={missingFieldsDialogOpen}
+            onClose={() => {
+              setMissingFieldsDialogOpen(false);
+              setMissingFieldsList([]);
+              setIncompleteItemHints(null);
+              setPendingCvExtracted(null);
+            }}
+            missingFields={missingFieldsList}
+            incompleteItemHints={incompleteItemHints}
+            currentProfile={
+              pendingCvExtracted
+                ? {
+                    workExperiences: pendingCvExtracted.workExperiences ?? user?.workExperiences,
+                    education: pendingCvExtracted.education ?? user?.education,
+                    certifications: pendingCvExtracted.certifications ?? user?.certifications,
+                    projects: pendingCvExtracted.projects ?? user?.projects,
+                  }
+                : user
+                  ? { workExperiences: user.workExperiences, education: user.education, certifications: user.certifications, projects: user.projects }
+                  : null
+            }
+            settingsHref="/settings"
+            onSave={async (values) => {
+              const scalar: Parameters<typeof updateProfile>[0] = {};
+              if (typeof values.bio === 'string' && values.bio.trim()) scalar.bio = values.bio.trim();
+              if (typeof values.linkedin === 'string' && values.linkedin.trim()) scalar.linkedin = values.linkedin.trim();
+              if (typeof values.github === 'string' && values.github.trim()) scalar.github = values.github.trim();
+              if (Array.isArray(values.stackAndTools) && values.stackAndTools.length > 0) scalar.stackAndTools = values.stackAndTools;
+              const payload = pendingCvExtracted ? { ...pendingCvExtracted, ...scalar } : scalar;
+              if (Object.keys(payload).length > 0) await updateProfile(payload);
+              setPendingCvExtracted(null);
+              setMissingFieldsDialogOpen(false);
+              setMissingFieldsList([]);
+              setIncompleteItemHints(null);
+              toast.success('Profile updated from your CV. Add the rest in Settings when ready.');
+            }}
+            onCompleteItem={async (section: CompleteItemDialogSection, index: number, newValues: Record<string, string>) => {
+              const removeHint = () => {
+                setIncompleteItemHints((prev) => {
+                  if (!prev) return null;
+                  const list = prev[section];
+                  if (!list?.length) return prev;
+                  const next = list.filter((_, i) => i !== index);
+                  if (next.length === 0) { const o = { ...prev }; delete o[section]; return Object.keys(o).length ? o : null; }
+                  return { ...prev, [section]: next };
+                });
+              };
+              if (pendingCvExtracted && Array.isArray(pendingCvExtracted[section]) && (pendingCvExtracted[section] as unknown[])[index]) {
+                const arr = [...(pendingCvExtracted[section] as Array<Record<string, unknown>>)];
+                arr[index] = { ...arr[index], ...newValues };
+                setPendingCvExtracted({ ...pendingCvExtracted, [section]: arr });
+                removeHint();
+                toast.success('Fields added. Complete all items to enable Save.');
+                return;
+              }
+              if (!user) return;
+              const arr = (user[section] ?? []) as Array<Record<string, unknown>>;
+              const updated = [...arr];
+              if (!updated[index]) return;
+              updated[index] = { ...updated[index], ...newValues };
+              await updateProfile({ [section]: updated } as Parameters<typeof updateProfile>[0]);
+              removeHint();
+              toast.success('Fields saved.');
+            }}
+            onEditInSettings={pendingCvExtracted ? async (section, index) => {
+              const hasIncomplete = incompleteItemHints && (
+                (incompleteItemHints.education?.length ?? 0) +
+                (incompleteItemHints.certifications?.length ?? 0) + (incompleteItemHints.workExperiences?.length ?? 0)
+              ) > 0;
+              if (hasIncomplete) {
+                toast.error('Complete all required fields first (use Add fields above) before opening Settings.');
+                return;
+              }
+              await updateProfile(pendingCvExtracted);
+              setPendingCvExtracted(null);
+              setMissingFieldsDialogOpen(false);
+              setMissingFieldsList([]);
+              setIncompleteItemHints(null);
+              const sectionId = section === 'workExperiences' ? 'work-experiences' : section === 'education' ? 'education' : section === 'certifications' ? 'certifications' : 'projects';
+              router.push(`/settings?section=${sectionId}&edit=${index}`);
+            } : undefined}
+          />
 
           {/* DYNAMIC SECTIONS — data from backend */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

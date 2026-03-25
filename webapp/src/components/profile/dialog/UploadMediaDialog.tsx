@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
-import { ImagePlus, Link2 } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { ImagePlus } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
+import { ImageDropzone } from '@/components/ui/ImageDropzone';
 import { Label } from '@/components/retroui';
 import { Input } from '@/components/retroui';
 import { toast } from 'sonner';
@@ -14,10 +15,9 @@ export interface UploadMediaDialogProps {
   open: boolean;
   onClose: () => void;
   token: string;
-  onSuccess: (item: { url: string; title?: string; altText?: string }) => void;
+  onSuccess: (item: { url: string; title?: string; altText?: string; blurDataUrl?: string }) => void;
 }
 
-const ACCEPT = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const MAX_MB = 5;
 
 type UploadMode = 'full' | 'crop';
@@ -28,9 +28,7 @@ export function UploadMediaDialog({
   token,
   onSuccess,
 }: UploadMediaDialogProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploadMode, setUploadMode] = useState<UploadMode>('crop');
@@ -52,7 +50,6 @@ export function UploadMediaDialog({
     setCroppedAreaPixels(null);
     setProgress(0);
     setUploading(false);
-    setDragOver(false);
   };
 
   const handleFile = (file: File | null) => {
@@ -104,6 +101,7 @@ export function UploadMediaDialog({
           url: data.url,
           title: title.trim() || undefined,
           altText: altText.trim() || undefined,
+          blurDataUrl: data.blurDataUrl,
         });
         toast.success('Media added.');
         resetState();
@@ -113,24 +111,6 @@ export function UploadMediaDialog({
       toast.error(e instanceof Error ? e.message : 'Upload failed.');
       setUploading(false);
     }
-  };
-
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    handleFile(file ?? null);
-    e.target.value = '';
-  };
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    handleFile(file ?? null);
-  };
-
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
   };
 
   const handleClose = () => {
@@ -170,33 +150,21 @@ export function UploadMediaDialog({
           />
         </div>
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPT}
-          onChange={onInputChange}
-          className="hidden"
-          aria-hidden
-        />
-
         {!imageUrl && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => inputRef.current?.click()}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            onDragLeave={() => setDragOver(false)}
-            onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+          <ImageDropzone
+            disabled={uploading}
+            maxSizeBytes={MAX_MB * 1024 * 1024}
             className={cn(
-              'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
-              dragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/20 hover:bg-muted/30',
+              'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'border-border bg-muted/20 hover:bg-muted/30',
               uploading && 'pointer-events-none opacity-70'
             )}
+            dragActiveClassName="border-primary bg-primary/5"
+            onFile={(f) => handleFile(f)}
           >
             <p className="text-sm font-bold text-foreground">Drop an image here or click to browse</p>
             <p className="text-[10px] text-muted-foreground mt-1">Image will be compressed to a thumbnail</p>
-          </div>
+          </ImageDropzone>
         )}
 
         {imageUrl && (

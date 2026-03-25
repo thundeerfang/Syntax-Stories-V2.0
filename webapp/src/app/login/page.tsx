@@ -19,7 +19,10 @@ export default function LoginPage() {
       return;
     }
     const error = searchParams.get('error');
-    if (error) toast.error(error);
+    // Dedupe: React Strict Mode runs this effect twice in dev; same Sonner id = one toast.
+    if (error) {
+      toast.error(error, { id: 'syntax-stories-login-oauth-error' });
+    }
     open('login');
     router.replace('/');
   }, [isHydrated, token, open, router, searchParams]);

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { AlignLeft, Camera, Film, Gauge, Github, Image as ImageIcon, Minus } from 'lucide-react';
+import { AlignLeft, Camera, Film, Gauge, Github, Image as ImageIcon, Minus, Type } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface BottomToolbarItem {
@@ -20,13 +20,19 @@ interface BottomToolbarProps {
   className?: string;
 }
 
-// Default configuration used by the blog write editor
-const DEFAULT_ITEMS: BottomToolbarItem[] = [
+// Default configuration used by the blog write editor (exported for sidebar Tools)
+export const DEFAULT_ITEMS: BottomToolbarItem[] = [
   {
     id: 'paragraph',
     label: 'Paragraph',
     icon: AlignLeft,
     description: 'Rich text block with markdown support for long-form writing.',
+  },
+  {
+    id: 'heading',
+    label: 'Sub-heading',
+    icon: Type,
+    description: 'Sub-heading (H2 or H3) below the main title.',
   },
   {
     id: 'partition',

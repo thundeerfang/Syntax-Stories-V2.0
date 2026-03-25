@@ -68,7 +68,7 @@ function FacebookCallbackInner() {
   };
 
   return (
-    <div className="flex min-h-[40vh] items-center justify-center">
+    <div className="flex w-full flex-col items-center justify-center py-12 sm:py-16">
       {twoFactorRequired && challengeToken ? (
         <form onSubmit={handleVerify} className="w-full max-w-sm space-y-3">
           <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground text-center">2FA required</p>
@@ -87,7 +87,7 @@ function FacebookCallbackInner() {
           </button>
         </form>
       ) : (
-        <TerminalLoaderPage pageName="auth" />
+        <TerminalLoaderPage pageName="auth" inline status="Completing sign-in…" />
       )}
     </div>
   );
@@ -95,7 +95,7 @@ function FacebookCallbackInner() {
 
 export default function FacebookCallbackPage() {
   return (
-    <Suspense fallback={<TerminalLoaderPage pageName="auth" />}>
+    <Suspense fallback={null}>
       <FacebookCallbackInner />
     </Suspense>
   );

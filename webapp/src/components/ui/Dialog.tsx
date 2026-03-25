@@ -30,7 +30,7 @@ export interface DialogProps {
 const defaultBackdropClass =
   'fixed inset-0 min-h-full min-w-full h-screen w-screen bg-black/60 backdrop-blur-[2px] pointer-events-auto';
 const defaultPanelClass =
-  'pointer-events-auto w-full max-w-md max-h-[90vh] overflow-y-auto border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]';
+  'pointer-events-auto w-full max-w-md max-h-[90vh] overflow-y-auto border-2 border-border bg-card text-card-foreground shadow-[6px_6px_0px_0px_var(--border)]';
 
 export function Dialog({
   open,
@@ -57,9 +57,10 @@ export function Dialog({
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
-        document.body.style.overflow = prev;
+        document.body.style.overflow = prev ?? '';
       };
     }
+    document.body.style.overflow = '';
   }, [open]);
 
   const overlay = (
@@ -98,10 +99,10 @@ export function Dialog({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="absolute right-4 top-4 p-2 cursor-pointer hover:opacity-80 transition-all"
+                    className="absolute right-4 top-4 p-2 cursor-pointer text-muted-foreground transition-all hover:text-card-foreground hover:opacity-100"
                     aria-label="Close"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-4 w-4" aria-hidden />
                   </button>
                 )}
                 {children}
