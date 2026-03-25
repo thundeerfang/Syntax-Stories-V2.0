@@ -12,6 +12,23 @@ const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio port
 
 const DAILY_FOLLOW_LIMIT = 500;
 
+/** Recompute from Follow collection when denormalized counts are missing, then persist on User. */
+async function ensureStoredFollowCounts(
+  userId: mongoose.Types.ObjectId,
+  followersCount: number | null | undefined,
+  followingCount: number | null | undefined
+): Promise<{ followersCount: number; followingCount: number }> {
+  if (followersCount != null && followingCount != null) {
+    return { followersCount, followingCount };
+  }
+  const [fc, fic] = await Promise.all([
+    FollowModel.countDocuments({ following: userId }),
+    FollowModel.countDocuments({ follower: userId }),
+  ]);
+  await UserModel.updateOne({ _id: userId }, { $set: { followersCount: fc, followingCount: fic } });
+  return { followersCount: fc, followingCount: fic };
+}
+
 export async function getPublicProfile(req: Request, res: Response): Promise<void> {
   try {
     const username = (req.params as { username?: string }).username?.trim()?.toLowerCase();
@@ -24,23 +41,14 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    let followersCount = (user as { followersCount?: number }).followersCount;
-    let followingCount = (user as { followingCount?: number }).followingCount;
-    if (followersCount == null || followingCount == null) {
-      const [fc, fic] = await Promise.all([
-        FollowModel.countDocuments({ following: user._id }),
-        FollowModel.countDocuments({ follower: user._id }),
-      ]);
-      followersCount = fc;
-      followingCount = fic;
-      await UserModel.updateOne({ _id: user._id }, { $set: { followersCount: fc, followingCount: fic } });
-    }
-    const profileImg = normalizeProfileImg((user as { profileImg?: string }).profileImg);
+    const u = user as { _id: mongoose.Types.ObjectId; profileImg?: string; followersCount?: number; followingCount?: number };
+    const counts = await ensureStoredFollowCounts(u._id, u.followersCount, u.followingCount);
+    const profileImg = normalizeProfileImg(u.profileImg);
     res.status(200).json({
       success: true,
       user: { ...user, id: String(user._id), profileImg },
-      followersCount: followersCount ?? 0,
-      followingCount: followingCount ?? 0,
+      followersCount: counts.followersCount,
+      followingCount: counts.followingCount,
     });
   } catch (err) {
     console.error(err);
@@ -60,18 +68,9 @@ export async function getFollowCounts(req: Request, res: Response): Promise<void
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    let followersCount = (user as { followersCount?: number }).followersCount;
-    let followingCount = (user as { followingCount?: number }).followingCount;
-    if (followersCount == null || followingCount == null) {
-      const [fc, fic] = await Promise.all([
-        FollowModel.countDocuments({ following: user._id }),
-        FollowModel.countDocuments({ follower: user._id }),
-      ]);
-      followersCount = fc;
-      followingCount = fic;
-      await UserModel.updateOne({ _id: user._id }, { $set: { followersCount: fc, followingCount: fic } });
-    }
-    res.status(200).json({ success: true, followersCount: followersCount ?? 0, followingCount: followingCount ?? 0 });
+    const u = user as { _id: mongoose.Types.ObjectId; followersCount?: number; followingCount?: number };
+    const counts = await ensureStoredFollowCounts(u._id, u.followersCount, u.followingCount);
+    res.status(200).json({ success: true, followersCount: counts.followersCount, followingCount: counts.followingCount });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -88,6 +87,72 @@ function dayBucketUTC(d = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
+function isMongooseTransactionUnsupportedError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : '';
+  return (
+    msg.includes('Transaction numbers are only allowed on a replica set member') ||
+    msg.includes('replica set') ||
+    msg.includes('Transaction') ||
+    msg.includes('transaction')
+  );
+}
+
+/** Parses limit + optional cursor; sends 400 on bad cursor and returns null. */
+function parseFollowListQuery(req: Request, res: Response): { limit: number; cursor?: Date } | null {
+  const limit = Math.min(Number(req.query?.limit) || DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  const cursorRaw = (req.query?.cursor as string)?.trim();
+  if (!cursorRaw) return { limit };
+  const cursor = new Date(cursorRaw);
+  if (isNaN(cursor.getTime())) {
+    res.status(400).json({ success: false, message: 'Invalid cursor' });
+    return null;
+  }
+  return { limit, cursor };
+}
+
+type FollowListItem = { id: string; username: string; fullName: string; profileImg: string | undefined };
+
+async function paginatedFollowEdges(
+  userId: mongoose.Types.ObjectId,
+  limit: number,
+  cursor: Date | undefined,
+  mode: 'followers' | 'following'
+): Promise<{ list: FollowListItem[]; nextCursor: string | null }> {
+  const peerKey = mode === 'followers' ? 'follower' : 'following';
+  const filterKey = mode === 'followers' ? 'following' : 'follower';
+  const filter: Record<string, unknown> = { [filterKey]: userId };
+  if (cursor) filter.createdAt = { $lt: cursor };
+
+  const follows = await FollowModel.find(filter as mongoose.FilterQuery<{ createdAt: Date }>)
+    .select(`${peerKey} createdAt`)
+    .sort({ createdAt: -1 })
+    .limit(limit + 1)
+    .populate(peerKey, FOLLOWED_FIELDS)
+    .lean();
+
+  const hasMore = follows.length > limit;
+  const slice = hasMore ? follows.slice(0, limit) : follows;
+  const list = slice.map((f) => {
+    const u = (f as Record<string, unknown>)[peerKey] as {
+      _id: mongoose.Types.ObjectId;
+      username: string;
+      fullName: string;
+      profileImg?: string;
+    };
+    return {
+      id: String(u._id),
+      username: u.username,
+      fullName: u.fullName,
+      profileImg: normalizeProfileImg(u.profileImg),
+    };
+  });
+  const nextCursor =
+    hasMore && slice.length > 0
+      ? (slice[slice.length - 1] as { createdAt: Date }).createdAt?.toISOString() ?? null
+      : null;
+  return { list, nextCursor };
+}
+
 export async function getFollowers(req: Request, res: Response): Promise<void> {
   try {
     const username = (req.params as { username?: string }).username?.trim()?.toLowerCase();
@@ -95,38 +160,14 @@ export async function getFollowers(req: Request, res: Response): Promise<void> {
       res.status(400).json({ success: false, message: 'Username required' });
       return;
     }
-    const limit = Math.min(Number(req.query?.limit) || DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-    const cursorRaw = (req.query?.cursor as string)?.trim();
-    let cursor: Date | undefined;
-    if (cursorRaw) {
-      cursor = new Date(cursorRaw);
-      if (isNaN(cursor.getTime())) {
-        res.status(400).json({ success: false, message: 'Invalid cursor' });
-        return;
-      }
-    }
+    const parsed = parseFollowListQuery(req, res);
+    if (!parsed) return;
     const user = await UserModel.findOne({ username }).select('_id').lean();
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    const filter: mongoose.FilterQuery<{ following: unknown; createdAt: Date }> = { following: user._id };
-    if (cursor) filter.createdAt = { $lt: cursor };
-    const follows = await FollowModel.find(filter)
-      .select('follower createdAt')
-      .sort({ createdAt: -1 })
-      .limit(limit + 1)
-      .populate<{ follower: { _id: string; username: string; fullName: string; profileImg?: string } }>('follower', FOLLOWED_FIELDS)
-      .lean();
-    const hasMore = follows.length > limit;
-    const slice = hasMore ? follows.slice(0, limit) : follows;
-    const list = slice.map((f) => {
-      const u = f.follower as unknown as { _id: mongoose.Types.ObjectId; username: string; fullName: string; profileImg?: string };
-      return { id: String(u._id), username: u.username, fullName: u.fullName, profileImg: normalizeProfileImg(u.profileImg) };
-    });
-    const nextCursor = hasMore && slice.length > 0
-      ? (slice[slice.length - 1] as { createdAt: Date }).createdAt?.toISOString() ?? null
-      : null;
+    const { list, nextCursor } = await paginatedFollowEdges(user._id, parsed.limit, parsed.cursor, 'followers');
     res.status(200).json({ success: true, list, nextCursor });
   } catch (err) {
     console.error(err);
@@ -141,38 +182,14 @@ export async function getFollowing(req: Request, res: Response): Promise<void> {
       res.status(400).json({ success: false, message: 'Username required' });
       return;
     }
-    const limit = Math.min(Number(req.query?.limit) || DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-    const cursorRaw = (req.query?.cursor as string)?.trim();
-    let cursor: Date | undefined;
-    if (cursorRaw) {
-      cursor = new Date(cursorRaw);
-      if (isNaN(cursor.getTime())) {
-        res.status(400).json({ success: false, message: 'Invalid cursor' });
-        return;
-      }
-    }
+    const parsed = parseFollowListQuery(req, res);
+    if (!parsed) return;
     const user = await UserModel.findOne({ username }).select('_id').lean();
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    const filter: mongoose.FilterQuery<{ follower: unknown; createdAt: Date }> = { follower: user._id };
-    if (cursor) filter.createdAt = { $lt: cursor };
-    const follows = await FollowModel.find(filter)
-      .select('following createdAt')
-      .sort({ createdAt: -1 })
-      .limit(limit + 1)
-      .populate<{ following: { _id: string; username: string; fullName: string; profileImg?: string } }>('following', FOLLOWED_FIELDS)
-      .lean();
-    const hasMore = follows.length > limit;
-    const slice = hasMore ? follows.slice(0, limit) : follows;
-    const list = slice.map((f) => {
-      const u = f.following as unknown as { _id: mongoose.Types.ObjectId; username: string; fullName: string; profileImg?: string };
-      return { id: String(u._id), username: u.username, fullName: u.fullName, profileImg: normalizeProfileImg(u.profileImg) };
-    });
-    const nextCursor = hasMore && slice.length > 0
-      ? (slice[slice.length - 1] as { createdAt: Date }).createdAt?.toISOString() ?? null
-      : null;
+    const { list, nextCursor } = await paginatedFollowEdges(user._id, parsed.limit, parsed.cursor, 'following');
     res.status(200).json({ success: true, list, nextCursor });
   } catch (err) {
     console.error(err);
@@ -253,14 +270,7 @@ export async function followUser(req: Request, res: Response): Promise<void> {
         return;
       }
       // If transactions aren't supported (standalone Mongo), fallback to non-transactional behavior
-      const msg = e instanceof Error ? e.message : '';
-      const looksLikeTxnUnsupported =
-        msg.includes('Transaction numbers are only allowed on a replica set member') ||
-        msg.includes('replica set') ||
-        msg.includes('Transaction') ||
-        msg.includes('transaction');
-
-      if (!looksLikeTxnUnsupported) throw e;
+      if (!isMongooseTransactionUnsupportedError(e)) throw e;
 
       const updateResult = await FollowModel.updateOne(
         { follower: currentUser._id, following: target._id },
@@ -367,14 +377,7 @@ export async function unfollowUser(req: Request, res: Response): Promise<void> {
         }], { session });
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '';
-      const looksLikeTxnUnsupported =
-        msg.includes('Transaction numbers are only allowed on a replica set member') ||
-        msg.includes('replica set') ||
-        msg.includes('Transaction') ||
-        msg.includes('transaction');
-
-      if (!looksLikeTxnUnsupported) throw e;
+      if (!isMongooseTransactionUnsupportedError(e)) throw e;
 
       const deleteResult = await FollowModel.deleteOne({ follower: currentUser._id, following: target._id });
       deleted = (deleteResult.deletedCount ?? 0) > 0;
