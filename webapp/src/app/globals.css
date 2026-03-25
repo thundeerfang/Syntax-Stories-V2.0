@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-vertical-timeline-component/style.min.css";
 
 /* Theme: purple primary, accent yellow, light/dark */
 @theme {
@@ -27,6 +28,8 @@
   --color-destructive-foreground: var(--destructive-foreground);
 }
 
+/* Settings: primary action buttons use `src/app/settings/buttonStyles.ts` — no hover translate/shadow shift; 3D press only on :active. */
+
 :root {
   --header-height: 4rem;
   --radius: 0;
@@ -46,12 +49,14 @@
   --destructive: #ef4444;
   --destructive-foreground: #fff;
   --border: #3a3a3a;
+  --scrollbar-track: #fff;
+  --scrollbar-thumb-border: #e5e5e5;
 }
 
 .dark {
   --background: #0f0f12;
   --foreground: #f5f5f5;
-  --card: #1a1a1d;
+  --card: #111111;
   --card-foreground: #eaeaea;
   --primary: #7b6df5;
   --primary-hover: #5f4fe6;
@@ -65,9 +70,17 @@
   --destructive: #ef4444;
   --destructive-foreground: #fff;
   --border: #2e2e32;
+  --scrollbar-track: #0a0a0b;
+  --scrollbar-thumb-border: #0a0a0b;
 }
 
 @custom-variant dark (&:is(.dark *));
+
+/* Theme transition app-wide so dark/light switch is smooth on every page */
+html,
+html * {
+  transition: background-color 0.12s ease-out, color 0.12s ease-out, border-color 0.12s ease-out;
+}
 
 @layer base {
   *,
@@ -80,6 +93,8 @@
 
   html {
     scroll-behavior: smooth;
+    /* Reserve space for scrollbar so layout doesn't shift when it appears/disappears */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -92,6 +107,129 @@
     text-decoration: none;
     color: inherit;
   }
+}
+
+/* ContentEditable empty state: show placeholder via ::before (e.g. summary INPUT_TITLE_HERE style) */
+.ss-editor-empty {
+  position: relative;
+}
+.ss-editor-empty::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0;
+  top: 0.75rem; /* match py-3 so placeholder aligns with first line */
+  color: var(--muted-foreground);
+  font-weight: 500;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  pointer-events: none;
+}
+
+/* Summary editor: links rendered as badge with link icon, text = domain (not full URL) */
+.ss-summary-editor a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  margin: 0 0.35em;
+  border-radius: 0;
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0 0 var(--border);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.ss-summary-editor a::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.ss-summary-editor a:empty {
+  min-width: 1.5rem;
+}
+.ss-summary-editor a:empty::after {
+  content: '\00a0';
+  white-space: pre;
+}
+
+/* Smooth theme transition for write page: only theme-related properties to avoid lag */
+.ss-write-theme-transition,
+.ss-write-theme-transition * {
+  transition: background-color 0.25s ease-out, color 0.25s ease-out, border-color 0.25s ease-out;
+}
+
+/* Retro UI scrollbar: purple thumb; track follows theme (white in light, dark in dark) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+  border: 2px solid var(--scrollbar-thumb-border);
+}
+
+/* Markdown buffer: links with primary bg, white text, link icon */
+.ss-markdown-links a::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  vertical-align: middle;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+/* Hide scrollbar (keep scroll behavior) */
+.ss-scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+.ss-scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Centre card: hidden scrollbar + smooth scroll */
+.ss-center-scroll {
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ss-center-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* Animated gradient background for profile cover / Open Source */
@@ -160,4 +298,214 @@
 .dark .grid-bg {
   background-image: linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+}
+/* Animations */
+
+@keyframes loader-scale-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes progress-loading {
+  0% { width: 0%; transform: translateX(-100%); }
+  50% { width: 70%; transform: translateX(0%); }
+  100% { width: 100%; transform: translateX(100%); }
+}
+
+.loader-scale-in {
+  animation: loader-scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-progress-loading {
+  animation: progress-loading 2s infinite ease-in-out;
+}
+
+/* Pacman Refinement */
+.terminal-loader-pacman-refined {
+  transform: scale(0.4);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Customizing the react-loader pacman colors */
+.terminal-loader-pacman-refined .pacman > div:first-of-type,
+.terminal-loader-pacman-refined .pacman > div:nth-child(2) {
+  border-top-color: #b967ff !important;
+  border-left-color: #b967ff !important;
+  border-bottom-color: #b967ff !important;
+}
+
+.terminal-loader-pacman-refined .pacman > div:nth-child(3),
+.terminal-loader-pacman-refined .pacman > div:nth-child(4),
+.terminal-loader-pacman-refined .pacman > div:nth-child(5) {
+  background-color: #b967ff !important;
+  opacity: 0.6;
+}
+
+/* Work experience timeline (react-vertical-timeline-component) overrides */
+.ss-we-timeline.vertical-timeline {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.ss-we-timeline.vertical-timeline::before {
+  left: 10px !important;
+  width: 1px !important;
+  background: color-mix(in srgb, var(--primary) 45%, transparent) !important;
+}
+
+.ss-we-timeline .vertical-timeline-element {
+  margin: 0 0 4px 0 !important;
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.ss-we-timeline .vertical-timeline-element-icon {
+  width: 16px !important;
+  height: 16px !important;
+  left: 2px !important;
+  top: 3px !important;
+  margin-left: 0 !important;
+  border-radius: 9999px !important;
+  background: var(--card) !important;
+  border: 2px solid color-mix(in srgb, var(--primary) 70%, var(--border)) !important;
+  box-shadow: 2px 2px 0 0 var(--border) !important;
+}
+
+.ss-we-timeline .vertical-timeline-element-content {
+  margin-left: 30px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.ss-we-timeline .vertical-timeline-element-content-arrow {
+  display: none !important;
+}
+
+/* Remove left-to-right and any entrance animation on timeline positions (library uses bounce-in) */
+.ss-we-timeline .vertical-timeline-element-icon {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Catch-all: no animation/transition on timeline elements (except our dot blink) */
+.ss-we-timeline .vertical-timeline-element,
+.ss-we-timeline .vertical-timeline-element-content,
+.ss-we-timeline .vertical-timeline-element-icon {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+.ss-we-timeline .vertical-timeline-element-content,
+.ss-we-timeline .vertical-timeline-element-icon {
+  animation-name: none !important;
+}
+/* Keep only the inner dot blink (it has its own class) */
+.ss-we-timeline .ss-we-node-dot--blink {
+  animation: ss-we-dot-blink 1.3s ease-in-out infinite !important;
+}
+
+@keyframes ss-we-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  75% { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+.ss-we-timeline .ss-we-pulse-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  border: 2px solid var(--primary);
+  opacity: 0.55;
+  animation: none !important;
+}
+
+@keyframes ss-we-dot-blink {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  45% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Use only .ss-we-node-dot span in JSX (no ::after) so only last promotion blinks */
+.ss-we-timeline .vertical-timeline-element-icon::after {
+  display: none !important;
+}
+
+/* ========== Settings list – animations & transitions (moved from raw component code) ========== */
+@keyframes ss-scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Card root: border and header transitions */
+.ss-settings-card.group:hover .ss-card-border { border-color: var(--primary); }
+.ss-settings-card .ss-card-border { transition: border-color 0.2s, color 0.2s; }
+.ss-settings-card.group:hover .ss-card-header { background-color: color-mix(in srgb, var(--muted) 50%, transparent); }
+.ss-settings-card .ss-card-header { transition: background-color 0.2s, color 0.2s; }
+.ss-settings-card.group:hover .ss-card-logo-box { border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
+.ss-settings-card .ss-card-logo-box { transition: border-color 0.2s; }
+/* Work card logo: dot pattern as background so icon/image stays on top */
+.ss-settings-card--work .ss-card-logo-box--work {
+  background-color: var(--background);
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+.dark .ss-settings-card--work .ss-card-logo-box--work {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+}
+.ss-settings-card .ss-card-logo-img { transition: filter 0.2s; }
+.ss-settings-card .ss-card-logo-img-bright { transition: filter 0.2s; }
+/* Work card: title uses same hover color as border (var(--primary)) */
+/* Work experience card title keeps its base color on hover; only the card border changes to primary. */
+.ss-settings-card .ss-card-title { transition: color 0.2s; }
+.ss-settings-card .ss-btn-action { transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+.ss-settings-card .ss-btn-action:hover { background-color: var(--primary); color: var(--primary-foreground); }
+.ss-settings-card .ss-btn-remove { transition: background-color 0.2s, color 0.2s; }
+.ss-settings-card .ss-btn-remove:hover { background-color: var(--destructive); color: var(--destructive-foreground); }
+.ss-settings-card.group:hover .ss-meta-pill { border-color: color-mix(in srgb, var(--primary) 30%, transparent); color: var(--primary); }
+.ss-settings-card .ss-meta-pill { transition: border-color 0.2s, color 0.2s; }
+.ss-settings-card .ss-link-pill { transition: background-color 0.2s; }
+.ss-settings-card .ss-link-pill:hover { background-color: color-mix(in srgb, var(--primary) 10%, transparent); }
+.ss-settings-card .ss-media-thumb { transition: border-color 0.2s; }
+.ss-settings-card .ss-media-thumb:hover { border-color: var(--primary); }
+.ss-settings-card .ss-scanline-overlay { transition: opacity 0.2s; }
+.ss-settings-card.group:hover .ss-scanline-overlay { opacity: 1; }
+.ss-settings-card .ss-scanline-line { animation: ss-scanline 4s linear infinite; }
+.ss-settings-card .ss-project-accent { transition: background-color 0.2s; }
+.ss-settings-card .ss-icon-scale { transition: transform 0.3s; }
+.ss-settings-card.group:hover .ss-icon-scale { transform: scale(1.1); }
+.ss-settings-card .ss-cert-media-wrap { transition: border-color 0.2s; }
+.ss-settings-card .ss-cert-media-wrap:hover { border-color: var(--primary); }
+.ss-settings-card .ss-cert-media-wrap .ss-overlay { transition: opacity 0.2s; }
+.ss-settings-card .ss-cert-media-wrap:hover .ss-overlay { opacity: 1; }
+
+/* Header primary button (settings section) */
+.ss-settings-header-btn { transition: transform 0.2s, box-shadow 0.2s; }
+.ss-settings-header-btn:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; }
+.ss-settings-header-btn:disabled { cursor: not-allowed; }
+.ss-settings-header-btn:disabled:hover { transform: none; box-shadow: 4px 4px 0 0 var(--border); }
+
+/* Profile page: reuse settings cards but hide edit/remove buttons */
+.ss-profile-readonly button.ss-btn-action,
+.ss-profile-readonly .ss-btn-remove {
+  display: none !important;
 }

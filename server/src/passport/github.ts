@@ -1,13 +1,15 @@
 import passport from 'passport';
 import { Strategy as GitHubStrategy } from 'passport-github2';
-import { UserModel } from '../models/User';
+import { UserModel, DEFAULT_AVATAR_URL } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
+import { getRedis } from '../config/redis';
+import { writeAuditLog } from '../utils/auditLog';
 
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/github/callback` : '';
 
 interface GitHubProfile {
-  _json?: { email?: string; name?: string };
+  _json?: { email?: string; name?: string; avatar_url?: string };
   emails?: Array<{ value: string; primary?: boolean }>;
   displayName?: string;
   username?: string;
@@ -40,6 +42,34 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
           return done(new Error('Email is required but not available from GitHub'), undefined);
         }
 
+        if (flow.startsWith('link:')) {
+          const linkKey = flow.slice(5);
+          const redis = getRedis();
+          if (!redis) return done(new Error('Linking unavailable'), undefined);
+          const userId = await redis.get(`link:${linkKey}`);
+          if (!userId) return done(new Error('Link expired or invalid'), undefined);
+          const user = await UserModel.findById(userId).select('+githubToken');
+          if (!user) return done(new Error('User not found'), undefined);
+          const accountEmail = (user.email ?? '').toLowerCase();
+          const providerEmail = email.toLowerCase();
+          if (accountEmail !== providerEmail) {
+            return done(
+              new Error(`Use the same email as your account (${user.email}) to connect GitHub.`),
+              undefined
+            );
+          }
+          user.gitId = String(profile.id);
+          user.githubToken = accessToken;
+          user.isGitAccount = true;
+          await user.save();
+          await redis.del(`link:${linkKey}`);
+          void writeAuditLog(req as import('express').Request, 'oauth_connected', {
+            actorId: String(user._id),
+            metadata: { provider: 'github' },
+          });
+          return done(null, { _id: user._id, gitId: user.gitId });
+        }
+
         if (flow === 'login') {
           const existingUser = await UserModel.findOne({ gitId: String(profile.id) }).select('+githubToken');
           if (!existingUser || !existingUser.isGitAccount) {
@@ -64,12 +94,16 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
         const randomNumber = Math.floor(1000 + Math.random() * 9000);
         const fullName =
           (profile._json?.name ?? profile.displayName ?? profile.username)?.trim() || 'User';
+        const avatarUrl = profile._json?.avatar_url;
+        const profileImg =
+          typeof avatarUrl === 'string' && avatarUrl.startsWith('http') ? avatarUrl : DEFAULT_AVATAR_URL;
+
         const newUser = new UserModel({
           fullName,
           username: (profile.username ?? 'user') + randomNumber,
           gitId: String(profile.id),
           email,
-          profileImg: '/uploads/waumti9zvnnmgayfxbmv',
+          profileImg,
           bio: 'Welcome to Syntax Stories 🧑🏻‍💻',
           github: `https://github.com/${profile.username}`,
           githubToken: accessToken,
@@ -78,6 +112,7 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
           isFacebookAccount: false,
           isXAccount: false,
           isAppleAccount: false,
+          isDiscordAccount: false,
         });
         await newUser.save();
         const subscription = await SubscriptionModel.create({

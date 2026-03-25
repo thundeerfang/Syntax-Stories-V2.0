@@ -1,11 +1,17 @@
 import { Router } from 'express';
+import multer from 'multer';
 import {
   sendOtp,
   signupEmail,
   verifyOtp,
   refresh,
   logout,
+  revokeSessionByRefreshToken,
   me,
+  linkRequest,
+  initEmailChange,
+  verifyEmailChange,
+  cancelEmailChange,
   disconnectProvider,
   setupTwoFactor,
   enableTwoFactor,
@@ -14,12 +20,15 @@ import {
   approveQrLogin,
   pollQrLogin,
   verifyTwoFactorLogin,
+  updateProfile,
+  parseCv,
 } from '../controllers/auth.controller';
 import {
   idempotency,
   sendOtpValidation,
   signupEmailValidation,
   verifyOtpValidation,
+  updateProfileValidation,
   verifyToken,
   rateLimitSendOtp,
   rateLimitVerifyOtp,
@@ -34,7 +43,23 @@ router.post('/signup-email', rateLimitSignupEmail, idempotency, signupEmailValid
 router.post('/verify-otp', rateLimitVerifyOtp, idempotency, verifyOtpValidation, verifyOtp);
 router.post('/refresh', rateLimitRefresh, refresh);
 router.post('/logout', verifyToken, logout);
+router.post('/revoke-session', revokeSessionByRefreshToken);
 router.get('/me', verifyToken, me);
+router.patch('/profile', verifyToken, updateProfileValidation, updateProfile);
+
+const cvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') cb(null, true);
+    else cb(new Error('Only PDF files are allowed'));
+  },
+});
+router.post('/parse-cv', verifyToken, cvUpload.single('pdf'), parseCv);
+router.post('/link-request', verifyToken, linkRequest);
+router.post('/email-change/init', verifyToken, initEmailChange);
+router.post('/email-change/verify', verifyToken, verifyEmailChange);
+router.post('/email-change/cancel', verifyToken, cancelEmailChange);
 router.post('/disconnect/:provider', verifyToken, disconnectProvider);
 router.post('/2fa/setup', verifyToken, setupTwoFactor);
 router.post('/2fa/enable', verifyToken, enableTwoFactor);

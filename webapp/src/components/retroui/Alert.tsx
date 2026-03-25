@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export type AlertStatus = 'success' | 'info' | 'error' | 'warning';
@@ -38,7 +38,6 @@ export function Alert({ status, className, children }: AlertProps) {
 }
 
 export function AlertTitle({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  const ctx = useContext(AlertContext);
   return (
     <div
       className={cn('font-semibold', className)}

@@ -34,7 +34,7 @@
   (TypeScript and @types are in dependencies so the build works on Render when NODE_ENV=production.)
 - **Start Command:** `npm start`
 
-Set env vars (e.g. `MONGODB_URI`, `REDIS_URL`, `FRONTEND_URL`, OAuth secrets) in the Render dashboard.
+Set env vars (e.g. `MONGODB_URI`, `REDIS_URL`, `FRONTEND_URL`, OAuth secrets) in the Render dashboard. For **7-day login**, set `JWT_ACCESS_EXPIRY=7d` and `JWT_REFRESH_EXPIRY=7d` (or leave unset; defaults are 7d). Session expiry is extended on each token refresh. OAuth and email logins both create a session and return a refresh token so the client can get new access tokens when they expire.
 
 **JWT PEM keys on Render:** Add them as **Secret Files** (Dashboard → Service → Environment → Secret Files). Create two files:
 - `privateKey.pem` — paste your private key contents

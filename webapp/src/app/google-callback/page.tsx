@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, Suspense, useState } from 'react';
+import { useEffect, Suspense, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi, normalizeUser } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
+import { TerminalLoaderPage } from '@/components/loader';
 import { toast } from 'sonner';
 
 function GoogleCallbackInner() {
@@ -12,14 +13,18 @@ function GoogleCallbackInner() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const handledRef = useRef(false);
 
   useEffect(() => {
+    if (handledRef.current) return;
     const token = searchParams.get('token');
+    const refreshToken = searchParams.get('refreshToken');
     const twoFactorRequired = searchParams.get('twoFactorRequired');
     const challengeToken = searchParams.get('challengeToken');
     const error = searchParams.get('error');
 
     if (error) {
+      handledRef.current = true;
       toast.error(error);
       router.replace('/login');
       return;
@@ -27,14 +32,16 @@ function GoogleCallbackInner() {
 
     if (!token) {
       if (twoFactorRequired && challengeToken) return;
+      handledRef.current = true;
       router.replace('/login');
       return;
     }
+    handledRef.current = true;
     authApi
       .getAccount(token)
       .then((res) => {
         const user = normalizeUser(res.user);
-        setAuth(user, token);
+        setAuth(user, token, refreshToken ?? undefined);
         router.replace('/');
       })
       .catch(() => router.replace('/'));
@@ -50,7 +57,7 @@ function GoogleCallbackInner() {
     try {
       const res = await authApi.verifyTwoFactorLogin({ challengeToken, token: code });
       const user = normalizeUser(res.user);
-      setAuth(user, res.accessToken);
+      setAuth(user, res.accessToken, res.refreshToken ?? undefined);
       toast.success('Signed in successfully.');
       router.replace('/');
     } catch (err) {
@@ -61,7 +68,7 @@ function GoogleCallbackInner() {
   };
 
   return (
-    <div className="flex min-h-[40vh] items-center justify-center">
+    <div className="flex w-full flex-col items-center justify-center py-12 sm:py-16">
       {twoFactorRequired && challengeToken ? (
         <form onSubmit={handleVerify} className="w-full max-w-sm space-y-3">
           <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground text-center">2FA required</p>
@@ -80,7 +87,7 @@ function GoogleCallbackInner() {
           </button>
         </form>
       ) : (
-        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Signing you in...</p>
+        <TerminalLoaderPage pageName="auth" inline status="Completing sign-in…" />
       )}
     </div>
   );
@@ -88,7 +95,7 @@ function GoogleCallbackInner() {
 
 export default function GoogleCallbackPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center"><p className="text-sm text-muted-foreground">Loading...</p></div>}>
+    <Suspense fallback={null}>
       <GoogleCallbackInner />
     </Suspense>
   );

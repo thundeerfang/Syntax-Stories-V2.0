@@ -1,36 +1,51 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import { MainLayout } from './MainLayout';
 import { FloatingActions } from './FloatingActions';
-import { NavbarSkeleton } from './NavbarSkeleton';
-import { FooterSkeleton } from './FooterSkeleton';
-import { cn } from '@/lib/utils';
+import { TerminalLoaderPage } from '@/components/loader';
+import { OAUTH_LEAVING_EVENT } from '@/lib/oauthNavigation';
 
 const LOADING_MS = 400;
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() ?? '';
+  const isOAuthCallbackRoute = pathname.includes('-callback');
   const [ready, setReady] = useState(false);
 
+  // OAuth returns should not stack the shell intro loader on top of the callback page loader.
+  useLayoutEffect(() => {
+    if (isOAuthCallbackRoute) setReady(true);
+  }, [isOAuthCallbackRoute]);
+
+  // Leaving the tab before LOADING_MS (e.g. OAuth) runs pagehide cleanup → timeout cleared, ready stays false.
+  // BFCache restore does not re-run this effect → terminal loader forever. Recover on back-forward / cache restore.
   useEffect(() => {
-    const id = setTimeout(() => setReady(true), LOADING_MS);
-    return () => clearTimeout(id);
+    const resume = () => setReady(true);
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) resume();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('popstate', resume);
+    window.addEventListener(OAUTH_LEAVING_EVENT, resume);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('popstate', resume);
+      window.removeEventListener(OAUTH_LEAVING_EVENT, resume);
+    };
   }, []);
 
+  useEffect(() => {
+    if (isOAuthCallbackRoute) return;
+    const id = setTimeout(() => setReady(true), LOADING_MS);
+    return () => clearTimeout(id);
+  }, [isOAuthCallbackRoute]);
+
   if (!ready) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <NavbarSkeleton />
-        <main className="flex flex-1 min-h-0 border-t border-border bg-background">
-          <div className={cn('relative flex-1 min-h-0 overflow-hidden p-4 sm:p-6')}>
-            <div className="relative z-[1] h-full min-h-[40vh]" />
-          </div>
-        </main>
-        <FooterSkeleton />
-      </div>
-    );
+    return <TerminalLoaderPage pageName="app" />;
   }
 
   return (

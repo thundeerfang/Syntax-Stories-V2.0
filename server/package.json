@@ -8,7 +8,8 @@
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:clean": "rimraf dist && npm run dev",
-    "generate-keys": "node scripts/generate-keys.js"
+    "generate-keys": "node scripts/generate-keys.js",
+    "reconcile:follow-counts": "ts-node src/scripts/reconcileFollowCounts.ts"
   },
   "dependencies": {
     "@types/express": "^5.0.6",
@@ -22,6 +23,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/speakeasy": "^2.0.10",
     "connect-redis": "^8.1.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -31,14 +33,18 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.0",
+    "multer": "^2.1.1",
     "nodemailer": "^8.0.1",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
+    "passport-oauth2": "^1.8.0",
     "passport-twitter": "^0.1.5",
+    "pdf-parse": "^1.1.1",
     "qrcode": "^1.5.4",
     "redis": "^4.7.0",
+    "sharp": "^0.33.5",
     "speakeasy": "^2.0.0",
     "typescript": "^5.7.2"
   },
@@ -48,6 +54,9 @@
     }
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/multer": "^2.0.0",
+    "@types/passport-oauth2": "^1.8.0",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0"

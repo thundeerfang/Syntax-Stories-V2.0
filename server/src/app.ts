@@ -1,18 +1,22 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
 import routes from './routes/index';
-import { signAccessToken } from './config/jwt';
+import uploadRoutes from './routes/upload.routes';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middlewares';
 import passport from './passport/index';
-import { hasFacebookConfig, hasXConfig } from './passport/index';
+import { hasFacebookConfig, hasXConfig, hasDiscordConfig } from './passport/index';
 import { env } from './config/env';
 import { getRedis } from './config/redis';
 import { RedisStore } from 'connect-redis';
 import { UserModel } from './models/User';
 import { createAuthChallenge } from './utils/authChallenge';
+import { createSessionAndTokens } from './controllers/auth.controller';
+import { writeAuditLog } from './utils/auditLog';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 
@@ -24,6 +28,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(express.json());
+app.use(cookieParser());
 // In production allow FRONTEND_URL (comma-separated; use *.example.com to allow any origin ending with .example.com, e.g. Vercel previews)
 const allowedOrigins =
   env.NODE_ENV === 'production'
@@ -86,12 +91,29 @@ app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/api', routes);
+app.use('/api/upload', uploadRoutes);
 app.use('/auth', authRoutes);
 
 app.get('/auth/google/login', passport.authenticate('google', { scope: ['profile', 'email'], state: 'login' }));
 app.get('/auth/google/signup', passport.authenticate('google', { scope: ['profile', 'email'], state: 'signup' }));
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], state: 'login' }));
+app.get('/auth/google/link', async (req, res, next) => {
+  const k = req.query.k as string;
+  if (!k?.trim()) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+  }
+  const redis = getRedis();
+  if (!redis) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+  }
+  const userId = await redis.get(`link:${k}`);
+  if (!userId) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'], state: `link:${k}` })(req, res, next);
+});
 app.get('/auth/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false }, async (err: unknown, userObj?: unknown) => {
     if (err) {
@@ -109,14 +131,41 @@ app.get('/auth/google/callback', (req, res, next) => {
         return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
       }
     }
-    const token = signAccessToken({ _id: u._id, googleId: u.googleId });
-    return res.redirect(`${redirectBaseUrl}/google-callback?token=${token}&userId=${u._id}&googleId=${u.googleId ?? ''}`);
+    const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+    void writeAuditLog(req, 'session_created', {
+      actorId: String(u._id),
+      metadata: {
+        sessionId: String(session._id),
+        deviceName: session.deviceName,
+        source: 'google',
+        expiresAt: session.expiresAt?.toISOString?.(),
+      },
+    });
+    void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'google' } });
+    void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'google' } });
+    const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), googleId: u.googleId ?? '' });
+    return res.redirect(`${redirectBaseUrl}/google-callback?${params.toString()}`);
   })(req, res, next);
 });
 
 app.get('/auth/github/login', passport.authenticate('github', { scope: ['user:email'], state: 'login' }));
 app.get('/auth/github/signup', passport.authenticate('github', { scope: ['user:email'], state: 'signup' }));
 app.get('/auth/github', passport.authenticate('github', { scope: ['user:email'], state: 'login' }));
+app.get('/auth/github/link', async (req, res, next) => {
+  const k = req.query.k as string;
+  if (!k?.trim()) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+  }
+  const redis = getRedis();
+  if (!redis) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+  }
+  const userId = await redis.get(`link:${k}`);
+  if (!userId) {
+    return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+  }
+  passport.authenticate('github', { scope: ['user:email'], state: `link:${k}` })(req, res, next);
+});
 app.get('/auth/github/callback', (req, res, next) => {
   passport.authenticate('github', { session: false }, async (err: unknown, userObj?: unknown) => {
     if (err) {
@@ -134,15 +183,109 @@ app.get('/auth/github/callback', (req, res, next) => {
         return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
       }
     }
-    const token = signAccessToken({ _id: u._id, gitId: u.gitId });
-    return res.redirect(`${redirectBaseUrl}/github-callback?token=${token}&userId=${u._id}&gitId=${u.gitId ?? ''}`);
+    const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+    void writeAuditLog(req, 'session_created', {
+      actorId: String(u._id),
+      metadata: {
+        sessionId: String(session._id),
+        deviceName: session.deviceName,
+        source: 'github',
+        expiresAt: session.expiresAt?.toISOString?.(),
+      },
+    });
+    void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'github' } });
+    void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'github' } });
+    const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), gitId: u.gitId ?? '' });
+    return res.redirect(`${redirectBaseUrl}/github-callback?${params.toString()}`);
   })(req, res, next);
 });
+
+if (hasDiscordConfig) {
+  app.get('/auth/discord/login', passport.authenticate('discord', { state: 'login' }));
+  app.get('/auth/discord/signup', passport.authenticate('discord', { state: 'signup' }));
+  app.get('/auth/discord', passport.authenticate('discord', { state: 'login' }));
+  app.get('/auth/discord/link', async (req, res, next) => {
+    const k = req.query.k as string;
+    if (!k?.trim()) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+    }
+    const redis = getRedis();
+    if (!redis) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+    }
+    const userId = await redis.get(`link:${k}`);
+    if (!userId) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+    }
+    passport.authenticate('discord', { state: `link:${k}` })(req, res, next);
+  });
+  app.get('/auth/discord/callback', (req, res, next) => {
+    passport.authenticate('discord', { session: false }, async (err: unknown, userObj?: unknown) => {
+      if (err) {
+        const msg = err instanceof Error ? err.message : 'Discord auth failed';
+        return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent(msg)}`);
+      }
+      const u = userObj as { _id?: string; discordId?: string } | undefined;
+      if (!u?._id) return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('Discord auth failed')}`);
+      const dbUser = await UserModel.findById(u._id).lean();
+      if (dbUser?.twoFactorEnabled) {
+        try {
+          const { challengeToken } = await createAuthChallenge(String(u._id));
+          return res.redirect(`${redirectBaseUrl}/discord-callback?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`);
+        } catch {
+          return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+        }
+      }
+      const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+      void writeAuditLog(req, 'session_created', {
+        actorId: String(u._id),
+        metadata: {
+          sessionId: String(session._id),
+          deviceName: session.deviceName,
+          source: 'discord',
+          expiresAt: session.expiresAt?.toISOString?.(),
+        },
+      });
+      void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'discord' } });
+      void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'discord' } });
+      const params = new URLSearchParams({
+        token: accessToken,
+        refreshToken,
+        userId: String(u._id),
+        discordId: u.discordId ?? '',
+      });
+      return res.redirect(`${redirectBaseUrl}/discord-callback?${params.toString()}`);
+    })(req, res, next);
+  });
+} else {
+  const discordRedirectBase = redirectBaseUrl || 'http://localhost:3000';
+  app.get('/auth/discord/login', (_req, res) => {
+    res.redirect(`${discordRedirectBase}/login?error=${encodeURIComponent('Discord OAuth is not configured (set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, BACKEND_URL).')}`);
+  });
+  app.get('/auth/discord/signup', (_req, res) => {
+    res.redirect(`${discordRedirectBase}/login?error=${encodeURIComponent('Discord OAuth is not configured (set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, BACKEND_URL).')}`);
+  });
+}
 
 if (hasFacebookConfig) {
   app.get('/auth/facebook/login', passport.authenticate('facebook', { scope: ['email'], state: 'login' }));
   app.get('/auth/facebook/signup', passport.authenticate('facebook', { scope: ['email'], state: 'signup' }));
   app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'], state: 'login' }));
+  app.get('/auth/facebook/link', async (req, res, next) => {
+    const k = req.query.k as string;
+    if (!k?.trim()) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+    }
+    const redis = getRedis();
+    if (!redis) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+    }
+    const userId = await redis.get(`link:${k}`);
+    if (!userId) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+    }
+    passport.authenticate('facebook', { scope: ['email'], state: `link:${k}` })(req, res, next);
+  });
   app.get('/auth/facebook/callback', (req, res, next) => {
     passport.authenticate('facebook', { session: false }, async (err: unknown, userObj?: unknown) => {
       if (err) {
@@ -160,8 +303,20 @@ if (hasFacebookConfig) {
           return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
         }
       }
-      const token = signAccessToken({ _id: u._id, facebookId: u.facebookId });
-      return res.redirect(`${redirectBaseUrl}/facebook-callback?token=${token}&userId=${u._id}&facebookId=${u.facebookId ?? ''}`);
+      const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+      void writeAuditLog(req, 'session_created', {
+        actorId: String(u._id),
+        metadata: {
+          sessionId: String(session._id),
+          deviceName: session.deviceName,
+          source: 'facebook',
+          expiresAt: session.expiresAt?.toISOString?.(),
+        },
+      });
+      void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'facebook' } });
+      void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'facebook' } });
+      const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), facebookId: u.facebookId ?? '' });
+      return res.redirect(`${redirectBaseUrl}/facebook-callback?${params.toString()}`);
     })(req, res, next);
   });
 } else {
@@ -174,6 +329,21 @@ if (hasXConfig) {
   app.get('/auth/x/login', passport.authenticate('twitter', { state: 'login' }));
   app.get('/auth/x/signup', passport.authenticate('twitter', { state: 'signup' }));
   app.get('/auth/x', passport.authenticate('twitter', { state: 'login' }));
+  app.get('/auth/x/link', async (req, res, next) => {
+    const k = req.query.k as string;
+    if (!k?.trim()) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Invalid link request')}`);
+    }
+    const redis = getRedis();
+    if (!redis) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Linking unavailable')}`);
+    }
+    const userId = await redis.get(`link:${k}`);
+    if (!userId) {
+      return res.redirect(`${redirectBaseUrl}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+    }
+    passport.authenticate('twitter', { state: `link:${k}` })(req, res, next);
+  });
 app.get('/auth/x/callback', (req, res, next) => {
     passport.authenticate('twitter', { session: false }, async (err: unknown, userObj?: unknown) => {
       if (err) {
@@ -191,8 +361,20 @@ app.get('/auth/x/callback', (req, res, next) => {
           return res.redirect(`${redirectBaseUrl}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
         }
       }
-      const token = signAccessToken({ _id: u._id, xId: u.xId });
-      return res.redirect(`${redirectBaseUrl}/x-callback?token=${token}&userId=${u._id}&xId=${u.xId ?? ''}`);
+      const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+      void writeAuditLog(req, 'session_created', {
+        actorId: String(u._id),
+        metadata: {
+          sessionId: String(session._id),
+          deviceName: session.deviceName,
+          source: 'x',
+          expiresAt: session.expiresAt?.toISOString?.(),
+        },
+      });
+      void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: 'x' } });
+      void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: 'x' } });
+      const params = new URLSearchParams({ token: accessToken, refreshToken, userId: String(u._id), xId: u.xId ?? '' });
+      return res.redirect(`${redirectBaseUrl}/x-callback?${params.toString()}`);
     })(req, res, next);
   });
 } else {
@@ -203,7 +385,7 @@ app.get('/auth/x/callback', (req, res, next) => {
 
 app.get('/auth/apple', (_req, res) => {
   res.status(501).json({
-    message: 'Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, X, or email OTP.',
+    message: 'Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, Discord, X, or email OTP.',
     success: false,
   });
 });
