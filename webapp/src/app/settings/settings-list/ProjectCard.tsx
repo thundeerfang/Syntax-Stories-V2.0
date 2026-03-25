@@ -5,7 +5,6 @@ import {
   BookOpen, 
   Calendar, 
   ExternalLink, 
-  FileText, 
   FolderGit2, 
   Link2, 
   Pencil, 

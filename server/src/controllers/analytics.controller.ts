@@ -134,18 +134,16 @@ export async function recordProfileView(req: Request, res: Response): Promise<vo
       throw e;
     }
 
-    if (counted) {
-      await ProfileDailyMetricsModel.findOneAndUpdate(
-        { profileUserId, date: dayBucket },
-        {
-          $inc: inc,
-          $set: { lastUpdatedAt: now },
-        },
-        { upsert: true, new: true }
-      );
-    }
+    await ProfileDailyMetricsModel.findOneAndUpdate(
+      { profileUserId, date: dayBucket },
+      {
+        $inc: inc,
+        $set: { lastUpdatedAt: now },
+      },
+      { upsert: true, new: true }
+    );
 
-    res.status(200).json({ success: true, counted });
+    res.status(200).json({ success: true, counted: true });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('recordProfileView error', err);

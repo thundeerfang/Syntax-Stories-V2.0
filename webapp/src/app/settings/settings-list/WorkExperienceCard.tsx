@@ -5,7 +5,6 @@ import {
   Building2,
   Calendar,
   Clock,
-  Code2,
   Globe,
   ImageOff,
   Link2,
@@ -19,7 +18,6 @@ import {
 import { cn } from '@/lib/utils';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
-import { RetroAccordion } from '@/components/ui/RetroAccordion';
 
 type MediaItem = { url: string; title?: string; altText?: string };
 

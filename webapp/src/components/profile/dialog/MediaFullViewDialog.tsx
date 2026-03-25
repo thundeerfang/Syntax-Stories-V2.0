@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { X } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { cn } from '@/lib/utils';
 

@@ -3,10 +3,7 @@
  */
 
 function getApiBase(): string {
-  const base =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? '')
-      : (process.env.NEXT_PUBLIC_API_BASE_URL ?? '');
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
   return base ? base.replace(/\/$/, '') : '';
 }
 

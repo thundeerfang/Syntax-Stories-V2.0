@@ -201,7 +201,6 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       res.status(400).json({ success: false, message: 'Cannot follow yourself' });
       return;
     }
-    const startedAt = Date.now();
     const now = new Date();
     const redis = getRedis();
     const dayKey = dayBucketUTC(now);
@@ -337,7 +336,6 @@ export async function unfollowUser(req: Request, res: Response): Promise<void> {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    const startedAt = Date.now();
     const now = new Date();
     const dayKey = dayBucketUTC(now);
 

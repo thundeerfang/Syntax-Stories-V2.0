@@ -79,16 +79,6 @@ function trunc(s: string | undefined, max: number): string {
   return t.length > max ? t.slice(0, max) : t;
 }
 
-/** Take first up to maxChars characters, breaking at last word boundary. */
-function truncateAtWords(s: string, maxChars: number): string {
-  const t = s.trim();
-  if (t.length <= maxChars) return t;
-  const slice = t.slice(0, maxChars);
-  const lastSpace = slice.lastIndexOf(' ');
-  if (lastSpace > maxChars * 0.5) return slice.slice(0, lastSpace).trim();
-  return slice.trim();
-}
-
 const SECTION_HEADERS = [
   'education',
   'academic',
@@ -175,7 +165,7 @@ function parseYearRange(str: string): { startDate?: string; endDate?: string; cu
   const start = m[0];
   const end = /present|current|now/i.test(str) ? undefined : m[1];
   return {
-    startDate: end ? `${start}-01` : `${start}-01`,
+    startDate: `${start}-01`,
     endDate: end ? `${end}-12` : undefined,
     current: /present|current|now/i.test(str),
   };
@@ -381,7 +371,7 @@ function extractWorkExperience(text: string): ExtractedProfile['workExperiences'
     let endDate: string | undefined;
     let current: boolean | undefined;
     let descLines: string[] = [];
-    let nextI = i + 1;
+    let nextI: number;
 
     if (parsedFirst) {
       jobTitle = trunc(parsedFirst.jobTitle, MAX.jobTitle);

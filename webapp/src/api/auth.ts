@@ -287,6 +287,7 @@ export type IncompleteItemHints = {
   workExperiences?: IncompleteItemHint[];
   education?: IncompleteItemHint[];
   certifications?: IncompleteItemHint[];
+  projects?: IncompleteItemHint[];
 };
 
 export interface ParseCvResponse {

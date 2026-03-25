@@ -3,12 +3,10 @@
 import React from 'react';
 import {
   Briefcase,
-  Code2,
   FolderGit2,
   Github,
   GraduationCap,
   Plus,
-  ShieldCheck,
   RefreshCw,
   Award,
 } from 'lucide-react';

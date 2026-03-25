@@ -1,18 +1,29 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  BarChart2, TrendingUp, Users, Eye, Calendar, Terminal, 
-  Clock, FileText, Repeat, Lock, Globe, Monitor, 
-  ShieldCheck, Activity, Zap
+import {
+  BarChart2,
+  Users,
+  Eye,
+  FileText,
+  Lock,
+  Globe,
+  Monitor,
+  ShieldCheck,
+  Activity,
+  Zap,
 } from 'lucide-react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, BarChart, Bar, Cell 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from 'recharts';
 import { analyticsApi, type ProfileOverviewMetrics, type ProfileTimePoint } from '@/api/analytics';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { useSidebar } from '@/hooks/useSidebar';
 import { cn } from '@/lib/utils';
 import { TerminalLoaderPage } from '@/components/loader';
 
@@ -20,7 +31,6 @@ type TabId = 'overview' | 'content' | 'audience';
 
 export default function ProfileAnalyticsPage() {
   const { user, shouldBlock } = useRequireAuth();
-  const { isOpen } = useSidebar();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [overviewMetrics, setOverviewMetrics] = useState<ProfileOverviewMetrics | null>(null);
   const [timeSeries, setTimeSeries] = useState<ProfileTimePoint[]>([]);

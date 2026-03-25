@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { Trash2, Minus, Image as ImageIcon, Gauge, Film, Link2, Github, Camera, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AtSign, ExternalLink, X, Type, GripVertical, Globe } from 'lucide-react';
+import { Trash2, Image as ImageIcon, Gauge, Film, Link2, Github, Camera, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AtSign, ExternalLink, X, Type, GripVertical, Globe } from 'lucide-react';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { followApi, type FollowUser } from '@/api/follow';
 import { toast } from 'sonner';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { uploadMedia } from '@/api/upload';
 import { searchGifs, type GiphyGif } from '@/api/giphy';
 import { searchUnsplashPhotos, type UnsplashPhoto } from '@/api/unsplash';
-import { fetchRepoByUrl, fetchMyRepos, parseGithubRepoUrl, type GithubRepoInfo, type GithubRepoListItem } from '@/api/github';
+import { fetchRepoByUrl, fetchMyRepos, parseGithubRepoUrl, type GithubRepoListItem } from '@/api/github';
 
 export type BlockType =
   | 'paragraph'
@@ -1520,23 +1520,6 @@ export function BlogWriteEditor({
       onBlocksChange(next);
     },
     [blocks, onBlocksChange],
-  );
-
-  const addBlock = useCallback(
-    (type: BlockType) => {
-      const inSectionCount = blocks.filter(
-        (b) => (b.sectionId ?? activeSectionId) === activeSectionId,
-      ).length;
-      if (inSectionCount >= 10) {
-        toast.error('Section limit reached (10 blocks)');
-        return;
-      }
-      onBlocksChange([
-        ...blocks,
-        createBlockInSection(type, activeSectionId),
-      ]);
-    },
-    [blocks, onBlocksChange, activeSectionId],
   );
 
   const visibleBlocks = blocks.filter(

@@ -39,7 +39,7 @@ export function registerX(passportInstance: passport.PassportStatic): void {
           const user = await UserModel.findById(userId).select('+xToken');
           if (!user) return done(new Error('User not found'), undefined);
           const accountEmail = (user.email ?? '').toLowerCase();
-          const providerEmail = (email ?? '').toLowerCase();
+          const providerEmail = email.toLowerCase();
           if (accountEmail !== providerEmail) {
             return done(
               new Error(`Use the same email as your account (${user.email}) to connect X.`),

@@ -218,13 +218,13 @@ export function EducationCard({
                       role="presentation"
                     >
                       <p className="text-[11px] font-medium text-muted-foreground break-words">
-                        <span className="text-primary font-bold mr-2">// INFO:</span>
+                        <span className="text-primary font-bold mr-2">INFO:</span>
                         <span className="break-words">{e.activity}</span>
                       </p>
                     </div>
                   ) : (
                     <p className="text-[11px] font-medium text-muted-foreground leading-snug break-words line-clamp-2 [line-height:1.375rem] py-1.5">
-                      <span className="text-primary font-bold mr-2">// INFO:</span>
+                      <span className="text-primary font-bold mr-2">INFO:</span>
                       <span className="break-words">{e.activity}</span>
                     </p>
                   )}

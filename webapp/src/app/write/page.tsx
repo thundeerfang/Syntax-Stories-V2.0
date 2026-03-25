@@ -6,13 +6,13 @@ import { useSidebar } from '@/hooks/useSidebar';
 import { blogApi } from '@/api/blog';
 import { TerminalLoaderPage } from '@/components/loader';
 import { 
-  PenLine, Save, Send, ChevronRight, FileCode, 
-  Activity, Info, Cpu, History, Terminal as TerminalIcon,
+  Save, Send, ChevronRight, FileCode, 
+  Activity, Cpu, History, Terminal as TerminalIcon,
   Globe, ShieldCheck, Box
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { BlogWriteEditor, Block, createBlock, createBlockInSection } from '@/components/ui/BlogWriteEditor';
+import { BlogWriteEditor, Block, createBlockInSection } from '@/components/ui/BlogWriteEditor';
 
 const TITLE_MAX = 300;
 /** Single section for /write (no section UI); must match how editor filters blocks. */

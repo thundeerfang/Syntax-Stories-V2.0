@@ -148,10 +148,10 @@ export function HoverCard({
             exit={{ opacity: 0, scale: 0.96, y: side === 'top' ? 6 : side === 'bottom' ? -6 : 0, x: side === 'left' ? 6 : side === 'right' ? -6 : 0 }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
             className={cn(
-              'fixed z-[90] w-[280px] min-h-[80px] max-h-[320px] overflow-hidden border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] pointer-events-auto',
+              'fixed w-[280px] min-h-[80px] max-h-[320px] overflow-hidden border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] pointer-events-auto',
               contentClassName
             )}
-            style={{ top: position.top, left: position.left }}
+            style={{ top: position.top, left: position.left, zIndex: HOVER_Z }}
             role="tooltip"
             onMouseEnter={cancelClose}
             onMouseLeave={handleMouseLeave}

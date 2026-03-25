@@ -14,12 +14,14 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
       onCheckedChange?.(e.target.checked);
     };
 
+    const controlProps =
+      checked !== undefined ? { checked } : defaultChecked !== undefined ? { defaultChecked } : {};
+
     return (
       <input
         type="checkbox"
         ref={ref}
-        checked={checked}
-        defaultChecked={defaultChecked}
+        {...controlProps}
         onChange={handleChange}
         className={cn(
           'h-4 w-4 rounded border-2 border-border bg-background cursor-pointer',

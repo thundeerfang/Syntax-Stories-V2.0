@@ -20,7 +20,7 @@ import { RetroAccordion } from '@/components/ui/RetroAccordion';
 import Cropper, { Area } from 'react-easy-crop';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { BlogWriteEditor, Block, createBlock, createBlockInSection, type BlockType } from '@/components/ui/BlogWriteEditor';
+import { BlogWriteEditor, Block, createBlockInSection, type BlockType } from '@/components/ui/BlogWriteEditor';
 import { DEFAULT_ITEMS } from '@/components/ui/BottomToolbar';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { StoredDraftPayload } from '@/types/blog';
@@ -38,7 +38,7 @@ function loadDraftFromStorage(): StoredDraftPayload | null {
     const data = JSON.parse(raw) as StoredDraftPayload;
     if (!data || typeof data.title !== 'string' || typeof data.content !== 'string') return null;
     return {
-      title: data.title ?? '',
+      title: data.title,
       summary: typeof data.summary === 'string' ? data.summary : '',
       content: data.content,
       thumbnailPreviewUrl: typeof data.thumbnailPreviewUrl === 'string' ? data.thumbnailPreviewUrl : undefined,
@@ -226,7 +226,6 @@ function SummaryEditor({
     if (!el || !sel || sel.rangeCount === 0) return;
     const collapsed = sel.isCollapsed;
     const active = document.activeElement;
-    const focusInSummary = el.contains(active);
     const focusInCard = cardRef.current?.contains(active);
 
     if (collapsed) {

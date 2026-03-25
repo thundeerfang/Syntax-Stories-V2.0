@@ -46,10 +46,10 @@ export interface MissingFieldsDialogProps {
   incompleteItemHints?: IncompleteItemHints | null;
   /** Current profile arrays so we can show "Add fields" for incomplete items and pass initial values */
   currentProfile?: {
-    workExperiences?: Array<Record<string, unknown>>;
-    education?: Array<Record<string, unknown>>;
-    certifications?: Array<Record<string, unknown>>;
-    projects?: Array<Record<string, unknown>>;
+    workExperiences?: ReadonlyArray<object> | undefined;
+    education?: ReadonlyArray<object> | undefined;
+    certifications?: ReadonlyArray<object> | undefined;
+    projects?: ReadonlyArray<object> | undefined;
   } | null;
   onSave: (values: Partial<Record<ParseCvMissingFieldKey, string | string[]>>) => Promise<void>;
   onCompleteItem: (section: CompleteItemDialogSection, index: number, values: Record<string, string>) => Promise<void>;
@@ -148,10 +148,10 @@ export function MissingFieldsDialog({
                 {key === 'bio' ? (
                   <textarea
                     className="w-full min-h-[80px] px-3 py-2 border-2 border-border bg-card text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder={key === 'bio' ? 'Tell us about yourself…' : ''}
+                    placeholder="Tell us about yourself…"
                     value={(values[key] as string) ?? ''}
                     onChange={(e) => handleChange(key, e.target.value)}
-                    maxLength={key === 'bio' ? 500 : undefined}
+                    maxLength={500}
                   />
                 ) : (
                   <input

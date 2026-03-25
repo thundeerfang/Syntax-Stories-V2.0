@@ -12,7 +12,6 @@ import {
   Monitor,
   Users,
   Award,
-  Calendar,
   Terminal,
   Github,
   Linkedin,

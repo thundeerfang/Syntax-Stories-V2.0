@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { VerticalTimeline, VerticalTimelineElement } from 'react-vertical-timeline-component';
 import {
   User,
   CreditCard,
@@ -17,7 +16,6 @@ import {
   ShieldCheck,
   FileText,
   BookOpen,
-  HeadphonesIcon,
   LogOut,
   Camera,
   Code2,
@@ -30,7 +28,6 @@ import {
   Plus,
   Check,
   Link2,
-  Unlink,
   ImagePlus,
   Bold,
   Italic,
@@ -44,18 +41,12 @@ import {
   Youtube,
   ExternalLink,
   X,
-  Calendar,
-  MapPin,
-  MoreHorizontal,
   Pencil,
   Trash2,
   TrendingUp,
   Search,
-  Star,
-  GitFork,
   Building2,
   Globe,
-  Clock,
 } from 'lucide-react';
 import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
 import { OptimizedRemoteImage } from '@/components/ui/OptimizedRemoteImage';
@@ -76,14 +67,12 @@ import { authApi } from '@/api/auth';
 import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
 import { UploadProfilePicDialog, UploadCoverDialog, UploadMediaDialog, MediaFullViewDialog } from '@/components/profile/dialog';
 import { FormDialog } from '@/components/ui/FormDialog';
-import { RetroAccordion } from '@/components/ui/RetroAccordion';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
-import { RetroBadge } from '@/components/ui/RetroBadge';
 import { getSkillIconUrl, getSkillIconUrlBySlug } from '@/lib/skillIcons';
 import { searchTechStack, type TechStackItem } from '@/data/techStack';
-import { Toggle, ToggleGroup, ToggleGroupItem, FormInput, FormDate, FormTextarea, FormCheckbox, Input, Label, SearchableSelect, EntitySearchInput } from '@/components/retroui';
+import { Toggle, ToggleGroup, ToggleGroupItem, FormInput, FormTextarea, FormCheckbox, Input, Label, SearchableSelect, EntitySearchInput } from '@/components/retroui';
 import { getCountryOptions, getStateOptions, getCityOptions, buildLocationString, parseLocationString } from '@/data/location';
 import { searchCompaniesWithApi, searchSchools, searchOrganizations } from '@/data/entities';
 import { WorkExperienceCard } from './settings-list/WorkExperienceCard';
@@ -106,8 +95,6 @@ interface NavGroup {
   heading: string;
   items: NavItem[];
 }
-
-// RetroBadge now lives in '@/components/ui/RetroBadge'
 
 /** Empty state for settings sections (work experience, education, etc.) when no entries exist. */
 function SettingsSectionEmptyState({
@@ -182,41 +169,6 @@ const FormSection = ({ title, children }: { title?: string; children: React.Reac
     <div className="grid gap-4 min-w-0">{children}</div>
   </div>
 );
-
-/**
- * Retro terminal-style header block for cards (used by certifications/projects/etc.).
- */
-function TechHeader({
-  title,
-  subtitle,
-  icon: Icon,
-}: {
-  title: string;
-  subtitle?: string;
-  icon: React.ElementType;
-}) {
-  return (
-    <div className="flex items-center gap-4 border-b-4 border-border bg-muted/30 p-4">
-      <div className="relative size-14 border-4 border-border bg-card flex shrink-0 items-center justify-center shadow-[4px_4px_0px_0px_var(--border)]">
-        <Icon className="size-7 text-primary" />
-        <div className="absolute -top-2 -left-2 size-3 border-2 border-border bg-primary" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <h4 className="text-lg font-black uppercase leading-tight tracking-tighter truncate">
-          {title}
-        </h4>
-        {subtitle && (
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            <p className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest truncate">
-              {subtitle}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function SyntaxCardContent() {
   return (
@@ -1000,7 +952,6 @@ function ConnectedAccountsContent() {
   const { user, logout, token } = useAuthStore();
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
-  const apiBase = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '') : '';
 
   const handleDisconnect = async (provider: string) => {
     if (!confirm(`Unlinking ${provider} will log you out. Continue?`)) return;
@@ -1671,11 +1622,9 @@ function MediaThumbnail({
   return (
     <div className="flex flex-col items-center gap-1 min-w-0">
       {box}
-      {(item.title || item.url) && (
-        <span className="text-[9px] font-medium text-muted-foreground truncate max-w-full" title={item.title || item.url}>
-          {item.title || item.url}
-        </span>
-      )}
+      <span className="text-[9px] font-medium text-muted-foreground truncate max-w-full" title={item.title || item.url}>
+        {item.title || item.url}
+      </span>
     </div>
   );
 }
@@ -1858,14 +1807,6 @@ function locationWithoutType(location: string | undefined): string {
   return location.trim().replace(/\s*\([^)]+\)/g, '').replace(/\s+/g, ' ').trim();
 }
 
-/** Get city (first part) from "City, State, Country" for short display. */
-function getCityFromLocation(location: string | undefined): string {
-  const clean = locationWithoutType(location);
-  if (!clean) return '';
-  const first = clean.split(',')[0]?.trim();
-  return first ?? clean;
-}
-
 /** Normalize domain for display and iframe (add https if missing). */
 function normalizeDomain(domain: string | undefined): string {
   if (!domain?.trim()) return '';
@@ -1884,7 +1825,6 @@ function WorkExperiencesContent() {
   const { user, updateProfile, token } = useAuthStore();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mediaPageByKey, setMediaPageByKey] = useState<Record<string, number>>({});
   const list = (user?.workExperiences ?? []).map((w) => {
     const mediaItems: MediaItem[] = (w.media && w.media.length > 0)
       ? w.media.map((m) => ({ url: m.url, title: m.title, altText: m.altText }))
@@ -2179,41 +2119,6 @@ function WorkExperiencesContent() {
   const addSkill = (skill: string) => {
     const s = skill.trim();
     if (s && !form.skills.includes(s) && form.skills.length < 30) setForm((f) => ({ ...f, skills: [...f.skills, s] }));
-  };
-
-  const renderPagedMedia = (key: string, items: MediaItem[], sizeClass: string) => {
-    const pageSize = 3;
-    const safe = (items ?? []).filter((m): m is MediaItem => m != null && !!m.url).slice(0, 10);
-    if (safe.length === 0) return null;
-    const pages = Math.max(1, Math.ceil(safe.length / pageSize));
-    const page = ((mediaPageByKey[key] ?? 0) % pages + pages) % pages;
-    const slice = safe.slice(page * pageSize, page * pageSize + pageSize);
-    return (
-      <div className="flex items-center gap-1.5">
-        {slice.map((m, j) => (
-          <MediaThumbnail
-            key={`${key}-${j}`}
-            item={m}
-            sizeClass={sizeClass}
-            showLabel={false}
-            className="shrink-0 cursor-pointer"
-            onClick={() => setListPreviewMedia(m)}
-          />
-        ))}
-        {pages > 1 && (
-          <button
-            type="button"
-            className="inline-flex items-center justify-center size-8 border-2 border-border bg-muted/20 hover:bg-muted/40 transition-colors"
-            aria-label="Next media"
-            onClick={() => setMediaPageByKey((s) => ({ ...s, [key]: (s[key] ?? 0) + 1 }))}
-            title={`More media (${page + 1}/${pages})`}
-          >
-            <MoreHorizontal className="size-4 text-muted-foreground" />
-          </button>
-        )}
-        <span className="text-[9px] font-bold text-muted-foreground ml-1">{safe.length}/10</span>
-      </div>
-    );
   };
 
   return (
@@ -3675,17 +3580,6 @@ function ProjectsContent() {
     openEdit(idx);
     router.replace('/settings?section=projects', { scroll: false });
   }, [list.length]);
-  const toApi = (p: typeof list[0]) => ({
-    type: p.type,
-    title: p.title,
-    publisher: p.publisher,
-    ongoing: p.ongoing,
-    publicationDate: p.publicationDate,
-    endDate: p.endDate,
-    publicationUrl: p.publicationUrl,
-    description: p.description,
-    media: p.mediaItems.map((m) => ({ url: m.url, title: m.title, altText: m.altText })),
-  });
   const remove = async (i: number) => {
     const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
     setSaving(true);
@@ -4138,23 +4032,6 @@ function SidebarSkeleton({ itemCount }: { itemCount: number }) {
           <div key={i} className="flex items-center gap-3 px-1 py-1.5">
             <div className="size-4 bg-muted animate-pulse shrink-0" />
             <SkeletonBar width={`${45 + Math.random() * 40}%`} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CollapsedSkeleton({ itemCount }: { itemCount: number }) {
-  return (
-    <div className="space-y-4">
-      <div className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-2 flex justify-center">
-        <div className="size-10 bg-muted animate-pulse" />
-      </div>
-      <div className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
-        {Array.from({ length: itemCount }).map((_, i) => (
-          <div key={i} className="flex justify-center py-2.5">
-            <div className="size-4 bg-muted animate-pulse" />
           </div>
         ))}
       </div>
