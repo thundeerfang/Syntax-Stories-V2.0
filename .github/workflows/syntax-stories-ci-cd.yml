@@ -1,0 +1,195 @@
+# Syntax Stories — CI & production gate (webapp + server)
+# Runs on PRs and pushes to `main`: quality checks, dependency visibility, clean production-style builds on main.
+
+name: Syntax Stories — CI / Production
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  dependency-report:
+    name: Dependencies — lockfile diff & audit summary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Lockfile diff (pull request vs base branch)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1 || true
+          BASE="origin/${{ github.base_ref }}"
+          echo "## Dependency lockfile changes" >> "$GITHUB_STEP_SUMMARY"
+          echo "Base: \`$BASE\` → HEAD" >> "$GITHUB_STEP_SUMMARY"
+          for f in webapp/package-lock.json server/package-lock.json; do
+            echo "### \`$f\`" >> "$GITHUB_STEP_SUMMARY"
+            echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+            git diff "$BASE"...HEAD -- "$f" >> "$GITHUB_STEP_SUMMARY" || echo "(no changes or file missing)" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Lockfile diff (push to main vs previous commit)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "## Dependency lockfile changes (latest commit)" >> "$GITHUB_STEP_SUMMARY"
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            for f in webapp/package-lock.json server/package-lock.json; do
+              echo "### \`$f\`" >> "$GITHUB_STEP_SUMMARY"
+              echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+              git diff HEAD~1..HEAD -- "$f" >> "$GITHUB_STEP_SUMMARY" || true
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "_No parent commit — first push to this branch._" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            webapp/package-lock.json
+            server/package-lock.json
+
+      - name: npm audit summary (webapp)
+        working-directory: webapp
+        run: |
+          npm ci
+          echo "### Webapp — \`npm audit\` (production deps)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          (npm audit --omit=dev 2>&1 || true) | head -120 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: npm audit summary (server)
+        working-directory: server
+        run: |
+          npm ci
+          echo "### Server — \`npm audit\`" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          (npm audit 2>&1 || true) | head -120 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  webapp-quality:
+    name: Webapp — Next.js quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Clean install (CI)
+        run: rm -rf node_modules .next && npm ci
+
+      - name: TypeScript (no emit)
+        run: npx tsc --noEmit
+
+      - name: ESLint (Next)
+        run: npm run lint
+
+      - name: Jest (unit + coverage)
+        run: npm run test:coverage
+
+      - name: Production build
+        run: npm run build
+        env:
+          CI: true
+          # Placeholder public envs so `next build` can prerender where required
+          NEXT_PUBLIC_API_BASE_URL: https://example.com
+          NEXT_TELEMETRY_DISABLED: '1'
+
+  server-quality:
+    name: Server — TypeScript API quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Clean install (CI)
+        run: rm -rf node_modules dist && npm ci
+
+      - name: TypeScript build
+        run: npm run build
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Jest (API + coverage)
+        run: npm run test:coverage
+
+  production-clean-verify:
+    name: Production — clean room rebuild (main only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [webapp-quality, server-quality]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            webapp/package-lock.json
+            server/package-lock.json
+
+      - name: Webapp — rm node_modules & .next, npm ci, build
+        working-directory: webapp
+        env:
+          CI: true
+          NEXT_PUBLIC_API_BASE_URL: https://example.com
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          rm -rf node_modules .next
+          npm ci
+          npm run build
+          echo "## Production clean — webapp" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Removed \`node_modules\` and \`.next\`, ran \`npm ci\` + \`npm run build\` ✓" >> "$GITHUB_STEP_SUMMARY"
+          echo '### Top-level dependencies' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          npm ls --depth=0 >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Server — rm node_modules & dist, npm ci, build
+        working-directory: server
+        run: |
+          rm -rf node_modules dist
+          npm ci
+          npm run build
+          echo "## Production clean — server" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Removed \`node_modules\` and \`dist\`, ran \`npm ci\` + \`npm run build\` ✓" >> "$GITHUB_STEP_SUMMARY"
+          echo '### Top-level dependencies' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          npm ls --depth=0 >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

@@ -45,18 +45,26 @@ const HeaderActionButton = ({
   </button>
 );
 
-export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: SettingsSectionHeaderProps) {
-  
-  // Base wrapper for all headers to ensure consistency
-  const HeaderWrapper = ({ children, border = true }: { children: React.ReactNode, border?: boolean }) => (
-    <header className={cn(
-      "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-6",
-      border && "border-b-4 border-border mb-6"
-    )}>
+function HeaderWrapper({
+  children,
+  border = true,
+}: {
+  children: React.ReactNode;
+  border?: boolean;
+}) {
+  return (
+    <header
+      className={cn(
+        'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-6',
+        border && 'border-b-4 border-border mb-6'
+      )}
+    >
       {children}
     </header>
   );
+}
 
+export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: SettingsSectionHeaderProps) {
   if (variant === 'work') {
     return (
       <HeaderWrapper>

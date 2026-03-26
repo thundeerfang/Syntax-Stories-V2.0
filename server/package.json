@@ -9,7 +9,12 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:clean": "rimraf dist && npm run dev",
     "generate-keys": "node scripts/generate-keys.js",
-    "reconcile:follow-counts": "ts-node src/scripts/reconcileFollowCounts.ts"
+    "reconcile:follow-counts": "ts-node src/scripts/reconcileFollowCounts.ts",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@types/express": "^5.0.6",
@@ -54,11 +59,21 @@
     }
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/cookie-parser": "^1.4.10",
+    "@types/jest": "^29.5.14",
     "@types/multer": "^2.0.0",
     "@types/passport-oauth2": "^1.8.0",
+    "@types/supertest": "^6.0.2",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.1",
+    "jest": "^29.7.0",
+    "prettier": "^3.5.3",
     "rimraf": "^6.0.1",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0"
+    "ts-node-dev": "^2.0.0",
+    "typescript-eslint": "^8.26.1"
   }
 }
