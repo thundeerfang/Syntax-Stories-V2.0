@@ -1,17 +1,15 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import crypto from 'crypto';
-import { UserModel } from '../../models/User';
-import { SessionModel } from '../../models/Session';
-import { getRedis } from '../../config/redis';
-import type { AuthUser } from '../../middlewares/auth';
-import { writeAuditLog } from '../../shared/audit/auditLog';
-import { AuditAction } from '../../shared/audit/events';
-import { redisKeys } from '../../shared/redis/keys';
-import { logSecurityEvent } from './securityEventLog';
-import { createSession } from '../../services/session.service';
+import { UserModel } from '../../../models/User';
+import { SessionModel } from '../../../models/Session';
+import { getRedis } from '../../../config/redis';
+import type { AuthUser } from '../../../middlewares/auth';
+import { writeAuditLog } from '../../../shared/audit/auditLog';
+import { AuditAction } from '../../../shared/audit/events';
+import { redisKeys } from '../../../shared/redis/keys';
+import { logSecurityEvent } from '../securityEventLog';
 
 const INTENT_TTL_SECONDS = 5 * 60;
-
 const ALLOWED_INTENT_ACTIONS = ['delete_account'] as const;
 type IntentAction = (typeof ALLOWED_INTENT_ACTIONS)[number];
 
