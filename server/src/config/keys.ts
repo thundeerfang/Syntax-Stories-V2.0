@@ -26,7 +26,7 @@ function loadKey(filename: string): string | null {
 export const privateKey = loadKey(privateKeyPem);
 export const publicKey = loadKey(publicKeyPem);
 
-if (!privateKey || !publicKey) {
+if ((!privateKey || !publicKey) && process.env.NODE_ENV !== 'test') {
   console.warn(
     '[Keys] JWT PEM files not found. Add privateKey.pem and publicKey.pem to server/keys/. Run: npm run generate-keys'
   );
