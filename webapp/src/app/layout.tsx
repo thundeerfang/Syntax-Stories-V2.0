@@ -9,6 +9,7 @@ import { SearchDialogWrapper } from '@/components/search';
 import { SonnerToaster } from '@/components/retroui';
 import { GlobalLoaderOverlay } from '@/components/loader';
 import { Providers } from './providers';
+import { AppwritePing } from '@/components/appwrite/AppwritePing';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -43,6 +44,7 @@ export default function RootLayout({
           }}
         />
         <Providers>
+          <AppwritePing />
           <GlobalLoaderOverlay />
           <StoreHydration />
           <AuthDialogWrapper />
