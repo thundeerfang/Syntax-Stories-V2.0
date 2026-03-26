@@ -5,14 +5,11 @@ import { initEmailChange, verifyEmailChange, cancelEmailChange } from './control
 import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller';
 import { me, updateProfile, parseCv } from './controllers/profile.controller';
 import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller';
+import { setupTwoFactor, enableTwoFactor, disableTwoFactor, verifyTwoFactorLogin } from './controllers/twoFactor.controller';
 import {
   refresh,
   logout,
   revokeSessionByRefreshToken,
-  setupTwoFactor,
-  enableTwoFactor,
-  disableTwoFactor,
-  verifyTwoFactorLogin,
 } from './auth.controller';
 import {
   idempotency,
