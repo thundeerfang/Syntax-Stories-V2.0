@@ -9,7 +9,7 @@ import type { AuthUser } from '../../../middlewares/auth';
 import { writeAuditLog } from '../../../shared/audit/auditLog';
 import { AuditAction } from '../../../shared/audit/events';
 import { logSecurityEvent } from '../securityEventLog';
-import { createSession, generateRefreshToken, SESSION_DURATION_MS } from '../../../services/session.service';
+import { SESSION_DURATION_MS } from '../../../services/session.service';
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');

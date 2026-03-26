@@ -1,6 +1,6 @@
 /**
- * Auth JSON API request/response shapes shared with the webapp (`webapp/src/api/auth.ts`).
- * Keep in sync with `webapp/src/contracts/authApi.ts` (deploy builds only include webapp).
+ * Auth JSON API request/response shapes shared with the server.
+ * Keep in sync with `server/src/shared/contracts/authApi.ts` (CI builds only ship webapp).
  */
 
 export interface SendOtpPayload {

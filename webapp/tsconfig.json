@@ -28,7 +28,7 @@
         "./src/*"
       ],
       "@contracts/*": [
-        "../server/src/shared/contracts/*"
+        "./src/contracts/*"
       ]
     }
   },
