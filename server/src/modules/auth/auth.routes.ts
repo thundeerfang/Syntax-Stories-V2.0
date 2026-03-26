@@ -4,6 +4,7 @@ import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controlle
 import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller';
 import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller';
 import { me, updateProfile, parseCv } from './controllers/profile.controller';
+import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller';
 import {
   refresh,
   logout,
@@ -11,9 +12,6 @@ import {
   setupTwoFactor,
   enableTwoFactor,
   disableTwoFactor,
-  initQrLogin,
-  approveQrLogin,
-  pollQrLogin,
   verifyTwoFactorLogin,
 } from './auth.controller';
 import {
