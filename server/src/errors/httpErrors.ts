@@ -35,9 +35,11 @@ export class RateLimitHttpError extends AppHttpError {
 
   constructor(
     message: string,
-    public readonly retryAfterSec?: number
+    public readonly retryAfterSec?: number,
+    code: string = 'RATE_LIMIT',
+    details?: unknown
   ) {
-    super(message, 429, 'RATE_LIMIT');
+    super(message, 429, code, details);
   }
 }
 

@@ -1,15 +1,13 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller';
+import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller';
 import {
   refresh,
   logout,
   revokeSessionByRefreshToken,
   me,
   linkRequest,
-  initEmailChange,
-  verifyEmailChange,
-  cancelEmailChange,
   disconnectProvider,
   setupTwoFactor,
   enableTwoFactor,

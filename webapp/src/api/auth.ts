@@ -37,6 +37,8 @@ export type AuthErrorExtras = {
   retryAfter?: number;
   attemptsLeft?: number;
   code?: string;
+  /** Server `AppHttpError.details` (e.g. rate-limit metadata). */
+  details?: unknown;
 };
 
 export class AuthError extends Error {
@@ -103,14 +105,23 @@ async function authFetch<T>(path: string, options?: RequestInit & { token?: stri
             retryAfter?: number;
             attemptsLeft?: number;
             code?: string;
+            details?: unknown;
           })
         : null;
       const detail = data?.error?.[0]?.message;
       const msg = detail || data?.message || res.statusText || 'Request failed';
+      const retryHeader = res.headers.get('Retry-After');
+      const retryFromHeader = retryHeader != null && retryHeader !== '' ? parseInt(retryHeader, 10) : NaN;
       const extras: AuthErrorExtras = {
-        retryAfter: typeof data?.retryAfter === 'number' ? data.retryAfter : undefined,
+        retryAfter:
+          typeof data?.retryAfter === 'number'
+            ? data.retryAfter
+            : !Number.isNaN(retryFromHeader)
+              ? retryFromHeader
+              : undefined,
         attemptsLeft: typeof data?.attemptsLeft === 'number' ? data.attemptsLeft : undefined,
         code: typeof data?.code === 'string' ? data.code : undefined,
+        details: data?.details !== undefined ? data.details : undefined,
       };
       throw new AuthError(msg, res.status, extras);
     } catch (e) {

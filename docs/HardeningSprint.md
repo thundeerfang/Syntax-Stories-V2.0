@@ -68,6 +68,7 @@ Stripe-style hardening means:
 - **`server/src/services/session.service.ts`** — session creation, refresh token, `createSessionAndTokens`, exported **`SESSION_DURATION_MS`** for sliding refresh in `refreshToken` handler.
 - **`server/src/shared/events/appEvents.ts`** — typed `emitAppEvent` / `onAppEvent`; email + OAuth login success emit **`auth.login.success`**; **`bootstrap/registerAppListeners.ts`** registers subscribers (non-prod structured `console.info` hook today).
 - **`server/src/middlewares/requestContext.ts`** — `X-Request-Id` propagation; 500 logs in `errorHandler` include request id when present.
+- **`server/src/errors/sendAppHttpError.ts`** — same body/headers as `errorHandler` for `AppHttpError` when a handler catches errors inline (Express 4). Example: follow daily cap throws **`RateLimitHttpError`** with `code: DAILY_FOLLOW_LIMIT`, **`Retry-After`** (seconds to UTC midnight), and **`details.limit`**. Webapp **`authFetch`** forwards **`code`**, **`details`**, and **`Retry-After`** into **`AuthError`**.
 
 ### Deliberately not urgent
 
@@ -90,11 +91,55 @@ Ordered by how often this **shape** of stack burns teams:
 
 ---
 
-## Suggested next PRs (after this baseline)
+## Pending checklist (planning)
 
-1. Extract **first** auth vertical from `auth.controller.ts` (e.g. OTP-only) into `modules/auth/controllers/otp.controller.ts` and re-export handlers.
-2. Split **`infrastructure/mail`** into `provider/smtpProvider.ts` and `provider/resendProvider.ts` with shared error typing.
-3. Add **`shared/audit/events.ts`** — start with string unions used by `writeAuditLog` today; expand payloads gradually.
+Everything below is **still pending** (shipped items are described in the Month 1–3 sections above). Use it to schedule **urgent vs optional** work.
+
+### Urgent (before real traffic, multi-instance, or serious auth incidents)
+
+| # | Item | Why |
+|---|------|-----|
+| 1 | **Object storage for uploads (S3/R2 + `UploadStorage`)** | Local disk + **>1 Node** = broken avatars/media; hits early if you scale horizontally. |
+| 2 | **Redis health & behavior in prod** | No/flaky Redis breaks OTP, OAuth link nonces, idempotency, rate limits, optional session store. Need **startup checks**, **alerts**, and a **documented degraded mode** (what fails vs what still works). |
+| 3 | **Email provider ops** | Misconfigured SMTP/Resend = silent or confusing failures. Need **verified domains**, **quotas**, **monitoring**, and clearer **operator signals** (you have `MailSendError` kinds; still need **retries/metrics** for urgency). |
+| 4 | **OAuth / cookies / HTTPS / `FRONTEND_URL`** | “Works locally, fails in prod” class. **Runbook**: preview URLs, SameSite, redirect URIs, env per environment. |
+| 5 | **Token / session incident playbook** | Document **access JWT TTL**, **refresh rotation**, **revoke-all**, and what you do under compromise (no code change required, but **urgent for ops**). |
+
+### Important (code quality and maintainability — plan in sprints)
+
+| # | Item | Why |
+|---|------|-----|
+| 6 | **Split `auth.controller.ts`** (sessions, profile, 2FA, QR, email-change, delete-account, etc.) | Reduces merge conflicts and auth bugs; OTP is already extracted. |
+| 7 | **Adopt `*HttpError` + `sendAppHttpError` broadly** | Follow daily cap is the pattern; auth and other APIs still mostly `res.status().json`. Improves **consistent `code` / `details`** for clients. |
+| 8 | **Mail resilience** | **Retries/backoff** on transient `MailSendError`; **metrics** by kind (configuration vs transient vs provider) beyond current OTP counters. |
+| 9 | **Expand `AppEventMap` + production listeners** | e.g. `otp.sent`, `mail.send_failed`; **`registerAppListeners`** should drive **metrics/alerting**, not only dev `console.info`. |
+| 10 | **Session module depth (optional split)** | Dedicated **token** / **revoke** modules *if* you need device graph, stricter revoke semantics, or clearer boundaries (nice after split #6). |
+
+### Optional (contracts, docs, DX, third parties)
+
+| # | Item | Why |
+|---|------|-----|
+| 11 | **Shared TS contracts outside auth** | Blog, follow, uploads JSON aligned with webapp (same pattern as `@contracts/authApi`). |
+| 12 | **Full OpenAPI + optional Swagger UI** | Needed mainly for **external API consumers** or **generated clients**; fragment exists for auth. |
+| 13 | **Extend non-auth clients with `code` / `details`** | `authFetch` already surfaces them; **follow/blog/etc.** fetch helpers can mirror that if you want uniform UI handling. |
+| 14 | **Structured logging (JSON) + trace/request correlation** | You have **request IDs**; next step is **one log line shape** and optional **OpenTelemetry** — polish, not blocking MVP. |
+| 15 | **Audit payload typing** | `AuditMetadataByAction` is partial; tightening over time is **compliance/UX** polish. |
+
+### Operational / documentation (not a single PR, but on the plan)
+
+| # | Item |
+|---|------|
+| O1 | **Runbooks** for Redis down, email down, OAuth misconfig, and “uploads 404 on another instance.” |
+| O2 | **Staging parity** with prod (same Redis, mail, OAuth redirect URLs, HTTPS). |
+| O3 | **On-call / alert hooks** once metrics exist (mail failures, OTP spike, 5xx rate). |
+
+### Suggested order for planning (compressed roadmap)
+
+1. **Urgent blockers for scale:** object storage (#1) + Redis/email/OAuth runbooks (#2–#4).
+2. **Auth safety:** split `auth.controller` (#6) + wider `*HttpError` on auth paths (#7).
+3. **Observability:** mail retries/metrics (#8) + app events + listeners (#9).
+4. **Contracts/OpenAPI/clients** (#11–#13) when you care about drift or third parties.
+5. **Everything else** (#10, #14–#15, O1–O3) as bandwidth allows.
 
 ---
 
@@ -109,4 +154,4 @@ Ordered by how often this **shape** of stack burns teams:
 
 ---
 
-*Last updated: Month 2–3 contracts, audit taxonomy, storage paths, error/event/request-id wiring; see sections above.*
+*Last updated: pending checklist (planning) section added; Month 2–3 shipped items and code map above.*

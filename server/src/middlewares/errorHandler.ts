@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { MulterError } from 'multer';
-import { AppHttpError, RateLimitHttpError, isAppHttpError } from '../errors/httpErrors';
+import { isAppHttpError } from '../errors/httpErrors';
+import { sendAppHttpError } from '../errors/sendAppHttpError';
 
 export function errorHandler(
   err: Error,
@@ -19,16 +20,7 @@ export function errorHandler(
     }
   }
   if (isAppHttpError(err)) {
-    if (err instanceof RateLimitHttpError && err.retryAfterSec != null) {
-      res.setHeader('Retry-After', String(err.retryAfterSec));
-    }
-    const body: Record<string, unknown> = {
-      success: false,
-      message: err.message,
-    };
-    if (err.code) body.code = err.code;
-    if (err.details !== undefined) body.details = err.details;
-    res.status(err.statusCode).json(body);
+    sendAppHttpError(res, err);
     return;
   }
   if (req.requestId) console.error(`[requestId=${req.requestId}]`, err);
