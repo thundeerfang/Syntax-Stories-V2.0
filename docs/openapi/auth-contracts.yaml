@@ -1,0 +1,102 @@
+# Fragment: auth JSON routes (`/auth/*`). Expand or merge into a full OpenAPI 3.1 doc when publishing.
+openapi: 3.1.0
+info:
+  title: Syntax Stories — Auth API (fragment)
+  version: 0.1.0
+paths:
+  /auth/send-otp:
+    post:
+      summary: Send login OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+                altcha: { type: string }
+      responses:
+        '200':
+          description: OTP dispatched (or idempotent success)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendOtpResponse'
+  /auth/verify-otp:
+    post:
+      summary: Verify OTP and issue session tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string }
+                code: { type: string }
+                otpVersion: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyOtpResponse'
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponseBody'
+components:
+  schemas:
+    SendOtpResponse:
+      type: object
+      required: [message, success]
+      properties:
+        message: { type: string }
+        success: { type: boolean }
+        otpVersion: { type: integer }
+        expiresInSeconds: { type: integer }
+    VerifyOtpResponse:
+      type: object
+      required: [message, success]
+      properties:
+        message: { type: string }
+        success: { type: boolean }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: string }
+        twoFactorRequired: { type: boolean }
+        challengeToken: { type: string }
+        isNewUser: { type: boolean }
+        email: { type: string }
+        sessionId: { type: string }
+        user:
+          type: object
+          properties:
+            _id: { type: string }
+            fullName: { type: string }
+            username: { type: string }
+            email: { type: string }
+            profileImg: { type: string }
+    RefreshTokenResponseBody:
+      type: object
+      required: [success, accessToken]
+      properties:
+        success: { type: boolean }
+        accessToken: { type: string }
+        expiresIn: { type: string }

@@ -5,7 +5,9 @@ import { FollowModel } from '../models/Follow';
 import type { AuthUser } from '../middlewares/auth';
 import { getRedis } from '../config/redis';
 import { AnalyticsEventModel } from '../models';
-import { writeAuditLog } from '../utils/auditLog';
+import { writeAuditLog } from '../shared/audit/auditLog';
+import { AuditAction } from '../shared/audit/events';
+import { redisKeys } from '../shared/redis/keys';
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
 const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount';
@@ -238,7 +240,7 @@ export async function followUser(req: Request, res: Response): Promise<void> {
 
         // Daily follow cap (counts only NEW follows)
         if (redis) {
-          const capKey = `cap:follow:${currentUser._id}:${dayKey}`;
+          const capKey = redisKeys.follow.dailyCap(String(currentUser._id), dayKey);
           const n = await redis.incr(capKey);
           if (n === 1) await redis.expire(capKey, 48 * 60 * 60);
           if (n > DAILY_FOLLOW_LIMIT) {
@@ -284,7 +286,7 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       }
 
       if (redis) {
-        const capKey = `cap:follow:${currentUser._id}:${dayKey}`;
+        const capKey = redisKeys.follow.dailyCap(String(currentUser._id), dayKey);
         const n = await redis.incr(capKey);
         if (n === 1) await redis.expire(capKey, 48 * 60 * 60);
         if (n > DAILY_FOLLOW_LIMIT) {
@@ -316,7 +318,7 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    void writeAuditLog(req, 'follow', {
+    void writeAuditLog(req, AuditAction.FOLLOW, {
       actorId: String(currentUser._id),
       targetType: 'user',
       targetId: String(target._id),
@@ -401,7 +403,7 @@ export async function unfollowUser(req: Request, res: Response): Promise<void> {
     }
 
     if (deleted) {
-      void writeAuditLog(req, 'unfollow', {
+      void writeAuditLog(req, AuditAction.UNFOLLOW, {
         actorId: String(currentUser._id),
         targetType: 'user',
         targetId: String(target._id),

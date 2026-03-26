@@ -1,5 +1,6 @@
 import type { Options } from 'express-rate-limit';
 import { getRedis } from '../../config/redis';
+import { redisKeys } from '../../shared/redis/keys';
 
 interface StoreResult {
   totalHits: number;
@@ -24,7 +25,7 @@ export function RedisRateLimitStore(prefix: string, windowMs: number): Options['
   return {
     async increment(key: string): Promise<StoreResult> {
       const client = getRedis();
-      const fullKey = fullPrefix + key;
+      const fullKey = redisKeys.rateLimit.authHttpKey(fullPrefix, key);
       if (client) {
         try {
           const totalHits = await client.incr(fullKey);
@@ -44,7 +45,7 @@ export function RedisRateLimitStore(prefix: string, windowMs: number): Options['
       const client = getRedis();
       if (client) {
         try {
-          await client.decr(fullPrefix + key);
+          await client.decr(redisKeys.rateLimit.authHttpKey(fullPrefix, key));
         } catch {}
       }
     },
@@ -52,7 +53,7 @@ export function RedisRateLimitStore(prefix: string, windowMs: number): Options['
       const client = getRedis();
       if (client) {
         try {
-          await client.del(fullPrefix + key);
+          await client.del(redisKeys.rateLimit.authHttpKey(fullPrefix, key));
         } catch {}
       }
       localStore.delete(key);

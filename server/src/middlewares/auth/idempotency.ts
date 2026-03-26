@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getRedis } from '../../config/redis';
 import { env } from '../../config/env';
+import { redisKeys } from '../../shared/redis/keys';
 
 const memoryKeys = new Map<string, number>();
 const IDEMPOTENCY_TTL_SEC = env.IDEMPOTENCY_TTL_SEC;
@@ -12,7 +13,7 @@ export async function idempotency(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  const storeKey = `idem:${key}`;
+  const storeKey = redisKeys.idempotency(key);
   const client = getRedis();
 
   if (client) {

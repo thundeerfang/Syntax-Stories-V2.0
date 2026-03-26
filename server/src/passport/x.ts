@@ -4,7 +4,9 @@ import { UserModel, DEFAULT_AVATAR_URL } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
-import { writeAuditLog } from '../utils/auditLog';
+import { writeAuditLog } from '../shared/audit/auditLog';
+import { AuditAction } from '../shared/audit/events';
+import { redisKeys } from '../shared/redis/keys';
 
 export const hasXConfig = !!(env.X_CONSUMER_KEY && env.X_CONSUMER_SECRET);
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/x/callback` : '';
@@ -34,7 +36,7 @@ export function registerX(passportInstance: passport.PassportStatic): void {
           const linkKey = flow.slice(5);
           const redis = getRedis();
           if (!redis) return done(new Error('Linking unavailable'), undefined);
-          const userId = await redis.get(`link:${linkKey}`);
+          const userId = await redis.get(redisKeys.oauth.link(linkKey));
           if (!userId) return done(new Error('Link expired or invalid'), undefined);
           const user = await UserModel.findById(userId).select('+xToken');
           if (!user) return done(new Error('User not found'), undefined);
@@ -50,8 +52,8 @@ export function registerX(passportInstance: passport.PassportStatic): void {
           user.xToken = accessToken;
           user.isXAccount = true;
           await user.save();
-          await redis.del(`link:${linkKey}`);
-          void writeAuditLog(req as import('express').Request, 'oauth_connected', {
+          await redis.del(redisKeys.oauth.link(linkKey));
+          void writeAuditLog(req as import('express').Request, AuditAction.OAUTH_CONNECTED, {
             actorId: String(user._id),
             metadata: { provider: 'x' },
           });

@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
+import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller';
 import {
-  sendOtp,
-  signupEmail,
-  verifyOtp,
   refresh,
   logout,
   revokeSessionByRefreshToken,
@@ -22,7 +20,7 @@ import {
   verifyTwoFactorLogin,
   updateProfile,
   parseCv,
-} from '../controllers/auth.controller';
+} from './auth.controller';
 import {
   idempotency,
   sendOtpValidation,
@@ -30,16 +28,25 @@ import {
   verifyOtpValidation,
   updateProfileValidation,
   verifyToken,
+  verifyAltchaIfConfigured,
   rateLimitSendOtp,
   rateLimitVerifyOtp,
   rateLimitSignupEmail,
   rateLimitRefresh,
-} from '../middlewares/auth';
+} from '../../middlewares/auth';
 
 const router = Router();
 
-router.post('/send-otp', rateLimitSendOtp, idempotency, sendOtpValidation, sendOtp);
-router.post('/signup-email', rateLimitSignupEmail, idempotency, signupEmailValidation, signupEmail);
+router.get('/altcha/challenge', getAltchaChallenge);
+router.post('/send-otp', rateLimitSendOtp, idempotency, verifyAltchaIfConfigured, sendOtpValidation, sendOtp);
+router.post(
+  '/signup-email',
+  rateLimitSignupEmail,
+  idempotency,
+  verifyAltchaIfConfigured,
+  signupEmailValidation,
+  signupEmail
+);
 router.post('/verify-otp', rateLimitVerifyOtp, idempotency, verifyOtpValidation, verifyOtp);
 router.post('/refresh', rateLimitRefresh, refresh);
 router.post('/logout', verifyToken, logout);

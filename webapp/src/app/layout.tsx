@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { LayoutShell } from '@/components/layout/LayoutShell';
 import { StoreHydration } from '@/components/StoreHydration';
-import { AuthDialogWrapper } from '@/components/auth';
+import { AuthDialogWrapper } from '@/features/auth';
 import { SearchDialogWrapper } from '@/components/search';
 import { SonnerToaster } from '@/components/retroui';
 import { GlobalLoaderOverlay } from '@/components/loader';

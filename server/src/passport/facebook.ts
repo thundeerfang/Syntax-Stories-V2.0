@@ -4,7 +4,9 @@ import { UserModel, DEFAULT_AVATAR_URL } from '../models/User';
 import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
 import { getRedis } from '../config/redis';
-import { writeAuditLog } from '../utils/auditLog';
+import { writeAuditLog } from '../shared/audit/auditLog';
+import { AuditAction } from '../shared/audit/events';
+import { redisKeys } from '../shared/redis/keys';
 
 export const hasFacebookConfig = !!(env.FACEBOOK_APP_ID && env.FACEBOOK_APP_SECRET);
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/facebook/callback` : '';
@@ -46,8 +48,8 @@ export function registerFacebook(passportInstance: passport.PassportStatic): voi
             user.facebookToken = accessToken;
             user.isFacebookAccount = true;
             await user.save();
-            await redis.del(`link:${linkKey}`);
-            void writeAuditLog(req as import('express').Request, 'oauth_connected', {
+            await redis.del(redisKeys.oauth.link(linkKey));
+            void writeAuditLog(req as import('express').Request, AuditAction.OAUTH_CONNECTED, {
               actorId: String(user._id),
               metadata: { provider: 'facebook' },
             });

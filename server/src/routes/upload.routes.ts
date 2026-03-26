@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { verifyToken } from '../middlewares/auth';
 import { MAX_FILE_SIZE_BYTES, checkImageResolution } from '../config/uploadValidation';
 import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder';
+import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage';
 
 async function tryBlurDataUrl(imagePath: string): Promise<string | undefined> {
   try {
@@ -18,19 +19,8 @@ async function tryBlurDataUrl(imagePath: string): Promise<string | undefined> {
 
 const router = Router();
 
-const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
-const AVATARS_DIR = path.join(UPLOADS_DIR, 'avatars');
-const COVERS_DIR = path.join(UPLOADS_DIR, 'covers');
-const MEDIA_DIR = path.join(UPLOADS_DIR, 'media');
-const LOGOS_DIR = path.join(UPLOADS_DIR, 'logos');
-const SCHOOL_LOGOS_DIR = path.join(UPLOADS_DIR, 'school-logos');
-const ORG_LOGOS_DIR = path.join(UPLOADS_DIR, 'org-logos');
-
-[UPLOADS_DIR, AVATARS_DIR, COVERS_DIR, MEDIA_DIR, LOGOS_DIR, SCHOOL_LOGOS_DIR, ORG_LOGOS_DIR].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
+const { avatars: AVATARS_DIR, covers: COVERS_DIR, media: MEDIA_DIR, logos: LOGOS_DIR, schoolLogos: SCHOOL_LOGOS_DIR, orgLogos: ORG_LOGOS_DIR } =
+  getDefaultUploadStorage().dirs;
 
 const storageAvatar = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATARS_DIR),

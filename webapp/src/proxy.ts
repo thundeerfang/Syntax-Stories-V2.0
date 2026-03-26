@@ -36,7 +36,7 @@ function isLegacyUserAgent(ua: string): boolean {
   return false;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === UNSUPPORTED_PATH || pathname.startsWith('/unsupported')) {

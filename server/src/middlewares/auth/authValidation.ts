@@ -1,19 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 
+const altchaField = Joi.alternatives().try(Joi.string().max(20000), Joi.object()).optional();
+
 const sendOtpSchema = Joi.object({
   email: Joi.string().email().required().lowercase().trim(),
+  altcha: altchaField,
 });
 
 const signupEmailSchema = Joi.object({
   fullName: Joi.string().min(2).max(100).required().trim(),
   email: Joi.string().email().required().lowercase().trim(),
+  altcha: altchaField,
 });
 
 const verifyOtpSchema = Joi.object({
   email: Joi.string().email().required().lowercase().trim(),
-  code: Joi.string().length(6).pattern(/^\d+$/).required(),
-});
+  code: Joi.string()
+    .required()
+    .custom((value, helpers) => {
+      const digits = String(value).replace(/\D/g, '').slice(0, 6);
+      if (digits.length !== 6) {
+        return helpers.error('any.custom', {
+          message: 'Code must be exactly 6 digits.',
+        });
+      }
+      return digits;
+    }, 'otp-digits'),
+  otpVersion: Joi.number().integer().min(1).optional(),
+}).messages({ 'any.custom': '{{#message}}' });
 
 function isMonthYear(val: unknown): val is string {
   return typeof val === 'string' && /^\d{4}-\d{2}$/.test(val);
@@ -259,11 +274,13 @@ export function signupEmailValidation(req: Request, res: Response, next: NextFun
 }
 
 export function verifyOtpValidation(req: Request, res: Response, next: NextFunction): void {
-  const { error } = verifyOtpSchema.validate(req.body);
+  const { error, value } = verifyOtpSchema.validate(req.body, { stripUnknown: true });
   if (error) {
-    res.status(400).json({ message: 'Validation error', error: error.details, success: false });
+    const msg = error.details[0]?.message?.replace(/"/g, '') ?? 'Validation error';
+    res.status(400).json({ message: msg, error: error.details, success: false });
     return;
   }
+  Object.assign(req.body, value);
   next();
 }
 

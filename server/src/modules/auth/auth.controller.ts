@@ -1,61 +1,31 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
-import { UserModel, normalizeProfileImg } from '../models/User';
-import { SessionModel } from '../models/Session';
-import { SecurityEventModel } from '../models/SecurityEvent';
-import { SubscriptionModel } from '../models/Subscription';
-import { authConfig } from '../config/auth.config';
-import { signAccessToken } from '../config/jwt';
-import { getRedis } from '../config/redis';
-import { env } from '../config/env';
-import type { AuthUser } from '../middlewares/auth';
-import { createAuthChallenge, consumeAuthChallenge } from '../utils/authChallenge';
-import { writeAuditLog } from '../utils/auditLog';
+import { UserModel, normalizeProfileImg } from '../../models/User';
+import { SessionModel } from '../../models/Session';
+import { SecurityEventModel } from '../../models/SecurityEvent';
+import { authConfig } from '../../config/auth.config';
+import { signAccessToken } from '../../config/jwt';
+import { getRedis } from '../../config/redis';
+import { env } from '../../config/env';
+import type { AuthUser } from '../../middlewares/auth';
+import { consumeAuthChallenge } from '../../utils/authChallenge';
+import { writeAuditLog } from '../../shared/audit/auditLog';
+import { AuditAction, type AuditActionName } from '../../shared/audit/events';
+import { sendAuthEmail, isAuthEmailConfigured } from '../../infrastructure/mail/sendAuthEmail';
+import { redisKeys } from '../../shared/redis/keys';
+import { generateEmailOtpDigits } from '../../services/emailOtp.service';
+import { logSecurityEvent } from './securityEventLog';
+import { createSession, generateRefreshToken, SESSION_DURATION_MS } from '../../services/session.service';
 
-const transporter = nodemailer.createTransport({
-  host: env.EMAIL_HOST,
-  port: env.EMAIL_PORT,
-  secure: env.EMAIL_PORT === 465,
-  auth: {
-    user: env.EMAIL_USER,
-    pass: env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS,
-  },
-});
-
-function getEmailErrorMessage(err: unknown): string {
-  const code = (err as { code?: string })?.code;
-  if (code === 'EAUTH') {
-    return 'Email not configured. For Gmail, use an App Password (see https://support.google.com/mail/?p=InvalidSecondFactor) and set EMAIL_APP_PASSWORD in .env.';
-  }
-  return (err as Error)?.message ?? 'Failed to send email.';
-}
-
-const OTP_PREFIX = 'otp:email:';
-const OTP_TTL = (authConfig.OTP_TTL_SECONDS || 600) * 1000;
-const OTP_ATTEMPT_PREFIX = 'otp:attempts:';
-const OTP_ATTEMPT_LIMIT = 10;
-const OTP_ATTEMPT_BLOCK_SECONDS = 5 * 60;
-const INTENT_PREFIX = 'intent:user:';
 const INTENT_TTL_SECONDS = 5 * 60;
-const TWO_FA_SETUP_PREFIX = '2fa:setup:';
 const TWO_FA_SETUP_TTL_SECONDS = 10 * 60;
-const QR_LOGIN_PREFIX = 'qr:login:';
 const QR_LOGIN_TTL_SECONDS = 5 * 60;
-const EMAIL_CHANGE_PREFIX = 'emailchange:';
 const EMAIL_CHANGE_TTL_SEC = 600; // 10 min
-
-/** Session duration and sliding window: extend session by this much on each refresh so active users stay logged in */
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const ALLOWED_INTENT_ACTIONS = ['delete_account'] as const;
 type IntentAction = (typeof ALLOWED_INTENT_ACTIONS)[number];
-
-function generateOtpCode(): string {
-  return String(crypto.randomInt(100000, 999999));
-}
 
 function getClientMeta(req: Request): { ip: string; userAgent: string } {
   const ip =
@@ -71,101 +41,6 @@ function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-function generateRefreshToken(): string {
-  return crypto.randomBytes(40).toString('hex');
-}
-
-function parseUserAgent(ua: string): string {
-  if (!ua) return 'Unknown device';
-  const match = ua.match(/\((.*?)\)/);
-  const os = match ? match[1] : ua.substring(0, 50);
-  const mobile = /Mobile|Android|iPhone/i.test(ua) ? 'Mobile' : 'Desktop';
-  return `${mobile} - ${os}`;
-}
-
-async function createSession(
-  userId: string,
-  req: Request,
-  refreshToken: string
-): Promise<InstanceType<typeof SessionModel>> {
-  const { ip, userAgent } = getClientMeta(req);
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  const session = await SessionModel.create({
-    userId,
-    refreshTokenHash: hashToken(refreshToken),
-    deviceName: parseUserAgent(userAgent),
-    userAgent,
-    ip,
-    expiresAt,
-  });
-  return session;
-}
-
-/** Create a session and return access + refresh tokens and session. Used by OAuth callbacks so the client can refresh when access token expires. */
-export async function createSessionAndTokens(
-  userId: string,
-  req: Request
-): Promise<{ accessToken: string; refreshToken: string; session: InstanceType<typeof SessionModel> }> {
-  const refreshToken = generateRefreshToken();
-  const session = await createSession(userId, req, refreshToken);
-  const accessToken = signAccessToken({ _id: userId, sessionId: String(session._id) });
-  return { accessToken, refreshToken, session };
-}
-
-async function logSecurityEvent(
-  userId: string | null,
-  type: string,
-  req: Request,
-  metadata: Record<string, unknown> = {}
-): Promise<void> {
-  const { ip, userAgent } = getClientMeta(req);
-  try {
-    const doc: Record<string, unknown> = { type, ip, userAgent, metadata };
-    if (userId) doc.userId = userId;
-    await SecurityEventModel.create(doc);
-  } catch (e) {
-    console.error('SecurityEvent log failed:', e);
-  }
-}
-
-async function storeOtp(
-  email: string,
-  payload: { code: string; fullName?: string; gender?: string; job?: string }
-): Promise<void> {
-  const redis = getRedis();
-  const key = OTP_PREFIX + email.toLowerCase().trim();
-  const value = JSON.stringify(payload);
-  if (redis) {
-    await redis.setEx(key, Math.ceil(OTP_TTL / 1000), value);
-    return;
-  }
-  throw new Error('Redis required for OTP');
-}
-
-async function getOtp(
-  email: string
-): Promise<{ code: string; fullName?: string } | null> {
-  const redis = getRedis();
-  const key = OTP_PREFIX + email.toLowerCase().trim();
-  if (!redis) return null;
-  const value = await redis.get(key);
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as {
-      code: string;
-      fullName?: string;
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function deleteOtp(email: string): Promise<void> {
-  const redis = getRedis();
-  const key = OTP_PREFIX + email.toLowerCase().trim();
-  if (redis) await redis.del(key);
-}
-
 async function storeIntent(
   userId: string,
   action: IntentAction
@@ -176,7 +51,7 @@ async function storeIntent(
   }
   const rawToken = crypto.randomBytes(32).toString('hex');
   const tokenHash = hashToken(rawToken);
-  const key = INTENT_PREFIX + tokenHash;
+  const key = redisKeys.auth.intent(tokenHash);
   const payload = JSON.stringify({ userId, action });
   await redis.setEx(key, INTENT_TTL_SECONDS, payload);
   return { token: rawToken, expiresIn: INTENT_TTL_SECONDS };
@@ -185,7 +60,7 @@ async function storeIntent(
 async function getTwoFactorSetupSecret(userId: string): Promise<string | null> {
   const redis = getRedis();
   if (!redis) return null;
-  const key = TWO_FA_SETUP_PREFIX + userId;
+  const key = redisKeys.auth.twoFactorSetup(userId);
   return (await redis.get(key)) ?? null;
 }
 
@@ -194,260 +69,8 @@ async function storeTwoFactorSetupSecret(userId: string, secret: string): Promis
   if (!redis) {
     throw new Error('Redis required for 2FA setup');
   }
-  const key = TWO_FA_SETUP_PREFIX + userId;
+  const key = redisKeys.auth.twoFactorSetup(userId);
   await redis.setEx(key, TWO_FA_SETUP_TTL_SECONDS, secret);
-}
-
-function isEmailConfigured(): boolean {
-  return !!(env.EMAIL_USER && (env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS));
-}
-
-export async function sendOtp(req: Request, res: Response): Promise<void> {
-  try {
-    if (!isEmailConfigured()) {
-      res.status(503).json({
-        message: 'Email is not configured. Cannot send login code.',
-        success: false,
-      });
-      return;
-    }
-    const { email } = req.body as { email: string };
-    const normalizedEmail = email.toLowerCase().trim();
-    const existing = await UserModel.findOne({ email: normalizedEmail });
-    if (!existing) {
-      res.status(404).json({
-        message: 'No account found with this email. Please sign up first.',
-        success: false,
-      });
-      return;
-    }
-    const code = generateOtpCode();
-    await storeOtp(normalizedEmail, { code });
-    await transporter.sendMail({
-      from: env.EMAIL_USER ?? 'noreply@syntaxstories.com',
-      to: normalizedEmail,
-      subject: 'Your Syntax Stories login code',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
-          <h2 style="color: #5f4fe6;">Your verification code</h2>
-          <p style="font-size: 16px;">Use this code to sign in:</p>
-          <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-          <p style="font-size: 14px; color: #666;">This code expires in 10 minutes.</p>
-        </div>
-      `,
-    });
-    res.status(200).json({ message: 'Verification code sent to your email 📧', success: true });
-  } catch (err) {
-    console.error(err);
-    const message =
-      (err as Error).message === 'Redis required for OTP'
-        ? 'Service temporarily unavailable. Try again later.'
-        : (err as { code?: string }).code === 'EAUTH'
-          ? getEmailErrorMessage(err)
-          : 'Internal Server Error 💀';
-    res.status(500).json({ message, success: false });
-  }
-}
-
-export async function signupEmail(req: Request, res: Response): Promise<void> {
-  try {
-    if (!isEmailConfigured()) {
-      res.status(503).json({
-        message: 'Email is not configured. Cannot send verification code.',
-        success: false,
-      });
-      return;
-    }
-    const { fullName, email } = req.body as { fullName: string; email: string };
-    const normalizedEmail = email.toLowerCase().trim();
-    const normalizedFullName = fullName?.trim() || 'User';
-    const existing = await UserModel.findOne({ email: normalizedEmail });
-    if (existing) {
-      res.status(409).json({
-        message: 'An account with this email already exists. Sign in with email instead.',
-        success: false,
-      });
-      return;
-    }
-    const code = generateOtpCode();
-    await storeOtp(normalizedEmail, {
-      code,
-      fullName: normalizedFullName,
-    });
-    await transporter.sendMail({
-      from: env.EMAIL_USER ?? 'noreply@syntaxstories.com',
-      to: normalizedEmail,
-      subject: 'Verify your Syntax Stories account',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
-          <h2 style="color: #5f4fe6;">Welcome to Syntax Stories</h2>
-          <p style="font-size: 16px;">Your verification code:</p>
-          <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-          <p style="font-size: 14px; color: #666;">This code expires in 10 minutes.</p>
-        </div>
-      `,
-    });
-    res.status(200).json({ message: 'Verification code sent to your email 📧', success: true });
-  } catch (err) {
-    console.error(err);
-    const message =
-      (err as Error).message === 'Redis required for OTP'
-        ? 'Service temporarily unavailable.'
-        : (err as { code?: string }).code === 'EAUTH'
-          ? getEmailErrorMessage(err)
-          : 'Internal Server Error 💀';
-    res.status(500).json({ message, success: false });
-  }
-}
-
-export async function verifyOtp(req: Request, res: Response): Promise<void> {
-  try {
-    const { email, code } = req.body as { email: string; code: string };
-    const normalizedEmail = email.toLowerCase().trim();
-    const redis = getRedis();
-
-    // Per-email throttle: if too many bad codes, block for a short period
-    if (redis) {
-      const attemptKey = OTP_ATTEMPT_PREFIX + normalizedEmail;
-      const attemptRaw = await redis.get(attemptKey);
-      const attempts = attemptRaw ? parseInt(attemptRaw, 10) || 0 : 0;
-      if (attempts >= OTP_ATTEMPT_LIMIT) {
-        res.status(429).json({
-          message: 'Too many invalid codes. Please wait 5 minutes before trying again.',
-          success: false,
-        });
-        return;
-      }
-    }
-
-    const stored = await getOtp(normalizedEmail);
-    if (!stored || stored.code !== code) {
-      await logSecurityEvent(null, 'login_failure', req, { email: normalizedEmail, reason: 'invalid_otp' });
-      void writeAuditLog(req, 'login_failure', { metadata: { email: normalizedEmail, reason: 'invalid_otp' } });
-
-       // Increment failed-attempt counter for this email
-      if (redis) {
-        const attemptKey = OTP_ATTEMPT_PREFIX + normalizedEmail;
-        const count = await redis.incr(attemptKey);
-        if (count === 1) {
-          await redis.expire(attemptKey, OTP_ATTEMPT_BLOCK_SECONDS);
-        }
-        if (count >= OTP_ATTEMPT_LIMIT) {
-          res.status(429).json({
-            message: 'Too many invalid codes. Please wait 5 minutes before trying again.',
-            success: false,
-          });
-          return;
-        }
-      }
-
-      res.status(401).json({
-        message: 'Invalid or expired code. Request a new one.',
-        success: false,
-      });
-      return;
-    }
-    await deleteOtp(normalizedEmail);
-
-    // Successful verification: clear failed-attempt counter if present
-    if (redis) {
-      const attemptKey = OTP_ATTEMPT_PREFIX + normalizedEmail;
-      await redis.del(attemptKey);
-    }
-    let user = await UserModel.findOne({ email: normalizedEmail });
-    let isNewUser = false;
-    if (stored.fullName && !user) {
-      const randomNumber = Math.floor(1000 + Math.random() * 9000);
-      const username =
-        stored.fullName.trim().toLowerCase().replace(/\s+/g, '') + randomNumber;
-      user = new UserModel({
-        fullName: stored.fullName,
-        username,
-        email: normalizedEmail,
-        isGoogleAccount: false,
-        isGitAccount: false,
-        isFacebookAccount: false,
-        isXAccount: false,
-        isAppleAccount: false,
-        isDiscordAccount: false,
-        emailVerified: true,
-      });
-      await user.save();
-      isNewUser = true;
-      const subscription = await SubscriptionModel.create({
-        userId: user._id,
-        plan: 'free',
-        status: 'active',
-      });
-      user.subscription = subscription._id;
-      await user.save();
-      await logSecurityEvent(String(user._id), 'login_success', req, { source: 'signup_email' });
-      void writeAuditLog(req, 'user_signup', { actorId: String(user._id), metadata: { source: 'email' } });
-    } else if (user) {
-      await logSecurityEvent(String(user._id), 'login_success', req, { source: 'otp' });
-    } else {
-      res.status(400).json({ message: 'No account found. Sign up first.', success: false });
-      return;
-    }
-
-    // 2FA: if enabled, require authenticator code before issuing tokens
-    if (user.twoFactorEnabled) {
-      try {
-        const { challengeToken, expiresIn } = await createAuthChallenge(String(user._id));
-        res.status(200).json({
-          success: true,
-          twoFactorRequired: true,
-          challengeToken,
-          expiresIn,
-          isNewUser,
-          message: 'Two-factor authentication required.',
-        });
-        return;
-      } catch {
-        res.status(503).json({
-          success: false,
-          message: 'Two-factor authentication temporarily unavailable. Try again later.',
-        });
-        return;
-      }
-    }
-    const refreshToken = generateRefreshToken();
-    const session = await createSession(String(user._id), req, refreshToken);
-    const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
-    const source = isNewUser ? 'signup_email' : 'otp';
-    void writeAuditLog(req, 'session_created', {
-      actorId: String(user._id),
-      metadata: {
-        sessionId: String(session._id),
-        deviceName: session.deviceName,
-        source,
-        expiresAt: session.expiresAt?.toISOString?.(),
-      },
-    });
-    void writeAuditLog(req, 'user_signin', {
-      actorId: String(user._id),
-      metadata: { source },
-    });
-    res.status(200).json({
-      message: 'Signed in successfully 🚀',
-      success: true,
-      accessToken,
-      refreshToken,
-      expiresIn: authConfig.ACCESS_TOKEN_EXPIRY,
-      sessionId: session._id,
-      isNewUser,
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        username: user.username,
-        email: user.email,
-        profileImg: normalizeProfileImg(user.profileImg),
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
-  }
 }
 
 export async function verifyTwoFactorLogin(req: Request, res: Response): Promise<void> {
@@ -484,7 +107,7 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
     const refreshToken = generateRefreshToken();
     const session = await createSession(String(dbUser._id), req, refreshToken);
     const accessToken = signAccessToken({ _id: String(dbUser._id), sessionId: String(session._id) });
-    void writeAuditLog(req, 'session_created', {
+    void writeAuditLog(req, AuditAction.SESSION_CREATED, {
       actorId: String(dbUser._id),
       metadata: {
         sessionId: String(session._id),
@@ -493,7 +116,7 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
         expiresAt: session.expiresAt?.toISOString?.(),
       },
     });
-    void writeAuditLog(req, 'user_signin', { actorId: String(dbUser._id), metadata: { source: '2fa' } });
+    void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: String(dbUser._id), metadata: { source: '2fa' } });
     res.status(200).json({
       success: true,
       message: 'Signed in successfully 🚀',
@@ -567,8 +190,8 @@ export async function logout(req: Request, res: Response): Promise<void> {
         session.revoked = true;
         await session.save();
         await logSecurityEvent(user._id, 'session_revoked', req, { sessionId });
-        void writeAuditLog(req, 'user_signout', { actorId: String(user._id), metadata: { sessionId } });
-        void writeAuditLog(req, 'session_revoked', { actorId: String(user._id), metadata: { sessionId } });
+        void writeAuditLog(req, AuditAction.USER_SIGNOUT, { actorId: String(user._id), metadata: { sessionId } });
+        void writeAuditLog(req, AuditAction.SESSION_REVOKED, { actorId: String(user._id), metadata: { sessionId } });
       }
     } else {
       const refreshToken = (req.body as { refreshToken?: string }).refreshToken;
@@ -579,8 +202,8 @@ export async function logout(req: Request, res: Response): Promise<void> {
           session.revoked = true;
           await session.save();
           await logSecurityEvent(user._id, 'session_revoked', req, { sessionId: session._id });
-          void writeAuditLog(req, 'user_signout', { actorId: String(user._id), metadata: { sessionId: session._id } });
-          void writeAuditLog(req, 'session_revoked', { actorId: String(user._id), metadata: { sessionId: session._id } });
+          void writeAuditLog(req, AuditAction.USER_SIGNOUT, { actorId: String(user._id), metadata: { sessionId: session._id } });
+          void writeAuditLog(req, AuditAction.SESSION_REVOKED, { actorId: String(user._id), metadata: { sessionId: session._id } });
         }
       }
     }
@@ -605,7 +228,7 @@ export async function revokeSessionByRefreshToken(req: Request, res: Response): 
       session.revoked = true;
       await session.save();
       await logSecurityEvent(String(session.userId), 'session_revoked', req, { sessionId: session._id });
-      void writeAuditLog(req, 'session_revoked', {
+      void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
         actorId: String(session.userId),
         metadata: { sessionId: String(session._id) },
       });
@@ -740,7 +363,7 @@ export async function enableTwoFactor(req: Request, res: Response): Promise<void
 
     const redis = getRedis();
     if (redis) {
-      await redis.del(TWO_FA_SETUP_PREFIX + user._id);
+      await redis.del(redisKeys.auth.twoFactorSetup(String(user._id)));
     }
 
     if (!dbUser) {
@@ -749,7 +372,7 @@ export async function enableTwoFactor(req: Request, res: Response): Promise<void
     }
 
     await logSecurityEvent(String(user._id), 'twofa_enabled', req, {});
-    void writeAuditLog(req, 'twofa_enabled', { actorId: String(user._id) });
+    void writeAuditLog(req, AuditAction.TWOFa_ENABLED, { actorId: String(user._id) });
 
     res.status(200).json({ success: true, message: 'Two-factor authentication enabled.' });
   } catch (err) {
@@ -795,7 +418,7 @@ export async function disableTwoFactor(req: Request, res: Response): Promise<voi
     await dbUser.save();
 
     await logSecurityEvent(String(user._id), 'twofa_disabled', req, {});
-    void writeAuditLog(req, 'twofa_disabled', { actorId: String(user._id) });
+    void writeAuditLog(req, AuditAction.TWOFa_DISABLED, { actorId: String(user._id) });
 
     res.status(200).json({ success: true, message: 'Two-factor authentication disabled.' });
   } catch (err) {
@@ -862,6 +485,10 @@ export async function revokeSession(req: Request, res: Response): Promise<void> 
     session.revoked = true;
     await session.save();
     await logSecurityEvent(String(user._id), 'session_revoked', req, { sessionId });
+    void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
+      actorId: String(user._id),
+      metadata: { sessionId },
+    });
 
     res.status(200).json({ success: true, message: 'Session revoked' });
   } catch (err) {
@@ -883,6 +510,10 @@ export async function logoutAll(req: Request, res: Response): Promise<void> {
       { $set: { revoked: true } }
     );
     await logSecurityEvent(String(user._id), 'session_revoked', req, { scope: 'all' });
+    void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
+      actorId: String(user._id),
+      metadata: { scope: 'all' },
+    });
 
     res.status(200).json({ success: true, message: 'All sessions revoked' });
   } catch (err) {
@@ -904,6 +535,10 @@ export async function logoutOthers(req: Request, res: Response): Promise<void> {
       { $set: { revoked: true } }
     );
     await logSecurityEvent(String(user._id), 'session_revoked', req, { scope: 'others' });
+    void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
+      actorId: String(user._id),
+      metadata: { scope: 'others' },
+    });
 
     res.status(200).json({ success: true, message: 'Other sessions revoked' });
   } catch (err) {
@@ -1094,7 +729,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     const actorId = String(user._id);
     const updatedProfile = updated as ProfileSections & { _id: unknown };
     if (currentProfile) {
-      const log = (action: string, targetType: string, metadata: Record<string, unknown>) => {
+      const log = (action: AuditActionName, targetType: string, metadata: Record<string, unknown>) => {
         void writeAuditLog(req, action, { actorId, targetType, targetId: actorId, metadata });
       };
       // stackAndTools: array of strings
@@ -1102,10 +737,10 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         const oldList = (currentProfile.stackAndTools ?? []) as string[];
         const newList = (updatedProfile.stackAndTools ?? []) as string[];
         for (const t of newList) {
-          if (!oldList.includes(t)) log('stack_tool_added', 'profile', { tool: t });
+          if (!oldList.includes(t)) log(AuditAction.STACK_TOOL_ADDED, 'profile', { tool: t });
         }
         for (const t of oldList) {
-          if (!newList.includes(t)) log('stack_tool_removed', 'profile', { tool: t });
+          if (!newList.includes(t)) log(AuditAction.STACK_TOOL_REMOVED, 'profile', { tool: t });
         }
       }
       // education: match by eduId
@@ -1117,14 +752,14 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         for (const e of newE) {
           const id = (e.eduId ?? '').trim();
           if (!id) continue;
-          if (!oldIds.has(id)) log('education_added', 'education', { eduId: id, school: (e as { school?: string }).school });
+          if (!oldIds.has(id)) log(AuditAction.EDUCATION_ADDED, 'education', { eduId: id, school: (e as { school?: string }).school });
           else {
             const prev = oldE.find((x) => (x.eduId ?? '').trim() === id);
-            if (prev && JSON.stringify(prev) !== JSON.stringify(e)) log('education_updated', 'education', { eduId: id });
+            if (prev && JSON.stringify(prev) !== JSON.stringify(e)) log(AuditAction.EDUCATION_UPDATED, 'education', { eduId: id });
           }
         }
         for (const id of oldIds) {
-          if (!newIds.has(id)) log('education_removed', 'education', { eduId: id });
+          if (!newIds.has(id)) log(AuditAction.EDUCATION_REMOVED, 'education', { eduId: id });
         }
       }
       // workExperiences: match by workId
@@ -1136,14 +771,14 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         for (const w of newW) {
           const id = (w.workId ?? '').trim();
           if (!id) continue;
-          if (!oldIds.has(id)) log('work_added', 'work', { workId: id, company: (w as { company?: string }).company });
+          if (!oldIds.has(id)) log(AuditAction.WORK_ADDED, 'work', { workId: id, company: (w as { company?: string }).company });
           else {
             const prev = oldW.find((x) => (x.workId ?? '').trim() === id);
-            if (prev && JSON.stringify(prev) !== JSON.stringify(w)) log('work_updated', 'work', { workId: id });
+            if (prev && JSON.stringify(prev) !== JSON.stringify(w)) log(AuditAction.WORK_UPDATED, 'work', { workId: id });
           }
         }
         for (const id of oldIds) {
-          if (!newIds.has(id)) log('work_removed', 'work', { workId: id });
+          if (!newIds.has(id)) log(AuditAction.WORK_REMOVED, 'work', { workId: id });
         }
       }
       // certifications: match by certId
@@ -1155,14 +790,14 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         for (const c of newC) {
           const id = (c.certId ?? '').trim();
           if (!id) continue;
-          if (!oldIds.has(id)) log('certification_added', 'certification', { certId: id, name: (c as { name?: string }).name });
+          if (!oldIds.has(id)) log(AuditAction.CERTIFICATION_ADDED, 'certification', { certId: id, name: (c as { name?: string }).name });
           else {
             const prev = oldC.find((x) => (x.certId ?? '').trim() === id);
-            if (prev && JSON.stringify(prev) !== JSON.stringify(c)) log('certification_updated', 'certification', { certId: id });
+            if (prev && JSON.stringify(prev) !== JSON.stringify(c)) log(AuditAction.CERTIFICATION_UPDATED, 'certification', { certId: id });
           }
         }
         for (const id of oldIds) {
-          if (!newIds.has(id)) log('certification_removed', 'certification', { certId: id });
+          if (!newIds.has(id)) log(AuditAction.CERTIFICATION_REMOVED, 'certification', { certId: id });
         }
       }
       // projects: by index (no stable id)
@@ -1172,18 +807,18 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         if (newP.length > oldP.length) {
           for (let i = oldP.length; i < newP.length; i++) {
             const p = newP[i] as { title?: string };
-            log('project_added', 'project', { index: i, title: p?.title });
+            log(AuditAction.PROJECT_ADDED, 'project', { index: i, title: p?.title });
           }
         }
         if (newP.length < oldP.length) {
           for (let i = newP.length; i < oldP.length; i++) {
-            log('project_removed', 'project', { index: i });
+            log(AuditAction.PROJECT_REMOVED, 'project', { index: i });
           }
         }
         const minLen = Math.min(oldP.length, newP.length);
         for (let i = 0; i < minLen; i++) {
           if (JSON.stringify(oldP[i]) !== JSON.stringify(newP[i])) {
-            log('project_updated', 'project', { index: i, title: (newP[i] as { title?: string })?.title });
+            log(AuditAction.PROJECT_UPDATED, 'project', { index: i, title: (newP[i] as { title?: string })?.title });
           }
         }
       }
@@ -1196,15 +831,15 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         for (let i = 0; i < newO.length; i++) {
           const o = newO[i];
           const key = (o.repositoryUrl ?? '').trim() || `i:${i}`;
-          if (!oldKeys.has(key)) log('open_source_added', 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
+          if (!oldKeys.has(key)) log(AuditAction.OPEN_SOURCE_ADDED, 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
           else {
             const prev = oldO.find((x, j) => ((x.repositoryUrl ?? '').trim() || `i:${j}`) === key);
-            if (prev && JSON.stringify(prev) !== JSON.stringify(o)) log('open_source_updated', 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
+            if (prev && JSON.stringify(prev) !== JSON.stringify(o)) log(AuditAction.OPEN_SOURCE_UPDATED, 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
           }
         }
         for (let i = 0; i < oldO.length; i++) {
           const key = (oldO[i].repositoryUrl ?? '').trim() || `i:${i}`;
-          if (!newKeys.has(key)) log('open_source_removed', 'open_source', { repositoryUrl: oldO[i].repositoryUrl, title: oldO[i].title });
+          if (!newKeys.has(key)) log(AuditAction.OPEN_SOURCE_REMOVED, 'open_source', { repositoryUrl: oldO[i].repositoryUrl, title: oldO[i].title });
         }
       }
       // mySetup: by index
@@ -1214,24 +849,24 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         if (newM.length > oldM.length) {
           for (let i = oldM.length; i < newM.length; i++) {
             const m = newM[i];
-            log('my_setup_added', 'my_setup', { label: m?.label, index: i });
+            log(AuditAction.MY_SETUP_ADDED, 'my_setup', { label: m?.label, index: i });
           }
         }
         if (newM.length < oldM.length) {
           for (let i = newM.length; i < oldM.length; i++) {
-            log('my_setup_removed', 'my_setup', { label: oldM[i]?.label, index: i });
+            log(AuditAction.MY_SETUP_REMOVED, 'my_setup', { label: oldM[i]?.label, index: i });
           }
         }
         const minLen = Math.min(oldM.length, newM.length);
         for (let i = 0; i < minLen; i++) {
           if (JSON.stringify(oldM[i]) !== JSON.stringify(newM[i])) {
-            log('my_setup_updated', 'my_setup', { label: newM[i]?.label, index: i });
+            log(AuditAction.MY_SETUP_UPDATED, 'my_setup', { label: newM[i]?.label, index: i });
           }
         }
       }
     }
     if (Object.keys(updates).length > 0) {
-      void writeAuditLog(req, 'profile_updated', { actorId, targetType: 'profile', targetId: actorId, metadata: { keys: Object.keys(updates) } });
+      void writeAuditLog(req, AuditAction.PROFILE_UPDATED, { actorId, targetType: 'profile', targetId: actorId, metadata: { keys: Object.keys(updates) } });
     }
 
     res.status(200).json({
@@ -1282,7 +917,7 @@ export async function parseCv(req: Request, res: Response): Promise<void> {
     // pdf-parse v1.1.1 works in Node.js (v2 uses pdfjs-dist with browser-only APIs like DOMMatrix)
     const pdfParse = (await import('pdf-parse')).default as (buf: Buffer) => Promise<{ text: string }>;
     const { text } = await pdfParse(buffer);
-    const { parseCvFromText } = await import('../utils/parseCvFromPdf');
+    const { parseCvFromText } = await import('../../utils/parseCvFromPdf');
     const { extracted, missingFields, incompleteItemHints } = parseCvFromText(text ?? '');
     res.status(200).json({
       success: true,
@@ -1359,8 +994,8 @@ export async function deleteAccount(req: Request, res: Response): Promise<void> 
     }
 
     await logSecurityEvent(String(user._id), 'account_locked', req, { reason: 'delete_account' });
-    void writeAuditLog(req, 'account_locked', { actorId: String(user._id), metadata: { reason: 'delete_account' } });
-    void writeAuditLog(req, 'account_deleted', { actorId: String(user._id), metadata: { reason: 'delete_account' } });
+    void writeAuditLog(req, AuditAction.ACCOUNT_LOCKED, { actorId: String(user._id), metadata: { reason: 'delete_account' } });
+    void writeAuditLog(req, AuditAction.ACCOUNT_DELETED, { actorId: String(user._id), metadata: { reason: 'delete_account' } });
 
     res.status(200).json({
       success: true,
@@ -1372,7 +1007,6 @@ export async function deleteAccount(req: Request, res: Response): Promise<void> 
   }
 }
 
-const LINK_PREFIX = 'link:';
 const LINK_TTL_SEC = 300; // 5 min
 
 const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord'] as const;
@@ -1399,7 +1033,7 @@ export async function linkRequest(req: Request, res: Response): Promise<void> {
       return;
     }
     const linkKey = crypto.randomBytes(16).toString('hex');
-    const key = LINK_PREFIX + linkKey;
+    const key = redisKeys.oauth.link(linkKey);
     await redis.setEx(key, LINK_TTL_SEC, String(user._id));
     const base = (env.BACKEND_URL || '').replace(/\/$/, '');
     if (!base) {
@@ -1423,7 +1057,7 @@ export async function initEmailChange(req: Request, res: Response): Promise<void
       res.status(401).json({ message: 'Unauthorized', success: false });
       return;
     }
-    if (!isEmailConfigured()) {
+    if (!isAuthEmailConfigured()) {
       res.status(503).json({ message: 'Email change is not available.', success: false });
       return;
     }
@@ -1453,20 +1087,17 @@ export async function initEmailChange(req: Request, res: Response): Promise<void
       res.status(503).json({ message: 'Email change temporarily unavailable.', success: false });
       return;
     }
-    const codeCurrent = generateOtpCode();
-    const codeNew = generateOtpCode();
-    const key = EMAIL_CHANGE_PREFIX + String(user._id);
+    const codeCurrent = generateEmailOtpDigits();
+    const codeNew = generateEmailOtpDigits();
+    const key = redisKeys.auth.emailChange(String(user._id));
     await redis.setEx(key, EMAIL_CHANGE_TTL_SEC, JSON.stringify({ codeCurrent, codeNew, newEmail }));
 
-    const from = env.EMAIL_USER ?? 'noreply@syntaxstories.com';
-    await transporter.sendMail({
-      from,
+    await sendAuthEmail({
       to: currentEmail,
       subject: 'Verify your email change – Syntax Stories',
       html: `<p>Your verification code for changing your email: <strong>${codeCurrent}</strong>. Valid for 10 minutes.</p>`,
     });
-    await transporter.sendMail({
-      from,
+    await sendAuthEmail({
       to: newEmail,
       subject: 'Verify your new email – Syntax Stories',
       html: `<p>Your verification code for your new email: <strong>${codeNew}</strong>. Valid for 10 minutes.</p>`,
@@ -1505,7 +1136,7 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
       res.status(503).json({ message: 'Email change temporarily unavailable.', success: false });
       return;
     }
-    const key = EMAIL_CHANGE_PREFIX + String(user._id);
+    const key = redisKeys.auth.emailChange(String(user._id));
     const raw = await redis.get(key);
     if (!raw) {
       res.status(400).json({ message: 'Codes expired or invalid. Request a new code.', success: false });
@@ -1557,7 +1188,7 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
       },
     });
     await logSecurityEvent(String(user._id), 'login_success', req, { metadata: { email_change: true, newEmail } });
-    void writeAuditLog(req, 'email_change', { actorId: String(user._id), metadata: { newEmail } });
+    void writeAuditLog(req, AuditAction.EMAIL_CHANGE, { actorId: String(user._id), metadata: { newEmail } });
 
     res.status(200).json({
       success: true,
@@ -1579,7 +1210,7 @@ export async function cancelEmailChange(req: Request, res: Response): Promise<vo
     }
     const redis = getRedis();
     if (redis) {
-      const key = EMAIL_CHANGE_PREFIX + String(user._id);
+      const key = redisKeys.auth.emailChange(String(user._id));
       await redis.del(key);
     }
     res.status(200).json({
@@ -1644,7 +1275,7 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
       { $set: { revoked: true } }
     );
     await logSecurityEvent(String(user._id), 'provider_disconnect', req, { provider });
-    void writeAuditLog(req, 'oauth_disconnected', { actorId: String(user._id), metadata: { provider } });
+    void writeAuditLog(req, AuditAction.OAUTH_DISCONNECTED, { actorId: String(user._id), metadata: { provider } });
 
     res.status(200).json({
       success: true,
@@ -1664,7 +1295,7 @@ export async function initQrLogin(_req: Request, res: Response): Promise<void> {
       return;
     }
     const token = crypto.randomBytes(24).toString('hex');
-    const key = QR_LOGIN_PREFIX + token;
+    const key = redisKeys.auth.qrLogin(token);
     await redis.setEx(key, QR_LOGIN_TTL_SECONDS, JSON.stringify({ approved: false }));
     res.status(201).json({ success: true, qrToken: token });
   } catch (err) {
@@ -1690,7 +1321,7 @@ export async function approveQrLogin(req: Request, res: Response): Promise<void>
       res.status(503).json({ message: 'Service temporarily unavailable', success: false });
       return;
     }
-    const key = QR_LOGIN_PREFIX + qrToken;
+    const key = redisKeys.auth.qrLogin(qrToken);
     const existing = await redis.get(key);
     if (!existing) {
       res.status(400).json({ message: 'QR login session not found or expired', success: false });
@@ -1720,7 +1351,7 @@ export async function pollQrLogin(req: Request, res: Response): Promise<void> {
       res.status(503).json({ message: 'Service temporarily unavailable', success: false });
       return;
     }
-    const key = QR_LOGIN_PREFIX + qrToken;
+    const key = redisKeys.auth.qrLogin(qrToken);
     const value = await redis.get(key);
     if (!value) {
       res.status(404).json({ success: false, message: 'QR login session not found or expired' });
@@ -1741,7 +1372,7 @@ export async function pollQrLogin(req: Request, res: Response): Promise<void> {
 
     await redis.del(key);
     await logSecurityEvent(userId, 'session_created', req, { source: 'qr_login' });
-    void writeAuditLog(req, 'session_created', {
+    void writeAuditLog(req, AuditAction.SESSION_CREATED, {
       actorId: userId,
       metadata: {
         sessionId: String(session._id),
@@ -1750,7 +1381,7 @@ export async function pollQrLogin(req: Request, res: Response): Promise<void> {
         expiresAt: session.expiresAt?.toISOString?.(),
       },
     });
-    void writeAuditLog(req, 'user_signin', { actorId: userId, metadata: { source: 'qr_login' } });
+    void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: userId, metadata: { source: 'qr_login' } });
 
     res.status(200).json({
       success: true,
