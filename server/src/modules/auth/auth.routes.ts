@@ -6,11 +6,7 @@ import { linkRequest, disconnectProvider } from './controllers/oauthLink.control
 import { me, updateProfile, parseCv } from './controllers/profile.controller';
 import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller';
 import { setupTwoFactor, enableTwoFactor, disableTwoFactor, verifyTwoFactorLogin } from './controllers/twoFactor.controller';
-import {
-  refresh,
-  logout,
-  revokeSessionByRefreshToken,
-} from './auth.controller';
+import { refresh, logout, revokeSessionByRefreshToken } from './controllers/session.controller';
 import {
   idempotency,
   sendOtpValidation,
