@@ -28,13 +28,13 @@ export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) resume();
     };
-    window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('popstate', resume);
-    window.addEventListener(OAUTH_LEAVING_EVENT, resume);
+    globalThis.addEventListener('pageshow', onPageShow);
+    globalThis.addEventListener('popstate', resume);
+    globalThis.addEventListener(OAUTH_LEAVING_EVENT, resume);
     return () => {
-      window.removeEventListener('pageshow', onPageShow);
-      window.removeEventListener('popstate', resume);
-      window.removeEventListener(OAUTH_LEAVING_EVENT, resume);
+      globalThis.removeEventListener('pageshow', onPageShow);
+      globalThis.removeEventListener('popstate', resume);
+      globalThis.removeEventListener(OAUTH_LEAVING_EVENT, resume);
     };
   }, []);
 

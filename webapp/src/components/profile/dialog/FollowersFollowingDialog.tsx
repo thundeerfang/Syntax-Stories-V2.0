@@ -22,6 +22,116 @@ export interface FollowersFollowingDialogProps {
   onFollowChange?: () => void;
 }
 
+function FollowersFollowingEmptyState({ tab, hasSearch }: Readonly<{ tab: Tab; hasSearch: boolean }>) {
+  if (hasSearch) {
+    return (
+      <>
+        <Search className="size-12 text-muted-foreground/60 mb-3" />
+        <p className="text-[10px] font-black uppercase text-muted-foreground">No matches</p>
+        <p className="text-[9px] font-bold text-muted-foreground/80 mt-1">Try a different search.</p>
+      </>
+    );
+  }
+  if (tab === 'followers') {
+    return (
+      <>
+        <div className="size-16 rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center mb-4">
+          <UserPlus className="size-8 text-muted-foreground/50" />
+        </div>
+        <p className="text-[10px] font-black uppercase">No followers yet</p>
+        <p className="text-[9px] font-bold text-muted-foreground mt-1.5 max-w-[220px]">
+          Share your profile — your audience is waiting
+        </p>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="size-16 rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center mb-4">
+        <Compass className="size-8 text-muted-foreground/50" />
+      </div>
+      <p className="text-[10px] font-black uppercase">Not following anyone yet</p>
+      <p className="text-[9px] font-bold text-muted-foreground mt-1.5 max-w-[220px]">
+        Discover builders and hit Follow
+      </p>
+    </>
+  );
+}
+
+function showFollowActionsForUser(
+  token: string | null,
+  profileUsername: string | null,
+  rowUsername: string,
+  currentUserUsername: string | null | undefined,
+): boolean {
+  if (!token || rowUsername === profileUsername) return false;
+  const me = currentUserUsername?.toLowerCase() ?? '';
+  return me === '' || rowUsername.toLowerCase() !== me;
+}
+
+function FollowListRow({
+  user,
+  profileUsername,
+  currentUserUsername,
+  token,
+  actionUsername,
+  onClose,
+  iFollowUsernames,
+  onFollow,
+  onUnfollow,
+}: Readonly<{
+  user: FollowUser;
+  profileUsername: string | null;
+  currentUserUsername?: string | null;
+  token: string | null;
+  actionUsername: string | null;
+  onClose: () => void;
+  iFollowUsernames: Set<string>;
+  onFollow: (u: string) => void;
+  onUnfollow: (u: string) => void;
+}>) {
+  const showActions = showFollowActionsForUser(token, profileUsername, user.username, currentUserUsername);
+  const isFollowing = iFollowUsernames.has(user.username);
+
+  return (
+    <div
+      className="flex items-center gap-3 p-3 border-2 border-border bg-muted/5 hover:bg-muted/20 transition-colors"
+    >
+      <Link href={`/u/${user.username}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
+        <img
+          src={user.profileImg || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+          alt=""
+          className="size-10 border-2 border-border shrink-0 object-cover rounded"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-black uppercase truncate">{user.fullName || user.username}</p>
+          <p className="text-[9px] font-bold text-muted-foreground uppercase truncate">@{user.username}</p>
+        </div>
+      </Link>
+      {showActions &&
+        (isFollowing ? (
+          <button
+            type="button"
+            disabled={actionUsername === user.username}
+            onClick={() => onUnfollow(user.username)}
+            className="shrink-0 px-3 py-1.5 border-2 border-border text-[9px] font-black uppercase hover:bg-muted disabled:opacity-50"
+          >
+            {actionUsername === user.username ? '…' : 'Unfollow'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={actionUsername === user.username}
+            onClick={() => onFollow(user.username)}
+            className="shrink-0 px-3 py-1.5 border-2 border-primary bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50"
+          >
+            {actionUsername === user.username ? '…' : 'Follow'}
+          </button>
+        ))}
+    </div>
+  );
+}
+
 export function FollowersFollowingDialog({
   open,
   onClose,
@@ -31,7 +141,7 @@ export function FollowersFollowingDialog({
   followersCount = 0,
   followingCount = 0,
   onFollowChange,
-}: FollowersFollowingDialogProps) {
+}: Readonly<FollowersFollowingDialogProps>) {
   const [tab, setTab] = useState<Tab>('followers');
   const [search, setSearch] = useState('');
   const [followers, setFollowers] = useState<FollowUser[]>([]);
@@ -49,10 +159,10 @@ export function FollowersFollowingDialog({
     setLoading(true);
     setFollowersNextCursor(null);
     setFollowingNextCursor(null);
-    const promises: [Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>, Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>] = [
-      followApi.getFollowers(username),
-      followApi.getFollowing(username),
-    ];
+    const promises: [
+      Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>,
+      Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>,
+    ] = [followApi.getFollowers(username), followApi.getFollowing(username)];
     Promise.all(promises)
       .then(([r1, r2]) => {
         if (r1.success) {
@@ -73,7 +183,8 @@ export function FollowersFollowingDialog({
   // Load who *current user* follows so we show Unfollow vs Follow correctly (e.g. in Followers tab)
   useEffect(() => {
     if (!open || !token || !currentUserUsername) return;
-    followApi.getFollowing(currentUserUsername)
+    followApi
+      .getFollowing(currentUserUsername)
       .then((res) => {
         if (res.success) setIFollowUsernames(new Set(res.list.map((u) => u.username)));
       })
@@ -85,7 +196,10 @@ export function FollowersFollowingDialog({
   const loadMore = () => {
     if (!username || !nextCursor || loadingMore) return;
     setLoadingMore(true);
-    const api = tab === 'followers' ? followApi.getFollowers(username, nextCursor) : followApi.getFollowing(username, nextCursor);
+    const api =
+      tab === 'followers'
+        ? followApi.getFollowers(username, nextCursor)
+        : followApi.getFollowing(username, nextCursor);
     api
       .then((res) => {
         if (res.success) {
@@ -107,7 +221,7 @@ export function FollowersFollowingDialog({
     ? list.filter(
         (u) =>
           (u.fullName ?? '').toLowerCase().includes(search.toLowerCase()) ||
-          (u.username ?? '').toLowerCase().includes(search.toLowerCase())
+          (u.username ?? '').toLowerCase().includes(search.toLowerCase()),
       )
     : list;
 
@@ -153,6 +267,56 @@ export function FollowersFollowingDialog({
     }
   };
 
+  const hasSearch = search.trim().length > 0;
+
+  let listSection: React.ReactNode;
+  if (loading) {
+    listSection = (
+      <p className="text-[10px] font-bold text-muted-foreground uppercase text-center py-8">Loading...</p>
+    );
+  } else if (filtered.length === 0) {
+    listSection = (
+      <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+        <FollowersFollowingEmptyState tab={tab} hasSearch={hasSearch} />
+      </div>
+    );
+  } else {
+    let loadMoreLabel = 'Load more';
+    if (loadingMore) {
+      loadMoreLabel = 'Loading…';
+    }
+    listSection = (
+      <>
+        {filtered.map((user) => (
+          <FollowListRow
+            key={user.id}
+            user={user}
+            profileUsername={username}
+            currentUserUsername={currentUserUsername}
+            token={token}
+            actionUsername={actionUsername}
+            onClose={onClose}
+            iFollowUsernames={iFollowUsernames}
+            onFollow={handleFollow}
+            onUnfollow={handleUnfollow}
+          />
+        ))}
+        {!search.trim() && nextCursor && (
+          <div className="pt-2">
+            <button
+              type="button"
+              disabled={loadingMore}
+              onClick={loadMore}
+              className="w-full py-2 border-2 border-border bg-muted/30 text-[10px] font-black uppercase tracking-widest hover:bg-muted/50 disabled:opacity-50"
+            >
+              {loadMoreLabel}
+            </button>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <Dialog
       open={open}
@@ -171,7 +335,7 @@ export function FollowersFollowingDialog({
             'flex-1 py-3 font-black text-[10px] uppercase tracking-widest border-b-2 -mb-0.5 transition-colors',
             tab === 'followers'
               ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
           )}
         >
           Followers {followersCount}
@@ -183,7 +347,7 @@ export function FollowersFollowingDialog({
             'flex-1 py-3 font-black text-[10px] uppercase tracking-widest border-b-2 -mb-0.5 transition-colors',
             tab === 'following'
               ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
           )}
         >
           Following {followingCount}
@@ -201,95 +365,7 @@ export function FollowersFollowingDialog({
           />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0">
-        {loading ? (
-          <p className="text-[10px] font-bold text-muted-foreground uppercase text-center py-8">Loading...</p>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-            {search.trim() ? (
-              <>
-                <Search className="size-12 text-muted-foreground/60 mb-3" />
-                <p className="text-[10px] font-black uppercase text-muted-foreground">No matches</p>
-                <p className="text-[9px] font-bold text-muted-foreground/80 mt-1">Try a different search.</p>
-              </>
-            ) : tab === 'followers' ? (
-              <>
-                <div className="size-16 rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center mb-4">
-                  <UserPlus className="size-8 text-muted-foreground/50" />
-                </div>
-                <p className="text-[10px] font-black uppercase">No followers yet</p>
-                <p className="text-[9px] font-bold text-muted-foreground mt-1.5 max-w-[220px]">
-                  Share your profile — your audience is waiting
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="size-16 rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center mb-4">
-                  <Compass className="size-8 text-muted-foreground/50" />
-                </div>
-                <p className="text-[10px] font-black uppercase">Not following anyone yet</p>
-                <p className="text-[9px] font-bold text-muted-foreground mt-1.5 max-w-[220px]">
-                  Discover builders and hit Follow
-                </p>
-              </>
-            )}
-          </div>
-        ) : (
-          <>
-          {filtered.map((user) => (
-            <div
-              key={user.id}
-              className="flex items-center gap-3 p-3 border-2 border-border bg-muted/5 hover:bg-muted/20 transition-colors"
-            >
-              <Link href={`/u/${user.username}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
-                <img
-                  src={user.profileImg || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
-                  alt=""
-                  className="size-10 border-2 border-border shrink-0 object-cover rounded"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black uppercase truncate">{user.fullName || user.username}</p>
-                  <p className="text-[9px] font-bold text-muted-foreground uppercase truncate">@{user.username}</p>
-                </div>
-              </Link>
-              {token && user.username !== username && (currentUserUsername == null || user.username.toLowerCase() !== currentUserUsername.toLowerCase()) && (
-                iFollowUsernames.has(user.username) ? (
-                  <button
-                    type="button"
-                    disabled={actionUsername === user.username}
-                    onClick={() => handleUnfollow(user.username)}
-                    className="shrink-0 px-3 py-1.5 border-2 border-border text-[9px] font-black uppercase hover:bg-muted disabled:opacity-50"
-                  >
-                    {actionUsername === user.username ? '…' : 'Unfollow'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={actionUsername === user.username}
-                    onClick={() => handleFollow(user.username)}
-                    className="shrink-0 px-3 py-1.5 border-2 border-primary bg-primary text-primary-foreground text-[9px] font-black uppercase disabled:opacity-50"
-                  >
-                    {actionUsername === user.username ? '…' : 'Follow'}
-                  </button>
-                )
-              )}
-            </div>
-          ))}
-          {!search.trim() && nextCursor && (
-            <div className="pt-2">
-              <button
-                type="button"
-                disabled={loadingMore}
-                onClick={loadMore}
-                className="w-full py-2 border-2 border-border bg-muted/30 text-[10px] font-black uppercase tracking-widest hover:bg-muted/50 disabled:opacity-50"
-              >
-                {loadingMore ? 'Loading…' : 'Load more'}
-              </button>
-            </div>
-          )}
-          </>
-        )}
-      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0">{listSection}</div>
     </Dialog>
   );
 }

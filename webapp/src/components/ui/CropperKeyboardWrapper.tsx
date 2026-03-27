@@ -35,11 +35,10 @@ export function CropperKeyboardWrapper({
     return () => cancelAnimationFrame(id);
   }, [imageReady, autoFocusOnImageReady]);
 
-  // NOSONAR S6845,S6847 — focusable crop region; role=application + keyboard/pointer handlers for react-easy-crop
   return (
-    <div
+    <div // NOSONAR S6847 — application region; keyboard + pointer handlers for react-easy-crop (see aria-label)
       ref={ref}
-      tabIndex={0}
+      tabIndex={0} // NOSONAR S6845 — focusable crop keyboard region
       role="application"
       aria-label="Image crop. Arrow keys move the image behind the frame. Shift plus arrow for larger steps."
       className={cn(

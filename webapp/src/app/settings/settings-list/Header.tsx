@@ -4,7 +4,6 @@ import React from 'react';
 import {
   Briefcase,
   FolderGit2,
-  Github,
   GraduationCap,
   Plus,
   RefreshCw,
@@ -14,11 +13,11 @@ import { cn } from '@/lib/utils';
 
 type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';
 
-interface SettingsSectionHeaderProps {
+type SettingsSectionHeaderProps = Readonly<{
   variant: HeaderVariant;
   onPrimaryAction: () => void;
   disabled?: boolean;
-}
+}>;
 
 // Reusable Button Component based on the "Education" style you liked
 const HeaderActionButton = ({ 
@@ -48,10 +47,10 @@ const HeaderActionButton = ({
 function HeaderWrapper({
   children,
   border = true,
-}: {
+}: Readonly<{
   children: React.ReactNode;
   border?: boolean;
-}) {
+}>) {
   return (
     <header
       className={cn(
@@ -156,7 +155,7 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
       <HeaderWrapper>
         <div className="flex items-center gap-4">
           <div className="size-12 bg-foreground text-background flex items-center justify-center border-2 border-border shadow-[3px_3px_0px_0px_var(--primary)]">
-            <Github className="size-7" />
+            <FolderGit2 className="size-7" />
           </div>
           <div>
             <h2 className="text-3xl font-black uppercase tracking-tighter">Open Source Sync</h2>

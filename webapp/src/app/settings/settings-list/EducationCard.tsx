@@ -4,6 +4,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Calendar, GraduationCap, Pencil, Sigma, Tag, Trash2, Cpu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const EDU_CARD_FOOTER_MARKS = ['e0', 'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7'] as const;
+
+type EducationCardProps = Readonly<{
+  education: any;
+  index: number;
+  saving: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+  formatMonthYear: (value: string) => string;
+  hideActions?: boolean;
+}>;
+
 export function EducationCard({
   education: e,
   index,
@@ -12,15 +24,7 @@ export function EducationCard({
   onRemove,
   formatMonthYear,
   hideActions = false,
-}: {
-  education: any;
-  index: number;
-  saving: boolean;
-  onEdit: () => void;
-  onRemove: () => void;
-  formatMonthYear: (value: string) => string;
-  hideActions?: boolean;
-}) {
+}: EducationCardProps) {
   const dateRange = [
     formatMonthYear(e.startDate ?? ''),
     e.currentEducation ? 'STILL_ACTIVE' : formatMonthYear(e.endDate ?? ''),
@@ -29,8 +33,8 @@ export function EducationCard({
     .join(' >> ');
 
   const rawId = (e.eduId ?? '').trim() || String(index + 1);
-  const numId = parseInt(rawId, 10);
-  const displayEduId = !Number.isNaN(numId) ? String(numId).padStart(2, '0') : rawId;
+  const numId = Number.parseInt(rawId, 10);
+  const displayEduId = Number.isNaN(numId) ? rawId : String(numId).padStart(2, '0');
   const isActive = !!e.currentEducation;
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(false);
@@ -98,7 +102,7 @@ export function EducationCard({
   }, [isInfoExpanded]);
 
   return (
-    <div key={index} className="group relative ss-settings-card">
+    <div className="group relative ss-settings-card">
       {/* Fixed Industrial Frame (No Translate/Uplift) */}
       <div className="ss-card-border relative border-[3px] border-border bg-card">
         
@@ -205,17 +209,18 @@ export function EducationCard({
               <div ref={infoRef} className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5">
                 <button
                   type="button"
-                  onClick={() => setIsInfoExpanded((v) => !v)}
+                  onClick={(ev) => {
+                    if ((ev.target as HTMLElement).closest('.ss-card-desc-scroll')) return;
+                    setIsInfoExpanded((v) => !v);
+                  }}
                   className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                   aria-expanded={isInfoExpanded}
                   aria-label={isInfoExpanded ? 'Collapse info' : 'Expand to read full info'}
                 >
                   {isInfoExpanded ? (
                     <div
-                      className="min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
+                      className="ss-card-desc-scroll min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
                       style={{ scrollbarGutter: 'stable' }}
-                      onClick={(ev) => ev.stopPropagation()}
-                      role="presentation"
                     >
                       <p className="text-[11px] font-medium text-muted-foreground break-words">
                         <span className="text-primary font-bold mr-2">INFO:</span>
@@ -237,8 +242,8 @@ export function EducationCard({
         {/* Footer: Serial Number & Static Barcode Deco */}
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1 opacity-30">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className={cn("h-2 w-[1px] bg-foreground", i % 3 === 0 && "w-[2px]")} />
+            {EDU_CARD_FOOTER_MARKS.map((mark, i) => (
+              <div key={mark} className={cn('h-2 w-[1px] bg-foreground', i % 3 === 0 && 'w-[2px]')} />
             ))}
           </div>
           <span className="text-[9px] font-mono font-bold text-muted-foreground/40 tracking-[0.2em]">

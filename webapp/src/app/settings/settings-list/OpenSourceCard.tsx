@@ -1,37 +1,41 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  ExternalLink, 
-  GitFork, 
-  Github, 
-  Unlink, 
-  Terminal, 
-  Hash
+import {
+  ExternalLink,
+  GitFork,
+  FolderGit2,
+  Unlink,
+  Terminal,
+  Hash,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function OpenSourceCard({
-  item: p,
-  index,
-  saving,
-  onOpen,
-  onDetach,
-  hideActions = false,
-}: {
+const OPEN_SOURCE_FOOTER_MARKS = ['o0', 'o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9'] as const;
+
+type OpenSourceCardProps = Readonly<{
   item: any;
   index: number;
   saving: boolean;
   onOpen: () => void;
   onDetach: () => void;
   hideActions?: boolean;
-}) {
-  const repoName = (p as any).repoFullName || p.title || 'UNKNOWN_REPO';
-  const repoUrl = p.publicationUrl || '#';
+}>;
+
+export function OpenSourceCard(props: OpenSourceCardProps) {
+  const {
+    item: p,
+    index,
+    saving,
+    onDetach,
+    hideActions = false,
+  } = props;
+  const repoName = String(p.repoFullName ?? p.title ?? 'UNKNOWN_REPO');
+  const repoUrl = String(p.publicationUrl ?? '#');
   const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   return (
-    <div key={(p as any).repoFullName ?? index} className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
+    <div className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
       {/* Industrial Sync Node Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card overflow-hidden">
         
@@ -42,7 +46,7 @@ export function OpenSourceCard({
         {/* Technical Header — reduced padding */}
         <div className="ss-card-header flex items-center justify-between border-b-[3px] border-border bg-muted/30 px-3 py-1.5 relative z-10 min-w-0">
           <div className="flex items-center gap-3 min-w-0 shrink">
-            <Github className="size-3.5 text-primary" />
+            <FolderGit2 className="size-3.5 text-primary" />
             <span className="text-[10px] font-black font-mono tracking-widest text-foreground uppercase">
               REPO_ID: <span className="text-primary">#{String(index + 1).padStart(2, '0')}</span>
             </span>
@@ -120,17 +124,18 @@ export function OpenSourceCard({
             <div className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5 w-full">
               <button
                 type="button"
-                onClick={() => setIsDescExpanded((v) => !v)}
+                onClick={(ev) => {
+                  if ((ev.target as HTMLElement).closest('.ss-open-source-desc-scroll')) return;
+                  setIsDescExpanded((v) => !v);
+                }}
                 className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                 aria-expanded={isDescExpanded}
                 aria-label={isDescExpanded ? 'Collapse description' : 'Expand to read full description'}
               >
                 {isDescExpanded ? (
                   <div
-                    className="min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
+                    className="ss-open-source-desc-scroll min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
                     style={{ scrollbarGutter: 'stable' }}
-                    onClick={(ev) => ev.stopPropagation()}
-                    role="presentation"
                   >
                     <p className="text-[11px] font-medium text-muted-foreground break-words break-all">
                       <span className="text-primary font-bold mr-2 shrink-0">REPO_DESC:</span>
@@ -151,13 +156,13 @@ export function OpenSourceCard({
         {/* Footer Hardware Deco — reduced padding */}
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1">
-            {[...Array(10)].map((_, i) => (
-              <div 
-                key={i} 
+            {OPEN_SOURCE_FOOTER_MARKS.map((mark, i) => (
+              <div
+                key={mark}
                 className={cn(
-                  "h-1.5 w-[2px] bg-primary/20", 
-                  i % 3 === 0 && "bg-primary/40"
-                )} 
+                  'h-1.5 w-[2px] bg-primary/20',
+                  i % 3 === 0 && 'bg-primary/40',
+                )}
               />
             ))}
           </div>

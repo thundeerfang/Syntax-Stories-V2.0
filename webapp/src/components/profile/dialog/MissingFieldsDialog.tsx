@@ -40,6 +40,24 @@ const MISSING_FIELD_LABELS: Record<string, string> = {
 const SCALAR_FIELDS: ParseCvMissingFieldKey[] = ['bio', 'linkedin', 'github', 'stackAndTools'];
 const ARRAY_FIELDS = new Set<ParseCvMissingFieldKey>(['workExperiences', 'education', 'certifications']);
 
+function buildInitialValuesForIncompleteItem(
+  item: Record<string, unknown> | undefined,
+  missingKeys: string[],
+): Record<string, string> {
+  const initialValues: Record<string, string> = {};
+  for (const f of missingKeys) {
+    const raw = item?.[f];
+    if (raw == null) {
+      initialValues[f] = '';
+    } else if (typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean') {
+      initialValues[f] = String(raw);
+    } else {
+      initialValues[f] = '';
+    }
+  }
+  return initialValues;
+}
+
 export interface MissingFieldsDialogProps {
   open: boolean;
   onClose: () => void;
@@ -47,16 +65,86 @@ export interface MissingFieldsDialogProps {
   incompleteItemHints?: IncompleteItemHints | null;
   /** Current profile arrays so we can show "Add fields" for incomplete items and pass initial values */
   currentProfile?: {
-    workExperiences?: ReadonlyArray<object> | undefined;
-    education?: ReadonlyArray<object> | undefined;
-    certifications?: ReadonlyArray<object> | undefined;
-    projects?: ReadonlyArray<object> | undefined;
+    workExperiences?: ReadonlyArray<object>;
+    education?: ReadonlyArray<object>;
+    certifications?: ReadonlyArray<object>;
+    projects?: ReadonlyArray<object>;
   } | null;
   onSave: (values: Partial<Record<ParseCvMissingFieldKey, string | string[]>>) => Promise<void>;
   onCompleteItem: (section: CompleteItemDialogSection, index: number, values: Record<string, string>) => Promise<void>;
   settingsHref: string;
   /** When provided, "Edit in Settings" runs this (e.g. save pending CV data then navigate) instead of using a plain link. */
   onEditInSettings?: (section: CompleteItemDialogSection, index: number) => void | Promise<void>;
+}
+
+type IncompleteItemHintRow = { index: number; title?: string; missing: string[] };
+
+type IncompleteItemCompletePayload = Readonly<{
+  section: CompleteItemDialogSection;
+  index: number;
+  title?: string;
+  missing: string[];
+  initialValues: Record<string, string>;
+}>;
+
+function IncompleteHintListItem(props: Readonly<{
+  sectionKey: CompleteItemDialogSection;
+  hint: IncompleteItemHintRow;
+  settingsHref: string;
+  currentProfile: MissingFieldsDialogProps['currentProfile'];
+  onEditInSettings?: MissingFieldsDialogProps['onEditInSettings'];
+  onOpenComplete: (payload: IncompleteItemCompletePayload) => void;
+}>) {
+  const { sectionKey, hint: h, settingsHref, currentProfile, onEditInSettings, onOpenComplete } = props;
+  const sectionQuery = SECTION_TO_SETTINGS_ID[sectionKey];
+  const settingsUrl = `${settingsHref}?section=${sectionQuery}&edit=${h.index}`;
+  const arr = currentProfile?.[sectionKey] ?? [];
+  const item = arr[h.index] as Record<string, unknown> | undefined;
+  const initialValues = buildInitialValuesForIncompleteItem(item, h.missing);
+
+  const handleOpenComplete = () => {
+    onOpenComplete({
+      section: sectionKey,
+      index: h.index,
+      title: h.title,
+      missing: h.missing,
+      initialValues,
+    });
+  };
+
+  const settingsButton = onEditInSettings ? (
+    <button
+      type="button"
+      onClick={() => void onEditInSettings(sectionKey, h.index)}
+      className="px-2 py-1 border-2 border-border bg-primary text-primary-foreground font-black text-[9px] uppercase hover:bg-primary/90"
+    >
+      Edit in Settings
+    </button>
+  ) : (
+    <Link
+      href={settingsUrl}
+      className="px-2 py-1 border-2 border-border bg-primary text-primary-foreground font-black text-[9px] uppercase hover:bg-primary/90 no-underline"
+    >
+      Edit in Settings
+    </Link>
+  );
+
+  return (
+    <li className="flex flex-wrap items-center gap-2 text-[10px]">
+      <span className="font-medium text-foreground">
+        {h.title ? `"${h.title}"` : `Item ${h.index + 1}`}: add{' '}
+        {h.missing.map((m) => MISSING_FIELD_LABELS[m] ?? m).join(', ')}
+      </span>
+      <button
+        type="button"
+        onClick={handleOpenComplete}
+        className="px-2 py-1 border-2 border-border bg-card font-black text-[9px] uppercase hover:bg-muted/40"
+      >
+        Add fields
+      </button>
+      {settingsButton}
+    </li>
+  );
 }
 
 export function MissingFieldsDialog({
@@ -165,6 +253,33 @@ export function MissingFieldsDialog({
     saveButtonLabel = 'Save (complete required fields first)';
   }
 
+  const incompleteHintSections: { key: CompleteItemDialogSection; label: string; hints: IncompleteItemHintRow[] }[] = [];
+  if (incompleteItemHints?.education?.length) {
+    incompleteHintSections.push({ key: 'education', label: 'Education', hints: incompleteItemHints.education });
+  }
+  if (incompleteItemHints?.certifications?.length) {
+    incompleteHintSections.push({ key: 'certifications', label: 'Certifications', hints: incompleteItemHints.certifications });
+  }
+  if (incompleteItemHints?.workExperiences?.length) {
+    incompleteHintSections.push({ key: 'workExperiences', label: 'Work experience', hints: incompleteItemHints.workExperiences });
+  }
+
+  const openIncompleteItemDialog = (payload: IncompleteItemCompletePayload) => {
+    setCompleteDialogState(payload);
+    setCompleteDialogOpen(true);
+  };
+
+  const closeCompleteItemDialog = () => {
+    setCompleteDialogOpen(false);
+    setCompleteDialogState(null);
+  };
+
+  const handleCompleteItemSave = async (vals: Record<string, string>) => {
+    if (!completeDialogState) return;
+    await onCompleteItem(completeDialogState.section, completeDialogState.index, vals);
+    closeCompleteItemDialog();
+  };
+
   return (
     <Dialog
       open={open}
@@ -209,107 +324,57 @@ export function MissingFieldsDialog({
           </div>
         )}
 
-        {(() => {
-          const hasIncompleteItems = incompleteItemHints && (
-            (incompleteItemHints.education?.length ?? 0) +
-            (incompleteItemHints.certifications?.length ?? 0) +
-            (incompleteItemHints.workExperiences?.length ?? 0)
-          ) > 0;
-          const sections: { key: CompleteItemDialogSection; label: string; hints: Array<{ index: number; title?: string; missing: string[] }> }[] = [];
-          if (incompleteItemHints?.education?.length) sections.push({ key: 'education', label: 'Education', hints: incompleteItemHints.education });
-          if (incompleteItemHints?.certifications?.length) sections.push({ key: 'certifications', label: 'Certifications', hints: incompleteItemHints.certifications });
-          if (incompleteItemHints?.workExperiences?.length) sections.push({ key: 'workExperiences', label: 'Work experience', hints: incompleteItemHints.workExperiences });
-
-          const settingsSectionId = (k: CompleteItemDialogSection) => SECTION_TO_SETTINGS_ID[k];
-
-          return (
-            <>
-              {hasIncompleteItems && (
-                <div className="border-2 border-border bg-muted/10 p-3 space-y-3">
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">
-                    Complete all required fields below before you can save. Use Add fields or Edit in Settings.
-                  </p>
-                  {sections.map(({ key, label, hints }) => (
-                    <div key={key} className="space-y-2">
-                      <span className="text-[10px] font-black uppercase text-foreground">{label}</span>
-                      <ul className="space-y-1">
-                        {hints.map((h) => {
-                          const settingsUrl = `${settingsHref}?section=${settingsSectionId(key)}&edit=${h.index}`;
-                          const openCompleteDialog = () => {
-                            const arr = currentProfile?.[key] ?? [];
-                            const item = arr[h.index] as Record<string, unknown> | undefined;
-                            const initialValues: Record<string, string> = {};
-                            h.missing.forEach((f) => { initialValues[f] = (item?.[f] != null ? String(item[f]) : '') || ''; });
-                            setCompleteDialogState({ section: key, index: h.index, title: h.title, missing: h.missing, initialValues });
-                            setCompleteDialogOpen(true);
-                          };
-                          return (
-                            <li key={`${key}-${h.index}`} className="flex flex-wrap items-center gap-2 text-[10px]">
-                              <span className="font-medium text-foreground">
-                                {h.title ? `"${h.title}"` : `Item ${h.index + 1}`}: add {h.missing.map((m) => MISSING_FIELD_LABELS[m] ?? m).join(', ')}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={openCompleteDialog}
-                                className="px-2 py-1 border-2 border-border bg-card font-black text-[9px] uppercase hover:bg-muted/40"
-                              >
-                                Add fields
-                              </button>
-                              {onEditInSettings ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onEditInSettings(key, h.index)}
-                                  className="px-2 py-1 border-2 border-border bg-primary text-primary-foreground font-black text-[9px] uppercase hover:bg-primary/90"
-                                >
-                                  Edit in Settings
-                                </button>
-                              ) : (
-                                <Link
-                                  href={settingsUrl}
-                                  className="px-2 py-1 border-2 border-border bg-primary text-primary-foreground font-black text-[9px] uppercase hover:bg-primary/90 no-underline"
-                                >
-                                  Edit in Settings
-                                </Link>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
+        {hasIncompleteItems ? (
+          <div className="border-2 border-border bg-muted/10 p-3 space-y-3">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">
+              Complete all required fields below before you can save. Use Add fields or Edit in Settings.
+            </p>
+            {incompleteHintSections.map(({ key, label, hints }) => (
+              <div key={key} className="space-y-2">
+                <span className="text-[10px] font-black uppercase text-foreground">{label}</span>
+                <ul className="space-y-1">
+                  {hints.map((h) => (
+                    <IncompleteHintListItem
+                      key={`${key}-${h.index}`}
+                      sectionKey={key}
+                      hint={h}
+                      settingsHref={settingsHref}
+                      currentProfile={currentProfile}
+                      onEditInSettings={onEditInSettings}
+                      onOpenComplete={openIncompleteItemDialog}
+                    />
                   ))}
-                </div>
-              )}
-              {arrayMissing.length > 0 && !hasIncompleteItems && (
-                <div className="border-2 border-border bg-muted/10 p-3 space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">Add these in Settings after saving:</p>
-                  <ul className="list-disc list-inside text-[10px] font-medium text-foreground space-y-1">
-                    {arrayMissing.map((key) => (
-                      <li key={key}>{FIELD_LABELS[key]}</li>
-                    ))}
-                  </ul>
-                  <Link href={settingsHref} className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-primary hover:underline">
-                    Open Settings →
-                  </Link>
-                </div>
-              )}
-              {completeDialogState && (
-                <CompleteItemDialog
-                  open={completeDialogOpen}
-                  onClose={() => { setCompleteDialogOpen(false); setCompleteDialogState(null); }}
-                  section={completeDialogState.section}
-                  itemTitle={completeDialogState.title}
-                  missingFields={completeDialogState.missing}
-                  initialValues={completeDialogState.initialValues}
-                  onSave={async (vals) => {
-                    await onCompleteItem(completeDialogState.section, completeDialogState.index, vals);
-                    setCompleteDialogOpen(false);
-                    setCompleteDialogState(null);
-                  }}
-                />
-              )}
-            </>
-          );
-        })()}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {arrayMissing.length > 0 && !hasIncompleteItems ? (
+          <div className="border-2 border-border bg-muted/10 p-3 space-y-2">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">Add these in Settings after saving:</p>
+            <ul className="list-disc list-inside text-[10px] font-medium text-foreground space-y-1">
+              {arrayMissing.map((key) => (
+                <li key={key}>{FIELD_LABELS[key]}</li>
+              ))}
+            </ul>
+            <Link href={settingsHref} className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-primary hover:underline">
+              Open Settings →
+            </Link>
+          </div>
+        ) : null}
+
+        {completeDialogState ? (
+          <CompleteItemDialog
+            open={completeDialogOpen}
+            onClose={closeCompleteItemDialog}
+            section={completeDialogState.section}
+            itemTitle={completeDialogState.title}
+            missingFields={completeDialogState.missing}
+            initialValues={completeDialogState.initialValues}
+            onSave={handleCompleteItemSave}
+          />
+        ) : null}
 
         <div className="flex gap-2 pt-2">
           <button

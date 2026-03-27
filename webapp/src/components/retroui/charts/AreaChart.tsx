@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -33,10 +33,10 @@ type ChartTooltipProps = {
   categoryLabel?: string | number;
 };
 
-function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }: ChartTooltipProps) {
+function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }: Readonly<ChartTooltipProps>) {
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value;
-  const name = (payload[0]?.dataKey as string) || categoryLabel;
+  const name = String(payload[0]?.dataKey ?? categoryLabel);
   return (
     <div
       className="px-3 py-2 border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] font-sans"
@@ -57,6 +57,27 @@ function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }
   );
 }
 
+type RechartsTooltipArgs = {
+  active?: boolean;
+  payload?: readonly TooltipPayloadItem[] | TooltipPayloadItem[];
+  label?: string | number;
+};
+
+function createAreaChartTooltipContent(categoryLabel: string) {
+  function RechartsAreaTooltip(props: Readonly<RechartsTooltipArgs>) {
+    return (
+      <ChartTooltipContent
+        active={props.active}
+        payload={props.payload}
+        label={props.label}
+        categoryLabel={categoryLabel}
+      />
+    );
+  }
+  RechartsAreaTooltip.displayName = 'RechartsAreaTooltip';
+  return RechartsAreaTooltip;
+}
+
 export function AreaChart<T extends Record<string, unknown>>({
   data,
   index,
@@ -64,15 +85,25 @@ export function AreaChart<T extends Record<string, unknown>>({
   height = 200,
   showGrowth = false,
   sparkline = false,
-}: AreaChartProps<T>) {
+}: Readonly<AreaChartProps<T>>) {
   const firstVal = data[0]?.[categories[0]];
-  const lastVal = data[data.length - 1]?.[categories[0]];
+  const lastRow = data.at(-1);
+  const lastVal = lastRow?.[categories[0]];
   const numFirst = typeof firstVal === 'number' ? firstVal : 0;
   const numLast = typeof lastVal === 'number' ? lastVal : 0;
-  const growthPct =
-    numFirst > 0 ? Math.round(((numLast - numFirst) / numFirst) * 100) : (numLast > 0 ? 100 : 0);
+  let growthPct = 0;
+  if (numFirst > 0) {
+    growthPct = Math.round(((numLast - numFirst) / numFirst) * 100);
+  } else if (numLast > 0) {
+    growthPct = 100;
+  }
 
-  const uniqueId = React.useId().replace(/:/g, '');
+  const uniqueId = React.useId().replaceAll(':', '');
+  const category0Label = String(categories[0]);
+  const TooltipContentComponent = useMemo(
+    () => createAreaChartTooltipContent(category0Label),
+    [category0Label],
+  );
 
   if (sparkline) {
     return (
@@ -90,12 +121,7 @@ export function AreaChart<T extends Record<string, unknown>>({
                 </linearGradient>
               ))}
             </defs>
-            <Tooltip
-              content={({ active, payload, label }) => (
-                <ChartTooltipContent active={active} payload={payload} label={label} categoryLabel={String(categories[0])} />
-              )}
-              cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
-            />
+            <Tooltip content={TooltipContentComponent} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
             {categories.map((cat, i) => (
               <Area
                 key={String(cat)}
@@ -148,12 +174,7 @@ export function AreaChart<T extends Record<string, unknown>>({
             tickLine={false}
             tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))}
           />
-          <Tooltip
-            content={({ active, payload, label }) => (
-              <ChartTooltipContent active={active} payload={payload} label={label} categoryLabel={String(categories[0])} />
-            )}
-            cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
-          />
+          <Tooltip content={TooltipContentComponent} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
           {categories.map((cat, i) => (
             <Area
               key={String(cat)}

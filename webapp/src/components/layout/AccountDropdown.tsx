@@ -170,7 +170,7 @@ export function AccountDropdown() {
             {/* Menu Sections */}
             <div className="flex flex-col">
               {menuSections.map((section, sectionIdx) => (
-                <div key={sectionIdx} className="py-0.5 border-b-2 border-border last:border-b-0">
+                <div key={section.id} className="py-0.5 border-b-2 border-border last:border-b-0">
                   {section.items.map((item, itemIdx) => (
                     <motion.div
                         key={item.label}

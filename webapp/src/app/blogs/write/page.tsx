@@ -473,11 +473,12 @@ function SummaryEditor({
         <div className="flex items-center justify-end text-[10px] font-bold text-muted-foreground mb-0.5">
           <span>{summaryTextLength(value)}/{maxLength}</span>
         </div>
-        <div
+        {/* Rich summary: contentEditable; native textarea cannot express inline formatting. */}
+        <div // NOSONAR S6848 — contentEditable summary; not replaceable by textarea
           ref={ref}
           contentEditable
           suppressContentEditableWarning
-          tabIndex={0}
+          tabIndex={0} // NOSONAR S6845 — editing host must be in sequential focus order
           aria-label="Summary"
           aria-multiline
           data-placeholder="SUMMARY_TEXT_HERE..."
@@ -747,32 +748,47 @@ function resolveCentreMaxWidthClass(leftSidebarOpen: boolean, rightSidebarOpen: 
 }
 
 type BlogWriteSyncRefs = {
-  latestForSyncRef: React.MutableRefObject<{
+  latestForSyncRef: { current: {
     title: string;
     summary: string;
     blocks: Block[];
     thumbnailPreviewUrl: string | null;
-  }>;
-  tokenRef: React.MutableRefObject<string | null | undefined>;
-  skipNextPopStateRef: React.MutableRefObject<boolean>;
-  hasRestoredRef: React.MutableRefObject<boolean>;
+  } };
+  tokenRef: { current: string | null | undefined };
+  skipNextPopStateRef: { current: boolean };
+  hasRestoredRef: { current: boolean };
 };
 
-function useBlogWritePageSyncEffects(
-  title: string,
-  summary: string,
-  blocks: Block[],
-  thumbnailPreviewUrl: string | null,
-  isOnline: boolean,
-  draftSyncStatus: DraftSyncUi,
-  setIsOnline: (v: boolean) => void,
-  setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>,
-  setLeaveConfirmOpen: (v: boolean) => void,
-  restoreFromLocalDraft: () => void,
-  syncDraftToServer: () => void,
-  refs: BlogWriteSyncRefs,
-): void {
-  const { latestForSyncRef, tokenRef, skipNextPopStateRef, hasRestoredRef } = refs;
+type BlogWritePageSyncEffectsInput = Readonly<{
+  title: string;
+  summary: string;
+  blocks: Block[];
+  thumbnailPreviewUrl: string | null;
+  isOnline: boolean;
+  draftSyncStatus: DraftSyncUi;
+  setIsOnline: (v: boolean) => void;
+  setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
+  setLeaveConfirmOpen: (v: boolean) => void;
+  restoreFromLocalDraft: () => void;
+  syncDraftToServer: () => void;
+  refs: BlogWriteSyncRefs;
+}>;
+
+function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void {
+  const {
+    title,
+    summary,
+    blocks,
+    thumbnailPreviewUrl,
+    isOnline,
+    draftSyncStatus,
+    setIsOnline,
+    setDraftSyncStatus,
+    setLeaveConfirmOpen,
+    restoreFromLocalDraft,
+    syncDraftToServer,
+    refs: { latestForSyncRef, tokenRef, skipNextPopStateRef, hasRestoredRef },
+  } = input;
 
   useEffect(() => {
     if (hasRestoredRef.current) return;
@@ -870,6 +886,248 @@ function useBlogWritePageSyncEffects(
   }, [latestForSyncRef, syncDraftToServer, tokenRef]);
 }
 
+async function runBlogWriteSubmit(args: Readonly<{
+  status: 'draft' | 'published';
+  token: string;
+  title: string;
+  summary: string;
+  blocks: Block[];
+  thumbnailFile: File | null;
+  thumbnailCropArea: CropArea | null;
+  clearThumbnail: () => void;
+  setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
+  setTitle: React.Dispatch<React.SetStateAction<string>>;
+  setSummary: React.Dispatch<React.SetStateAction<string>>;
+  setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
+}>): Promise<void> {
+  const {
+    status,
+    token,
+    title,
+    summary,
+    blocks,
+    thumbnailFile,
+    thumbnailCropArea,
+    clearThumbnail,
+    setDraftSyncStatus,
+    setTitle,
+    setSummary,
+    setBlocks,
+  } = args;
+  const content = JSON.stringify(blocks);
+  const summaryToSend =
+    summary && summary !== '<br>' && summaryTextLength(summary) > 0 ? summary.trim() : undefined;
+
+  if (status === 'draft') {
+    await blogApi.saveDraft({ title: title.trim(), summary: summaryToSend, content }, token);
+    toast.success('DRAFT_SYNCED');
+    setDraftSyncStatus('synced');
+    return;
+  }
+
+  let thumbnailUrl: string | undefined;
+  if (thumbnailFile && thumbnailCropArea) {
+    const data = await uploadCover(token, thumbnailFile, thumbnailCropArea, () => {});
+    thumbnailUrl = data.url;
+    clearThumbnail();
+  }
+  await blogApi.createPost({ title, summary: summaryToSend, content, thumbnailUrl, status: 'published' }, token);
+  toast.success('POST_LIVE');
+  setTitle('');
+  setSummary('');
+  setBlocks([]);
+  setDraftSyncStatus('idle');
+  if (globalThis.window !== undefined) {
+    try {
+      globalThis.localStorage.removeItem(BLOG_DRAFT_STORAGE_KEY);
+    } catch (err) {
+      console.debug('clear blog draft failed', err);
+    }
+  }
+}
+
+type BlogWriteDraftRefs = Readonly<{
+  latestForSyncRef: { current: {
+    title: string;
+    summary: string;
+    blocks: Block[];
+    thumbnailPreviewUrl: string | null;
+  } };
+  tokenRef: { current: string | null | undefined };
+}>;
+
+type BlogWriteDraftHandlersInput = Readonly<{
+  title: string;
+  summary: string;
+  blocks: Block[];
+  thumbnailPreviewUrl: string | null;
+  setTitle: React.Dispatch<React.SetStateAction<string>>;
+  setSummary: React.Dispatch<React.SetStateAction<string>>;
+  setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
+  setThumbnailPreviewUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
+  refs: BlogWriteDraftRefs;
+}>;
+
+function useBlogWriteDraftHandlers(input: BlogWriteDraftHandlersInput): {
+  saveDraftToLocal: () => void;
+  restoreFromLocalDraft: () => void;
+  syncDraftToServer: () => void;
+} {
+  const {
+    title,
+    summary,
+    blocks,
+    thumbnailPreviewUrl,
+    setTitle,
+    setSummary,
+    setBlocks,
+    setThumbnailPreviewUrl,
+    setDraftSyncStatus,
+    refs: { latestForSyncRef, tokenRef },
+  } = input;
+
+  const saveDraftToLocal = useCallback(() => {
+    const content = JSON.stringify(blocks);
+    const summaryVal = summary && summary !== '<br>' && summaryTextLength(summary) > 0 ? summary : '';
+    saveDraftToStorage({
+      title,
+      summary: summaryVal,
+      content,
+      thumbnailPreviewUrl,
+    });
+  }, [title, summary, blocks, thumbnailPreviewUrl]);
+
+  const restoreFromLocalDraft = useCallback(() => {
+    const draft = loadDraftFromStorage();
+    if (!draft) return;
+    setTitle(draft.title);
+    setSummary(draft.summary || '');
+    try {
+      const parsed = JSON.parse(draft.content) as unknown;
+      if (Array.isArray(parsed) && parsed.length <= MAX_BLOCKS_PER_SECTION) {
+        setBlocks(parsed as Block[]);
+      }
+    } catch {
+      // ignore invalid content
+    }
+    if (draft.thumbnailPreviewUrl) {
+      setThumbnailPreviewUrl(draft.thumbnailPreviewUrl);
+    }
+    setDraftSyncStatus('local');
+  }, [setTitle, setSummary, setBlocks, setThumbnailPreviewUrl, setDraftSyncStatus]);
+
+  const syncDraftToServer = useCallback(() => {
+    if (!navigator.onLine) return;
+    const currentToken = tokenRef.current;
+    if (!currentToken) return;
+    const { title: t, summary: s, blocks: b } = latestForSyncRef.current;
+    if (!t.trim() && b.length === 0) return;
+    setDraftSyncStatus('syncing');
+    const content = JSON.stringify(b);
+    const summaryToSend = s && s !== '<br>' && summaryTextLength(s) > 0 ? s : undefined;
+    blogApi
+      .saveDraft(
+        {
+          title: t.trim() || 'Untitled draft',
+          summary: summaryToSend,
+          content,
+        },
+        currentToken,
+      )
+      .then(() => {
+        setDraftSyncStatus('synced');
+      })
+      .catch(() => {
+        setDraftSyncStatus('local');
+      });
+  }, [latestForSyncRef, tokenRef, setDraftSyncStatus]);
+
+  return { saveDraftToLocal, restoreFromLocalDraft, syncDraftToServer };
+}
+
+type BlogWriteTopNavProps = Readonly<{
+  username: string;
+  title: string;
+  hasDraftContent: boolean;
+  leftSidebarOpen: boolean;
+  onToggleLeft: () => void;
+  rightSidebarOpen: boolean;
+  onToggleRight: () => void;
+  draftSyncStatus: DraftSyncUi;
+  currentTime: string;
+}>;
+
+function BlogWriteTopNav({
+  username,
+  title,
+  hasDraftContent,
+  leftSidebarOpen,
+  onToggleLeft,
+  rightSidebarOpen,
+  onToggleRight,
+  draftSyncStatus,
+  currentTime,
+}: BlogWriteTopNavProps) {
+  return (
+    <div className="flex-shrink-0 bg-card px-4 py-2 flex items-center justify-between z-50 border-b border-border">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
+          <FileText className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
+          <span>Workspace</span>
+          <ChevronRight className="h-3 w-3 opacity-30" />
+          <span className="text-primary text-[9px] font-semibold">{username}</span>
+          <ChevronRight className="h-3 w-3 opacity-30" />
+          <span className="bg-muted px-2 border border-border truncate max-w-[200px] md:max-w-[280px]" title={title.trim() || 'new_entry.log'}>
+            {title.trim() ? title.trim().replaceAll(/\s+/g, '_') : 'new_entry.log'}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onToggleLeft}
+          className="p-1.5 rounded border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+          title={leftSidebarOpen ? 'Close left panel' : 'Open left panel'}
+          aria-label={leftSidebarOpen ? 'Close left panel' : 'Open left panel'}
+        >
+          {leftSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={onToggleRight}
+          className="p-1.5 rounded border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+          title={rightSidebarOpen ? 'Close right panel' : 'Open right panel'}
+          aria-label={rightSidebarOpen ? 'Close right panel' : 'Open right panel'}
+        >
+          {rightSidebarOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-[8px] font-medium text-muted-foreground">
+            <Activity className="h-2.5 w-2.5 text-green-500 animate-pulse" />
+            <span>Uptime: 99.9%</span>
+          </div>
+          {hasDraftContent ? (
+            <span
+              className={cn(
+                'text-[8px] font-medium px-1.5 py-0.5 rounded border',
+                draftSyncStatus === 'offline' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
+                draftSyncStatus === 'syncing' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
+                draftSyncStatus === 'local' && 'text-muted-foreground border-border',
+                draftSyncStatus === 'synced' && 'text-green-600 border-green-500/50 bg-green-500/10',
+              )}
+              title={draftSyncBadgeTitle(draftSyncStatus)}
+            >
+              {draftSyncBadgeLabel(draftSyncStatus)}
+            </span>
+          ) : null}
+        </div>
+        <div className="hidden md:block text-[8px] font-medium text-muted-foreground">{currentTime}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function WriteBlogPage() {
   const { user, token, shouldBlock } = useRequireAuth();
   const { isOpen } = useSidebar();
@@ -897,6 +1155,19 @@ export default function WriteBlogPage() {
   const skipNextPopStateRef = useRef(false);
   latestForSyncRef.current = { title, summary, blocks, thumbnailPreviewUrl };
   tokenRef.current = token;
+
+  const { saveDraftToLocal, restoreFromLocalDraft, syncDraftToServer } = useBlogWriteDraftHandlers({
+    title,
+    summary,
+    blocks,
+    thumbnailPreviewUrl,
+    setTitle,
+    setSummary,
+    setBlocks,
+    setThumbnailPreviewUrl,
+    setDraftSyncStatus,
+    refs: { latestForSyncRef, tokenRef },
+  });
 
   const resizeTitleInput = useCallback(() => {
     const el = titleInputRef.current;
@@ -942,63 +1213,7 @@ export default function WriteBlogPage() {
     [blocks],
   );
 
-  const saveDraftToLocal = useCallback(() => {
-    const content = JSON.stringify(blocks);
-    const summaryVal = summary && summary !== '<br>' && summaryTextLength(summary) > 0 ? summary : '';
-    saveDraftToStorage({
-      title,
-      summary: summaryVal,
-      content,
-      thumbnailPreviewUrl,
-    });
-  }, [title, summary, blocks, thumbnailPreviewUrl]);
-
-  const restoreFromLocalDraft = useCallback(() => {
-    const draft = loadDraftFromStorage();
-    if (!draft) return;
-    setTitle(draft.title);
-    setSummary(draft.summary || '');
-    try {
-      const parsed = JSON.parse(draft.content) as unknown;
-      if (Array.isArray(parsed) && parsed.length <= MAX_BLOCKS_PER_SECTION) {
-        setBlocks(parsed as Block[]);
-      }
-    } catch {
-      // ignore invalid content
-    }
-    if (draft.thumbnailPreviewUrl) {
-      setThumbnailPreviewUrl(draft.thumbnailPreviewUrl);
-    }
-    setDraftSyncStatus('local');
-  }, []);
-
-  const syncDraftToServer = useCallback(() => {
-    if (!navigator.onLine) return;
-    const currentToken = tokenRef.current;
-    if (!currentToken) return;
-    const { title: t, summary: s, blocks: b } = latestForSyncRef.current;
-    if (!t.trim() && b.length === 0) return;
-    setDraftSyncStatus('syncing');
-    const content = JSON.stringify(b);
-    const summaryToSend = s && s !== '<br>' && summaryTextLength(s) > 0 ? s : undefined;
-    blogApi
-      .saveDraft(
-        {
-          title: t.trim() || 'Untitled draft',
-          summary: summaryToSend,
-          content,
-        },
-        currentToken
-      )
-      .then(() => {
-        setDraftSyncStatus('synced');
-      })
-      .catch(() => {
-        setDraftSyncStatus('local');
-      });
-  }, []);
-
-  useBlogWritePageSyncEffects(
+  useBlogWritePageSyncEffects({
     title,
     summary,
     blocks,
@@ -1010,13 +1225,13 @@ export default function WriteBlogPage() {
     setLeaveConfirmOpen,
     restoreFromLocalDraft,
     syncDraftToServer,
-    {
+    refs: {
       latestForSyncRef,
       tokenRef,
       skipNextPopStateRef,
       hasRestoredRef,
     },
-  );
+  });
 
   const handleLeaveConfirmYes = useCallback(() => {
     saveDraftToLocal();
@@ -1030,51 +1245,49 @@ export default function WriteBlogPage() {
     history.pushState({ blogWriteGuard: true }, '', location.href);
   }, []);
 
-  const handleSubmit = async (status: 'draft' | 'published') => {
-    if (!title.trim()) { toast.error('ERROR: TITLE_REQUIRED'); return; }
-    if (!token) return;
-    setSubmitting(true);
-    setSubmitAction(status);
-    try {
-      const content = JSON.stringify(blocks);
-      const summaryToSend = (summary && summary !== '<br>' && summaryTextLength(summary) > 0) ? summary.trim() : undefined;
-
-      if (status === 'draft') {
-        await blogApi.saveDraft(
-          { title: title.trim(), summary: summaryToSend, content },
-          token
-        );
-        toast.success('DRAFT_SYNCED');
-        setDraftSyncStatus('synced');
-      } else {
-        let thumbnailUrl: string | undefined;
-        if (thumbnailFile && thumbnailCropArea) {
-          const data = await uploadCover(token, thumbnailFile, thumbnailCropArea, () => {});
-          thumbnailUrl = data.url;
-          clearThumbnail();
-        }
-        await blogApi.createPost({ title, summary: summaryToSend, content, thumbnailUrl, status: 'published' }, token);
-        toast.success('POST_LIVE');
-        setTitle('');
-        setSummary('');
-        setBlocks([]);
-        setDraftSyncStatus('idle');
-        if (globalThis.window !== undefined) {
-          try {
-            globalThis.localStorage.removeItem(BLOG_DRAFT_STORAGE_KEY);
-          } catch (err) {
-            console.debug('clear blog draft failed', err);
-          }
-        }
+  const handleSubmit = useCallback(
+    async (status: 'draft' | 'published') => {
+      if (!title.trim()) {
+        toast.error('ERROR: TITLE_REQUIRED');
+        return;
       }
-    } catch (e) {
-      console.error(e);
-      toast.error('FATAL: UPLOAD_FAILED');
-    } finally {
-      setSubmitting(false);
-      setSubmitAction(null);
-    }
-  };
+      if (!token) return;
+      setSubmitting(true);
+      setSubmitAction(status);
+      try {
+        await runBlogWriteSubmit({
+          status,
+          token,
+          title,
+          summary,
+          blocks,
+          thumbnailFile,
+          thumbnailCropArea,
+          clearThumbnail,
+          setDraftSyncStatus,
+          setTitle,
+          setSummary,
+          setBlocks,
+        });
+      } catch (e) {
+        console.error(e);
+        toast.error('FATAL: UPLOAD_FAILED');
+      } finally {
+        setSubmitting(false);
+        setSubmitAction(null);
+      }
+    },
+    [
+      title,
+      token,
+      summary,
+      blocks,
+      thumbnailFile,
+      thumbnailCropArea,
+      clearThumbnail,
+      setDraftSyncStatus,
+    ],
+  );
 
   if (shouldBlock) return <TerminalLoaderPage />;
 
@@ -1084,62 +1297,17 @@ export default function WriteBlogPage() {
     <div className={cn(
       'ss-write-theme-transition flex flex-col h-screen bg-background font-mono text-foreground border-2 border-border shadow-[4px_4px_0_0_rgba(0,0,0,1)] overflow-hidden'
     )}>
-      {/* 1. TOP SYSTEM NAV */}
-      <div className="flex-shrink-0 bg-card px-4 py-2 flex items-center justify-between z-50 border-b border-border">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
-            <FileText className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
-            <span>Workspace</span>
-            <ChevronRight className="h-3 w-3 opacity-30" />
-            <span className="text-primary text-[9px] font-semibold">{user?.username || 'user'}</span>
-            <ChevronRight className="h-3 w-3 opacity-30" />
-            <span className="bg-muted px-2 border border-border truncate max-w-[200px] md:max-w-[280px]" title={title.trim() || 'new_entry.log'}>
-              {title.trim() ? title.trim().replaceAll(/\s+/g, '_') : 'new_entry.log'}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setLeftSidebarOpen((o) => !o)}
-            className="p-1.5 rounded border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-            title={leftSidebarOpen ? 'Close left panel' : 'Open left panel'}
-            aria-label={leftSidebarOpen ? 'Close left panel' : 'Open left panel'}
-          >
-            {leftSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setRightSidebarOpen((o) => !o)}
-            className="p-1.5 rounded border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-            title={rightSidebarOpen ? 'Close right panel' : 'Open right panel'}
-            aria-label={rightSidebarOpen ? 'Close right panel' : 'Open right panel'}
-          >
-            {rightSidebarOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-[8px] font-medium text-muted-foreground">
-              <Activity className="h-2.5 w-2.5 text-green-500 animate-pulse" />
-              <span>Uptime: 99.9%</span>
-            </div>
-            {(title.trim() || blocks.length > 0) && (
-              <span
-                className={cn(
-                  'text-[8px] font-medium px-1.5 py-0.5 rounded border',
-                  draftSyncStatus === 'offline' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
-                  draftSyncStatus === 'syncing' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
-                  draftSyncStatus === 'local' && 'text-muted-foreground border-border',
-                  draftSyncStatus === 'synced' && 'text-green-600 border-green-500/50 bg-green-500/10'
-                )}
-                title={draftSyncBadgeTitle(draftSyncStatus)}
-              >
-                {draftSyncBadgeLabel(draftSyncStatus)}
-              </span>
-            )}
-          </div>
-          <div className="hidden md:block text-[8px] font-medium text-muted-foreground">{currentTime}</div>
-        </div>
-      </div>
+      <BlogWriteTopNav
+        username={user?.username || 'user'}
+        title={title}
+        hasDraftContent={Boolean(title.trim() || blocks.length > 0)}
+        leftSidebarOpen={leftSidebarOpen}
+        onToggleLeft={() => setLeftSidebarOpen((o) => !o)}
+        rightSidebarOpen={rightSidebarOpen}
+        onToggleRight={() => setRightSidebarOpen((o) => !o)}
+        draftSyncStatus={draftSyncStatus}
+        currentTime={currentTime}
+      />
 
       {/* 2. MAIN WORKBENCH - flex so centre expands when sidebars collapse */}
       <div className="flex flex-1 min-h-0 overflow-hidden">

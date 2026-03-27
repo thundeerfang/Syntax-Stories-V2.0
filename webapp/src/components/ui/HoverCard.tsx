@@ -210,8 +210,7 @@ export function HoverCard({
     );
 
   return (
-    // NOSONAR S6848 — hover-only trigger wraps arbitrary children (often buttons); a native button would nest incorrectly
-    <div
+    <div // NOSONAR S6848 — hover wrapper around arbitrary children; native button would nest incorrectly
       ref={triggerRef}
       className={cn('inline-flex transition-opacity duration-150', className)}
       onMouseEnter={handleMouseEnter}

@@ -55,6 +55,78 @@ export function domainFromUrl(url: string): string {
     const withProto = /^https?:\/\//i.test(u) ? u : `https://${u}`;
     return new URL(withProto).host;
   } catch {
-    return u.replace(/^https?:\/\//i, '').split('/')[0] || u;
+    return u.replaceAll(/^https?:\/\//gi, '').split('/')[0] || u;
   }
+}
+
+export function entriesCountSubtitle(count: number): string | undefined {
+  if (count <= 0) return undefined;
+  return count === 1 ? `${count} entry` : `${count} entries`;
+}
+
+export function reposCountSubtitle(count: number): string | undefined {
+  if (count <= 0) return undefined;
+  return count === 1 ? `${count} repo` : `${count} repos`;
+}
+
+/** Min visible rows after opening an accordion section (matches profile/public profile UX). */
+export function profileSectionMinVisible(
+  variant: string,
+  prior: number | undefined,
+): number {
+  const floor = variant === 'openSource' || variant === 'mySetup' ? 2 : 1;
+  return Math.max(prior ?? floor, floor);
+}
+
+export function markdownBioToHtml(raw: string): string {
+  const escapeHtml = (str: string) =>
+    str
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  let s = escapeHtml(raw || '');
+  s = s.replaceAll(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replaceAll(/__([^_\n]+)__/g, '<u>$1</u>');
+  s = s.replaceAll(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  return s.replaceAll('\n', '<br>');
+}
+
+export function workExperienceListKey(e: Record<string, unknown>): string {
+  const id = e.id ?? e.workId;
+  if (typeof id === 'string' && id.length > 0) return `we-${id}`;
+  const company = typeof e.company === 'string' ? e.company : '';
+  const start = typeof e.startDate === 'string' ? e.startDate : '';
+  const title = typeof e.title === 'string' ? e.title : '';
+  return `we-${company}-${start}-${title}`.replaceAll(/\s+/g, '-');
+}
+
+export function educationListKey(e: Record<string, unknown>): string {
+  const id = e.eduId ?? e.id;
+  if (typeof id === 'string' && id.length > 0) return `edu-${id}`;
+  const school = typeof e.school === 'string' ? e.school : '';
+  const start = typeof e.startDate === 'string' ? e.startDate : '';
+  return `edu-${school}-${start}`.replaceAll(/\s+/g, '-');
+}
+
+export function certificationListKey(c: Record<string, unknown>): string {
+  const id = c.certId ?? c.id;
+  if (typeof id === 'string' && id.length > 0) return `cert-${id}`;
+  const name = typeof c.name === 'string' ? c.name : '';
+  const org = typeof c.issuingOrganization === 'string' ? c.issuingOrganization : '';
+  return `cert-${name}-${org}`.replaceAll(/\s+/g, '-');
+}
+
+export function projectListKey(p: Record<string, unknown>): string {
+  const id = p.id ?? p._id;
+  if (typeof id === 'string' && id.length > 0) return `proj-${id}`;
+  const title = typeof p.title === 'string' ? p.title : '';
+  const url = typeof p.publicationUrl === 'string' ? p.publicationUrl : '';
+  return `proj-${title}-${url}`.replaceAll(/\s+/g, '-');
+}
+
+export function openSourceListKey(item: Record<string, unknown>): string {
+  const repo = typeof item.repoFullName === 'string' ? item.repoFullName : '';
+  const url = typeof item.publicationUrl === 'string' ? item.publicationUrl : '';
+  return `os-${repo || url || 'item'}`.replaceAll(/\s+/g, '-');
 }

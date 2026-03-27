@@ -254,7 +254,12 @@ function MiniCard({
   );
 }
 
-function CompositionBar({ label, value, total, color }: { label: string, value: number, total: number, color: string }) {
+function CompositionBar({
+  label,
+  value,
+  total,
+  color,
+}: Readonly<{ label: string; value: number; total: number; color: string }>) {
   const percentage = Math.min(100, (value / total) * 100);
   return (
     <div className="space-y-1">

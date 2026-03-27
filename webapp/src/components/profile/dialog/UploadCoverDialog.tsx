@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Image } from 'lucide-react';
+import { Image as ImageIconLucide } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
 import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
@@ -24,7 +24,7 @@ export function UploadCoverDialog({
   onClose,
   token,
   onSuccess,
-}: UploadCoverDialogProps) {
+}: Readonly<UploadCoverDialogProps>) {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export function UploadCoverDialog({
       backdropClassName="fixed inset-0 z-50 bg-black/40"
     >
       <h2 id="upload-cover-title" className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-4">
-        <Image className="size-4 text-primary" /> Upload cover image
+        <ImageIconLucide className="size-4 text-primary" aria-hidden /> Upload cover image
       </h2>
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
         JPEG, PNG, GIF or WebP. Max {MAX_MB}MB. Recommended width 1200px+.

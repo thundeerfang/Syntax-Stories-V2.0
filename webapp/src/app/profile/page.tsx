@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { followApi } from '@/api/follow';
@@ -35,6 +35,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
 import { authApi, type ParseCvMissingFieldKey, type IncompleteItemHints } from '@/api/auth';
 import type { CompleteItemDialogSection } from '@/components/profile/dialog';
+import { ProfileCardSkeleton } from '@/components/profile/ProfileCardSkeleton';
+import { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader';
 import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
 import { FollowersFollowingDialog, MissingFieldsDialog, MediaFullViewDialog } from '@/components/profile/dialog';
@@ -50,17 +52,65 @@ import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { GithubIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from '@/components/icons/SocialProviderIcons';
 import {
+  certificationListKey,
   domainFromUrl,
+  educationListKey,
+  entriesCountSubtitle,
   formatJoinedDate,
   formatMonthYear,
   isImageUrl,
   locationWithoutType,
+  markdownBioToHtml,
   normalizeDomain,
+  openSourceListKey,
+  profileSectionMinVisible,
+  projectListKey,
+  reposCountSubtitle,
+  workExperienceListKey,
 } from '@/lib/profileDisplay';
 
 type ActivityTab = 'posts' | 'replies' | 'repost';
 
-export default function ProfilePage() {
+function activityTabLabel(tab: ActivityTab): string {
+  if (tab === 'posts') return 'Posts';
+  if (tab === 'replies') return 'Replies';
+  return 'Repost';
+}
+
+function filterIncompleteHintsAfterIndex(
+  prev: IncompleteItemHints | null,
+  section: CompleteItemDialogSection,
+  index: number,
+): IncompleteItemHints | null {
+  if (!prev) return null;
+  const list = prev[section];
+  if (!list?.length) return prev;
+  const next = list.filter((_, i) => i !== index);
+  if (next.length === 0) {
+    const o = { ...prev };
+    delete o[section];
+    return Object.keys(o).length ? o : null;
+  }
+  return { ...prev, [section]: next };
+}
+
+function incompleteHintsBlockingCount(h: IncompleteItemHints | null): number {
+  if (!h) return 0;
+  return (
+    (h.education?.length ?? 0) +
+    (h.certifications?.length ?? 0) +
+    (h.workExperiences?.length ?? 0)
+  );
+}
+
+function completeItemSectionToSettingsId(section: CompleteItemDialogSection): string {
+  if (section === 'workExperiences') return 'work-experiences';
+  if (section === 'education') return 'education';
+  if (section === 'certifications') return 'certifications';
+  return 'projects';
+}
+
+export default function ProfilePage() { // NOSONAR S3776 — large owner dashboard; split into section components incrementally
   const router = useRouter();
   const { isOpen } = useSidebar();
   const { user, token, isHydrated, shouldBlock } = useRequireAuth();
@@ -109,12 +159,7 @@ export default function ProfilePage() {
     setOpenSectionId(variant);
     setVisibleCounts((prev) => ({
       ...prev,
-      [variant]:
-        variant === 'openSource'
-          ? Math.max(prev[variant] ?? 2, 2)
-          : variant === 'mySetup'
-            ? Math.max(prev[variant] ?? 2, 2)
-            : Math.max(prev[variant] ?? 1, 1),
+      [variant]: profileSectionMinVisible(variant, prev[variant]),
     }));
     setSectionLoading((prev) => ({ ...prev, [variant]: true }));
     globalThis.setTimeout(() => {
@@ -129,18 +174,6 @@ export default function ProfilePage() {
       setSectionLoading((prev) => ({ ...prev, [variant]: false }));
     }, 420);
   };
-
-  const CardSkeleton = ({ lines = 3 }: { lines?: number }) => (
-    <div className="border-2 border-border bg-muted/10 p-4 animate-pulse">
-      <div className="h-4 w-40 bg-muted rounded" />
-      <div className="mt-3 space-y-2">
-        {Array.from({ length: lines }).map((_, i) => (
-          <div key={i} className="h-3 w-full bg-muted rounded" />
-        ))}
-        <div className="h-3 w-2/3 bg-muted rounded" />
-      </div>
-    </div>
-  );
 
   useEffect(() => {
     const onDown = (ev: MouseEvent) => {
@@ -197,12 +230,15 @@ export default function ProfilePage() {
   const showMonthChart = monthChartData.length >= 7;
   const showTotalChart = monthChartData.length >= 7;
 
+  const profileShareUrl = useMemo(() => {
+    if (publicProfileUrl) return publicProfileUrl;
+    if (globalThis.window !== undefined) return `${globalThis.window.location.origin}/profile`;
+    return '/profile';
+  }, [publicProfileUrl]);
+
   const copyProfileUrl = async () => {
-    const url =
-      publicProfileUrl ||
-      (globalThis.window !== undefined ? `${globalThis.window.location.origin}/profile` : '');
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(profileShareUrl);
       setProfileUrlCopied(true);
       toast.success('Link copied to clipboard');
       setTimeout(() => setProfileUrlCopied(false), 2000);
@@ -215,21 +251,6 @@ export default function ProfilePage() {
     const str = formatJoinedDate(user?.createdAt);
     return str ? `Joined ${str}` : '';
   }, [user?.createdAt]);
-
-  const markdownToHtml = (raw: string) => {
-    const escape = (str: string) =>
-      str
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;');
-    let s = escape(raw || '');
-    // Keep patterns conservative to avoid leaking stray '*' in edge cases like "*Harshit *is"
-    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-    s = s.replace(/__([^_\n]+)__/g, '<u>$1</u>');
-    s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-    return s.replaceAll('\n', '<br>');
-  };
 
   // Match settings: Projects = manual only; Open Source = GitHub repos from projects + openSourceContributions (must run before any early return)
   const profileProjects = useMemo(() => {
@@ -251,44 +272,74 @@ export default function ProfilePage() {
     return [...fromProjects, ...fromContributions].slice(0, 7);
   }, [profileProjects.github, user?.openSourceContributions]);
 
+  const missingFieldsDialogCurrentProfile = useMemo(() => {
+    if (pendingCvExtracted) {
+      return {
+        workExperiences: pendingCvExtracted.workExperiences ?? user?.workExperiences,
+        education: pendingCvExtracted.education ?? user?.education,
+        certifications: pendingCvExtracted.certifications ?? user?.certifications,
+        projects: pendingCvExtracted.projects ?? user?.projects,
+      };
+    }
+    if (user) {
+      return {
+        workExperiences: user.workExperiences,
+        education: user.education,
+        certifications: user.certifications,
+        projects: user.projects,
+      };
+    }
+    return null;
+  }, [pendingCvExtracted, user]);
+
+  const handleMissingFieldsCompleteItem = useCallback(
+    async (section: CompleteItemDialogSection, index: number, newValues: Record<string, string>) => {
+      const bumpHints = () =>
+        setIncompleteItemHints((prev) => filterIncompleteHintsAfterIndex(prev, section, index));
+
+      if (pendingCvExtracted && Array.isArray(pendingCvExtracted[section]) && (pendingCvExtracted[section] as unknown[])[index]) {
+        const arr = [...(pendingCvExtracted[section] as Array<Record<string, unknown>>)];
+        arr[index] = { ...arr[index], ...newValues };
+        setPendingCvExtracted({ ...pendingCvExtracted, [section]: arr });
+        bumpHints();
+        toast.success('Fields added. Complete all items to enable Save.');
+        return;
+      }
+      if (!user) return;
+      const arr = (user[section] ?? []) as Array<Record<string, unknown>>;
+      const updated = [...arr];
+      if (!updated[index]) return;
+      updated[index] = { ...updated[index], ...newValues };
+      await updateProfile({ [section]: updated } as Parameters<typeof updateProfile>[0]);
+      bumpHints();
+      toast.success('Fields saved.');
+    },
+    [pendingCvExtracted, updateProfile, user],
+  );
+
+  const handleEditIncompleteInSettings = useCallback(
+    async (section: CompleteItemDialogSection, index: number) => {
+      if (incompleteHintsBlockingCount(incompleteItemHints) > 0) {
+        toast.error('Complete all required fields first (use Add fields above) before opening Settings.');
+        return;
+      }
+      if (!pendingCvExtracted) return;
+      await updateProfile(pendingCvExtracted);
+      setPendingCvExtracted(null);
+      setMissingFieldsDialogOpen(false);
+      setMissingFieldsList([]);
+      setIncompleteItemHints(null);
+      const sectionId = completeItemSectionToSettingsId(section);
+      router.push(`/settings?section=${sectionId}&edit=${index}`);
+    },
+    [incompleteItemHints, pendingCvExtracted, router, updateProfile],
+  );
+
   if (!isHydrated || shouldBlock) {
     return <TerminalLoaderPage pageName="profile" />;
   }
 
   const settingsUrl = (section: string) => `/settings?section=${encodeURIComponent(section)}`;
-
-  // Reusable Section Header (hide Add button in preview mode; Add links to settings tab when settingsSection provided)
-  const SectionHeader = ({
-    icon: Icon,
-    title,
-    showAdd = true,
-    settingsSection,
-  }: {
-    icon: React.ComponentType<{ className?: string }>;
-    title: string;
-    showAdd?: boolean;
-    settingsSection?: string;
-  }) => (
-    <div className="flex items-center justify-between px-2 mb-4">
-      <h2 className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
-        <Icon className="size-4 text-primary" /> {title}
-      </h2>
-      {showAdd && !isPreviewMode && (
-        settingsSection ? (
-          <Link
-            href={settingsUrl(settingsSection)}
-            className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-0.5 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 transition-all"
-          >
-            <Plus className="size-3" /> Add
-          </Link>
-        ) : (
-          <button className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-0.5 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 transition-all">
-            <Plus className="size-3" /> Add
-          </button>
-        )
-      )}
-    </div>
-  );
 
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans text-foreground ss-profile-readonly">
@@ -377,7 +428,7 @@ export default function ProfilePage() {
                     <div
                       className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none
                         [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
-                      dangerouslySetInnerHTML={{ __html: markdownToHtml(user.bio) }}
+                      dangerouslySetInnerHTML={{ __html: markdownBioToHtml(user.bio) }}
                     />
 
                     <div className="absolute bottom-1 right-1 size-3 border-r-2 border-b-2 border-border/50" />
@@ -457,7 +508,7 @@ export default function ProfilePage() {
                       : 'bg-card hover:bg-muted text-muted-foreground'
                   )}
                 >
-                  {tab === 'posts' ? 'Posts' : tab === 'replies' ? 'Replies' : 'Repost'}
+                  {activityTabLabel(tab)}
                 </button>
               ))}
             </div>
@@ -526,18 +577,7 @@ export default function ProfilePage() {
             }}
             missingFields={missingFieldsList}
             incompleteItemHints={incompleteItemHints}
-            currentProfile={
-              pendingCvExtracted
-                ? {
-                    workExperiences: pendingCvExtracted.workExperiences ?? user?.workExperiences,
-                    education: pendingCvExtracted.education ?? user?.education,
-                    certifications: pendingCvExtracted.certifications ?? user?.certifications,
-                    projects: pendingCvExtracted.projects ?? user?.projects,
-                  }
-                : user
-                  ? { workExperiences: user.workExperiences, education: user.education, certifications: user.certifications, projects: user.projects }
-                  : null
-            }
+            currentProfile={missingFieldsDialogCurrentProfile}
             settingsHref="/settings"
             onSave={async (values) => {
               const scalar: Parameters<typeof updateProfile>[0] = {};
@@ -555,51 +595,8 @@ export default function ProfilePage() {
               setIncompleteItemHints(null);
               toast.success('Profile updated from your CV. Add the rest in Settings when ready.');
             }}
-            onCompleteItem={async (section: CompleteItemDialogSection, index: number, newValues: Record<string, string>) => {
-              const removeHint = () => {
-                setIncompleteItemHints((prev) => {
-                  if (!prev) return null;
-                  const list = prev[section];
-                  if (!list?.length) return prev;
-                  const next = list.filter((_, i) => i !== index);
-                  if (next.length === 0) { const o = { ...prev }; delete o[section]; return Object.keys(o).length ? o : null; }
-                  return { ...prev, [section]: next };
-                });
-              };
-              if (pendingCvExtracted && Array.isArray(pendingCvExtracted[section]) && (pendingCvExtracted[section] as unknown[])[index]) {
-                const arr = [...(pendingCvExtracted[section] as Array<Record<string, unknown>>)];
-                arr[index] = { ...arr[index], ...newValues };
-                setPendingCvExtracted({ ...pendingCvExtracted, [section]: arr });
-                removeHint();
-                toast.success('Fields added. Complete all items to enable Save.');
-                return;
-              }
-              if (!user) return;
-              const arr = (user[section] ?? []) as Array<Record<string, unknown>>;
-              const updated = [...arr];
-              if (!updated[index]) return;
-              updated[index] = { ...updated[index], ...newValues };
-              await updateProfile({ [section]: updated } as Parameters<typeof updateProfile>[0]);
-              removeHint();
-              toast.success('Fields saved.');
-            }}
-            onEditInSettings={pendingCvExtracted ? async (section, index) => {
-              const hasIncomplete = incompleteItemHints && (
-                (incompleteItemHints.education?.length ?? 0) +
-                (incompleteItemHints.certifications?.length ?? 0) + (incompleteItemHints.workExperiences?.length ?? 0)
-              ) > 0;
-              if (hasIncomplete) {
-                toast.error('Complete all required fields first (use Add fields above) before opening Settings.');
-                return;
-              }
-              await updateProfile(pendingCvExtracted);
-              setPendingCvExtracted(null);
-              setMissingFieldsDialogOpen(false);
-              setMissingFieldsList([]);
-              setIncompleteItemHints(null);
-              const sectionId = section === 'workExperiences' ? 'work-experiences' : section === 'education' ? 'education' : section === 'certifications' ? 'certifications' : 'projects';
-              router.push(`/settings?section=${sectionId}&edit=${index}`);
-            } : undefined}
+            onCompleteItem={handleMissingFieldsCompleteItem}
+            onEditInSettings={pendingCvExtracted ? handleEditIncompleteInSettings : undefined}
           />
 
           <MediaFullViewDialog
@@ -613,15 +610,21 @@ export default function ProfilePage() {
           {/* DYNAMIC SECTIONS — data from backend */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
-              <SectionHeader icon={Monitor} title="Stack & Tools" settingsSection="stack-tools" />
+              <ProfileSectionHeader
+                icon={Monitor}
+                title="Stack & Tools"
+                settingsSection="stack-tools"
+                isPreviewMode={isPreviewMode}
+                settingsUrl={settingsUrl}
+              />
               {user?.stackAndTools?.length ? (
                 <div className="relative">
                   <div className="flex flex-wrap gap-3 py-1">
-                    {user.stackAndTools.slice(0, STACK_AND_TOOLS_MAX).map((t, i) => {
+                    {user.stackAndTools.slice(0, STACK_AND_TOOLS_MAX).map((t) => {
                       const iconUrl = getSkillIconUrl(t);
                       return (
                         <div
-                          key={i}
+                          key={`stack-${t}`}
                           className="border-2 border-border bg-muted/10 px-3 py-2 shadow-[2px_2px_0px_0px_var(--border)] max-w-full"
                           title={t}
                         >
@@ -660,15 +663,21 @@ export default function ProfilePage() {
             </section>
 
             <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
-              <SectionHeader icon={Wrench} title="My Setup" settingsSection="my-setup" />
+              <ProfileSectionHeader
+                icon={Wrench}
+                title="My Setup"
+                settingsSection="my-setup"
+                isPreviewMode={isPreviewMode}
+                settingsUrl={settingsUrl}
+              />
               {(user as any)?.mySetup?.length ? (
                 <div className="relative">
                   <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
-                    {((user as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string }>).slice(0, 5).map((it, i) => {
+                    {((user as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string }>).slice(0, 5).map((it) => {
                       const hasProduct = Boolean((it.productUrl ?? '').trim());
                       return (
                         <div
-                          key={`${it.imageUrl}-${i}`}
+                          key={`setup-${it.imageUrl}-${it.label}`}
                           className="snap-start shrink-0 w-[240px] border-2 border-border bg-muted/10 shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden"
                         >
                           <button
@@ -724,7 +733,7 @@ export default function ProfilePage() {
               variant="workExperience"
               open={openSectionId === 'workExperience'}
               onOpenChange={(open) => setSectionOpen('workExperience', open)}
-              subtitle={user?.workExperiences?.length ? `${user.workExperiences.length} ${user.workExperiences.length === 1 ? 'entry' : 'entries'}` : undefined}
+              subtitle={entriesCountSubtitle(user?.workExperiences?.length ?? 0)}
               headerAction={!isPreviewMode && (
                 <Link href={settingsUrl('work-experiences')} className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 transition-all" onClick={(e) => e.stopPropagation()}>
                   <Plus className="size-3" /> Add
@@ -734,10 +743,10 @@ export default function ProfilePage() {
               {user?.workExperiences?.length ? (
                 <div className="space-y-4">
                   {sectionLoading.workExperience
-                    ? <CardSkeleton lines={4} />
+                    ? <ProfileCardSkeleton lines={4} />
                     : user.workExperiences.slice(0, visibleCounts.workExperience).map((e, i) => (
                     <WorkExperienceCard
-                      key={i}
+                      key={workExperienceListKey(e as Record<string, unknown>)}
                       experience={e}
                       index={i}
                       saving={false}
@@ -781,7 +790,7 @@ export default function ProfilePage() {
               variant="education"
               open={openSectionId === 'education'}
               onOpenChange={(open) => setSectionOpen('education', open)}
-              subtitle={user?.education?.length ? `${user.education.length} ${user.education.length === 1 ? 'entry' : 'entries'}` : undefined}
+              subtitle={entriesCountSubtitle(user?.education?.length ?? 0)}
               headerAction={!isPreviewMode && (
                 <Link href={settingsUrl('education')} className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 transition-all" onClick={(e) => e.stopPropagation()}>
                   <Plus className="size-3" /> Add
@@ -791,10 +800,10 @@ export default function ProfilePage() {
               {user?.education?.length ? (
                 <div className="space-y-4">
                   {sectionLoading.education
-                    ? <CardSkeleton lines={3} />
+                    ? <ProfileCardSkeleton lines={3} />
                     : user.education.slice(0, visibleCounts.education).map((e, i) => (
                     <EducationCard
-                      key={i}
+                      key={educationListKey(e as Record<string, unknown>)}
                       education={e}
                       index={i}
                       saving={false}
@@ -834,7 +843,7 @@ export default function ProfilePage() {
             variant="certification"
             open={openSectionId === 'certification'}
             onOpenChange={(open) => setSectionOpen('certification', open)}
-            subtitle={user?.certifications?.length ? `${user.certifications.length} ${user.certifications.length === 1 ? 'entry' : 'entries'}` : undefined}
+            subtitle={entriesCountSubtitle(user?.certifications?.length ?? 0)}
             headerAction={!isPreviewMode && (
               <Link href={settingsUrl('certifications')} className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 transition-all" onClick={(e) => e.stopPropagation()}>
                 <Plus className="size-3" /> Add
@@ -844,10 +853,10 @@ export default function ProfilePage() {
             {user?.certifications?.length ? (
               <div className="space-y-4">
                 {sectionLoading.certification
-                  ? <CardSkeleton lines={4} />
+                  ? <ProfileCardSkeleton lines={4} />
                   : user.certifications.slice(0, visibleCounts.certification).map((c, i) => (
                   <CertificationCard
-                    key={i}
+                    key={certificationListKey(c as Record<string, unknown>)}
                     cert={c}
                     index={i}
                     saving={false}
@@ -890,7 +899,7 @@ export default function ProfilePage() {
             variant="project"
             open={openSectionId === 'project'}
             onOpenChange={(open) => setSectionOpen('project', open)}
-            subtitle={profileProjects.nonGithub.length > 0 ? `${profileProjects.nonGithub.length} ${profileProjects.nonGithub.length === 1 ? 'entry' : 'entries'}` : undefined}
+            subtitle={entriesCountSubtitle(profileProjects.nonGithub.length)}
             headerAction={!isPreviewMode && (
               <Link href={settingsUrl('projects')} className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 transition-all" onClick={(e) => e.stopPropagation()}>
                 <Plus className="size-3" /> Add
@@ -900,10 +909,10 @@ export default function ProfilePage() {
             {profileProjects.nonGithub.length > 0 ? (
               <div className="space-y-4">
                 {sectionLoading.project
-                  ? <CardSkeleton lines={4} />
+                  ? <ProfileCardSkeleton lines={4} />
                   : profileProjects.nonGithub.slice(0, visibleCounts.project).map((p, i) => (
                   <ProjectCard
-                    key={i}
+                    key={projectListKey(p as Record<string, unknown>)}
                     project={p}
                     index={i}
                     saving={false}
@@ -946,7 +955,7 @@ export default function ProfilePage() {
               variant="openSource"
               open={openSectionId === 'openSource'}
               onOpenChange={(open) => setSectionOpen('openSource', open)}
-              subtitle={openSourceList.length > 0 ? `${openSourceList.length} ${openSourceList.length === 1 ? 'repo' : 'repos'}` : undefined}
+              subtitle={reposCountSubtitle(openSourceList.length)}
               headerAction={!isPreviewMode && (
                 <Link href={settingsUrl('open-source')} className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 transition-all" onClick={(e) => e.stopPropagation()}>
                   <Plus className="size-3" /> Add
@@ -957,13 +966,13 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {sectionLoading.openSource ? (
                     <>
-                      <CardSkeleton lines={3} />
-                      <CardSkeleton lines={3} />
+                      <ProfileCardSkeleton lines={3} />
+                      <ProfileCardSkeleton lines={3} />
                     </>
                   ) : (
                     openSourceList.slice(0, visibleCounts.openSource).map((item, i) => (
                     <OpenSourceCard
-                      key={(item as { repoFullName?: string }).repoFullName ?? i}
+                      key={openSourceListKey(item as Record<string, unknown>)}
                       item={item}
                       index={i}
                       saving={false}
@@ -1064,8 +1073,7 @@ export default function ProfilePage() {
                 className="flex-1 min-w-0 flex items-center justify-between gap-2 bg-muted/30 border-2 border-border p-3 hover:bg-muted/50 transition-colors text-left group"
               >
                 <span className="text-[10px] font-bold truncate text-foreground">
-                  {publicProfileUrl ||
-                    (globalThis.window !== undefined ? `${globalThis.window.location.origin}/profile` : '/profile')}
+                  {profileShareUrl}
                 </span>
                 <span className={cn(
                   'shrink-0 flex items-center gap-1.5 px-2 py-1 border-2 border-border text-[9px] font-black uppercase',

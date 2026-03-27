@@ -28,6 +28,10 @@ export function NotificationsDropdown() {
   }, [isOpen]);
 
   const unreadCount = placeholderNotifications.filter((n) => n.unread).length;
+  let menuHeaderUnreadLabel = '0';
+  if (unreadCount > 0) {
+    menuHeaderUnreadLabel = unreadCount > 9 ? '9+' : String(unreadCount);
+  }
 
   return (
     <div className="relative" ref={panelRef}>
@@ -42,7 +46,7 @@ export function NotificationsDropdown() {
         <Bell className="h-4 w-4 text-foreground" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {unreadCount > 9 ? '9+' : String(unreadCount)}
           </span>
         )}
       </button>
@@ -54,7 +58,7 @@ export function NotificationsDropdown() {
           <div className="border-b-2 border-border px-4 py-3 flex items-center justify-between bg-muted/30">
             <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground flex items-center gap-2">
               <span className="inline-flex h-5 w-5 items-center justify-center border-2 border-border bg-card text-[9px]">
-                {unreadCount > 0 ? (unreadCount > 9 ? '9+' : String(unreadCount)) : '0'}
+                {menuHeaderUnreadLabel}
               </span>
               <span>Notifications</span>
             </h3>
