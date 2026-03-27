@@ -5,7 +5,9 @@ import { UserModel } from '../models/User';
 import { ProfileViewEventModel, ProfileDailyMetricsModel, AnalyticsEventModel } from '../models';
 import type { AuthUser } from '../middlewares/auth';
 import { getRedis } from '../config/redis';
-import { writeAuditLog } from '../utils/auditLog';
+import { writeAuditLog } from '../shared/audit/auditLog';
+import { AuditAction } from '../shared/audit/events';
+import { redisKeys } from '../shared/redis/keys';
 
 function getDayBucket(d: Date): string {
   const year = d.getUTCFullYear();
@@ -118,7 +120,7 @@ export async function recordProfileView(req: Request, res: Response): Promise<vo
         metadata: {},
         timestamp: now,
       }).catch(() => {});
-      void writeAuditLog(req, 'profile_view', {
+      void writeAuditLog(req, AuditAction.PROFILE_VIEW, {
         actorId: viewerIdStr || undefined,
         targetType: 'profile',
         targetId: String(profileUserId),
@@ -179,7 +181,7 @@ export async function getProfileOverview(req: Request, res: Response): Promise<v
     const from30Bucket = getDayBucket(from30);
 
     const redis = getRedis();
-    const cacheKey = `profile:analytics:${username.trim().toLowerCase()}`;
+    const cacheKey = redisKeys.analytics.profileOverview(username.trim().toLowerCase());
 
     if (redis) {
       const cached = await redis.get(cacheKey);
@@ -275,7 +277,7 @@ export async function getProfileTimeSeries(req: Request, res: Response): Promise
     const from30Bucket = getDayBucket(from30);
 
     const redis = getRedis();
-    const cacheKey = `profile:analytics:${username.trim().toLowerCase()}:timeseries`;
+    const cacheKey = redisKeys.analytics.profileTimeseries(username.trim().toLowerCase());
 
     if (redis) {
       const cached = await redis.get(cacheKey);

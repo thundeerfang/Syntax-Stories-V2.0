@@ -1,6 +1,6 @@
 import type { Request } from 'express';
 import mongoose from 'mongoose';
-import { AuditLogModel } from '../models/AuditLog';
+import { AuditLogModel } from '../../models/AuditLog';
 
 function getClientMeta(req: Request | null): { ip?: string; userAgent?: string } {
   if (!req) return {};

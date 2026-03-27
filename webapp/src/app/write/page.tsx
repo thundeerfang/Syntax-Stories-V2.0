@@ -210,7 +210,7 @@ export default function WriteBlogPage() {
                SYSTEM_STABLE
             </div>
             <div className="text-[9px] text-muted-foreground font-mono truncate">
-               LOG: User "{user?.username}" initiated write sequence... payload size {JSON.stringify(blocks).length} bytes...
+              {`LOG: User "${user?.username ?? ''}" initiated write sequence... payload size ${JSON.stringify(blocks).length} bytes...`}
             </div>
          </div>
       </div>

@@ -25,6 +25,8 @@ export interface DialogProps {
   showCloseButton?: boolean;
   /** Close when backdrop is clicked. Default true. */
   closeOnBackdropClick?: boolean;
+  /** Close when Escape is pressed. Default true. */
+  closeOnEscape?: boolean;
 }
 
 const defaultBackdropClass =
@@ -42,15 +44,16 @@ export function Dialog({
   contentClassName = 'relative p-6 sm:p-8',
   showCloseButton = true,
   closeOnBackdropClick = true,
+  closeOnEscape = true,
 }: DialogProps) {
   useEffect(() => {
-    if (!open) return;
+    if (!open || !closeOnEscape) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, closeOnEscape]);
 
   useEffect(() => {
     if (open) {

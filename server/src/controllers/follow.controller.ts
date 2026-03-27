@@ -5,12 +5,31 @@ import { FollowModel } from '../models/Follow';
 import type { AuthUser } from '../middlewares/auth';
 import { getRedis } from '../config/redis';
 import { AnalyticsEventModel } from '../models';
-import { writeAuditLog } from '../utils/auditLog';
+import { writeAuditLog } from '../shared/audit/auditLog';
+import { AuditAction } from '../shared/audit/events';
+import { redisKeys } from '../shared/redis/keys';
+import { RateLimitHttpError, isAppHttpError } from '../errors/httpErrors';
+import { sendAppHttpError } from '../errors/sendAppHttpError';
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
 const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount';
 
 const DAILY_FOLLOW_LIMIT = 500;
+
+function secondsUntilUtcMidnight(): number {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+  return Math.max(1, Math.ceil((next.getTime() - now.getTime()) / 1000));
+}
+
+function dailyFollowLimitError(): RateLimitHttpError {
+  return new RateLimitHttpError(
+    `Daily follow limit reached (${DAILY_FOLLOW_LIMIT}/day).`,
+    secondsUntilUtcMidnight(),
+    'DAILY_FOLLOW_LIMIT',
+    { limit: DAILY_FOLLOW_LIMIT }
+  );
+}
 
 /** Recompute from Follow collection when denormalized counts are missing, then persist on User. */
 async function ensureStoredFollowCounts(
@@ -223,7 +242,6 @@ export async function followUser(req: Request, res: Response): Promise<void> {
     const dayKey = dayBucketUTC(now);
 
     let created = false;
-    let dailyAllowed = true;
 
     const session = await mongoose.startSession();
     try {
@@ -238,13 +256,12 @@ export async function followUser(req: Request, res: Response): Promise<void> {
 
         // Daily follow cap (counts only NEW follows)
         if (redis) {
-          const capKey = `cap:follow:${currentUser._id}:${dayKey}`;
+          const capKey = redisKeys.follow.dailyCap(String(currentUser._id), dayKey);
           const n = await redis.incr(capKey);
           if (n === 1) await redis.expire(capKey, 48 * 60 * 60);
           if (n > DAILY_FOLLOW_LIMIT) {
-            dailyAllowed = false;
             // Roll back by throwing; transaction will abort
-            throw new Error('DAILY_FOLLOW_LIMIT');
+            throw dailyFollowLimitError();
           }
         }
 
@@ -265,8 +282,8 @@ export async function followUser(req: Request, res: Response): Promise<void> {
         }], { session });
       });
     } catch (e) {
-      if (e instanceof Error && e.message === 'DAILY_FOLLOW_LIMIT') {
-        res.status(429).json({ success: false, message: `Daily follow limit reached (${DAILY_FOLLOW_LIMIT}/day).` });
+      if (isAppHttpError(e)) {
+        sendAppHttpError(res, e);
         return;
       }
       // If transactions aren't supported (standalone Mongo), fallback to non-transactional behavior
@@ -284,12 +301,12 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       }
 
       if (redis) {
-        const capKey = `cap:follow:${currentUser._id}:${dayKey}`;
+        const capKey = redisKeys.follow.dailyCap(String(currentUser._id), dayKey);
         const n = await redis.incr(capKey);
         if (n === 1) await redis.expire(capKey, 48 * 60 * 60);
         if (n > DAILY_FOLLOW_LIMIT) {
           await FollowModel.deleteOne({ follower: currentUser._id, following: target._id }).catch(() => {});
-          res.status(429).json({ success: false, message: `Daily follow limit reached (${DAILY_FOLLOW_LIMIT}/day).` });
+          sendAppHttpError(res, dailyFollowLimitError());
           return;
         }
       }
@@ -316,7 +333,7 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    void writeAuditLog(req, 'follow', {
+    void writeAuditLog(req, AuditAction.FOLLOW, {
       actorId: String(currentUser._id),
       targetType: 'user',
       targetId: String(target._id),
@@ -401,7 +418,7 @@ export async function unfollowUser(req: Request, res: Response): Promise<void> {
     }
 
     if (deleted) {
-      void writeAuditLog(req, 'unfollow', {
+      void writeAuditLog(req, AuditAction.UNFOLLOW, {
         actorId: String(currentUser._id),
         targetType: 'user',
         targetId: String(target._id),

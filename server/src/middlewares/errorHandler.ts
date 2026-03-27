@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { MulterError } from 'multer';
+import { isAppHttpError } from '../errors/httpErrors';
+import { sendAppHttpError } from '../errors/sendAppHttpError';
 
 export function errorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
@@ -17,7 +19,12 @@ export function errorHandler(
       return;
     }
   }
-  console.error(err);
+  if (isAppHttpError(err)) {
+    sendAppHttpError(res, err);
+    return;
+  }
+  if (req.requestId) console.error(`[requestId=${req.requestId}]`, err);
+  else console.error(err);
   res.status(500).json({
     success: false,
     message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,

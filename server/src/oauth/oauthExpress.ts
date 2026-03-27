@@ -5,8 +5,11 @@ import { getFrontendRedirectBase } from '../config/frontendUrl';
 import { getRedis } from '../config/redis';
 import { UserModel } from '../models/User';
 import { createAuthChallenge } from '../utils/authChallenge';
-import { createSessionAndTokens } from '../controllers/auth.controller';
-import { writeAuditLog } from '../utils/auditLog';
+import { createSessionAndTokens } from '../services/session.service';
+import { writeAuditLog } from '../shared/audit/auditLog';
+import { AuditAction } from '../shared/audit/events';
+import { emitAppEvent } from '../shared/events/appEvents';
+import { redisKeys } from '../shared/redis/keys';
 
 /** Validate link key in Redis, then Passport with `state: link:<key>`. */
 export function oauthLinkHandler(strategy: string, authenticateOptions: AuthenticateOptions = {}): RequestHandler {
@@ -20,7 +23,7 @@ export function oauthLinkHandler(strategy: string, authenticateOptions: Authenti
     if (!redis) {
       return res.redirect(`${base}/settings?error=${encodeURIComponent('Linking unavailable')}`);
     }
-    const userId = await redis.get(`link:${k}`);
+    const userId = await redis.get(redisKeys.oauth.link(k));
     if (!userId) {
       return res.redirect(`${base}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
     }
@@ -61,7 +64,7 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
         }
       }
       const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
-      void writeAuditLog(req, 'session_created', {
+      void writeAuditLog(req, AuditAction.SESSION_CREATED, {
         actorId: String(u._id),
         metadata: {
           sessionId: String(session._id),
@@ -70,8 +73,9 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
           expiresAt: session.expiresAt?.toISOString?.(),
         },
       });
-      void writeAuditLog(req, 'oauth_login', { actorId: String(u._id), metadata: { provider: auditProvider } });
-      void writeAuditLog(req, 'user_signin', { actorId: String(u._id), metadata: { source: auditProvider } });
+      void writeAuditLog(req, AuditAction.OAUTH_LOGIN, { actorId: String(u._id), metadata: { provider: auditProvider } });
+      void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: String(u._id), metadata: { source: auditProvider } });
+      emitAppEvent('auth.login.success', { userId: String(u._id), source: auditProvider });
       const providerId = String(u[idField] ?? '');
       const urlParams = new URLSearchParams({
         token: accessToken,

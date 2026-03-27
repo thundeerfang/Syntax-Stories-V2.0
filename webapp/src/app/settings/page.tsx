@@ -4005,7 +4005,7 @@ function SidebarSkeleton({ itemCount }: { itemCount: number }) {
         {Array.from({ length: itemCount }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 px-1 py-1.5">
             <div className="size-4 bg-muted animate-pulse shrink-0" />
-            <SkeletonBar width={`${45 + Math.random() * 40}%`} />
+            <SkeletonBar width={`${45 + ((i * 11) % 41)}%`} />
           </div>
         ))}
       </div>

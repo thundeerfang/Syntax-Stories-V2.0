@@ -1,2 +1,2 @@
-export { AuthDialog } from './AuthDialog';
-export { AuthDialogWrapper } from './AuthDialogWrapper';
+/** @deprecated Prefer `@/features/auth` for new code. */
+export { AuthDialog, AuthDialogWrapper, AltchaField } from '@/features/auth';

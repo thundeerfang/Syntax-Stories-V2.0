@@ -1,12 +1,52 @@
+import { getOrCreateDeviceFingerprint } from '@/lib/deviceFingerprint';
+import type {
+  SendOtpPayload,
+  SignUpEmailPayload,
+  VerifyOtpPayload,
+  SendOtpResponse,
+  VerifyOtpResponse,
+  VerifyTwoFactorLoginResponse,
+  RefreshTokenResponseBody,
+  SimpleSuccessMessage,
+} from '@contracts/authApi';
+
+export type {
+  SendOtpPayload,
+  SignUpEmailPayload,
+  VerifyOtpPayload,
+  SendOtpResponse,
+  VerifyOtpResponse,
+  VerifyTwoFactorLoginResponse,
+  RefreshTokenResponseBody,
+  SimpleSuccessMessage,
+} from '@contracts/authApi';
+
 function getAuthBase(): string {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
   return base ? `${base.replace(/\/$/, '')}/auth` : '/auth';
 }
 
+export function getAltchaChallengeUrl(): string {
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+  return base ? `${base}/auth/altcha/challenge` : '';
+}
+
 const AUTH_FETCH_TIMEOUT_MS = 28000; // 28s – avoid infinite "Sending..." when backend is cold or slow
 
+export type AuthErrorExtras = {
+  retryAfter?: number;
+  attemptsLeft?: number;
+  code?: string;
+  /** Server `AppHttpError.details` (e.g. rate-limit metadata). */
+  details?: unknown;
+};
+
 export class AuthError extends Error {
-  constructor(message: string, public status?: number) {
+  constructor(
+    message: string,
+    public status?: number,
+    public extras?: AuthErrorExtras
+  ) {
     super(message);
     this.name = 'AuthError';
   }
@@ -27,11 +67,15 @@ async function authFetch<T>(path: string, options?: RequestInit & { token?: stri
       : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${path}`;
   const token = options?.token;
   const { token: _, ...restOptions } = options ?? {};
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...restOptions?.headers,
+    ...(restOptions?.headers as Record<string, string> | undefined),
   };
-  if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (typeof window !== 'undefined') {
+    const fp = getOrCreateDeviceFingerprint();
+    if (fp) headers['X-Device-Fingerprint'] = fp;
+  }
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), AUTH_FETCH_TIMEOUT_MS);
@@ -54,10 +98,32 @@ async function authFetch<T>(path: string, options?: RequestInit & { token?: stri
       if (newToken) return authFetch<T>(path, { ...restOptions, token: newToken }, true);
     }
     try {
-      const data = text ? (JSON.parse(text) as { message?: string; error?: Array<{ message?: string }> }) : null;
+      const data = text
+        ? (JSON.parse(text) as {
+            message?: string;
+            error?: Array<{ message?: string }>;
+            retryAfter?: number;
+            attemptsLeft?: number;
+            code?: string;
+            details?: unknown;
+          })
+        : null;
       const detail = data?.error?.[0]?.message;
       const msg = detail || data?.message || res.statusText || 'Request failed';
-      throw new AuthError(msg, res.status);
+      const retryHeader = res.headers.get('Retry-After');
+      const retryFromHeader = retryHeader != null && retryHeader !== '' ? parseInt(retryHeader, 10) : NaN;
+      const extras: AuthErrorExtras = {
+        retryAfter:
+          typeof data?.retryAfter === 'number'
+            ? data.retryAfter
+            : !Number.isNaN(retryFromHeader)
+              ? retryFromHeader
+              : undefined,
+        attemptsLeft: typeof data?.attemptsLeft === 'number' ? data.attemptsLeft : undefined,
+        code: typeof data?.code === 'string' ? data.code : undefined,
+        details: data?.details !== undefined ? data.details : undefined,
+      };
+      throw new AuthError(msg, res.status, extras);
     } catch (e) {
       if (e instanceof AuthError) throw e;
       if (e instanceof SyntaxError) throw new AuthError(text || res.statusText || 'Request failed', res.status);
@@ -68,20 +134,6 @@ async function authFetch<T>(path: string, options?: RequestInit & { token?: stri
 
   if (!text) return {} as T;
   return JSON.parse(text) as T;
-}
-
-export interface SendOtpPayload {
-  email: string;
-}
-
-export interface SignUpEmailPayload {
-  fullName: string;
-  email: string;
-}
-
-export interface VerifyOtpPayload {
-  email: string;
-  code: string;
 }
 
 export interface WorkExperience {
@@ -293,48 +345,15 @@ export interface ParseCvResponse {
   incompleteItemHints?: IncompleteItemHints;
 }
 
-export interface VerifyOtpResponse {
-  message: string;
-  success: boolean;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresIn?: string;
-  twoFactorRequired?: boolean;
-  challengeToken?: string;
-  isNewUser?: boolean;
-  user: {
-    _id: string;
-    fullName: string;
-    username: string;
-    email: string;
-    profileImg?: string;
-  };
-}
-
-export interface VerifyTwoFactorLoginResponse {
-  success: boolean;
-  message: string;
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: string;
-  user: {
-    _id: string;
-    fullName: string;
-    username: string;
-    email: string;
-    profileImg?: string;
-  };
-}
-
 export const authApi = {
   sendOtp: (data: SendOtpPayload) =>
-    authFetch<{ message: string; success: boolean }>(`${getAuthBase()}/send-otp`, {
+    authFetch<SendOtpResponse>(`${getAuthBase()}/send-otp`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   signupEmail: (data: SignUpEmailPayload) =>
-    authFetch<{ message: string; success: boolean }>(`${getAuthBase()}/signup-email`, {
+    authFetch<SendOtpResponse>(`${getAuthBase()}/signup-email`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -352,20 +371,20 @@ export const authApi = {
     }),
 
   logout: (accessToken: string) =>
-    authFetch<{ message: string; success: boolean }>(`${getAuthBase()}/logout`, {
+    authFetch<SimpleSuccessMessage & { message: string }>(`${getAuthBase()}/logout`, {
       method: 'POST',
       token: accessToken,
     }),
 
   /** Revoke session by refresh token (no JWT). Call when clearing state after token expiry. */
   revokeSession: (refreshToken: string) =>
-    authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/revoke-session`, {
+    authFetch<SimpleSuccessMessage>(`${getAuthBase()}/revoke-session`, {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     }),
 
   refresh: (refreshToken: string) =>
-    authFetch<{ success: boolean; accessToken: string; expiresIn?: string }>(`${getAuthBase()}/refresh`, {
+    authFetch<RefreshTokenResponseBody>(`${getAuthBase()}/refresh`, {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     }),

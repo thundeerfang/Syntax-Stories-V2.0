@@ -2,7 +2,13 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authApi, AuthError, normalizeUser, type AuthUser, type UpdateProfilePayload } from '@/api/auth';
+import {
+  authApi,
+  AuthError,
+  normalizeUser,
+  type AuthUser,
+  type UpdateProfilePayload,
+} from '@/api/auth';
 import { setLastUserName } from '@/lib/lastUser';
 
 const AUTH_KEY = 'syntax-stories-auth';
@@ -14,12 +20,14 @@ type AuthState = {
   isLoading: boolean;
   isHydrated: boolean;
   twoFactor: { challengeToken: string; email: string } | null;
+  /** Latest OTP generation from send/signup; paired with verify-otp. */
+  pendingOtpVersion: number | null;
   setHydrated: () => void;
   setAuth: (user: AuthUser | null, token: string | null, refreshToken?: string | null) => void;
   refreshUser: () => Promise<void>;
   updateProfile: (data: UpdateProfilePayload) => Promise<void>;
-  sendLoginOtp: (email: string) => Promise<void>;
-  signUp: (fullName: string, email: string) => Promise<void>;
+  sendLoginOtp: (email: string, altcha?: string) => Promise<void>;
+  signUp: (fullName: string, email: string, altcha?: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<void>;
   verifyTwoFactor: (token: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -36,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
       isHydrated: false,
       twoFactor: null,
+      pendingOtpVersion: null,
       setHydrated: () => set({ isLoading: false, isHydrated: true }),
       setAuth: (user, token, refreshToken = null) => {
         if (user?.fullName) setLastUserName(user.fullName);
@@ -90,11 +99,14 @@ export const useAuthStore = create<AuthState>()(
           throw e;
         }
       },
-      sendLoginOtp: async (email: string) => {
+      sendLoginOtp: async (email: string, altcha?: string) => {
         set({ isLoading: true });
         try {
-          await authApi.sendOtp({ email });
-          set({ isLoading: false });
+          const out = await authApi.sendOtp({ email, altcha });
+          set({
+            isLoading: false,
+            pendingOtpVersion: typeof out.otpVersion === 'number' ? out.otpVersion : null,
+          });
         } catch (err) {
           set({ isLoading: false });
           const message =
@@ -102,11 +114,14 @@ export const useAuthStore = create<AuthState>()(
           throw new Error(message);
         }
       },
-      signUp: async (fullName: string, email: string) => {
+      signUp: async (fullName: string, email: string, altcha?: string) => {
         set({ isLoading: true });
         try {
-          await authApi.signupEmail({ fullName, email });
-          set({ isLoading: false });
+          const out = await authApi.signupEmail({ fullName, email, altcha });
+          set({
+            isLoading: false,
+            pendingOtpVersion: typeof out.otpVersion === 'number' ? out.otpVersion : null,
+          });
         } catch (err) {
           set({ isLoading: false });
           const message =
@@ -117,14 +132,33 @@ export const useAuthStore = create<AuthState>()(
       verifyCode: async (email: string, code: string) => {
         set({ isLoading: true });
         try {
-          const res = await authApi.verifyOtp({ email, code });
+          const otpVersion = get().pendingOtpVersion ?? undefined;
+          const res = await authApi.verifyOtp({
+            email,
+            code,
+            ...(otpVersion != null ? { otpVersion } : {}),
+          });
           if (res.twoFactorRequired && res.challengeToken) {
-            set({ twoFactor: { challengeToken: res.challengeToken, email }, isLoading: false });
+            set({
+              twoFactor: {
+                challengeToken: res.challengeToken,
+                email: res.email ?? res.user?.email ?? email,
+              },
+              isLoading: false,
+              pendingOtpVersion: null,
+            });
             return;
           }
-          if (!res.accessToken) throw new Error('Login failed');
+          if (!res.accessToken || !res.user) throw new Error('Login failed');
           const user = normalizeUser(res.user);
-          set({ user, token: res.accessToken, refreshToken: res.refreshToken ?? null, isLoading: false, twoFactor: null });
+          set({
+            user,
+            token: res.accessToken,
+            refreshToken: res.refreshToken ?? null,
+            isLoading: false,
+            twoFactor: null,
+            pendingOtpVersion: null,
+          });
           if (user?.fullName) setLastUserName(user.fullName);
         } catch (err) {
           set({ isLoading: false });

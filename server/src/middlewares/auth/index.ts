@@ -11,4 +11,5 @@ export {
   rateLimitSignupEmail,
   rateLimitRefresh,
 } from './rateLimitAuth';
+export { verifyAltchaIfConfigured } from './verifyAltcha';
 export { idempotency } from './idempotency';

@@ -1,28 +1,12 @@
 import { Router } from 'express';
 import multer from 'multer';
-import {
-  sendOtp,
-  signupEmail,
-  verifyOtp,
-  refresh,
-  logout,
-  revokeSessionByRefreshToken,
-  me,
-  linkRequest,
-  initEmailChange,
-  verifyEmailChange,
-  cancelEmailChange,
-  disconnectProvider,
-  setupTwoFactor,
-  enableTwoFactor,
-  disableTwoFactor,
-  initQrLogin,
-  approveQrLogin,
-  pollQrLogin,
-  verifyTwoFactorLogin,
-  updateProfile,
-  parseCv,
-} from '../controllers/auth.controller';
+import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller';
+import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller';
+import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller';
+import { me, updateProfile, parseCv } from './controllers/profile.controller';
+import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller';
+import { setupTwoFactor, enableTwoFactor, disableTwoFactor, verifyTwoFactorLogin } from './controllers/twoFactor.controller';
+import { refresh, logout, revokeSessionByRefreshToken } from './controllers/session.controller';
 import {
   idempotency,
   sendOtpValidation,
@@ -30,16 +14,25 @@ import {
   verifyOtpValidation,
   updateProfileValidation,
   verifyToken,
+  verifyAltchaIfConfigured,
   rateLimitSendOtp,
   rateLimitVerifyOtp,
   rateLimitSignupEmail,
   rateLimitRefresh,
-} from '../middlewares/auth';
+} from '../../middlewares/auth';
 
 const router = Router();
 
-router.post('/send-otp', rateLimitSendOtp, idempotency, sendOtpValidation, sendOtp);
-router.post('/signup-email', rateLimitSignupEmail, idempotency, signupEmailValidation, signupEmail);
+router.get('/altcha/challenge', getAltchaChallenge);
+router.post('/send-otp', rateLimitSendOtp, idempotency, verifyAltchaIfConfigured, sendOtpValidation, sendOtp);
+router.post(
+  '/signup-email',
+  rateLimitSignupEmail,
+  idempotency,
+  verifyAltchaIfConfigured,
+  signupEmailValidation,
+  signupEmail
+);
 router.post('/verify-otp', rateLimitVerifyOtp, idempotency, verifyOtpValidation, verifyOtp);
 router.post('/refresh', rateLimitRefresh, refresh);
 router.post('/logout', verifyToken, logout);

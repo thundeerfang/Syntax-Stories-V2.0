@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { getRedis } from '../../config/redis';
+import { redisKeys } from '../../shared/redis/keys';
 
 const LIMIT = 100;
 const WINDOW_SECONDS = 60;
@@ -12,7 +13,7 @@ export async function rateLimitProfileView(req: Request, res: Response, next: Ne
   }
 
   const ip = (req.ip ?? 'unknown').trim();
-  const key = `rl:analytics:profile-view:${ip}`;
+  const key = redisKeys.analytics.rateLimitProfileView(ip);
 
   try {
     const count = await redis.incr(key);

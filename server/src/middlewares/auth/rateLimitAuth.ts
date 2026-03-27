@@ -1,11 +1,23 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import type { Request } from 'express';
 import { authConfig } from '../../config/auth.config';
+import { redisKeys } from '../../shared/redis/keys';
 import { RedisRateLimitStore } from './redisRateLimitStore';
+
+const FP_HEADER = 'x-device-fingerprint';
+
+function fingerprintSuffix(req: Request): string {
+  const raw = req.headers[FP_HEADER];
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  const t = typeof s === 'string' ? s.trim().slice(0, 128) : '';
+  return t ? `:${t}` : '';
+}
 
 function createRateLimiter(
   windowMs: number,
   max: number,
-  prefix: string
+  prefix: string,
+  useFingerprint = false
 ): ReturnType<typeof rateLimit> {
   const store = RedisRateLimitStore(prefix, windowMs);
   return rateLimit({
@@ -14,7 +26,9 @@ function createRateLimiter(
     message: { message: 'Too many attempts. Please try again later.', success: false },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req, res) => ipKeyGenerator(req.ip ?? req.socket?.remoteAddress ?? '0.0.0.0'),
+    keyGenerator: (req, res) =>
+      ipKeyGenerator(req.ip ?? req.socket?.remoteAddress ?? '0.0.0.0') +
+      (useFingerprint ? fingerprintSuffix(req) : ''),
     handler: (req, res) => {
       res.status(429).json({
         message: 'Too many attempts. Please try again later.',
@@ -30,20 +44,23 @@ function createRateLimiter(
 export const rateLimitSendOtp = createRateLimiter(
   authConfig.RATE_LIMIT_SEND_OTP.windowMs,
   authConfig.RATE_LIMIT_SEND_OTP.max,
-  'rl:sendotp:'
+  redisKeys.rateLimit.sendOtp,
+  true
 );
 export const rateLimitVerifyOtp = createRateLimiter(
   authConfig.RATE_LIMIT_VERIFY_OTP.windowMs,
   authConfig.RATE_LIMIT_VERIFY_OTP.max,
-  'rl:verifyotp:'
+  redisKeys.rateLimit.verifyOtp,
+  true
 );
 export const rateLimitSignupEmail = createRateLimiter(
   authConfig.RATE_LIMIT_SIGNUP.windowMs,
   authConfig.RATE_LIMIT_SIGNUP.max,
-  'rl:signupemail:'
+  redisKeys.rateLimit.signupEmail,
+  true
 );
 export const rateLimitRefresh = createRateLimiter(
   authConfig.RATE_LIMIT_REFRESH.windowMs,
   authConfig.RATE_LIMIT_REFRESH.max,
-  'rl:refresh:'
+  redisKeys.rateLimit.refresh
 );
