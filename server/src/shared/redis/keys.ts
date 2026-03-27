@@ -10,6 +10,8 @@ export const redisKeys = {
   oauth: {
     /** Ephemeral account-link nonce; value is userId string. */
     link: (linkKey: string) => `link:${linkKey}`,
+    /** One-time OAuth browser callback; value is JSON payload (tokens, userId). TTL ~90s. */
+    exchange: (code: string) => `oauth:exchange:${code}`,
   },
 
   auth: {

@@ -10,6 +10,7 @@ import { writeAuditLog } from '../shared/audit/auditLog';
 import { AuditAction } from '../shared/audit/events';
 import { emitAppEvent } from '../shared/events/appEvents';
 import { redisKeys } from '../shared/redis/keys';
+import { storeOAuthExchange } from './oauth.exchange.service';
 
 /** Validate link key in Redis, then Passport with `state: link:<key>`. */
 export function oauthLinkHandler(strategy: string, authenticateOptions: AuthenticateOptions = {}): RequestHandler {
@@ -77,6 +78,18 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
       void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: String(u._id), metadata: { source: auditProvider } });
       emitAppEvent('auth.login.success', { userId: String(u._id), source: auditProvider });
       const providerId = String(u[idField] ?? '');
+      const exchangeCode = await storeOAuthExchange({
+        accessToken,
+        refreshToken,
+        userId: String(u._id),
+        idField,
+        providerId,
+      });
+      if (exchangeCode) {
+        return res.redirect(
+          `${base}/${clientCallbackSlug}?code=${encodeURIComponent(exchangeCode)}`
+        );
+      }
       const urlParams = new URLSearchParams({
         token: accessToken,
         refreshToken,

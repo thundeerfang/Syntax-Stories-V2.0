@@ -8,6 +8,7 @@ import type {
   VerifyTwoFactorLoginResponse,
   RefreshTokenResponseBody,
   SimpleSuccessMessage,
+  OAuthExchangeResponseBody,
 } from '@contracts/authApi';
 
 export type {
@@ -19,6 +20,7 @@ export type {
   VerifyTwoFactorLoginResponse,
   RefreshTokenResponseBody,
   SimpleSuccessMessage,
+  OAuthExchangeResponseBody,
 } from '@contracts/authApi';
 
 function getAuthBase(): string {
@@ -368,6 +370,13 @@ export const authApi = {
     authFetch<VerifyTwoFactorLoginResponse>(`${getAuthBase()}/2fa/verify-login`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  /** Swap one-time `code` from OAuth redirect for tokens (no tokens in URL). */
+  exchangeOAuthCode: (code: string) =>
+    authFetch<OAuthExchangeResponseBody>(`${getAuthBase()}/oauth/exchange`, {
+      method: 'POST',
+      body: JSON.stringify({ code }),
     }),
 
   logout: (accessToken: string) =>

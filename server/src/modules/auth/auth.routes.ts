@@ -7,6 +7,7 @@ import { me, updateProfile, parseCv } from './controllers/profile.controller';
 import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller';
 import { setupTwoFactor, enableTwoFactor, disableTwoFactor, verifyTwoFactorLogin } from './controllers/twoFactor.controller';
 import { refresh, logout, revokeSessionByRefreshToken } from './controllers/session.controller';
+import { exchangeOAuthCode } from './controllers/oauthExchange.controller';
 import {
   idempotency,
   sendOtpValidation,
@@ -24,6 +25,7 @@ import {
 const router = Router();
 
 router.get('/altcha/challenge', getAltchaChallenge);
+router.post('/oauth/exchange', exchangeOAuthCode);
 router.post('/send-otp', rateLimitSendOtp, idempotency, verifyAltchaIfConfigured, sendOtpValidation, sendOtp);
 router.post(
   '/signup-email',

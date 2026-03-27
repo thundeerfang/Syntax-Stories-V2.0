@@ -72,3 +72,21 @@ export interface SimpleSuccessMessage {
   success: boolean;
   message?: string;
 }
+
+/** `POST /auth/oauth/exchange` — browser OAuth callback (Week 3). */
+export interface OAuthExchangeRequestBody {
+  code: string;
+}
+
+export interface OAuthExchangeResponseBody {
+  success: boolean;
+  message?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  userId?: string;
+  googleId?: string;
+  gitId?: string;
+  facebookId?: string;
+  xId?: string;
+  discordId?: string;
+}
