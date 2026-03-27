@@ -1,12 +1,9 @@
-'use client';
+import { redirectLegacyOAuthCallback } from '@/lib/legacyOAuthCallbackRedirect';
 
-import { Suspense } from 'react';
-import { OAuthBrowserCallback } from '@/components/auth/OAuthBrowserCallback';
-
-export default function FacebookCallbackPage() {
-  return (
-    <Suspense fallback={null}>
-      <OAuthBrowserCallback providerLabel="Facebook" />
-    </Suspense>
-  );
+export default async function FacebookCallbackRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectLegacyOAuthCallback('facebook', searchParams);
 }

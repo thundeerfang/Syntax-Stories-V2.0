@@ -1,12 +1,9 @@
-'use client';
+import { redirectLegacyOAuthCallback } from '@/lib/legacyOAuthCallbackRedirect';
 
-import { Suspense } from 'react';
-import { OAuthBrowserCallback } from '@/components/auth/OAuthBrowserCallback';
-
-export default function GithubCallbackPage() {
-  return (
-    <Suspense fallback={null}>
-      <OAuthBrowserCallback providerLabel="GitHub" />
-    </Suspense>
-  );
+export default async function GithubCallbackRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectLegacyOAuthCallback('github', searchParams);
 }

@@ -1,12 +1,9 @@
-'use client';
+import { redirectLegacyOAuthCallback } from '@/lib/legacyOAuthCallbackRedirect';
 
-import { Suspense } from 'react';
-import { OAuthBrowserCallback } from '@/components/auth/OAuthBrowserCallback';
-
-export default function GoogleCallbackPage() {
-  return (
-    <Suspense fallback={null}>
-      <OAuthBrowserCallback providerLabel="Google" />
-    </Suspense>
-  );
+export default async function GoogleCallbackRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectLegacyOAuthCallback('google', searchParams);
 }

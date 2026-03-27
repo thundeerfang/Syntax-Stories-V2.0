@@ -1,12 +1,9 @@
-'use client';
+import { redirectLegacyOAuthCallback } from '@/lib/legacyOAuthCallbackRedirect';
 
-import { Suspense } from 'react';
-import { OAuthBrowserCallback } from '@/components/auth/OAuthBrowserCallback';
-
-export default function XCallbackPage() {
-  return (
-    <Suspense fallback={null}>
-      <OAuthBrowserCallback providerLabel="X" />
-    </Suspense>
-  );
+export default async function XCallbackRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectLegacyOAuthCallback('x', searchParams);
 }

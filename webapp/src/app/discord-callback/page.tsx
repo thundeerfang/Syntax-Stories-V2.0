@@ -1,12 +1,9 @@
-'use client';
+import { redirectLegacyOAuthCallback } from '@/lib/legacyOAuthCallbackRedirect';
 
-import { Suspense } from 'react';
-import { OAuthBrowserCallback } from '@/components/auth/OAuthBrowserCallback';
-
-export default function DiscordCallbackPage() {
-  return (
-    <Suspense fallback={null}>
-      <OAuthBrowserCallback providerLabel="Discord" />
-    </Suspense>
-  );
+export default async function DiscordCallbackRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return redirectLegacyOAuthCallback('discord', searchParams);
 }
