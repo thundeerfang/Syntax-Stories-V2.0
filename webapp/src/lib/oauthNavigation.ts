@@ -10,8 +10,8 @@ export function markOAuthNavigationPending(): void {
   } catch {
     /* ignore private mode */
   }
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(OAUTH_LEAVING_EVENT));
+  if (globalThis.window !== undefined) {
+    globalThis.dispatchEvent(new CustomEvent(OAUTH_LEAVING_EVENT));
   }
 }
 

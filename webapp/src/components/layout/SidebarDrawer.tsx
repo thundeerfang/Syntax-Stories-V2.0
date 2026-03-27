@@ -136,8 +136,8 @@ function SidebarSkeletonContent() {
         {/* Network skeleton */}
         <div className="space-y-3">
           <div className="h-2 w-16 bg-muted/30 rounded-sm mx-3" />
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-center gap-3 px-3 py-2">
+          {(['sk1', 'sk2', 'sk3', 'sk4', 'sk5'] as const).map((sk, i) => (
+            <div key={sk} className="flex items-center gap-3 px-3 py-2">
               <div className="size-4 bg-muted/40 rounded-sm" />
               <div className="h-2 bg-muted/40 rounded-sm" style={{ width: `${40 + i * 10}%` }} />
             </div>

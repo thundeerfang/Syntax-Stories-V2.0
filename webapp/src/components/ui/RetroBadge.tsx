@@ -7,11 +7,11 @@ export function RetroBadge({
   children,
   variant = 'default',
   className,
-}: {
+}: Readonly<{
   children: React.ReactNode;
   variant?: 'default' | 'primary' | 'outline';
   className?: string;
-}) {
+}>) {
   const variants: Record<string, string> = {
     default: 'bg-muted text-muted-foreground border-border',
     primary: 'bg-primary text-primary-foreground border-primary shadow-[2px_2px_0px_0px_var(--border)]',

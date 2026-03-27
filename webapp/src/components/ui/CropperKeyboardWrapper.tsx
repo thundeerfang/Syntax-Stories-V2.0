@@ -24,7 +24,7 @@ export function CropperKeyboardWrapper({
   className,
   children,
   autoFocusOnImageReady = true,
-}: CropperKeyboardWrapperProps) {
+}: Readonly<CropperKeyboardWrapperProps>) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,6 +35,7 @@ export function CropperKeyboardWrapper({
     return () => cancelAnimationFrame(id);
   }, [imageReady, autoFocusOnImageReady]);
 
+  // NOSONAR S6845,S6847 — focusable crop region; role=application + keyboard/pointer handlers for react-easy-crop
   return (
     <div
       ref={ref}

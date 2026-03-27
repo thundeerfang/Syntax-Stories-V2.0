@@ -20,8 +20,46 @@ import { cn } from '@/lib/utils';
 import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
 import { AltchaField } from './AltchaField';
 import { readAltchaPayload, useOtpFlow } from '../hooks/useOtpFlow';
+import type { AuthDialogView } from '@/store/authDialog';
 
 type Step = 'welcome' | 'login-email' | 'signup' | 'signup-email' | 'verify-email';
+
+/** Avoid deprecated `React.FormEvent` (Sonar S1874); matches what submit handlers use. */
+type FormSubmit = { preventDefault(): void; currentTarget: HTMLFormElement };
+
+function seedAuthDialogOnOpen(
+  storeTwoFactor: { email: string } | null,
+  initialView: AuthDialogView,
+  a: {
+    setStep: (s: Step) => void;
+    setVerifyEmail: (v: string) => void;
+    setCode: (v: string) => void;
+    setStepBeforeVerify: (s: Step) => void;
+    setEmail: (v: string) => void;
+    setName: (v: string) => void;
+    setSignupEmail: (v: string) => void;
+    setResendCooldownSec: (n: number) => void;
+    setOtpAttemptsLeft: (n: number | null) => void;
+  },
+): void {
+  if (storeTwoFactor) {
+    a.setStep('verify-email');
+    a.setVerifyEmail(storeTwoFactor.email);
+    a.setCode('');
+    a.setStepBeforeVerify('login-email');
+    a.setResendCooldownSec(0);
+    a.setOtpAttemptsLeft(null);
+    return;
+  }
+  a.setStep(initialView === 'signup' ? 'signup' : 'welcome');
+  a.setEmail('');
+  a.setName('');
+  a.setSignupEmail('');
+  a.setCode('');
+  a.setVerifyEmail('');
+  a.setResendCooldownSec(0);
+  a.setOtpAttemptsLeft(null);
+}
 
 const TERMS_LINK = '/terms';
 const PRIVACY_LINK = '/privacy';
@@ -35,7 +73,7 @@ function SocialButton({
   label,
   href,
   onBeforeNavigate,
-}: {
+}: Readonly<{
   icon?: React.ComponentType<{ className?: string }>;
   iconSrc?: string;
   iconClassName?: string;
@@ -43,13 +81,15 @@ function SocialButton({
   href?: string;
   /** Runs after marking OAuth pending; use to close the dialog so loaders do not stack on the card. */
   onBeforeNavigate?: () => void;
-}) {
-  const iconEl =
-    iconSrc != null ? (
+}>) {
+  let iconEl: React.ReactNode = null;
+  if (iconSrc != null) {
+    iconEl = (
       <img src={iconSrc} alt="" className={cn('h-5 w-5 shrink-0 object-contain', iconClassName)} />
-    ) : Icon ? (
-      <Icon className="h-5 w-5 shrink-0" />
-    ) : null;
+    );
+  } else if (Icon) {
+    iconEl = <Icon className="h-5 w-5 shrink-0" />;
+  }
 
   if (href) {
     const oauthStart = href.includes('/auth/');
@@ -87,11 +127,11 @@ function AuthFooter({
   children,
   showHelp = false,
   closeDialog,
-}: {
+}: Readonly<{
   children: React.ReactNode;
   showHelp?: boolean;
   closeDialog?: () => void;
-}) {
+}>) {
   return (
     <div className="mt-8 pt-6 border-t-2 border-border space-y-4 text-center">
       <div className="space-y-2">
@@ -189,30 +229,23 @@ export function AuthDialog() {
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      if (storeTwoFactor) {
-        setStep('verify-email');
-        setVerifyEmail(storeTwoFactor.email);
-        setCode('');
-        setStepBeforeVerify('login-email');
-        setResendCooldownSec(0);
-        setOtpAttemptsLeft(null);
-        return;
-      }
-      setStep(initialView === 'signup' ? 'signup' : 'welcome');
-      setEmail('');
-      setName('');
-      setSignupEmail('');
-      setCode('');
-      setVerifyEmail('');
-      setResendCooldownSec(0);
-      setOtpAttemptsLeft(null);
-    }
+    if (!isOpen) return;
+    seedAuthDialogOnOpen(storeTwoFactor, initialView, {
+      setStep,
+      setVerifyEmail,
+      setCode,
+      setStepBeforeVerify,
+      setEmail,
+      setName,
+      setSignupEmail,
+      setResendCooldownSec,
+      setOtpAttemptsLeft,
+    });
   }, [isOpen, initialView, storeTwoFactor, setResendCooldownSec, setOtpAttemptsLeft]);
 
-  const handleSendLoginOtp = async (e: React.FormEvent) => {
+  const handleSendLoginOtp = async (e: FormSubmit) => {
     e.preventDefault();
-    const altcha = altchaOn ? readAltchaPayload(e.currentTarget as HTMLFormElement) : undefined;
+    const altcha = altchaOn ? readAltchaPayload(e.currentTarget) : undefined;
     if (altchaOn && !altcha) {
       toast.error('Complete the verification check below.');
       return;
@@ -230,9 +263,9 @@ export function AuthDialog() {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: FormSubmit) => {
     e.preventDefault();
-    const altcha = altchaOn ? readAltchaPayload(e.currentTarget as HTMLFormElement) : undefined;
+    const altcha = altchaOn ? readAltchaPayload(e.currentTarget) : undefined;
     if (altchaOn && !altcha) {
       toast.error('Complete the verification check below.');
       return;
@@ -250,7 +283,7 @@ export function AuthDialog() {
     }
   };
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
+  const handleVerifyCode = async (e: FormSubmit) => {
     e.preventDefault();
     try {
       await verifyCode(verifyEmail, code);
@@ -272,9 +305,9 @@ export function AuthDialog() {
     }
   };
 
-  const sanitizeOtpInput = (raw: string): string => raw.replace(/\D/g, '').slice(0, 6);
+  const sanitizeOtpInput = (raw: string): string => raw.replaceAll(/\D/g, '').slice(0, 6);
 
-  const handleVerifyTwoFactor = async (e: React.FormEvent) => {
+  const handleVerifyTwoFactor = async (e: FormSubmit) => {
     e.preventDefault();
     try {
       await verifyTwoFactor(code);

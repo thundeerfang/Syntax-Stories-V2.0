@@ -32,7 +32,7 @@ const SUMMARY_MAX = 200;
 const BLOG_DRAFT_STORAGE_KEY = 'syntax-stories-blog-draft';
 
 function loadDraftFromStorage(): StoredDraftPayload | null {
-  if (typeof window === 'undefined') return null;
+  if (globalThis.window === undefined) return null;
   try {
     const raw = localStorage.getItem(BLOG_DRAFT_STORAGE_KEY);
     if (!raw) return null;
@@ -56,7 +56,7 @@ function saveDraftToStorage(payload: {
   content: string;
   thumbnailPreviewUrl?: string | null;
 }): void {
-  if (typeof window === 'undefined') return;
+  if (globalThis.window === undefined) return;
   try {
     const data: StoredDraftPayload = {
       title: payload.title,
@@ -73,10 +73,20 @@ function saveDraftToStorage(payload: {
 
 function summaryTextLength(html: string): number {
   if (!html || html === '<br>') return 0;
-  if (typeof document === 'undefined') return (html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').length);
+  if (typeof document === 'undefined')
+    return html.replaceAll(/<[^>]*>/g, '').replaceAll('&nbsp;', ' ').length;
   const div = document.createElement('div');
   div.innerHTML = html;
   return (div.textContent ?? '').length;
+}
+
+/** Rich `contentEditable` formatting; deprecated DOM APIs remain the practical cross-browser path. */
+function richExecCommand(commandId: string, showUI = false, value?: string | null): boolean {
+  return document.execCommand(commandId, showUI, value ?? undefined); // NOSONAR S1874
+}
+
+function richQueryCommandState(commandId: string): boolean {
+  return document.queryCommandState(commandId); // NOSONAR S1874
 }
 
 /** Collapse multiple spaces (and any whitespace run) to one space in all text nodes (Medium-style) */
@@ -85,7 +95,7 @@ function collapseSpacesInElement(el: HTMLElement): void {
   let node: Text | null;
   while ((node = walker.nextNode() as Text | null)) {
     if (node.textContent && /\s{2,}/.test(node.textContent)) {
-      node.textContent = node.textContent.replace(/\s+/g, ' ');
+      node.textContent = node.textContent.replaceAll(/\s+/g, ' ');
     }
   }
 }
@@ -123,7 +133,8 @@ function trimSelectionRange(range: Range): void {
   const text = range.toString();
   if (!text || !/\S/.test(text)) return;
   const lead = text.search(/\S/);
-  const trail = text.match(/\s*$/)?.[0]?.length ?? 0;
+  const trailMatch = /\s*$/.exec(text);
+  const trail = trailMatch?.[0]?.length ?? 0;
   const trimEndChar = text.length - trail;
   if (lead >= trimEndChar) return;
   const startPos = getRangePositionAtOffset(range, lead);
@@ -176,6 +187,73 @@ function setSelectionToOffset(el: HTMLElement, offset: number): void {
   sel.removeAllRanges();
   sel.addRange(range);
 }
+
+function finalizeSummaryLinkInsertion(el: HTMLElement, sel: Selection | null, syncToState: () => void): void {
+  const links = el.getElementsByTagName('a');
+  const lastLink = links.length > 0 ? links.item(links.length - 1) : null;
+  if (lastLink && el.contains(lastLink)) {
+    el.focus();
+    const r = document.createRange();
+    r.selectNodeContents(lastLink);
+    r.collapse(false);
+    const s = document.getSelection();
+    if (s) {
+      s.removeAllRanges();
+      s.addRange(r);
+    }
+    richExecCommand('insertText', false, ' ');
+    syncToState();
+    return;
+  }
+  syncToState();
+  if (sel && sel.rangeCount > 0) {
+    const r = sel.getRangeAt(0);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    el.focus();
+  }
+}
+
+type DraftSyncUi = 'idle' | 'offline' | 'local' | 'syncing' | 'synced';
+
+function draftSyncBadgeTitle(status: DraftSyncUi): string {
+  switch (status) {
+    case 'offline':
+      return 'Offline – saved locally; will sync when connection is back';
+    case 'syncing':
+      return 'Syncing…';
+    case 'local':
+      return 'Saved locally only';
+    case 'synced':
+    case 'idle':
+      return 'Draft synced to server';
+    default:
+      return '';
+  }
+}
+
+function draftSyncBadgeLabel(status: DraftSyncUi): string {
+  switch (status) {
+    case 'offline':
+      return 'Offline';
+    case 'syncing':
+      return 'Syncing…';
+    case 'local':
+      return 'Local';
+    case 'synced':
+    case 'idle':
+      return 'Up to date';
+    default:
+      return '';
+  }
+}
+
+function blockCountSubtitle(count: number): string {
+  const suffix = count === 1 ? '' : 's';
+  return `${count} block${suffix}`;
+}
+
 const MAX_BLOCKS_PER_SECTION = 10;
 const PRIMARY_SECTION_ID = 's-1';
 const THUMB_ACCEPT = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
@@ -185,11 +263,11 @@ function SummaryEditor({
   value,
   onChange,
   maxLength,
-}: {
+}: Readonly<{
   value: string;
   onChange: (v: string) => void;
   maxLength: number;
-}) {
+}>) {
   const ref = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const skipSync = useRef(false);
@@ -265,9 +343,9 @@ function SummaryEditor({
       savedSelectionRef.current = null;
     }
     setFormatState({
-      bold: document.queryCommandState('bold'),
-      italic: document.queryCommandState('italic'),
-      underline: document.queryCommandState('underline'),
+      bold: richQueryCommandState('bold'),
+      italic: richQueryCommandState('italic'),
+      underline: richQueryCommandState('underline'),
     });
     try {
       const rect = range.getBoundingClientRect();
@@ -291,8 +369,8 @@ function SummaryEditor({
 
   useEffect(() => {
     const closeOnScroll = () => setSelectionCard(null);
-    window.addEventListener('scroll', closeOnScroll, true);
-    return () => window.removeEventListener('scroll', closeOnScroll, true);
+    globalThis.addEventListener('scroll', closeOnScroll, true);
+    return () => globalThis.removeEventListener('scroll', closeOnScroll, true);
   }, []);
 
   useEffect(() => {
@@ -337,19 +415,19 @@ function SummaryEditor({
       const el = ref.current;
       if (!el) return;
       el.focus();
-      document.execCommand(cmd, false);
+      richExecCommand(cmd, false);
       setFormatState((prev) => ({
         ...prev,
-        bold: document.queryCommandState('bold'),
-        italic: document.queryCommandState('italic'),
-        underline: document.queryCommandState('underline'),
+        bold: richQueryCommandState('bold'),
+        italic: richQueryCommandState('italic'),
+        underline: richQueryCommandState('underline'),
       }));
       syncToState();
     },
     [syncToState],
   );
 
-  const normalizeLinkInput = useCallback((v: string) => v.replace(/^https?:\/\//i, '').trim(), []);
+  const normalizeLinkInput = useCallback((v: string) => v.replaceAll(/^https?:\/\//gi, '').trim(), []);
   const applyLink = useCallback(() => {
     const el = ref.current;
     if (!el) return;
@@ -367,38 +445,15 @@ function SummaryEditor({
       try {
         sel.removeAllRanges();
         sel.addRange(range);
-        document.execCommand('createLink', false, url);
+        richExecCommand('createLink', false, url);
       } catch {
-        document.execCommand('createLink', false, url);
+        richExecCommand('createLink', false, url);
       }
       savedSelectionRef.current = null;
     } else {
-      document.execCommand('createLink', false, url);
+      richExecCommand('createLink', false, url);
     }
-    const links = el.getElementsByTagName('a');
-    const lastLink = links.length > 0 ? links[links.length - 1] : null;
-    if (lastLink && el.contains(lastLink)) {
-      el.focus();
-      const r = document.createRange();
-      r.selectNodeContents(lastLink);
-      r.collapse(false);
-      const s = document.getSelection();
-      if (s) {
-        s.removeAllRanges();
-        s.addRange(r);
-      }
-      document.execCommand('insertText', false, ' ');
-      syncToState();
-    } else {
-      syncToState();
-      if (sel && sel.rangeCount > 0) {
-        const r = sel.getRangeAt(0);
-        r.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(r);
-        el.focus();
-      }
-    }
+    finalizeSummaryLinkInsertion(el, sel, syncToState);
   }, [linkInput, normalizeLinkInput, syncToState]);
 
   useEffect(() => {
@@ -422,8 +477,9 @@ function SummaryEditor({
           ref={ref}
           contentEditable
           suppressContentEditableWarning
-          role="textbox"
+          tabIndex={0}
           aria-label="Summary"
+          aria-multiline
           data-placeholder="SUMMARY_TEXT_HERE..."
           onInput={handleInput}
           onKeyDown={(e) => {
@@ -431,7 +487,7 @@ function SummaryEditor({
             else lastKeyDownInSummaryRef.current = Date.now();
             if (e.key === 'Enter') {
               e.preventDefault();
-              document.execCommand('insertHTML', false, '<br>');
+              richExecCommand('insertHTML', false, '<br>');
               handleInput();
               return;
             }
@@ -452,8 +508,8 @@ function SummaryEditor({
           onPaste={(e) => {
             e.preventDefault();
             const raw = e.clipboardData.getData('text/plain') ?? '';
-            const plain = raw.replace(/\s+/g, ' ').replace(/<[^>]*>/g, '');
-            document.execCommand('insertText', false, plain);
+            const plain = raw.replaceAll(/\s+/g, ' ').replaceAll(/<[^>]*>/g, '');
+            richExecCommand('insertText', false, plain);
             handleInput();
           }}
           className={cn(
@@ -535,11 +591,11 @@ function ThumbnailCropDialog({
   open,
   onClose,
   onConfirm,
-}: {
+}: Readonly<{
   open: boolean;
   onClose: () => void;
   onConfirm: (file: File, cropArea: CropArea) => void;
-}) {
+}>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -610,20 +666,21 @@ function ThumbnailCropDialog({
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
         JPEG, PNG, GIF or WebP. Max {THUMB_MAX_MB}MB. Cropped on publish.
       </p>
+      <label htmlFor="thumbnail-crop-file-input" className="sr-only">
+        Choose thumbnail image file
+      </label>
       <input
+        id="thumbnail-crop-file-input"
         ref={inputRef}
         type="file"
         accept={THUMB_ACCEPT}
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
         className="hidden"
-        aria-hidden
       />
       {!imageUrl && (
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           onClick={() => inputRef.current?.click()}
-          onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
           className={cn(
             'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
             'border-border bg-muted/20 hover:bg-muted/30 cursor-pointer'
@@ -631,7 +688,7 @@ function ThumbnailCropDialog({
         >
           <p className="text-sm font-bold text-foreground">Drop an image or click to browse</p>
           <p className="text-[10px] text-muted-foreground mt-1 placeholder:text-muted-foreground">Thumbnail will be uploaded when you publish</p>
-        </div>
+        </button>
       )}
       {imageUrl && (
         <div className="space-y-4">
@@ -683,6 +740,136 @@ function ThumbnailCropDialog({
   );
 }
 
+function resolveCentreMaxWidthClass(leftSidebarOpen: boolean, rightSidebarOpen: boolean): string {
+  if (leftSidebarOpen && rightSidebarOpen) return 'max-w-3xl';
+  if (leftSidebarOpen || rightSidebarOpen) return 'max-w-5xl';
+  return 'max-w-7xl';
+}
+
+type BlogWriteSyncRefs = {
+  latestForSyncRef: React.MutableRefObject<{
+    title: string;
+    summary: string;
+    blocks: Block[];
+    thumbnailPreviewUrl: string | null;
+  }>;
+  tokenRef: React.MutableRefObject<string | null | undefined>;
+  skipNextPopStateRef: React.MutableRefObject<boolean>;
+  hasRestoredRef: React.MutableRefObject<boolean>;
+};
+
+function useBlogWritePageSyncEffects(
+  title: string,
+  summary: string,
+  blocks: Block[],
+  thumbnailPreviewUrl: string | null,
+  isOnline: boolean,
+  draftSyncStatus: DraftSyncUi,
+  setIsOnline: (v: boolean) => void,
+  setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>,
+  setLeaveConfirmOpen: (v: boolean) => void,
+  restoreFromLocalDraft: () => void,
+  syncDraftToServer: () => void,
+  refs: BlogWriteSyncRefs,
+): void {
+  const { latestForSyncRef, tokenRef, skipNextPopStateRef, hasRestoredRef } = refs;
+
+  useEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+    const draft = loadDraftFromStorage();
+    const isEmpty = !title.trim() && blocks.length === 0;
+    if (draft && isEmpty) {
+      restoreFromLocalDraft();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only restore from localStorage when editor starts empty
+  }, []);
+
+  useEffect(() => {
+    const hasContent = title.trim() || blocks.length > 0;
+    if (!hasContent) return;
+    if (!isOnline) {
+      setDraftSyncStatus('offline');
+      return;
+    }
+    if (draftSyncStatus === 'idle') setDraftSyncStatus('local');
+    if (draftSyncStatus === 'synced') setDraftSyncStatus('local');
+  }, [title, blocks, draftSyncStatus, isOnline, setDraftSyncStatus]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => {
+      setIsOnline(false);
+      const { title: t, summary: s, blocks: b, thumbnailPreviewUrl: thumb } = latestForSyncRef.current;
+      const hasContent = t.trim() || b.length > 0;
+      if (hasContent) {
+        setDraftSyncStatus('offline');
+        saveDraftToStorage({
+          title: t,
+          summary: s && s !== '<br>' ? s : '',
+          content: JSON.stringify(b),
+          thumbnailPreviewUrl: thumb ?? undefined,
+        });
+      }
+    };
+    globalThis.addEventListener('online', handleOnline);
+    globalThis.addEventListener('offline', handleOffline);
+    return () => {
+      globalThis.removeEventListener('online', handleOnline);
+      globalThis.removeEventListener('offline', handleOffline);
+    };
+  }, [latestForSyncRef, setDraftSyncStatus, setIsOnline]);
+
+  useEffect(() => {
+    history.pushState({ blogWriteGuard: true }, '', location.href);
+    const onPopState = () => {
+      if (skipNextPopStateRef.current) {
+        skipNextPopStateRef.current = false;
+        return;
+      }
+      setLeaveConfirmOpen(true);
+    };
+    globalThis.addEventListener('popstate', onPopState);
+    return () => globalThis.removeEventListener('popstate', onPopState);
+  }, [skipNextPopStateRef, setLeaveConfirmOpen]);
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasContent = title.trim() || blocks.length > 0;
+      if (hasContent) {
+        saveDraftToStorage({
+          title,
+          summary: summary && summary !== '<br>' ? summary : '',
+          content: JSON.stringify(blocks),
+          thumbnailPreviewUrl,
+        });
+        e.preventDefault();
+        e.returnValue = ''; // NOSONAR typescript:S1874 — legacy beforeunload confirmation in Chromium
+      }
+    };
+    globalThis.addEventListener('beforeunload', onBeforeUnload);
+    return () => globalThis.removeEventListener('beforeunload', onBeforeUnload);
+  }, [title, summary, blocks, thumbnailPreviewUrl]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      syncDraftToServer();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [syncDraftToServer]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      const { title: t, blocks: b } = latestForSyncRef.current;
+      if ((t.trim() || b.length > 0) && tokenRef.current) syncDraftToServer();
+    };
+    globalThis.addEventListener('online', handleOnline);
+    return () => globalThis.removeEventListener('online', handleOnline);
+  }, [latestForSyncRef, syncDraftToServer, tokenRef]);
+}
+
 export default function WriteBlogPage() {
   const { user, token, shouldBlock } = useRequireAuth();
   const { isOpen } = useSidebar();
@@ -699,7 +886,9 @@ export default function WriteBlogPage() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [isOnline, setIsOnline] = useState(() =>
+    globalThis.navigator === undefined ? true : globalThis.navigator.onLine,
+  );
   const [draftSyncStatus, setDraftSyncStatus] = useState<'idle' | 'offline' | 'local' | 'syncing' | 'synced'>('idle');
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const hasRestoredRef = useRef(false);
@@ -783,82 +972,6 @@ export default function WriteBlogPage() {
     setDraftSyncStatus('local');
   }, []);
 
-  useEffect(() => {
-    if (hasRestoredRef.current) return;
-    hasRestoredRef.current = true;
-    const draft = loadDraftFromStorage();
-    const isEmpty = !title.trim() && blocks.length === 0;
-    if (draft && isEmpty) {
-      restoreFromLocalDraft();
-    }
-  }, []);
-
-  useEffect(() => {
-    const hasContent = title.trim() || blocks.length > 0;
-    if (!hasContent) return;
-    if (!isOnline) {
-      setDraftSyncStatus('offline');
-      return;
-    }
-    if (draftSyncStatus === 'idle') setDraftSyncStatus('local');
-    if (draftSyncStatus === 'synced') setDraftSyncStatus('local');
-  }, [title, blocks, draftSyncStatus, isOnline]);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => {
-      setIsOnline(false);
-      const { title: t, summary: s, blocks: b, thumbnailPreviewUrl: thumb } = latestForSyncRef.current;
-      const hasContent = t.trim() || b.length > 0;
-      if (hasContent) {
-        setDraftSyncStatus('offline');
-        saveDraftToStorage({
-          title: t,
-          summary: s && s !== '<br>' ? s : '',
-          content: JSON.stringify(b),
-          thumbnailPreviewUrl: thumb ?? undefined,
-        });
-      }
-    };
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    history.pushState({ blogWriteGuard: true }, '', location.href);
-    const onPopState = () => {
-      if (skipNextPopStateRef.current) {
-        skipNextPopStateRef.current = false;
-        return;
-      }
-      setLeaveConfirmOpen(true);
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      const hasContent = title.trim() || blocks.length > 0;
-      if (hasContent) {
-        saveDraftToStorage({
-          title,
-          summary: summary && summary !== '<br>' ? summary : '',
-          content: JSON.stringify(blocks),
-          thumbnailPreviewUrl,
-        });
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [title, summary, blocks, thumbnailPreviewUrl]);
-
   const syncDraftToServer = useCallback(() => {
     if (!navigator.onLine) return;
     const currentToken = tokenRef.current;
@@ -885,23 +998,25 @@ export default function WriteBlogPage() {
       });
   }, []);
 
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
-      syncDraftToServer();
-    };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [syncDraftToServer]);
-
-  useEffect(() => {
-    const handleOnline = () => {
-      const { title: t, blocks: b } = latestForSyncRef.current;
-      if ((t.trim() || b.length > 0) && tokenRef.current) syncDraftToServer();
-    };
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, [syncDraftToServer]);
+  useBlogWritePageSyncEffects(
+    title,
+    summary,
+    blocks,
+    thumbnailPreviewUrl,
+    isOnline,
+    draftSyncStatus,
+    setIsOnline,
+    setDraftSyncStatus,
+    setLeaveConfirmOpen,
+    restoreFromLocalDraft,
+    syncDraftToServer,
+    {
+      latestForSyncRef,
+      tokenRef,
+      skipNextPopStateRef,
+      hasRestoredRef,
+    },
+  );
 
   const handleLeaveConfirmYes = useCallback(() => {
     saveDraftToLocal();
@@ -944,9 +1059,16 @@ export default function WriteBlogPage() {
         setSummary('');
         setBlocks([]);
         setDraftSyncStatus('idle');
-        if (typeof window !== 'undefined') try { localStorage.removeItem(BLOG_DRAFT_STORAGE_KEY); } catch { /* ignore */ }
+        if (globalThis.window !== undefined) {
+          try {
+            globalThis.localStorage.removeItem(BLOG_DRAFT_STORAGE_KEY);
+          } catch (err) {
+            console.debug('clear blog draft failed', err);
+          }
+        }
       }
     } catch (e) {
+      console.error(e);
       toast.error('FATAL: UPLOAD_FAILED');
     } finally {
       setSubmitting(false);
@@ -955,6 +1077,8 @@ export default function WriteBlogPage() {
   };
 
   if (shouldBlock) return <TerminalLoaderPage />;
+
+  const centreMaxWidthClass = resolveCentreMaxWidthClass(leftSidebarOpen, rightSidebarOpen);
 
   return (
     <div className={cn(
@@ -970,7 +1094,7 @@ export default function WriteBlogPage() {
             <span className="text-primary text-[9px] font-semibold">{user?.username || 'user'}</span>
             <ChevronRight className="h-3 w-3 opacity-30" />
             <span className="bg-muted px-2 border border-border truncate max-w-[200px] md:max-w-[280px]" title={title.trim() || 'new_entry.log'}>
-              {title.trim() ? title.trim().replace(/\s+/g, '_') : 'new_entry.log'}
+              {title.trim() ? title.trim().replaceAll(/\s+/g, '_') : 'new_entry.log'}
             </span>
           </div>
         </div>
@@ -1007,23 +1131,9 @@ export default function WriteBlogPage() {
                   draftSyncStatus === 'local' && 'text-muted-foreground border-border',
                   draftSyncStatus === 'synced' && 'text-green-600 border-green-500/50 bg-green-500/10'
                 )}
-                title={
-                  draftSyncStatus === 'offline'
-                    ? 'Offline – saved locally; will sync when connection is back'
-                    : draftSyncStatus === 'syncing'
-                      ? 'Syncing…'
-                      : draftSyncStatus === 'local'
-                        ? 'Saved locally only'
-                        : 'Draft synced to server'
-                }
+                title={draftSyncBadgeTitle(draftSyncStatus)}
               >
-                {draftSyncStatus === 'offline'
-                  ? 'Offline'
-                  : draftSyncStatus === 'syncing'
-                    ? 'Syncing…'
-                    : draftSyncStatus === 'local'
-                      ? 'Local'
-                      : 'Up to date'}
+                {draftSyncBadgeLabel(draftSyncStatus)}
               </span>
             )}
           </div>
@@ -1057,7 +1167,7 @@ export default function WriteBlogPage() {
                 <section className="min-h-0 flex flex-col">
                   <RetroAccordion
                     label="Blocks"
-                    subtitle={`${blocks.length} block${blocks.length !== 1 ? 's' : ''}`}
+                    subtitle={blockCountSubtitle(blocks.length)}
                     defaultOpen={true}
                     className="flex-1 min-h-0 flex flex-col"
                   >
@@ -1111,7 +1221,7 @@ export default function WriteBlogPage() {
                 transition={{ duration: 0.15 }}
                 className="flex flex-col items-center py-3 gap-1 w-14 min-h-0 flex-1"
               >
-                <div className="text-[10px] font-bold text-primary shrink-0 mb-1" title={`${blocks.length} block${blocks.length !== 1 ? 's' : ''}`}>
+                <div className="text-[10px] font-bold text-primary shrink-0 mb-1" title={blockCountSubtitle(blocks.length)}>
                   {blocks.length}
                 </div>
                 <div className="flex-1 overflow-y-auto flex flex-col items-center gap-0.5 min-h-0">
@@ -1161,12 +1271,7 @@ export default function WriteBlogPage() {
         {/* CENTRE: expands to fill space */}
         <div className="flex-1 min-w-0 flex flex-col bg-background overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 md:p-8 ss-center-scroll">
-          <div
-            className={cn(
-              'mx-auto transition-[max-width] duration-300',
-              leftSidebarOpen && rightSidebarOpen ? 'max-w-3xl' : leftSidebarOpen || rightSidebarOpen ? 'max-w-5xl' : 'max-w-7xl',
-            )}
-          >
+          <div className={cn('mx-auto transition-[max-width] duration-300', centreMaxWidthClass)}>
              <div className="mb-8">
                <div className="relative mb-8">
                  <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">H1</span>
@@ -1177,14 +1282,14 @@ export default function WriteBlogPage() {
                   ref={titleInputRef}
                   value={title}
                   onChange={(e) => {
-                    const next = e.target.value.slice(0, TITLE_MAX).replace(/\s+/g, ' ');
+                    const next = e.target.value.slice(0, TITLE_MAX).replaceAll(/\s+/g, ' ');
                     setTitle(next);
                     resizeTitleInput();
                   }}
                   onPaste={(e) => {
                     e.preventDefault();
                     const raw = e.clipboardData.getData('text/plain') ?? '';
-                    const plain = raw.replace(/\s+/g, ' ').trim();
+                    const plain = raw.replaceAll(/\s+/g, ' ').trim();
                     const ta = titleInputRef.current;
                     if (!ta) return;
                     const start = ta.selectionStart ?? 0;
@@ -1193,7 +1298,7 @@ export default function WriteBlogPage() {
                     const after = title.slice(end);
                     const maxInsert = TITLE_MAX - before.length - after.length;
                     const toInsert = plain.slice(0, Math.max(0, maxInsert));
-                    const newTitle = (before + toInsert + after).replace(/\s+/g, ' ').slice(0, TITLE_MAX);
+                    const newTitle = (before + toInsert + after).replaceAll(/\s+/g, ' ').slice(0, TITLE_MAX);
                     setTitle(newTitle);
                     requestAnimationFrame(() => {
                       resizeTitleInput();
@@ -1273,23 +1378,10 @@ export default function WriteBlogPage() {
                     <Globe className="h-4 w-4 text-primary" /> Asset_Configuration
                   </h3>
                   <div>
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase block mb-1">Thumbnail</label>
-                    {!thumbnailPreviewUrl ? (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setThumbnailDialogOpen(true)}
-                        onKeyDown={(e) => e.key === 'Enter' && setThumbnailDialogOpen(true)}
-                        className={cn(
-                          'aspect-video border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer',
-                          'bg-muted/20 hover:bg-muted/30 transition-colors'
-                        )}
-                      >
-                        <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase placeholder:text-muted-foreground">Upload thumbnail</span>
-                        <span className="text-[9px] text-muted-foreground">JPEG, PNG, GIF, WebP. Max {THUMB_MAX_MB}MB</span>
-                      </div>
-                    ) : (
+                    <label htmlFor="write-blog-thumbnail-trigger" className="text-[9px] font-bold text-muted-foreground uppercase block mb-1">
+                      Thumbnail
+                    </label>
+                    {thumbnailPreviewUrl ? (
                       <div className="space-y-2">
                         <div className="aspect-video border-2 border-border overflow-hidden rounded-lg bg-muted">
                           <img src={thumbnailPreviewUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
@@ -1311,6 +1403,20 @@ export default function WriteBlogPage() {
                           </button>
                         </div>
                       </div>
+                    ) : (
+                      <button
+                        type="button"
+                        id="write-blog-thumbnail-trigger"
+                        onClick={() => setThumbnailDialogOpen(true)}
+                        className={cn(
+                          'w-full aspect-video border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer',
+                          'bg-muted/20 hover:bg-muted/30 transition-colors text-left',
+                        )}
+                      >
+                        <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase placeholder:text-muted-foreground">Upload thumbnail</span>
+                        <span className="text-[9px] text-muted-foreground">JPEG, PNG, GIF, WebP. Max {THUMB_MAX_MB}MB</span>
+                      </button>
                     )}
                   </div>
                 </div>

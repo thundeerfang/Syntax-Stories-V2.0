@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { AlignLeft, Camera, Film, Gauge, Github, Image as ImageIcon, Minus, Type } from 'lucide-react';
+import { AlignLeft, Camera, Film, Gauge, Image as ImageIcon, Minus, Type } from 'lucide-react';
+import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/utils';
 
 export interface BottomToolbarItem {
@@ -61,7 +62,7 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
   {
     id: 'githubRepo',
     label: 'GitHub repo',
-    icon: Github,
+    icon: GithubIcon,
     description: 'Showcase an open-source repository directly in your story.',
   },
   {
@@ -78,10 +79,10 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
 const ToolbarItemCard = ({
   item,
   onClick,
-}: {
+}: Readonly<{
   item: BottomToolbarItem;
   onClick: (id: string) => void;
-}) => {
+}>) => {
   const { id, label, icon: Icon, description, disabled } = item;
 
   return (
@@ -142,7 +143,7 @@ export function BottomToolbar({
   isSidebarOpen = false, // kept for API compatibility (not used in inline layout)
   maxWidthClassName = 'max-w-xl',
   className,
-}: BottomToolbarProps) {
+}: Readonly<BottomToolbarProps>) {
   const resolvedItems = items ?? DEFAULT_ITEMS;
 
   return (

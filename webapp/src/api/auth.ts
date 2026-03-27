@@ -1,4 +1,5 @@
 import { getOrCreateDeviceFingerprint } from '@/lib/deviceFingerprint';
+import { resolveSameOriginRequestUrl } from '@/lib/publicApiBase';
 import type {
   SendOtpPayload,
   SignUpEmailPayload,
@@ -35,6 +36,52 @@ export function getAltchaChallengeUrl(): string {
 
 const AUTH_FETCH_TIMEOUT_MS = 28000; // 28s – avoid infinite "Sending..." when backend is cold or slow
 
+type AuthErrorJson = {
+  message?: string;
+  error?: Array<{ message?: string }>;
+  retryAfter?: number;
+  attemptsLeft?: number;
+  code?: string;
+  details?: unknown;
+};
+
+function buildAuthErrorExtras(data: AuthErrorJson | null, res: Response): AuthErrorExtras {
+  const retryHeader = res.headers.get('Retry-After');
+  let retryFromHeader = Number.NaN;
+  if (retryHeader != null && retryHeader !== '') {
+    retryFromHeader = Number.parseInt(retryHeader, 10);
+  }
+  let retryAfter: number | undefined;
+  if (typeof data?.retryAfter === 'number') {
+    retryAfter = data.retryAfter;
+  } else if (Number.isFinite(retryFromHeader)) {
+    retryAfter = retryFromHeader;
+  }
+  return {
+    retryAfter,
+    attemptsLeft: typeof data?.attemptsLeft === 'number' ? data.attemptsLeft : undefined,
+    code: typeof data?.code === 'string' ? data.code : undefined,
+    details: data?.details,
+  };
+}
+
+function throwAuthErrorFromResponse(res: Response, text: string): never {
+  let data: AuthErrorJson | null = null;
+  try {
+    if (text) {
+      data = JSON.parse(text) as AuthErrorJson;
+    }
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      throw new AuthError(text || res.statusText || 'Request failed', res.status);
+    }
+    throw e;
+  }
+  const detail = data?.error?.[0]?.message;
+  const msg = detail || data?.message || res.statusText || 'Request failed';
+  throw new AuthError(msg, res.status, buildAuthErrorExtras(data, res));
+}
+
 export type AuthErrorExtras = {
   retryAfter?: number;
   attemptsLeft?: number;
@@ -61,23 +108,27 @@ export function setAuthRetryHandler(handler: (() => Promise<string | null>) | nu
   authRetryHandler = handler;
 }
 
-async function authFetch<T>(path: string, options?: RequestInit & { token?: string }, isRetry = false): Promise<T> {
-  const url = path.startsWith('http')
-    ? path
-    : typeof window !== 'undefined'
-      ? `${window.location.origin}${path}`
-      : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${path}`;
-  const token = options?.token;
-  const { token: _, ...restOptions } = options ?? {};
+function buildAuthFetchHeaders(
+  restOptions: RequestInit | undefined,
+  token: string | undefined
+): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(restOptions?.headers as Record<string, string> | undefined),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  if (typeof window !== 'undefined') {
+  if (globalThis.window !== undefined) {
     const fp = getOrCreateDeviceFingerprint();
     if (fp) headers['X-Device-Fingerprint'] = fp;
   }
+  return headers;
+}
+
+async function authFetch<T>(path: string, options?: RequestInit & { token?: string }, isRetry = false): Promise<T> {
+  const url = resolveSameOriginRequestUrl(path);
+  const token = options?.token;
+  const { token: _, ...restOptions } = options ?? {};
+  const headers = buildAuthFetchHeaders(restOptions, token);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), AUTH_FETCH_TIMEOUT_MS);
@@ -99,39 +150,7 @@ async function authFetch<T>(path: string, options?: RequestInit & { token?: stri
       const newToken = await authRetryHandler();
       if (newToken) return authFetch<T>(path, { ...restOptions, token: newToken }, true);
     }
-    try {
-      const data = text
-        ? (JSON.parse(text) as {
-            message?: string;
-            error?: Array<{ message?: string }>;
-            retryAfter?: number;
-            attemptsLeft?: number;
-            code?: string;
-            details?: unknown;
-          })
-        : null;
-      const detail = data?.error?.[0]?.message;
-      const msg = detail || data?.message || res.statusText || 'Request failed';
-      const retryHeader = res.headers.get('Retry-After');
-      const retryFromHeader = retryHeader != null && retryHeader !== '' ? parseInt(retryHeader, 10) : NaN;
-      const extras: AuthErrorExtras = {
-        retryAfter:
-          typeof data?.retryAfter === 'number'
-            ? data.retryAfter
-            : !Number.isNaN(retryFromHeader)
-              ? retryFromHeader
-              : undefined,
-        attemptsLeft: typeof data?.attemptsLeft === 'number' ? data.attemptsLeft : undefined,
-        code: typeof data?.code === 'string' ? data.code : undefined,
-        details: data?.details !== undefined ? data.details : undefined,
-      };
-      throw new AuthError(msg, res.status, extras);
-    } catch (e) {
-      if (e instanceof AuthError) throw e;
-      if (e instanceof SyntaxError) throw new AuthError(text || res.statusText || 'Request failed', res.status);
-      if (e instanceof Error) throw new AuthError(e.message, res.status);
-      throw new AuthError(text || res.statusText || 'Request failed', res.status);
-    }
+    throwAuthErrorFromResponse(res, text);
   }
 
   if (!text) return {} as T;
@@ -414,12 +433,7 @@ export const authApi = {
   /** Parse CV/Resume PDF and return extracted profile + missing field keys. Does not update profile. */
   parseCv: async (accessToken: string, file: File) => {
     const path = `${getAuthBase()}/parse-cv`;
-    const url =
-      path.startsWith('http')
-        ? path
-        : typeof window !== 'undefined'
-          ? `${window.location.origin}${path}`
-          : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${path}`;
+    const url = resolveSameOriginRequestUrl(path);
     const formData = new FormData();
     formData.append('pdf', file);
     const headers: HeadersInit = { Authorization: `Bearer ${accessToken}` };
@@ -482,13 +496,13 @@ export function normalizeUser(backendUser: AccountResponse['user']): AuthUser {
     instagram: backendUser.instagram,
     github: backendUser.github,
     youtube: backendUser.youtube,
-    stackAndTools: backendUser.stackAndTools as string[] | undefined,
-    workExperiences: backendUser.workExperiences as WorkExperience[] | undefined,
-    education: backendUser.education as EducationItem[] | undefined,
-    certifications: backendUser.certifications as CertificationItem[] | undefined,
-    projects: backendUser.projects as ProjectItem[] | undefined,
-    openSourceContributions: backendUser.openSourceContributions as OpenSourceContribution[] | undefined,
-    mySetup: backendUser.mySetup as SetupItem[] | undefined,
+    stackAndTools: backendUser.stackAndTools,
+    workExperiences: backendUser.workExperiences,
+    education: backendUser.education,
+    certifications: backendUser.certifications,
+    projects: backendUser.projects,
+    openSourceContributions: backendUser.openSourceContributions,
+    mySetup: backendUser.mySetup,
     isGoogleAccount: backendUser.isGoogleAccount,
     isGitAccount: backendUser.isGitAccount,
     isDiscordAccount: backendUser.isDiscordAccount,

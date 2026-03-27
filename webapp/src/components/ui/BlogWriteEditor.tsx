@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { Trash2, Image as ImageIcon, Gauge, Film, Link2, Github, Camera, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AtSign, ExternalLink, X, Type, GripVertical, Globe } from 'lucide-react';
+import { Trash2, Image as ImageIcon, Gauge, Film, Link2, Camera, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AtSign, ExternalLink, X, Type, GripVertical, Globe } from 'lucide-react';
+import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { followApi, type FollowUser } from '@/api/follow';
 import { toast } from 'sonner';
@@ -1175,8 +1176,6 @@ function GithubRepoBlockEditor({
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [myRepos, setMyRepos] = useState<GithubRepoListItem[]>([]);
   const [loadingRepos, setLoadingRepos] = useState(false);
-  const [hoverCard, setHoverCard] = useState(false);
-
   const handleFetchByUrl = useCallback(async () => {
     const toFetch = urlInput.trim();
     if (!toFetch) return;
@@ -1237,11 +1236,7 @@ function GithubRepoBlockEditor({
     const title = repoName || repo || 'Repository';
     const by = owner || 'GitHub';
     return (
-      <div
-        className="relative group w-full rounded-lg border-2 border-border bg-card overflow-hidden"
-        onMouseEnter={() => setHoverCard(true)}
-        onMouseLeave={() => setHoverCard(false)}
-      >
+      <div className="relative group w-full rounded-lg border-2 border-border bg-card overflow-hidden">
         <a
           href={displayUrl}
           target="_blank"
@@ -1252,7 +1247,7 @@ function GithubRepoBlockEditor({
             <img src={avatarUrl} alt="" className="h-10 w-10 rounded-full border border-border object-cover" />
           ) : (
             <div className="h-10 w-10 rounded-full border-2 border-border bg-muted flex items-center justify-center">
-              <Github className="h-5 w-5 text-muted-foreground" />
+              <GithubIcon className="h-5 w-5 text-muted-foreground" />
             </div>
           )}
           <div className="min-w-0 flex-1">
@@ -1262,30 +1257,31 @@ function GithubRepoBlockEditor({
           </div>
           <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
         </a>
-        {hoverCard && (
-          <div className="absolute top-2 right-2">
-            <button
-              type="button"
-              onClick={onRemove}
-              className="p-1.5 rounded border border-border bg-card text-destructive hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Remove repo"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-1.5 rounded border border-border bg-card text-destructive hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Remove repo"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     );
   }
 
   // Picker: URL input + optional "Your repos"
   return (
-    <BlockCard title="GitHub repo" icon={Github} onRemove={onRemove}>
+    <BlockCard title="GitHub repo" icon={GithubIcon} onRemove={onRemove}>
       <div className="space-y-3">
         <div>
-          <label className="text-[9px] font-bold text-muted-foreground uppercase">Repo URL</label>
+          <label htmlFor="github-repo-url-input" className="text-[9px] font-bold text-muted-foreground uppercase">
+            Repo URL
+          </label>
           <div className="flex gap-2 mt-1">
             <input
+              id="github-repo-url-input"
               type="url"
               value={urlInput}
               onChange={(e) => { setUrlInput(e.target.value); setFetchError(null); }}
@@ -1329,7 +1325,7 @@ function GithubRepoBlockEditor({
                       {r.owner?.avatar_url ? (
                         <img src={r.owner.avatar_url} alt="" className="h-6 w-6 rounded-full object-cover" />
                       ) : (
-                        <Github className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <GithubIcon className="h-5 w-5 text-muted-foreground shrink-0" />
                       )}
                       <span className="text-xs font-mono truncate flex-1">{r.full_name}</span>
                     </button>
@@ -1349,18 +1345,17 @@ function UnsplashBlockEditor({
   payload,
   onUpdate,
   onRemove,
-}: {
+}: Readonly<{
   blockId: string;
   payload: { url?: string; photographer?: string; caption?: string };
   onUpdate: (p: { url?: string; photographer?: string; caption?: string }) => void;
   onRemove: () => void;
-}) {
+}>) {
   const { url = '', photographer = '' } = payload;
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UnsplashPhoto[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [hoverImage, setHoverImage] = useState(false);
   const hasUnsplashKey = !!process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
 
   const handleSearch = useCallback(async () => {
@@ -1392,11 +1387,7 @@ function UnsplashBlockEditor({
   // Image selected: show only the image card (no Unsplash block UI), full-width landscape like Medium
   if (url) {
     return (
-      <div
-        className="relative group w-full"
-        onMouseEnter={() => setHoverImage(true)}
-        onMouseLeave={() => setHoverImage(false)}
-      >
+      <div className="relative group w-full">
         <div className="w-full overflow-hidden rounded-lg border border-border bg-muted">
           <img
             src={url}
@@ -1412,16 +1403,14 @@ function UnsplashBlockEditor({
             placeholder="Photo by …"
             className="inline-flex items-center px-2.5 py-1 text-xs rounded-full border-2 border-border bg-muted/50 text-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground min-w-[140px]"
           />
-          {hoverImage && (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="p-1.5 rounded border border-border bg-card text-destructive hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Remove image"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-1.5 rounded border border-border bg-card text-destructive hover:bg-destructive/10 focus:outline-none focus:ring-2 focus:ring-primary opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+            aria-label="Remove image"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     );
@@ -1504,7 +1493,7 @@ export function BlogWriteEditor({
   isSidebarOpen,
   maxWidthClassName = 'max-w-3xl',
   activeSectionId,
-}: BlogWriteEditorProps) {
+}: Readonly<BlogWriteEditorProps>) {
   const updateBlock = useCallback(
     (id: string, payload: any) => {
       onBlocksChange(
@@ -1569,7 +1558,7 @@ export function BlogWriteEditor({
   const handleDrop = useCallback(
     (e: React.DragEvent, toIndex: number) => {
       e.preventDefault();
-      const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      const fromIndex = Number.parseInt(e.dataTransfer.getData('text/plain'), 10);
       if (Number.isNaN(fromIndex)) return;
       setDraggedIndex(null);
       setDropTargetIndex(null);
@@ -1591,6 +1580,7 @@ export function BlogWriteEditor({
     );
   }
 
+  // NOSONAR S6848 — block list uses drag-and-drop; dragleave must be on this container
   return (
     <div className="pb-16 selection:bg-primary selection:text-primary-foreground" onDragLeave={handleDragLeave}>
       <div className="space-y-4 mb-6">
@@ -1694,6 +1684,7 @@ export function BlogWriteEditor({
               </div>
             );
           }
+          // NOSONAR S6848 — HTML5 draggable row
           return (
             <div key={block.id} className="relative">
               {isDropTarget && (

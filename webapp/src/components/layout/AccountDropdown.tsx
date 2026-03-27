@@ -63,6 +63,7 @@ export function AccountDropdown() {
 
   const menuSections = [
     {
+      id: 'account-profile-stack',
       items: [
         { href: '/profile', label: 'Your profile', icon: User },
         { href: '/wallet', label: 'Wallet', icon: Wallet },
@@ -71,6 +72,7 @@ export function AccountDropdown() {
       ],
     },
     {
+      id: 'account-settings-stack',
       items: [
         { href: '/settings', label: 'Settings', icon: Settings },
         { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },

@@ -12,7 +12,7 @@ interface StreakFireLottieProps {
   size?: number;
 }
 
-export function StreakFireLottie({ play = false, size = 28 }: StreakFireLottieProps) {
+export function StreakFireLottie({ play = false, size = 28 }: Readonly<StreakFireLottieProps>) {
   return (
     <span
       className="inline-flex shrink-0 pointer-events-none overflow-hidden"

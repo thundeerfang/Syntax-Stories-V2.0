@@ -13,10 +13,17 @@ export interface TooltipProps {
 
 const OFFSET = 8;
 
-export function Tooltip({ content, children, side = 'top', className }: TooltipProps) {
+function tooltipTransform(side: TooltipProps['side']): string {
+  if (side === 'top') return 'translate(-50%, -100%)';
+  if (side === 'bottom') return 'translate(-50%, 0)';
+  if (side === 'left') return 'translate(-100%, -50%)';
+  return 'translate(0, -50%)';
+}
+
+export function Tooltip({ content, children, side = 'top', className }: Readonly<TooltipProps>) {
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const updatePosition = () => {
     if (!triggerRef.current) return;
@@ -39,14 +46,7 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
 
   const handleMouseLeave = () => setVisible(false);
 
-  const transform =
-    side === 'top'
-      ? 'translate(-50%, -100%)'
-      : side === 'bottom'
-        ? 'translate(-50%, 0)'
-        : side === 'left'
-          ? 'translate(-100%, -50%)'
-          : 'translate(0, -50%)';
+  const transform = tooltipTransform(side);
 
   const tooltipEl =
     visible &&
@@ -67,15 +67,16 @@ export function Tooltip({ content, children, side = 'top', className }: TooltipP
     );
 
   return (
-    <div
+    <button
+      type="button"
       ref={triggerRef}
-      className={cn('inline-flex', className)}
+      className={cn('inline-flex border-0 bg-transparent p-0 font-inherit text-inherit cursor-default', className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseMove={updatePosition}
     >
       {children}
       {tooltipEl}
-    </div>
+    </button>
   );
 }

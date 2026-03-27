@@ -45,14 +45,14 @@ export function Dialog({
   showCloseButton = true,
   closeOnBackdropClick = true,
   closeOnEscape = true,
-}: DialogProps) {
+}: Readonly<DialogProps>) {
   useEffect(() => {
     if (!open || !closeOnEscape) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose, closeOnEscape]);
 
   useEffect(() => {

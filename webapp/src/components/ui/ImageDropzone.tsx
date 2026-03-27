@@ -30,7 +30,7 @@ export function ImageDropzone({
   className,
   dragActiveClassName,
   children,
-}: ImageDropzoneProps) {
+}: Readonly<ImageDropzoneProps>) {
   const maxMb = Math.max(1, Math.round(maxSizeBytes / (1024 * 1024)));
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

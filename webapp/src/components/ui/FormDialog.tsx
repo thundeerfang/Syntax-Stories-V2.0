@@ -40,7 +40,7 @@ export function FormDialog({
   footer,
   panelClassName,
   contentClassName,
-}: FormDialogProps) {
+}: Readonly<FormDialogProps>) {
   return (
     <Dialog
       open={open}

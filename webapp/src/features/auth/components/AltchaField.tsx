@@ -31,7 +31,7 @@ export function AltchaField({
   floating,
   floatingAnchor,
   floatingOffset,
-}: Props) {
+}: Readonly<Props>) {
   const ref = useRef<HTMLElement & { reset?: () => void }>(null);
   const url = getAltchaChallengeUrl();
   const [sdkReady, setSdkReady] = useState(false);
@@ -61,7 +61,7 @@ export function AltchaField({
   const floatingProps = useFloating
     ? {
         floating,
-        ...(floatingAnchor != null ? { floatinganchor: floatingAnchor } : {}),
+        ...(floatingAnchor === undefined ? {} : { floatinganchor: floatingAnchor }),
         floatingoffset: floatingOffset ?? 8,
       }
     : {};

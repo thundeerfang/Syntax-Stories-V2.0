@@ -11,7 +11,7 @@ import { OAUTH_LEAVING_EVENT } from '@/lib/oauthNavigation';
 
 const LOADING_MS = 400;
 
-export function LayoutShell({ children }: { children: React.ReactNode }) {
+export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname() ?? '';
   const isOAuthCallbackRoute = pathname.includes('-callback');
   const [ready, setReady] = useState(false);

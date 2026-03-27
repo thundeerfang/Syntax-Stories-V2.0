@@ -7,6 +7,8 @@ import { useAuthStore } from '@/store/auth';
 import { TerminalLoaderPage } from '@/components/loader';
 import { toast } from 'sonner';
 
+type FormSubmit = { preventDefault(): void };
+
 export type OAuthBrowserCallbackProps = {
   /** Short label for loader copy, e.g. "Google". */
   providerLabel: string;
@@ -15,7 +17,7 @@ export type OAuthBrowserCallbackProps = {
 /**
  * Handles browser OAuth return: `code` (Redis exchange → POST /auth/oauth/exchange) or 2FA challenge.
  */
-export function OAuthBrowserCallback({ providerLabel }: OAuthBrowserCallbackProps) {
+export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCallbackProps>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -70,7 +72,7 @@ export function OAuthBrowserCallback({ providerLabel }: OAuthBrowserCallbackProp
   const twoFactorRequired = searchParams.get('twoFactorRequired');
   const challengeToken = searchParams.get('challengeToken');
 
-  const handleVerify = async (e: React.FormEvent) => {
+  const handleVerify = async (e: FormSubmit) => {
     e.preventDefault();
     if (!challengeToken) return;
     setIsSubmitting(true);

@@ -69,7 +69,7 @@ export function ProfileSectionAccordion({
   className,
   children,
   headerAction,
-}: ProfileSectionAccordionProps) {
+}: Readonly<ProfileSectionAccordionProps>) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;

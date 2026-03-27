@@ -13,10 +13,6 @@ import {
   Users,
   Award,
   Terminal,
-  Github,
-  Linkedin,
-  Instagram,
-  Youtube,
   Eye,
 
   TrendingUp,
@@ -52,6 +48,7 @@ import { OpenSourceCard } from '@/app/settings/settings-list/OpenSourceCard';
 import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/components/ui/ProfileSectionAccordion';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
+import { GithubIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from '@/components/icons/SocialProviderIcons';
 import {
   domainFromUrl,
   formatJoinedDate,
@@ -120,14 +117,14 @@ export default function ProfilePage() {
             : Math.max(prev[variant] ?? 1, 1),
     }));
     setSectionLoading((prev) => ({ ...prev, [variant]: true }));
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
       setSectionLoading((prev) => ({ ...prev, [variant]: false }));
     }, 420);
   };
 
   const viewMore = (variant: ProfileSectionVariant, step = 1) => {
     setSectionLoading((prev) => ({ ...prev, [variant]: true }));
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
       setVisibleCounts((prev) => ({ ...prev, [variant]: (prev[variant] ?? 0) + step }));
       setSectionLoading((prev) => ({ ...prev, [variant]: false }));
     }, 420);
@@ -183,8 +180,8 @@ export default function ProfilePage() {
   }, [user?.username]);
 
   const publicProfileUrl = useMemo(() => {
-    if (typeof window === 'undefined' || !user?.username) return '';
-    return `${window.location.origin}/u/${user.username}`;
+    if (globalThis.window === undefined || !user?.username) return '';
+    return `${globalThis.window.location.origin}/u/${user.username}`;
   }, [user?.username]);
 
   // Profile Activity charts: only show when we have enough daily data (avoid misleading straight lines)
@@ -201,7 +198,9 @@ export default function ProfilePage() {
   const showTotalChart = monthChartData.length >= 7;
 
   const copyProfileUrl = async () => {
-    const url = publicProfileUrl || (typeof window !== 'undefined' ? window.location.origin + '/profile' : '');
+    const url =
+      publicProfileUrl ||
+      (globalThis.window !== undefined ? `${globalThis.window.location.origin}/profile` : '');
     try {
       await navigator.clipboard.writeText(url);
       setProfileUrlCopied(true);
@@ -218,13 +217,18 @@ export default function ProfilePage() {
   }, [user?.createdAt]);
 
   const markdownToHtml = (raw: string) => {
-    const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const escape = (str: string) =>
+      str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
     let s = escape(raw || '');
     // Keep patterns conservative to avoid leaking stray '*' in edge cases like "*Harshit *is"
     s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/__([^_\n]+)__/g, '<u>$1</u>');
     s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-    return s.replace(/\n/g, '<br>');
+    return s.replaceAll('\n', '<br>');
   };
 
   // Match settings: Projects = manual only; Open Source = GitHub repos from projects + openSourceContributions (must run before any early return)
@@ -241,7 +245,7 @@ export default function ProfilePage() {
     const fromProjects = profileProjects.github;
     const fromContributions = (user?.openSourceContributions ?? []).map((c) => ({
       ...c,
-      repoFullName: (c as { repoFullName?: string }).repoFullName ?? c.repository ?? c.repo ?? c.title,
+      repoFullName: (c as { repoFullName?: string }).repoFullName ?? c.repository ?? c.title,
       publicationUrl: (c as { publicationUrl?: string }).publicationUrl ?? (c as { repositoryUrl?: string }).repositoryUrl ?? (c as { url?: string }).url,
     }));
     return [...fromProjects, ...fromContributions].slice(0, 7);
@@ -673,7 +677,6 @@ export default function ProfilePage() {
                             className="relative block h-28 w-full cursor-zoom-in border-b-2 border-border bg-muted/20 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                             aria-label={`View ${it.label} image larger`}
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={it.imageUrl}
                               alt={it.label}
@@ -966,7 +969,7 @@ export default function ProfilePage() {
                       saving={false}
                       onOpen={() => {
                         const url = (item as { publicationUrl?: string }).publicationUrl ?? (item as { url?: string }).url ?? (item as { repositoryUrl?: string }).repositoryUrl;
-                        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                        if (url) globalThis.open(url, '_blank', 'noopener,noreferrer');
                       }}
                       onDetach={() => {}}
                       hideActions
@@ -1061,7 +1064,8 @@ export default function ProfilePage() {
                 className="flex-1 min-w-0 flex items-center justify-between gap-2 bg-muted/30 border-2 border-border p-3 hover:bg-muted/50 transition-colors text-left group"
               >
                 <span className="text-[10px] font-bold truncate text-foreground">
-                  {publicProfileUrl || (typeof window !== 'undefined' ? `${window.location.origin}/profile` : '/profile')}
+                  {publicProfileUrl ||
+                    (globalThis.window !== undefined ? `${globalThis.window.location.origin}/profile` : '/profile')}
                 </span>
                 <span className={cn(
                   'shrink-0 flex items-center gap-1.5 px-2 py-1 border-2 border-border text-[9px] font-black uppercase',
@@ -1075,22 +1079,22 @@ export default function ProfilePage() {
             <div className="flex gap-3 items-center justify-center pt-1 flex-wrap">
               {user?.linkedin && (
                 <a href={user.linkedin.startsWith('http') ? user.linkedin : `https://${user.linkedin}`} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <Linkedin className="size-4 text-foreground" />
+                  <LinkedinIcon className="size-4 text-foreground" />
                 </a>
               )}
               {user?.github && (
                 <a href={user.github.startsWith('http') ? user.github : `https://${user.github}`} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <Github className="size-4 text-foreground" />
+                  <GithubIcon className="size-4 text-foreground" />
                 </a>
               )}
               {user?.instagram && (
                 <a href={user.instagram.startsWith('http') ? user.instagram : `https://${user.instagram}`} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <Instagram className="size-4 text-foreground" />
+                  <InstagramIcon className="size-4 text-foreground" />
                 </a>
               )}
               {user?.youtube && (
                 <a href={user.youtube.startsWith('http') ? user.youtube : `https://${user.youtube}`} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <Youtube className="size-4 text-foreground" />
+                  <YoutubeIcon className="size-4 text-foreground" />
                 </a>
               )}
             </div>

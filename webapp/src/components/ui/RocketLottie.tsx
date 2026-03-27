@@ -15,7 +15,7 @@ interface RocketLottieProps {
   play?: boolean;
 }
 
-export function RocketLottie({ play = false }: RocketLottieProps) {
+export function RocketLottie({ play = false }: Readonly<RocketLottieProps>) {
   const dotLottieRef = useRef<{ play: () => void; pause: () => void } | null>(null);
 
   useEffect(() => {
