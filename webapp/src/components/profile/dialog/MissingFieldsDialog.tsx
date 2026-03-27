@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { ParseCvMissingFieldKey, IncompleteItemHints } from '@/api/auth';
 import { CompleteItemDialog, type CompleteItemDialogSection } from './CompleteItemDialog';
 import { cn } from '@/lib/utils';
+import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
 
 /** Settings page section id for each profile section (for deep link). Projects not from CV. */
 const SECTION_TO_SETTINGS_ID: Record<CompleteItemDialogSection, string> = {
@@ -20,7 +21,7 @@ const FIELD_LABELS: Record<ParseCvMissingFieldKey, string> = {
   bio: 'Short bio',
   linkedin: 'LinkedIn URL',
   github: 'GitHub URL',
-  stackAndTools: 'Tech stack (comma-separated)',
+  stackAndTools: `Tech stack (comma-separated, max ${STACK_AND_TOOLS_MAX})`,
   workExperiences: 'Work experience',
   education: 'Education',
   certifications: 'Certifications',
@@ -37,7 +38,7 @@ const MISSING_FIELD_LABELS: Record<string, string> = {
 };
 
 const SCALAR_FIELDS: ParseCvMissingFieldKey[] = ['bio', 'linkedin', 'github', 'stackAndTools'];
-const ARRAY_FIELDS: ParseCvMissingFieldKey[] = ['workExperiences', 'education', 'certifications'];
+const ARRAY_FIELDS = new Set<ParseCvMissingFieldKey>(['workExperiences', 'education', 'certifications']);
 
 export interface MissingFieldsDialogProps {
   open: boolean;
@@ -68,7 +69,7 @@ export function MissingFieldsDialog({
   onCompleteItem,
   settingsHref,
   onEditInSettings,
-}: MissingFieldsDialogProps) {
+}: Readonly<MissingFieldsDialogProps>) {
   const [values, setValues] = useState<Partial<Record<ParseCvMissingFieldKey, string | string[]>>>({});
   const [saving, setSaving] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -89,7 +90,11 @@ export function MissingFieldsDialog({
 
   const handleChange = (key: ParseCvMissingFieldKey, value: string) => {
     if (key === 'stackAndTools') {
-      const arr = value.split(',').map((s) => s.trim()).filter(Boolean);
+      const arr = value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, STACK_AND_TOOLS_MAX);
       setValues((v) => ({ ...v, [key]: arr }));
     } else {
       setValues((v) => ({ ...v, [key]: value }));
@@ -102,8 +107,12 @@ export function MissingFieldsDialog({
       const payload: Partial<Record<ParseCvMissingFieldKey, string | string[]>> = {};
       for (const k of SCALAR_FIELDS) {
         if (missingFields.includes(k) && values[k] !== undefined) {
-          if (k === 'stackAndTools' && Array.isArray(values[k])) payload[k] = values[k] as string[];
-          else if (k !== 'stackAndTools' && typeof values[k] === 'string') payload[k] = values[k] as string;
+          const fieldValue = values[k];
+          if (k === 'stackAndTools' && Array.isArray(fieldValue)) {
+            payload[k] = fieldValue.slice(0, STACK_AND_TOOLS_MAX);
+          } else if (k !== 'stackAndTools' && typeof fieldValue === 'string') {
+            payload[k] = fieldValue;
+          }
         }
       }
       await onSave(payload);
@@ -114,14 +123,47 @@ export function MissingFieldsDialog({
   };
 
   const scalarMissing = missingFields.filter((f) => SCALAR_FIELDS.includes(f));
-  const arrayMissing = missingFields.filter((f) => ARRAY_FIELDS.includes(f));
+  const arrayMissing = missingFields.filter((f) => ARRAY_FIELDS.has(f));
   const hasIncompleteItems = !!incompleteItemHints && (
     (incompleteItemHints.education?.length ?? 0) +
     (incompleteItemHints.certifications?.length ?? 0) +
     (incompleteItemHints.workExperiences?.length ?? 0)
   ) > 0;
-  const hasFilledScalar = scalarMissing.some((f) => (f === 'stackAndTools' ? (values[f] as string[] | undefined)?.length : (values[f] as string | undefined)?.trim()));
+  const hasFilledScalar = scalarMissing.some((f) => {
+    if (f === 'stackAndTools') {
+      const v = values.stackAndTools;
+      return Array.isArray(v) && v.length > 0;
+    }
+    const v = values[f];
+    return typeof v === 'string' && v.trim().length > 0;
+  });
   const canSave = (scalarMissing.length === 0 || hasFilledScalar) && !hasIncompleteItems;
+
+  const nonBioScalarInputValue = (key: ParseCvMissingFieldKey): string => {
+    if (key === 'stackAndTools') {
+      return Array.isArray(values.stackAndTools) ? values.stackAndTools.join(', ') : '';
+    }
+    if (key === 'linkedin') {
+      return typeof values.linkedin === 'string' ? values.linkedin : '';
+    }
+    if (key === 'github') {
+      return typeof values.github === 'string' ? values.github : '';
+    }
+    return '';
+  };
+
+  const nonBioScalarPlaceholder = (key: ParseCvMissingFieldKey): string => {
+    if (key === 'linkedin') return 'https://linkedin.com/in/username';
+    if (key === 'github') return 'https://github.com/username';
+    return 'e.g. JavaScript, React, Node.js';
+  };
+
+  let saveButtonLabel = 'Save';
+  if (saving) {
+    saveButtonLabel = 'Saving…';
+  } else if (hasIncompleteItems) {
+    saveButtonLabel = 'Save (complete required fields first)';
+  }
 
   return (
     <Dialog
@@ -149,7 +191,7 @@ export function MissingFieldsDialog({
                   <textarea
                     className="w-full min-h-[80px] px-3 py-2 border-2 border-border bg-card text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Tell us about yourself…"
-                    value={(values[key] as string) ?? ''}
+                    value={typeof values.bio === 'string' ? values.bio : ''}
                     onChange={(e) => handleChange(key, e.target.value)}
                     maxLength={500}
                   />
@@ -157,16 +199,8 @@ export function MissingFieldsDialog({
                   <input
                     type="text"
                     className="w-full px-3 py-2 border-2 border-border bg-card text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder={
-                      key === 'linkedin' ? 'https://linkedin.com/in/username' :
-                      key === 'github' ? 'https://github.com/username' :
-                      'e.g. JavaScript, React, Node.js'
-                    }
-                    value={
-                      key === 'stackAndTools'
-                        ? (values[key] as string[] | undefined)?.join(', ') ?? ''
-                        : (values[key] as string | undefined) ?? ''
-                    }
+                    placeholder={nonBioScalarPlaceholder(key)}
+                    value={nonBioScalarInputValue(key)}
                     onChange={(e) => handleChange(key, e.target.value)}
                   />
                 )}
@@ -297,7 +331,7 @@ export function MissingFieldsDialog({
                 : 'bg-muted text-muted-foreground cursor-not-allowed'
             )}
           >
-            {saving ? 'Saving…' : hasIncompleteItems ? 'Save (complete required fields first)' : 'Save'}
+            {saveButtonLabel}
           </button>
         </div>
       </div>

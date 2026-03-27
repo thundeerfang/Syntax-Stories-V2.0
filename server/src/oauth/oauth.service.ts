@@ -6,6 +6,7 @@ import { writeAuditLog } from '../shared/audit/auditLog';
 import { AuditAction } from '../shared/audit/events';
 import { redisKeys } from '../shared/redis/keys';
 import type { HandleOAuthInput, NormalizedOAuthProfile, OAuthPassportUser, OAuthProviderKey } from './oauth.types';
+import { sealProviderToken } from '../shared/crypto/providerTokenCrypto';
 
 const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
   google: 'Google',
@@ -56,6 +57,10 @@ function signupEmail(provider: OAuthProviderKey, n: NormalizedOAuthProfile): str
   return n.email;
 }
 
+function sealTok(t: string): string {
+  return sealProviderToken(t) ?? t;
+}
+
 function newUserBaseDoc(
   provider: OAuthProviderKey,
   n: NormalizedOAuthProfile,
@@ -82,14 +87,14 @@ function newUserBaseDoc(
       return {
         ...base,
         googleId: n.providerId,
-        googleToken: accessToken,
+        googleToken: sealTok(accessToken),
         isGoogleAccount: true,
       };
     case 'github':
       return {
         ...base,
         gitId: n.providerId,
-        githubToken: accessToken,
+        githubToken: sealTok(accessToken),
         github: n.githubUrl,
         isGitAccount: true,
       };
@@ -97,21 +102,21 @@ function newUserBaseDoc(
       return {
         ...base,
         facebookId: n.providerId,
-        facebookToken: accessToken,
+        facebookToken: sealTok(accessToken),
         isFacebookAccount: true,
       };
     case 'x':
       return {
         ...base,
         xId: n.providerId,
-        xToken: accessToken,
+        xToken: sealTok(accessToken),
         isXAccount: true,
       };
     case 'discord':
       return {
         ...base,
         discordId: n.providerId,
-        discordToken: accessToken,
+        discordToken: sealTok(accessToken),
         isDiscordAccount: true,
       };
     default:
@@ -152,7 +157,7 @@ async function handleLink(
         throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
       }
       user.googleId = n.providerId;
-      user.googleToken = accessToken;
+      user.googleToken = sealTok(accessToken);
       user.isGoogleAccount = true;
       await user.save();
       await redis.del(redisKeys.oauth.link(linkKey));
@@ -171,7 +176,7 @@ async function handleLink(
         throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
       }
       user.gitId = n.providerId;
-      user.githubToken = accessToken;
+      user.githubToken = sealTok(accessToken);
       user.isGitAccount = true;
       await user.save();
       await redis.del(redisKeys.oauth.link(linkKey));
@@ -190,7 +195,7 @@ async function handleLink(
         throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
       }
       user.facebookId = n.providerId;
-      user.facebookToken = accessToken;
+      user.facebookToken = sealTok(accessToken);
       user.isFacebookAccount = true;
       await user.save();
       await redis.del(redisKeys.oauth.link(linkKey));
@@ -209,7 +214,7 @@ async function handleLink(
         throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
       }
       user.xId = n.providerId;
-      user.xToken = accessToken;
+      user.xToken = sealTok(accessToken);
       user.isXAccount = true;
       await user.save();
       await redis.del(redisKeys.oauth.link(linkKey));
@@ -227,7 +232,7 @@ async function handleLink(
         throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
       }
       user.discordId = n.providerId;
-      user.discordToken = accessToken;
+      user.discordToken = sealTok(accessToken);
       user.isDiscordAccount = true;
       await user.save();
       await redis.del(redisKeys.oauth.link(linkKey));
@@ -256,7 +261,7 @@ async function handleLogin(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
         );
       }
-      existingUser.googleToken = accessToken;
+      existingUser.googleToken = sealTok(accessToken);
       await existingUser.save();
       return passportShape('google', existingUser);
     }
@@ -267,7 +272,7 @@ async function handleLogin(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
         );
       }
-      existingUser.githubToken = accessToken;
+      existingUser.githubToken = sealTok(accessToken);
       await existingUser.save();
       return passportShape('github', existingUser);
     }
@@ -278,7 +283,7 @@ async function handleLogin(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
         );
       }
-      existingUser.facebookToken = accessToken;
+      existingUser.facebookToken = sealTok(accessToken);
       await existingUser.save();
       return passportShape('facebook', existingUser);
     }
@@ -289,7 +294,7 @@ async function handleLogin(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
         );
       }
-      existingUser.xToken = accessToken;
+      existingUser.xToken = sealTok(accessToken);
       await existingUser.save();
       return passportShape('x', existingUser);
     }
@@ -300,7 +305,7 @@ async function handleLogin(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
         );
       }
-      existingUser.discordToken = accessToken;
+      existingUser.discordToken = sealTok(accessToken);
       await existingUser.save();
       return passportShape('discord', existingUser);
     }

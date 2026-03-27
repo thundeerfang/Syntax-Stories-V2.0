@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import  { useCallback, useState } from 'react';
 import { Camera } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
@@ -23,7 +23,7 @@ export function UploadProfilePicDialog({
   onClose,
   token,
   onSuccess,
-}: UploadProfilePicDialogProps) {
+}: Readonly<UploadProfilePicDialogProps>) {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -152,6 +152,9 @@ export function UploadProfilePicDialog({
               {zoom.toFixed(1)}x
             </span>
           </div>
+          <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+            Tip: click the crop area, then use arrow keys to move (Shift for larger steps).
+          </p>
           {uploading && (
             <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div

@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { Image } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
+import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
 import { ImageDropzone } from '@/components/ui/ImageDropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -127,7 +128,7 @@ export function UploadCoverDialog({
 
       {imageUrl && (
         <div className="space-y-4">
-          <div className="relative w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
+          <CropperKeyboardWrapper imageReady={!!imageUrl} setCrop={setCrop} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
             <Cropper
               image={imageUrl}
               crop={crop}
@@ -137,7 +138,7 @@ export function UploadCoverDialog({
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
             />
-          </div>
+          </CropperKeyboardWrapper>
           <div className="flex items-center justify-between gap-4">
             <input
               type="range"
@@ -152,6 +153,9 @@ export function UploadCoverDialog({
               {zoom.toFixed(1)}x
             </span>
           </div>
+          <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+            Tip: click the crop area, then arrow keys to move (Shift for larger steps).
+          </p>
           {uploading && (
             <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div

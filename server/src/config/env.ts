@@ -49,6 +49,9 @@ export const env = {
   JWT_REFRESH_EXPIRY: process.env.JWT_REFRESH_EXPIRY ?? '7d',
   IDEMPOTENCY_TTL_SEC: parseInt(process.env.IDEMPOTENCY_TTL_SEC ?? '86400', 10),
 
+  /** 32-byte key (base64 or hex) to encrypt Google/GitHub/etc. provider tokens at rest on User. Optional: plaintext if unset. */
+  OAUTH_PROVIDER_TOKEN_KEY: process.env.OAUTH_PROVIDER_TOKEN_KEY as string | undefined,
+
   /** Optional HMAC pepper for email OTP hashes (defaults to JWT_SECRET if unset). */
   OTP_PEPPER: process.env.OTP_PEPPER as string | undefined,
 

@@ -239,7 +239,7 @@ const updateProfileSchema = Joi.object({
   instagram: Joi.string().max(200).allow('').trim(),
   github: Joi.string().uri().allow('').trim(),
   youtube: Joi.string().uri().allow('').trim(),
-  stackAndTools: Joi.array().items(Joi.string().max(80)).max(50),
+  stackAndTools: Joi.array().items(Joi.string().max(80)).max(10),
   workExperiences: Joi.array().items(workExperienceItem).max(5),
   education: Joi.array().items(educationItem).max(15),
   certifications: Joi.array().items(certificationItem).max(30),

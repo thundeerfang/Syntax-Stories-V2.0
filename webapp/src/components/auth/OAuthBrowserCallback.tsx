@@ -13,7 +13,7 @@ export type OAuthBrowserCallbackProps = {
 };
 
 /**
- * Handles browser OAuth return: optional `code` (Redis exchange), legacy `token` query, or 2FA challenge.
+ * Handles browser OAuth return: `code` (Redis exchange → POST /auth/oauth/exchange) or 2FA challenge.
  */
 export function OAuthBrowserCallback({ providerLabel }: OAuthBrowserCallbackProps) {
   const router = useRouter();
@@ -30,8 +30,6 @@ export function OAuthBrowserCallback({ providerLabel }: OAuthBrowserCallbackProp
     const twoFactorRequired = searchParams.get('twoFactorRequired');
     const challengeToken = searchParams.get('challengeToken');
     const oauthExchangeCode = searchParams.get('code');
-    const token = searchParams.get('token');
-    const refreshToken = searchParams.get('refreshToken');
 
     if (error) {
       handledRef.current = true;
@@ -62,19 +60,6 @@ export function OAuthBrowserCallback({ providerLabel }: OAuthBrowserCallbackProp
           toast.error('Sign-in failed');
           router.replace('/login');
         });
-      return;
-    }
-
-    if (token) {
-      handledRef.current = true;
-      authApi
-        .getAccount(token)
-        .then((res) => {
-          const user = normalizeUser(res.user);
-          setAuth(user, token, refreshToken ?? undefined);
-          router.replace('/');
-        })
-        .catch(() => router.replace('/'));
       return;
     }
 

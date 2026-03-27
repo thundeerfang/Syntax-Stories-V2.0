@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
 import { Switch, AreaChart } from '@/components/retroui';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -40,7 +41,7 @@ import { authApi, type ParseCvMissingFieldKey, type IncompleteItemHints } from '
 import type { CompleteItemDialogSection } from '@/components/profile/dialog';
 import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
-import { FollowersFollowingDialog, MissingFieldsDialog } from '@/components/profile/dialog';
+import { FollowersFollowingDialog, MissingFieldsDialog, MediaFullViewDialog } from '@/components/profile/dialog';
 import { getSkillIconUrl } from '@/lib/skillIcons';
 import { TerminalLoaderPage } from '@/components/loader';
 import { WorkExperienceCard } from '@/app/settings/settings-list/WorkExperienceCard';
@@ -73,6 +74,7 @@ export default function ProfilePage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [pdfUploading, setPdfUploading] = useState(false);
   const [missingFieldsDialogOpen, setMissingFieldsDialogOpen] = useState(false);
+  const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
   const [missingFieldsList, setMissingFieldsList] = useState<ParseCvMissingFieldKey[]>([]);
   const [incompleteItemHints, setIncompleteItemHints] = useState<IncompleteItemHints | null>(null);
   /** Pending CV-extracted data: only saved when user clicks Save in the dialog; discarded on Skip. */
@@ -538,7 +540,9 @@ export default function ProfilePage() {
               if (typeof values.bio === 'string' && values.bio.trim()) scalar.bio = values.bio.trim();
               if (typeof values.linkedin === 'string' && values.linkedin.trim()) scalar.linkedin = values.linkedin.trim();
               if (typeof values.github === 'string' && values.github.trim()) scalar.github = values.github.trim();
-              if (Array.isArray(values.stackAndTools) && values.stackAndTools.length > 0) scalar.stackAndTools = values.stackAndTools;
+              if (Array.isArray(values.stackAndTools) && values.stackAndTools.length > 0) {
+                scalar.stackAndTools = values.stackAndTools.slice(0, STACK_AND_TOOLS_MAX);
+              }
               const payload = pendingCvExtracted ? { ...pendingCvExtracted, ...scalar } : scalar;
               if (Object.keys(payload).length > 0) await updateProfile(payload);
               setPendingCvExtracted(null);
@@ -594,23 +598,31 @@ export default function ProfilePage() {
             } : undefined}
           />
 
+          <MediaFullViewDialog
+            open={!!mySetupPreview}
+            onClose={() => setMySetupPreview(null)}
+            src={mySetupPreview?.src ?? ''}
+            title={mySetupPreview?.title}
+            altText={mySetupPreview?.title}
+          />
+
           {/* DYNAMIC SECTIONS — data from backend */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <section className="space-y-4 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
               <SectionHeader icon={Monitor} title="Stack & Tools" settingsSection="stack-tools" />
               {user?.stackAndTools?.length ? (
                 <div className="relative">
-                  <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
-                    {user.stackAndTools.map((t, i) => {
+                  <div className="flex flex-wrap gap-3 py-1">
+                    {user.stackAndTools.slice(0, STACK_AND_TOOLS_MAX).map((t, i) => {
                       const iconUrl = getSkillIconUrl(t);
                       return (
                         <div
                           key={i}
-                          className="snap-start shrink-0 border-2 border-border bg-muted/10 px-3 py-2 shadow-[2px_2px_0px_0px_var(--border)]"
+                          className="border-2 border-border bg-muted/10 px-3 py-2 shadow-[2px_2px_0px_0px_var(--border)] max-w-full"
                           title={t}
                         >
                           <div className="flex items-center gap-2">
-                            <div className="size-7 flex items-center justify-center overflow-hidden">
+                            <div className="size-7 shrink-0 flex items-center justify-center overflow-hidden">
                               {iconUrl ? (
                                 <img
                                   src={iconUrl}
@@ -622,7 +634,7 @@ export default function ProfilePage() {
                                 <Monitor className="size-4 text-muted-foreground" />
                               )}
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground break-words text-left">
                               {t}
                             </span>
                           </div>
@@ -655,10 +667,20 @@ export default function ProfilePage() {
                           key={`${it.imageUrl}-${i}`}
                           className="snap-start shrink-0 w-[240px] border-2 border-border bg-muted/10 shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden"
                         >
-                          <div className="h-28 border-b-2 border-border bg-muted/20 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setMySetupPreview({ src: it.imageUrl, title: it.label })}
+                            className="relative block h-28 w-full cursor-zoom-in border-b-2 border-border bg-muted/20 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            aria-label={`View ${it.label} image larger`}
+                          >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={it.imageUrl} alt={it.label} className="h-full w-full object-cover" loading="lazy" />
-                          </div>
+                            <img
+                              src={it.imageUrl}
+                              alt={it.label}
+                              className="h-full w-full object-cover transition-opacity hover:opacity-90"
+                              loading="lazy"
+                            />
+                          </button>
                           <div className="p-3">
                             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate">
                               {it.label}

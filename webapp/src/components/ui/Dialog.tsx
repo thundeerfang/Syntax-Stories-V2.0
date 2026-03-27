@@ -91,24 +91,30 @@ export function Dialog({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className={cn(defaultPanelClass, panelClassName)}
+              className={cn(defaultPanelClass, panelClassName, 'relative')}
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
             >
-              <div className={cn('relative', contentClassName)}>
-                {children}
-                {showCloseButton && (
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-sm cursor-pointer text-muted-foreground transition-colors hover:text-card-foreground"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4 shrink-0" aria-hidden />
-                  </button>
+              {showCloseButton && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="absolute right-2 top-2 z-30 flex size-9 shrink-0 items-center justify-center rounded-sm border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0_0_var(--border)] transition-colors hover:text-foreground hover:border-primary"
+                  aria-label="Close"
+                >
+                  <X className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                </button>
+              )}
+              <div
+                className={cn(
+                  'relative',
+                  contentClassName,
+                  showCloseButton && 'pt-11 pr-11 sm:pt-12 sm:pr-12'
                 )}
+              >
+                {children}
               </div>
             </motion.div>
           </div>

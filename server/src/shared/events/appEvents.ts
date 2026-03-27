@@ -2,14 +2,19 @@
  * In-process event bus (not Kafka). Listeners must not block the request path for heavy work.
  * Async listeners are fire-and-forget; errors are logged only.
  */
-export type AuthLoginSuccessPayload = {
+export type AuthSigninSuccessPayload = {
   userId: string;
+  /** e.g. `google`, `otp`, `signup_email`, `2fa`, `qr_login` */
   source: string;
   isNewUser?: boolean;
 };
 
+/** @deprecated Use `AuthSigninSuccessPayload` / event `auth.signin.success`. */
+export type AuthLoginSuccessPayload = AuthSigninSuccessPayload;
+
 export type AppEventMap = {
-  'auth.login.success': AuthLoginSuccessPayload;
+  /** Successful sign-in after session + JWT issuance (email OTP, OAuth, etc.). */
+  'auth.signin.success': AuthSigninSuccessPayload;
 };
 
 type Listener<K extends keyof AppEventMap> = (payload: AppEventMap[K]) => void | Promise<void>;

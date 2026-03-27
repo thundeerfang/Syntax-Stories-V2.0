@@ -1,24 +1,25 @@
 'use client';
 
 import React from 'react';
-import { Share2, Copy, Github, Twitter, Globe, Check } from 'lucide-react';
+import { Share2, Copy, Globe, Check, Code2 } from 'lucide-react';
+import { XIcon } from '@/components/icons/SocialProviderIcons';
 import { Dialog } from '@/components/ui/Dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-const PROFILE_URL = 'https://daily.dev/harshitkushwah';
-
 export interface ShareProfileDialogProps {
   open: boolean;
   onClose: () => void;
+  /** Full public profile URL, e.g. `${origin}/u/${username}` (see profile page `publicProfileUrl`). */
+  profileUrl: string;
 }
 
-export function ShareProfileDialog({ open, onClose }: ShareProfileDialogProps) {
+export function ShareProfileDialog({ open, onClose, profileUrl }: Readonly<ShareProfileDialogProps>) {
   const [copied, setCopied] = React.useState(false);
 
   const copyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(PROFILE_URL);
+      await navigator.clipboard.writeText(profileUrl);
       setCopied(true);
       toast.success('Link copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
@@ -47,7 +48,7 @@ export function ShareProfileDialog({ open, onClose }: ShareProfileDialogProps) {
       </p>
       <div className="flex gap-2 mb-6">
         <div className="flex-1 min-w-0 bg-muted/50 border-2 border-border p-3 pr-2">
-          <span className="text-[10px] font-bold truncate block text-foreground">{PROFILE_URL}</span>
+          <span className="text-[10px] font-bold truncate block text-foreground">{profileUrl}</span>
         </div>
         <button
           type="button"
@@ -67,8 +68,8 @@ export function ShareProfileDialog({ open, onClose }: ShareProfileDialogProps) {
         <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mb-3">Share to</p>
         <div className="flex gap-3">
           {[
-            { Icon: Github, label: 'GitHub' },
-            { Icon: Twitter, label: 'Twitter' },
+            { Icon: Code2, label: 'GitHub' },
+            { Icon: XIcon, label: 'X' },
             { Icon: Globe, label: 'Web' },
           ].map(({ Icon, label }) => (
             <button

@@ -51,6 +51,7 @@ import {
 import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
 import { OptimizedRemoteImage } from '@/components/ui/OptimizedRemoteImage';
 import { cn } from '@/lib/utils';
+import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
 import {
   settingsBtnPrimary,
   settingsBtnShadowLg,
@@ -1105,24 +1106,42 @@ function StackToolIcon({ name }: { name: string }) {
 
 function StackAndToolsContent() {
   const { user, updateProfile } = useAuthStore();
-  const [items, setItems] = useState<string[]>(user?.stackAndTools ?? []);
+  const [items, setItems] = useState<string[]>(
+    () => (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX)
+  );
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const suggestions = useMemo(() => searchTechStack(input, 12), [input]);
-  const showSuggestions = open && input.trim().length >= 2;
+  const atMax = items.length >= STACK_AND_TOOLS_MAX;
+  const showSuggestions = open && input.trim().length >= 2 && !atMax;
 
   useEffect(() => {
-    setItems(user?.stackAndTools ?? []);
+    setItems((user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX));
   }, [user?.stackAndTools]);
 
   const addByName = (name: string) => {
-    if (name && !items.includes(name)) {
-      setItems([...items, name]);
-      toast.success(`${name} added to arsenal.`);
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setInput('');
+      setOpen(false);
+      setHighlight(0);
+      return;
     }
+    if (items.length >= STACK_AND_TOOLS_MAX) {
+      toast.error(`You can add up to ${STACK_AND_TOOLS_MAX} languages and tools.`);
+      return;
+    }
+    if (items.includes(trimmed)) {
+      setInput('');
+      setOpen(false);
+      setHighlight(0);
+      return;
+    }
+    setItems([...items, trimmed]);
+    toast.success(`${trimmed} added to arsenal.`);
     setInput('');
     setOpen(false);
     setHighlight(0);
@@ -1135,7 +1154,7 @@ function StackAndToolsContent() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({ stackAndTools: items });
+      await updateProfile({ stackAndTools: items.slice(0, STACK_AND_TOOLS_MAX) });
       toast.success('Stack & Tools Synchronized.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Sync failed.');
@@ -1174,7 +1193,7 @@ function StackAndToolsContent() {
           <h2 className="text-2xl font-black uppercase tracking-tighter">Stack & Tools</h2>
         </div>
         <p className="text-sm font-medium text-muted-foreground">
-          Search and add tools to your development stack.
+          Search and add up to {STACK_AND_TOOLS_MAX} languages, frameworks, and tools.
         </p>
       </header>
 
@@ -1225,6 +1244,7 @@ function StackAndToolsContent() {
             <input
               type="text"
               value={input}
+              disabled={atMax}
               onChange={(e) => {
                 setInput(e.target.value);
                 setOpen(true);
@@ -1233,8 +1253,12 @@ function StackAndToolsContent() {
               onFocus={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 200)}
               onKeyDown={onKeyDown}
-              placeholder="E.G. REACT, TYPESCRIPT, DOCKER..."
-              className="w-full py-4 px-2 bg-transparent font-mono text-xs font-bold uppercase tracking-widest outline-none placeholder:text-muted-foreground/50"
+              placeholder={
+                atMax
+                  ? `MAX ${STACK_AND_TOOLS_MAX} — REMOVE ONE TO ADD MORE`
+                  : 'E.G. REACT, TYPESCRIPT, DOCKER...'
+              }
+              className="w-full py-4 px-2 bg-transparent font-mono text-xs font-bold uppercase tracking-widest outline-none placeholder:text-muted-foreground/50 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <div className="pr-4 hidden md:block">
               <kbd className="px-1.5 py-0.5 border-2 border-border bg-muted text-[8px] font-black uppercase">Enter</kbd>
@@ -1297,7 +1321,7 @@ function StackAndToolsContent() {
 
       <div className="flex items-center justify-between pt-2">
         <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-          Total Modules: {items.length}
+          Total modules: {items.length} / {STACK_AND_TOOLS_MAX}
         </p>
         <button
           type="button"

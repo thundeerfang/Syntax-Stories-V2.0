@@ -7,6 +7,7 @@ import { blogApi } from '@/api/blog';
 import { uploadCover, type CropArea } from '@/api/upload';
 import { TerminalLoaderPage } from '@/components/loader';
 import { Dialog } from '@/components/ui/Dialog';
+import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   Save, Send, ChevronRight,
@@ -634,7 +635,7 @@ function ThumbnailCropDialog({
       )}
       {imageUrl && (
         <div className="space-y-4">
-          <div className="relative w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
+          <CropperKeyboardWrapper imageReady={!!imageUrl} setCrop={setCrop} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
             <Cropper
               image={imageUrl}
               crop={crop}
@@ -644,7 +645,7 @@ function ThumbnailCropDialog({
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
             />
-          </div>
+          </CropperKeyboardWrapper>
           <div className="flex items-center justify-between gap-4">
             <input
               type="range"
@@ -657,6 +658,9 @@ function ThumbnailCropDialog({
             />
             <span className="text-[10px] font-bold text-muted-foreground w-16 text-right">{zoom.toFixed(1)}x</span>
           </div>
+          <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+            Tip: click the crop area, then arrow keys to move (Shift for larger steps).
+          </p>
           <div className="flex justify-end gap-2">
             <button
               type="button"

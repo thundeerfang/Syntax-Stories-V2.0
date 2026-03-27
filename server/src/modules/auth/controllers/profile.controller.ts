@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { STACK_AND_TOOLS_MAX } from '../../../constants/profileLimits';
 import { UserModel, normalizeProfileImg } from '../../../models/User';
 import type { AuthUser } from '../../../middlewares/auth';
 import { writeAuditLog } from '../../../shared/audit/auditLog';
@@ -70,6 +71,10 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     const updates: Record<string, unknown> = {};
     for (const key of UPDATE_PROFILE_KEYS) {
       if (body[key] !== undefined) updates[key] = body[key];
+    }
+    if (Array.isArray(updates.stackAndTools)) {
+      const arr = (updates.stackAndTools as unknown[]).filter((t) => typeof t === 'string') as string[];
+      updates.stackAndTools = arr.slice(0, STACK_AND_TOOLS_MAX);
     }
     if (Object.keys(updates).length === 0) {
       res.status(400).json({ message: 'No valid fields to update', success: false });

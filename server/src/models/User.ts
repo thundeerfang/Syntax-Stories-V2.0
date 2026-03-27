@@ -320,7 +320,16 @@ const UserSchema = new Schema<IUser>(
     instagram: { type: String },
     github: { type: String },
     youtube: { type: String },
-    stackAndTools: { type: [String], default: [] },
+    stackAndTools: {
+      type: [String],
+      default: [],
+      validate: {
+        validator(v: unknown) {
+          return Array.isArray(v) && v.length <= 10;
+        },
+        message: 'Stack & Tools cannot exceed 10 items.',
+      },
+    },
     workExperiences: { type: [WorkExperienceSchema], default: [], maxlength: 5 },
     education: { type: [EducationSchema], default: [] },
     certifications: { type: [CertificationSchema], default: [] },

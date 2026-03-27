@@ -57,7 +57,7 @@ export async function respondWithSessionAfterEmailAuth(
     actorId: String(user._id),
     metadata: { source: auditSource },
   });
-  emitAppEvent('auth.login.success', {
+  emitAppEvent('auth.signin.success', {
     userId: String(user._id),
     source: auditSource,
     isNewUser,

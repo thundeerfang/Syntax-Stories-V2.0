@@ -66,7 +66,7 @@ Stripe-style hardening means:
 
 - **`server/src/errors/httpErrors.ts`** — `AppHttpError`, `ValidationHttpError`, `AuthHttpError`, `RateLimitHttpError`; **`middlewares/errorHandler.ts`** maps them to JSON (`code`, optional `details`, `Retry-After` for rate limits).
 - **`server/src/services/session.service.ts`** — session creation, refresh token, `createSessionAndTokens`, exported **`SESSION_DURATION_MS`** for sliding refresh in `refreshToken` handler.
-- **`server/src/shared/events/appEvents.ts`** — typed `emitAppEvent` / `onAppEvent`; email + OAuth login success emit **`auth.login.success`**; **`bootstrap/registerAppListeners.ts`** registers subscribers (non-prod structured `console.info` hook today).
+- **`server/src/shared/events/appEvents.ts`** — typed `emitAppEvent` / `onAppEvent`; email + OAuth login success emit **`auth.signin.success`**; **`bootstrap/registerAppListeners.ts`** registers subscribers (non-prod structured `console.info` hook today).
 - **`server/src/middlewares/requestContext.ts`** — `X-Request-Id` propagation; 500 logs in `errorHandler` include request id when present.
 - **`server/src/errors/sendAppHttpError.ts`** — same body/headers as `errorHandler` for `AppHttpError` when a handler catches errors inline (Express 4). Example: follow daily cap throws **`RateLimitHttpError`** with `code: DAILY_FOLLOW_LIMIT`, **`Retry-After`** (seconds to UTC midnight), and **`details.limit`**. Webapp **`authFetch`** forwards **`code`**, **`details`**, and **`Retry-After`** into **`AuthError`**.
 

@@ -386,6 +386,10 @@ html * {
   background: var(--card) !important;
   border: 2px solid color-mix(in srgb, var(--primary) 70%, var(--border)) !important;
   box-shadow: 2px 2px 0 0 var(--border) !important;
+  /* No library bounce / entrance on icon */
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 .ss-we-timeline .vertical-timeline-element-content {
@@ -403,13 +407,6 @@ html * {
 
 .ss-we-timeline .vertical-timeline-element-content-arrow {
   display: none !important;
-}
-
-/* Remove left-to-right and any entrance animation on timeline positions (library uses bounce-in) */
-.ss-we-timeline .vertical-timeline-element-icon {
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
 }
 
 /* Catch-all: no animation/transition on timeline elements (except our dot blink) */

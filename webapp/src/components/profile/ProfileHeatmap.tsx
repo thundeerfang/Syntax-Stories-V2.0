@@ -8,18 +8,37 @@ const ActivityCalendar = dynamic(
   { ssr: false }
 );
 
+type ActivityDay = { date: string; count: number; level: number };
+
+/** GitHub-style activity level 0–4 from a uniform random sample. */
+function randomActivityLevel(rand: number): number {
+  if (rand < 0.4) return 0;
+  if (rand < 0.65) return 1;
+  if (rand < 0.85) return 2;
+  if (rand < 0.95) return 3;
+  return 4;
+}
+
+function randomCountForLevel(level: number): number {
+  if (level === 0) return 0;
+  return Math.floor(1 + Math.random() * 12);
+}
+
+function createDummyDay(anchor: Date, offsetDays: number): ActivityDay {
+  const d = new Date(anchor);
+  d.setDate(d.getDate() - offsetDays);
+  const date = d.toISOString().slice(0, 10);
+  const level = randomActivityLevel(Math.random());
+  const count = randomCountForLevel(level);
+  return { date, count, level };
+}
+
 // Dummy data: last ~6 months, GitHub-style activity levels 0–4
-function getDummyActivityData(): Array<{ date: string; count: number; level: number }> {
-  const data: Array<{ date: string; count: number; level: number }> = [];
-  const today = new Date();
+function getDummyActivityData(): ActivityDay[] {
+  const anchor = new Date();
+  const data: ActivityDay[] = [];
   for (let i = 0; i < 180; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const date = d.toISOString().slice(0, 10);
-    const rand = Math.random();
-    const level = rand < 0.4 ? 0 : rand < 0.65 ? 1 : rand < 0.85 ? 2 : rand < 0.95 ? 3 : 4;
-    const count = level === 0 ? 0 : Math.floor(1 + Math.random() * 12);
-    data.push({ date, count, level });
+    data.push(createDummyDay(anchor, i));
   }
   return data.reverse();
 }

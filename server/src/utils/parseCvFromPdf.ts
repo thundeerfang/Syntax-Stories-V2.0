@@ -3,6 +3,8 @@
  * plus a list of missing field keys for the frontend to prompt the user.
  */
 
+import { STACK_AND_TOOLS_MAX } from '../constants/profileLimits';
+
 export type ExtractedProfile = {
   bio?: string;
   linkedin?: string;
@@ -565,7 +567,7 @@ export function parseCvFromText(text: string): {
   else missingFields.push('bio');
 
   const skills = extractSkills(text);
-  if (skills.length > 0) extracted.stackAndTools = skills;
+  if (skills.length > 0) extracted.stackAndTools = skills.slice(0, STACK_AND_TOOLS_MAX);
   else missingFields.push('stackAndTools');
 
   const education = extractEducation(text);

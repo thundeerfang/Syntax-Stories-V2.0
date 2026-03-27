@@ -1,6 +1,9 @@
 /**
  * OAuth provider registry (Week 1: config-driven route registration).
  * URL paths stay `/auth/{routeKey}/...` so clients and provider dashboards need no changes.
+ *
+ * Passport remains the HTTP/OAuth transport; domain rules live in `oauth.service.ts` so a future
+ * swap to direct OAuth2/OIDC handlers can reuse the same service without rewriting user linking.
  */
 
 export type OAuthWhenDisabled =

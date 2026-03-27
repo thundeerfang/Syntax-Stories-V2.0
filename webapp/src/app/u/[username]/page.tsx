@@ -7,8 +7,9 @@ import { ExternalLink, Github, Instagram, Linkedin, Monitor, Users, Wrench, Yout
 import { followApi, type PublicProfileUser } from '@/api/follow';
 import { analyticsApi } from '@/api/analytics';
 import { useAuthStore } from '@/store/auth';
-import { FollowersFollowingDialog } from '@/components/profile/dialog';
+import { FollowersFollowingDialog, MediaFullViewDialog } from '@/components/profile/dialog';
 import { cn } from '@/lib/utils';
+import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
 import { toast } from 'sonner';
 import { getSkillIconUrl } from '@/lib/skillIcons';
 import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/components/ui/ProfileSectionAccordion';
@@ -35,6 +36,7 @@ export default function PublicProfilePage() {
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
   const [activityTab, setActivityTab] = useState<'posts' | 'repost'>('posts');
 
   useEffect(() => {
@@ -445,20 +447,24 @@ export default function PublicProfilePage() {
                 </h2>
               </div>
               {profile.stackAndTools?.length ? (
-                <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
-                  {profile.stackAndTools.map((t, i) => {
+                <div className="flex flex-wrap gap-3 py-1">
+                  {profile.stackAndTools.slice(0, STACK_AND_TOOLS_MAX).map((t, i) => {
                     const iconUrl = getSkillIconUrl(t);
                     return (
-                      <div key={i} className="snap-start shrink-0 border-2 border-border bg-muted/10 px-3 py-2 shadow-[2px_2px_0px_0px_var(--border)]" title={t}>
+                      <div
+                        key={i}
+                        className="border-2 border-border bg-muted/10 px-3 py-2 shadow-[2px_2px_0px_0px_var(--border)] max-w-full"
+                        title={t}
+                      >
                         <div className="flex items-center gap-2">
-                          <div className="size-7 flex items-center justify-center overflow-hidden">
+                          <div className="size-7 shrink-0 flex items-center justify-center overflow-hidden">
                             {iconUrl ? (
                               <img src={iconUrl} alt={t} className="size-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             ) : (
                               <Monitor className="size-4 text-muted-foreground" />
                             )}
                           </div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">{t}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground break-words text-left">{t}</span>
                         </div>
                       </div>
                     );
@@ -481,9 +487,14 @@ export default function PublicProfilePage() {
                 <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
                   {((profile as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string }>).slice(0, 5).map((it, i) => (
                     <div key={`${it.imageUrl}-${i}`} className="snap-start shrink-0 w-[240px] border-2 border-border bg-muted/10 shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden">
-                      <div className="h-28 border-b-2 border-border bg-muted/20 overflow-hidden">
-                        <img src={it.imageUrl} alt={it.label} className="h-full w-full object-cover" loading="lazy" />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setMySetupPreview({ src: it.imageUrl, title: it.label })}
+                        className="relative block h-28 w-full cursor-zoom-in border-b-2 border-border bg-muted/20 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label={`View ${it.label} image larger`}
+                      >
+                        <img src={it.imageUrl} alt={it.label} className="h-full w-full object-cover transition-opacity hover:opacity-90" loading="lazy" />
+                      </button>
                       <div className="p-3">
                         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate">{it.label}</div>
                         {it.productUrl ? (
@@ -927,6 +938,13 @@ export default function PublicProfilePage() {
           followersCount={followersCount}
           followingCount={followingCount}
           onFollowChange={refreshCounts}
+        />
+        <MediaFullViewDialog
+          open={!!mySetupPreview}
+          onClose={() => setMySetupPreview(null)}
+          src={mySetupPreview?.src ?? ''}
+          title={mySetupPreview?.title}
+          altText={mySetupPreview?.title}
         />
       </div>
     </div>

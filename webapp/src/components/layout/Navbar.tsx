@@ -8,11 +8,10 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useSearchDialogStore } from '@/store/searchDialog';
-import { Button } from '@/components/ui';
+import { Button, FireLottie, RocketLottie } from '@/components/ui';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { AccountDropdown } from './AccountDropdown';
 import { cn } from '@/lib/utils';
-import { FireLottie, RocketLottie } from '@/components/ui';
 import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
 
 const navLinks = [
@@ -113,8 +112,14 @@ export function Navbar() {
                 <Link
                   key={href}
                   href={href}
-                  onMouseEnter={() => isExplore ? setExploreHovered(true) : isTrending ? setTrendingHovered(true) : null}
-                  onMouseLeave={() => isExplore ? setExploreHovered(false) : isTrending ? setTrendingHovered(false) : null}
+                  onMouseEnter={() => {
+                    if (isExplore) setExploreHovered(true);
+                    else if (isTrending) setTrendingHovered(true);
+                  }}
+                  onMouseLeave={() => {
+                    if (isExplore) setExploreHovered(false);
+                    else if (isTrending) setTrendingHovered(false);
+                  }}
                   className={cn(
                     'group relative px-4 py-2 text-[11px] font-black tracking-widest transition-all overflow-hidden',
                     isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'

@@ -76,7 +76,7 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
       });
       void writeAuditLog(req, AuditAction.OAUTH_LOGIN, { actorId: String(u._id), metadata: { provider: auditProvider } });
       void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: String(u._id), metadata: { source: auditProvider } });
-      emitAppEvent('auth.login.success', { userId: String(u._id), source: auditProvider });
+      emitAppEvent('auth.signin.success', { userId: String(u._id), source: auditProvider });
       const providerId = String(u[idField] ?? '');
       const exchangeCode = await storeOAuthExchange({
         accessToken,
@@ -90,13 +90,9 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
           `${base}/${clientCallbackSlug}?code=${encodeURIComponent(exchangeCode)}`
         );
       }
-      const urlParams = new URLSearchParams({
-        token: accessToken,
-        refreshToken,
-        userId: String(u._id),
-        [idField]: providerId,
-      });
-      return res.redirect(`${base}/${clientCallbackSlug}?${urlParams.toString()}`);
+      return res.redirect(
+        `${base}/login?error=${encodeURIComponent('Sign-in is temporarily unavailable (session exchange). Ensure Redis is configured.')}`
+      );
     })(req, res, next);
   };
 }

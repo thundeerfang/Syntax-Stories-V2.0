@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifyToken, type AuthUser } from '../middlewares/auth';
 import { UserModel } from '../models/User';
+import { unsealProviderToken } from '../shared/crypto/providerTokenCrypto';
 
 const router = Router();
 
@@ -65,7 +66,9 @@ function monthYearFromIso(iso: string): string {
 async function getGithubToken(userId: string): Promise<string | null> {
   const u = await UserModel.findById(userId).select('+githubToken isGitAccount githubToken');
   if (!u || !u.isGitAccount) return null;
-  return (u.githubToken ?? null) as string | null;
+  const raw = u.githubToken;
+  if (raw == null || raw === '') return null;
+  return unsealProviderToken(raw) ?? null;
 }
 
 router.get('/repos', verifyToken, async (req: Request, res: Response) => {
