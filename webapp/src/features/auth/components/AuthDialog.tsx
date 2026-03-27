@@ -312,11 +312,10 @@ export function AuthDialog() {
               key={step}
               role="region"
               aria-live="polite"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={stepMotionTransition}
-              className="will-change-transform"
             >
               {/* 1. WELCOME STEP */}
               {step === 'welcome' && (
@@ -431,14 +430,22 @@ export function AuthDialog() {
                         className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
                       />
                     </div>
-                    <AltchaField enabled={altchaOn} />
-                    <Button
-                      type="submit"
-                      className="w-full py-6 text-xs font-black uppercase tracking-widest"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Sending...' : 'Send login code'}
-                    </Button>
+                    <div className="flex w-full flex-col">
+                      <AltchaField
+                        enabled={altchaOn}
+                        floating="bottom"
+                        floatingAnchor="#auth-login-send-code"
+                        floatingOffset={8}
+                      />
+                      <Button
+                        id="auth-login-send-code"
+                        type="submit"
+                        className="w-full py-6 text-xs font-black uppercase tracking-widest"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Sending...' : 'Send login code'}
+                      </Button>
+                    </div>
                   </form>
                   <AuthFooter>
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -590,14 +597,22 @@ export function AuthDialog() {
                         className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
                       />
                     </div>
-                    <AltchaField enabled={altchaOn} />
-                    <Button
-                      type="submit"
-                      className="w-full py-6 text-xs font-black uppercase tracking-widest"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Creating...' : 'Create account'}
-                    </Button>
+                    <div className="flex w-full flex-col">
+                      <AltchaField
+                        enabled={altchaOn}
+                        floating="bottom"
+                        floatingAnchor="#auth-signup-create"
+                        floatingOffset={8}
+                      />
+                      <Button
+                        id="auth-signup-create"
+                        type="submit"
+                        className="w-full py-6 text-xs font-black uppercase tracking-widest"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Creating...' : 'Create account'}
+                      </Button>
+                    </div>
                   </form>
                   <AuthFooter>
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -749,14 +764,23 @@ export function AuthDialog() {
             void runResendWithOptionalAltcha();
           }}
         >
-          <AltchaField key={resendDialogNonce} enabled={altchaOn} />
-          <Button
-            type="submit"
-            className="w-full py-5 text-xs font-black uppercase tracking-widest"
-            disabled={isLoading}
-          >
-            Send new code
-          </Button>
+          <div className="flex w-full flex-col">
+            <AltchaField
+              key={resendDialogNonce}
+              enabled={altchaOn}
+              floating="bottom"
+              floatingAnchor="#auth-resend-send-code"
+              floatingOffset={8}
+            />
+            <Button
+              id="auth-resend-send-code"
+              type="submit"
+              className="w-full py-5 text-xs font-black uppercase tracking-widest"
+              disabled={isLoading}
+            >
+              Send new code
+            </Button>
+          </div>
         </form>
       </Dialog>
     </>

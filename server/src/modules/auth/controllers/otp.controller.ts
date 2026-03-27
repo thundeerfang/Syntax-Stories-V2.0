@@ -48,6 +48,8 @@ export async function getAltchaChallenge(_req: Request, res: Response): Promise<
   }
   try {
     const challenge = await createChallenge({ hmacKey: key, maxNumber: 1_000_000 });
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.status(200).json(challenge);
   } catch (e) {
     console.error(e);

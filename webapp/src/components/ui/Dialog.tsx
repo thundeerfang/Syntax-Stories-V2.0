@@ -87,9 +87,9 @@ export function Dialog({
           >
             <motion.div
               key="dialog-panel"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className={cn(defaultPanelClass, panelClassName)}
               onClick={(e) => e.stopPropagation()}
@@ -98,17 +98,17 @@ export function Dialog({
               aria-labelledby={titleId}
             >
               <div className={cn('relative', contentClassName)}>
+                {children}
                 {showCloseButton && (
                   <button
                     type="button"
                     onClick={onClose}
-                    className="absolute right-4 top-4 p-2 cursor-pointer text-muted-foreground transition-all hover:text-card-foreground hover:opacity-100"
+                    className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-sm cursor-pointer text-muted-foreground transition-colors hover:text-card-foreground"
                     aria-label="Close"
                   >
-                    <X className="h-4 w-4" aria-hidden />
+                    <X className="h-4 w-4 shrink-0" aria-hidden />
                   </button>
                 )}
-                {children}
               </div>
             </motion.div>
           </div>

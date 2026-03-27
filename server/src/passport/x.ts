@@ -1,12 +1,9 @@
 import passport from 'passport';
+import type { Request } from 'express';
 import { Strategy as TwitterStrategy } from 'passport-twitter';
-import { UserModel, DEFAULT_AVATAR_URL } from '../models/User';
-import { SubscriptionModel } from '../models/Subscription';
 import { env } from '../config/env';
-import { getRedis } from '../config/redis';
-import { writeAuditLog } from '../shared/audit/auditLog';
-import { AuditAction } from '../shared/audit/events';
-import { redisKeys } from '../shared/redis/keys';
+import { normalizeXProfile } from '../oauth/oauth.profiles';
+import { handleOAuthProviderAuth } from '../oauth/oauth.service';
 
 export const hasXConfig = !!(env.X_CONSUMER_KEY && env.X_CONSUMER_SECRET);
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/x/callback` : '';
@@ -23,90 +20,23 @@ export function registerX(passportInstance: passport.PassportStatic): void {
     },
     async (...args: unknown[]) => {
       const [req, accessToken, _tokenSecret, profile, done] = args as [
-        { query?: Record<string, unknown> },
+        Request & { query?: Record<string, unknown> },
         string,
         string,
-        passport.Profile,
+        Parameters<typeof normalizeXProfile>[0],
         (err: Error | null, user?: unknown) => void,
       ];
       try {
         const flow = String(req?.query?.state ?? 'login');
-        const email = profile.emails?.[0]?.value ?? profile.username + '@twitter.placeholder';
-        if (flow.startsWith('link:')) {
-          const linkKey = flow.slice(5);
-          const redis = getRedis();
-          if (!redis) return done(new Error('Linking unavailable'), undefined);
-          const userId = await redis.get(redisKeys.oauth.link(linkKey));
-          if (!userId) return done(new Error('Link expired or invalid'), undefined);
-          const user = await UserModel.findById(userId).select('+xToken');
-          if (!user) return done(new Error('User not found'), undefined);
-          const accountEmail = (user.email ?? '').toLowerCase();
-          const providerEmail = email.toLowerCase();
-          if (accountEmail !== providerEmail) {
-            return done(
-              new Error(`Use the same email as your account (${user.email}) to connect X.`),
-              undefined
-            );
-          }
-          user.xId = profile.id;
-          user.xToken = accessToken;
-          user.isXAccount = true;
-          await user.save();
-          await redis.del(redisKeys.oauth.link(linkKey));
-          void writeAuditLog(req as import('express').Request, AuditAction.OAUTH_CONNECTED, {
-            actorId: String(user._id),
-            metadata: { provider: 'x' },
-          });
-          return done(null, { _id: user._id, xId: user.xId });
-        }
-        if (flow === 'login') {
-          const existingUser = await UserModel.findOne({ xId: profile.id }).select('+xToken');
-          if (!existingUser || !existingUser.isXAccount) {
-            return done(
-              new Error('No account is linked to this X. Please sign up or link X from settings.'),
-              undefined
-            );
-          }
-          existingUser.xToken = accessToken;
-          await existingUser.save();
-          return done(null, { _id: existingUser._id, xId: existingUser.xId });
-        }
-
-        const existingByEmail = await UserModel.findOne({ email });
-        if (existingByEmail) {
-          return done(
-            new Error('An account with this email already exists. Please sign in, then link X from settings.'),
-            undefined
-          );
-        }
-
-        const randomNumber = Math.floor(1000 + Math.random() * 9000);
-        const newUser = new UserModel({
-          fullName: profile.displayName ?? profile.username ?? 'User',
-          xId: profile.id,
-          xToken: accessToken,
-          username: (profile.username ?? 'user').toLowerCase() + randomNumber,
-          email: email.includes('@twitter.placeholder') ? `x-${profile.id}@syntaxstories.placeholder` : email,
-          profileImg:
-            (typeof profile.photos?.[0]?.value === 'string' && profile.photos[0].value.startsWith('http'))
-              ? profile.photos[0].value
-              : DEFAULT_AVATAR_URL,
-          isGoogleAccount: false,
-          isGitAccount: false,
-          isFacebookAccount: false,
-          isXAccount: true,
-          isAppleAccount: false,
-          isDiscordAccount: false,
+        const normalized = normalizeXProfile(profile);
+        const user = await handleOAuthProviderAuth({
+          provider: 'x',
+          flow,
+          accessToken,
+          normalized,
+          req,
         });
-        await newUser.save();
-        const subscription = await SubscriptionModel.create({
-          userId: newUser._id,
-          plan: 'free',
-          status: 'active',
-        });
-        newUser.subscription = subscription._id;
-        await newUser.save();
-        done(null, { _id: newUser._id, xId: newUser.xId });
+        done(null, user);
       } catch (err) {
         done(err as Error, undefined);
       }

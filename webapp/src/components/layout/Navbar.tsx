@@ -97,8 +97,8 @@ export function Navbar() {
             >
               <Menu className="h-5 w-5 group-hover:text-primary transition-colors" strokeWidth={2.5} />
             </button>
-            <Link href="/" className="shrink-0 transition-transform hover:scale-105 active:scale-95">
-              <img src="/svg/logo_hori.svg" alt="Syntax Stories" className="h-8 sm:h-9 w-auto object-contain" />
+            <Link href="/" className="shrink-0">
+              <img src="/svg/logo_hori.png" alt="Syntax Stories" className="h-8 sm:h-9 w-auto object-contain" />
             </Link>
           </div>
 
