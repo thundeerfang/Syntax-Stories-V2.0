@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import type { ProfileSections, ProfileUpdateSection } from '../../modules/profile/profile.types';
+import type { ProfileSections, ProfileUpdateSection } from '../../modules/profile/profile.types.js';
 
 /**
  * In-process event bus (not Kafka). Listeners must not block the request path for heavy work.
@@ -12,9 +12,6 @@ export type AuthSigninSuccessPayload = {
   isNewUser?: boolean;
 };
 
-/** @deprecated Use `AuthSigninSuccessPayload` / event `auth.signin.success`. */
-export type AuthLoginSuccessPayload = AuthSigninSuccessPayload;
-
 /** Emitted after a successful profile persist; audit listener diffs sections. */
 export type ProfileUpdatedPayload = {
   req: Request;
@@ -25,9 +22,6 @@ export type ProfileUpdatedPayload = {
   /** `legacy` = monolithic `PATCH /auth/profile`; otherwise the section route used. */
   section: ProfileUpdateSection | 'legacy';
 };
-
-/** @deprecated Alias for `ProfileUpdatedPayload` — prefer the payload type name. */
-export type ProfileUpdatedEvent = ProfileUpdatedPayload;
 
 export type AppEventMap = {
   /** Successful sign-in after session + JWT issuance (email OTP, OAuth, etc.). */
@@ -48,7 +42,7 @@ export function onAppEvent<K extends keyof AppEventMap>(event: K, fn: Listener<K
   }
   set.add(fn as Listener<keyof AppEventMap>);
   return () => {
-    set!.delete(fn as Listener<keyof AppEventMap>);
+    set?.delete(fn as Listener<keyof AppEventMap>);
   };
 }
 

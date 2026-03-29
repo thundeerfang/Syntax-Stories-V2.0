@@ -1,9 +1,9 @@
 import passport from 'passport';
-import type { Request } from 'express';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { env } from '../config/env';
-import { normalizeGoogleProfile } from '../oauth/oauth.profiles';
-import { handleOAuthProviderAuth } from '../oauth/oauth.service';
+import { env } from '../config/env.js';
+import { normalizeGoogleProfile } from '../oauth/oauth.profiles.js';
+import { handleOAuthProviderAuth } from '../oauth/oauth.service.js';
+import { oauthFlowFromReq } from './oauthQuery.js';
 
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/google/callback` : '';
 
@@ -18,14 +18,14 @@ export function registerGoogle(passportInstance: passport.PassportStatic): void 
       },
       async (req, accessToken, _refreshToken, profile, done) => {
         try {
-          const flow = String((req.query as Record<string, unknown>)?.state ?? 'login');
+          const flow = oauthFlowFromReq(req);
           const normalized = normalizeGoogleProfile(profile);
           const user = await handleOAuthProviderAuth({
             provider: 'google',
             flow,
             accessToken,
             normalized,
-            req: req as Request,
+            req,
           });
           done(null, user);
         } catch (err) {

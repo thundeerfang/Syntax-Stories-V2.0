@@ -1,5 +1,5 @@
-import { privateKey, publicKey } from './keys';
-import { env } from './env';
+import { privateKey, publicKey } from './keys.js';
+import { env } from './env.js';
 
 export const authConfig = {
   JWT_ACCESS_PRIVATE_KEY: privateKey,

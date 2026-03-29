@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { consumeOAuthExchange } from '../../../oauth/oauth.exchange.service';
+import { consumeOAuthExchange } from '../../../oauth/oauth.exchange.service.js';
 
 /**
  * `POST /auth/oauth/exchange` — swap one-time redirect code for tokens (no secrets in browser history/referrer).

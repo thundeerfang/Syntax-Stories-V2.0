@@ -1,9 +1,10 @@
 import passport from 'passport';
 import type { Request } from 'express';
 import { Strategy as GitHubStrategy } from 'passport-github2';
-import { env } from '../config/env';
-import { normalizeGithubProfile } from '../oauth/oauth.profiles';
-import { handleOAuthProviderAuth } from '../oauth/oauth.service';
+import { env } from '../config/env.js';
+import { normalizeGithubProfile } from '../oauth/oauth.profiles.js';
+import { handleOAuthProviderAuth } from '../oauth/oauth.service.js';
+import { oauthFlowFromReq } from './oauthQuery.js';
 
 const callbackURL = env.BACKEND_URL ? `${env.BACKEND_URL}/auth/github/callback` : '';
 
@@ -25,7 +26,7 @@ export function registerGithub(passportInstance: passport.PassportStatic): void 
         (err: Error | null, user?: unknown) => void,
       ];
       try {
-        const flow = String(req?.query?.state ?? 'login');
+        const flow = oauthFlowFromReq(req);
         const normalized = normalizeGithubProfile(profile);
         const user = await handleOAuthProviderAuth({
           provider: 'github',

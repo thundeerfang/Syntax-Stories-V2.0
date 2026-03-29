@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { env } from './env';
+import { env } from './env.js';
 
 type RedisClient = Awaited<ReturnType<typeof createClient>>;
 let redisClient: RedisClient | null = null;

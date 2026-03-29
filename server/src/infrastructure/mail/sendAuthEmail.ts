@@ -1,10 +1,10 @@
-import { env } from '../../config/env';
-import { getSmtpTransporter, sendViaSmtp } from './provider/smtpProvider';
-import { sendViaResend } from './provider/resendProvider';
-import { isMailSendError, MailSendError } from './types';
+import { env } from '../../config/env.js';
+import { getSmtpTransporter, sendViaSmtp } from './provider/smtpProvider.js';
+import { sendViaResend } from './provider/resendProvider.js';
+import { isMailSendError, MailSendError } from './types.js';
 
-export { MailSendError, isMailSendError } from './types';
-export type { MailErrorKind } from './types';
+export { MailSendError, isMailSendError } from './types.js';
+export type { MailErrorKind } from './types.js';
 
 export function isAuthEmailConfigured(): boolean {
   return !!(getSmtpTransporter() || env.RESEND_API_KEY?.trim());

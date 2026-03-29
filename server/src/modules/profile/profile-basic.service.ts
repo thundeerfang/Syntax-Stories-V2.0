@@ -1,6 +1,6 @@
-import { STACK_AND_TOOLS_MAX } from '../../constants/profileLimits';
-import { ProfileErrorCode } from './profile.types';
-import { profileRepository } from './profile.repository';
+import { STACK_AND_TOOLS_MAX } from '../../constants/profileLimits.js';
+import { ProfileErrorCode } from './profile.types.js';
+import { profileRepository } from './profile.repository.js';
 
 export type BasicRulesResult =
   | { ok: true }

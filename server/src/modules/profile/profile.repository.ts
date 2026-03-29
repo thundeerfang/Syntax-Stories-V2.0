@@ -1,5 +1,5 @@
-import { UserModel } from '../../models/User';
-import type { ProfileUpdateSection } from './profile.types';
+import { UserModel } from '../../models/User.js';
+import type { ProfileUpdateSection } from './profile.types.js';
 
 const TOKEN_PROJECTION = {
   twoFactorSecret: 0,

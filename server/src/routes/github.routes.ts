@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { verifyToken, type AuthUser } from '../middlewares/auth';
-import { UserModel } from '../models/User';
-import { unsealProviderToken } from '../shared/crypto/providerTokenCrypto';
+import { verifyToken, type AuthUser } from '../middlewares/auth/index.js';
+import { UserModel } from '../models/User.js';
+import { unsealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
 
 const router = Router();
 
@@ -108,7 +108,7 @@ router.get('/repo/:fullName', verifyToken, async (req: Request, res: Response) =
       return;
     }
     const fullName = String(req.params.fullName || '').trim();
-    if (!fullName || !fullName.includes('/')) {
+    if (!fullName?.includes('/')) {
       res.status(400).json({ success: false, message: 'Invalid repo name.' });
       return;
     }

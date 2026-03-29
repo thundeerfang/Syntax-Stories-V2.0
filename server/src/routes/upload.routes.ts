@@ -3,10 +3,10 @@ import path from 'node:path';
 import fs from 'node:fs';
 import multer from 'multer';
 import sharp from 'sharp';
-import { verifyToken } from '../middlewares/auth';
-import { MAX_FILE_SIZE_BYTES, imageBufferMatchesClaimedMime, imageDimensionsAllowed } from '../config/uploadValidation';
-import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder';
-import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage';
+import { verifyToken } from '../middlewares/auth/index.js';
+import { MAX_FILE_SIZE_BYTES, imageBufferMatchesClaimedMime, imageDimensionsAllowed } from '../config/uploadValidation.js';
+import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder.js';
+import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage.js';
 
 async function tryBlurDataUrl(imagePath: string): Promise<string | undefined> {
   try {
@@ -154,6 +154,37 @@ function getPublicUrl(req: Request, pathSegment: string): string {
   return pathSegment.startsWith('http') ? pathSegment : `${base}/${pathSegment.replace(/^\/+/, '')}`;
 }
 
+/** Multer fields may be strings or numbers; never stringify arbitrary objects. */
+function formCropCoord(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t.length > 0 ? t : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return undefined;
+}
+
+function applyOptionalRasterCrop(
+  image: sharp.Sharp,
+  body: Record<string, string | undefined>,
+  meta: sharp.Metadata
+): sharp.Sharp {
+  const { cropX, cropY, cropWidth, cropHeight } = body;
+  if (!cropX || !cropY || !cropWidth || !cropHeight || !meta.width || !meta.height) {
+    return image;
+  }
+  const left = Math.max(0, Math.round(Number.parseFloat(cropX)));
+  const top = Math.max(0, Math.round(Number.parseFloat(cropY)));
+  const width = Math.min(meta.width - left, Math.round(Number.parseFloat(cropWidth)));
+  const height = Math.min(meta.height - top, Math.round(Number.parseFloat(cropHeight)));
+  if (width > 0 && height > 0) {
+    return image.extract({ left, top, width, height });
+  }
+  return image;
+}
+
 router.post('/avatar', verifyToken, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
   if (!req.file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -176,20 +207,11 @@ router.post('/avatar', verifyToken, uploadAvatar.single('avatar'), async (req: R
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
     }
-    const { cropX, cropY, cropWidth, cropHeight } = req.body as Record<string, string | undefined>;
     const inputPath = req.file.path;
     const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
     const outputPath = path.join(AVATARS_DIR, outputFilename);
 
-    if (cropX && cropY && cropWidth && cropHeight && meta.width && meta.height) {
-      const left = Math.max(0, Math.round(Number.parseFloat(cropX)));
-      const top = Math.max(0, Math.round(Number.parseFloat(cropY)));
-      const width = Math.min(meta.width - left, Math.round(Number.parseFloat(cropWidth)));
-      const height = Math.min(meta.height - top, Math.round(Number.parseFloat(cropHeight)));
-      if (width > 0 && height > 0) {
-        image = image.extract({ left, top, width, height });
-      }
-    }
+    image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
 
     await image
       .resize(256, 256, { fit: 'cover' })
@@ -231,20 +253,11 @@ router.post('/cover', verifyToken, uploadCover.single('cover'), async (req: Requ
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
     }
-    const { cropX, cropY, cropWidth, cropHeight } = req.body as Record<string, string | undefined>;
     const inputPath = req.file.path;
     const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
     const outputPath = path.join(COVERS_DIR, outputFilename);
 
-    if (cropX && cropY && cropWidth && cropHeight && meta.width && meta.height) {
-      const left = Math.max(0, Math.round(Number.parseFloat(cropX)));
-      const top = Math.max(0, Math.round(Number.parseFloat(cropY)));
-      const width = Math.min(meta.width - left, Math.round(Number.parseFloat(cropWidth)));
-      const height = Math.min(meta.height - top, Math.round(Number.parseFloat(cropHeight)));
-      if (width > 0 && height > 0) {
-        image = image.extract({ left, top, width, height });
-      }
-    }
+    image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
 
     await image
       .resize(1600, 400, { fit: 'cover' })
@@ -287,20 +300,18 @@ router.post('/media', verifyToken, uploadMedia.single('media'), async (req: Requ
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
     }
-    const { cropX, cropY, cropWidth, cropHeight } = req.body as Record<string, string | undefined>;
+    const rawBody = req.body as Record<string, unknown>;
+    const cropBody: Record<string, string | undefined> = {
+      cropX: formCropCoord(rawBody.cropX),
+      cropY: formCropCoord(rawBody.cropY),
+      cropWidth: formCropCoord(rawBody.cropWidth),
+      cropHeight: formCropCoord(rawBody.cropHeight),
+    };
     const inputPath = req.file.path;
     const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-thumb.jpg';
     const outputPath = path.join(MEDIA_DIR, outputFilename);
 
-    if (cropX != null && cropY != null && cropWidth != null && cropHeight != null && meta.width && meta.height) {
-      const left = Math.max(0, Math.round(Number.parseFloat(String(cropX))));
-      const top = Math.max(0, Math.round(Number.parseFloat(String(cropY))));
-      const width = Math.min(meta.width - left, Math.round(Number.parseFloat(String(cropWidth))));
-      const height = Math.min(meta.height - top, Math.round(Number.parseFloat(String(cropHeight))));
-      if (width > 0 && height > 0) {
-        image = image.extract({ left, top, width, height });
-      }
-    }
+    image = applyOptionalRasterCrop(image, cropBody, meta);
 
     await image
       .resize(MEDIA_THUMB_SIZE, MEDIA_THUMB_SIZE, { fit: 'cover' })

@@ -1,9 +1,10 @@
 import passport from 'passport';
 import OAuth2Strategy from 'passport-oauth2';
 import type { Request } from 'express';
-import { env } from '../config/env';
-import { fetchDiscordMe, normalizeDiscordProfile, type DiscordMeProfile } from '../oauth/oauth.profiles';
-import { handleOAuthProviderAuth } from '../oauth/oauth.service';
+import { env } from '../config/env.js';
+import { fetchDiscordMe, normalizeDiscordProfile, type DiscordMeProfile } from '../oauth/oauth.profiles.js';
+import { handleOAuthProviderAuth } from '../oauth/oauth.service.js';
+import { oauthFlowFromReq } from './oauthQuery.js';
 
 export const hasDiscordConfig = !!(
   env.DISCORD_CLIENT_ID &&
@@ -36,7 +37,7 @@ export function registerDiscord(passportInstance: passport.PassportStatic): void
       done: (err: Error | null, user?: unknown) => void
     ) => {
       try {
-        const flow = String((req.query as Record<string, unknown>)?.state ?? 'login');
+        const flow = oauthFlowFromReq(req);
         const normalized = normalizeDiscordProfile(profile);
         const user = await handleOAuthProviderAuth({
           provider: 'discord',

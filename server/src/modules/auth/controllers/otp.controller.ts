@@ -1,20 +1,20 @@
 import { Request, Response } from 'express';
-import { UserModel } from '../../../models/User';
-import { SubscriptionModel } from '../../../models/Subscription';
-import { authConfig } from '../../../config/auth.config';
-import { getRedis } from '../../../config/redis';
-import { env } from '../../../config/env';
-import { writeAuditLog } from '../../../shared/audit/auditLog';
-import { AuditAction } from '../../../shared/audit/events';
+import { UserModel } from '../../../models/User.js';
+import { SubscriptionModel } from '../../../models/Subscription.js';
+import { authConfig } from '../../../config/auth.config.js';
+import { getRedis } from '../../../config/redis.js';
+import { env } from '../../../config/env.js';
+import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { AuditAction } from '../../../shared/audit/events.js';
 import {
   sendAuthEmail,
   isAuthEmailConfigured,
   getEmailSendErrorMessage,
   isMailSendError,
-} from '../../../infrastructure/mail/sendAuthEmail';
-import { bumpOtpMetric } from '../../../shared/metrics/otpMetrics';
+} from '../../../infrastructure/mail/sendAuthEmail.js';
+import { bumpOtpMetric } from '../../../shared/metrics/otpMetrics.js';
 import { createChallenge } from 'altcha-lib';
-import { respondWithSessionAfterEmailAuth } from '../../../services/authLogin.service';
+import { respondWithSessionAfterEmailAuth } from '../../../services/authLogin.service.js';
 import {
   generateEmailOtpDigits,
   getStoredLoginOtp,
@@ -29,13 +29,31 @@ import {
   markOtpResendGate,
   isOtpVersionMismatch,
   type EmailOtpPurpose,
+  type StoredLoginOtp,
   type StoredSignupOtp,
-} from '../../../services/emailOtp.service';
-import { redisKeys } from '../../../shared/redis/keys';
-import { logSecurityEvent } from '../securityEventLog';
+} from '../../../services/emailOtp.service.js';
+import { redisKeys } from '../../../shared/redis/keys.js';
+import { logSecurityEvent } from '../securityEventLog.js';
 
 const OTP_ATTEMPT_LIMIT = 10;
 const OTP_ATTEMPT_BLOCK_SECONDS = 5 * 60;
+
+function otpEmailSendFailureMessage(err: unknown, redisUnavailableMessage: string): string {
+  if (err instanceof Error && err.message === 'Redis required for OTP') {
+    return redisUnavailableMessage;
+  }
+  const code =
+    typeof err === 'object' && err !== null && 'code' in err
+      ? (err as { code?: string }).code
+      : undefined;
+  if (code === 'EAUTH') {
+    return getEmailSendErrorMessage(err);
+  }
+  if (isMailSendError(err) && err.kind === 'transient') {
+    return 'Email delivery is temporarily unavailable. Try again shortly.';
+  }
+  return 'Internal Server Error 💀';
+}
 
 export async function getAltchaChallenge(_req: Request, res: Response): Promise<void> {
   const key = env.ALTCHA_HMAC_KEY?.trim() || process.env.JWT_SECRET?.trim();
@@ -115,14 +133,10 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
     });
   } catch (err) {
     console.error(err);
-    const message =
-      (err as Error).message === 'Redis required for OTP'
-        ? 'Service temporarily unavailable. Try again later.'
-        : (err as { code?: string }).code === 'EAUTH'
-          ? getEmailSendErrorMessage(err)
-          : isMailSendError(err) && err.kind === 'transient'
-            ? 'Email delivery is temporarily unavailable. Try again shortly.'
-            : 'Internal Server Error 💀';
+    const message = otpEmailSendFailureMessage(
+      err,
+      'Service temporarily unavailable. Try again later.'
+    );
     res.status(500).json({ message, success: false });
   }
 }
@@ -186,16 +200,129 @@ export async function signupEmail(req: Request, res: Response): Promise<void> {
     });
   } catch (err) {
     console.error(err);
-    const message =
-      (err as Error).message === 'Redis required for OTP'
-        ? 'Service temporarily unavailable.'
-        : (err as { code?: string }).code === 'EAUTH'
-          ? getEmailSendErrorMessage(err)
-          : isMailSendError(err) && err.kind === 'transient'
-            ? 'Email delivery is temporarily unavailable. Try again shortly.'
-            : 'Internal Server Error 💀';
+    const message = otpEmailSendFailureMessage(err, 'Service temporarily unavailable.');
     res.status(500).json({ message, success: false });
   }
+}
+
+async function failOtpVerification(
+  req: Request,
+  res: Response,
+  redis: ReturnType<typeof getRedis>,
+  normalizedEmail: string,
+  reason: 'invalid_otp' | 'stale_otp_version'
+): Promise<void> {
+  bumpOtpMetric('otp_verify_fail_total');
+  await logSecurityEvent(null, 'login_failure', req, { email: normalizedEmail, reason });
+  void writeAuditLog(req, AuditAction.OTP_FAILED, { metadata: { email: normalizedEmail, reason } });
+
+  const msg =
+    reason === 'stale_otp_version'
+      ? 'That code is no longer valid. Use the code from your latest email or request a new one.'
+      : 'Invalid or expired code. Use Resend code or go back to request a new one.';
+
+  if (!redis) {
+    res.status(401).json({ message: msg, success: false });
+    return;
+  }
+
+  const attemptKey = redisKeys.auth.otpAttempts(normalizedEmail);
+  const count = await redis.incr(attemptKey);
+  if (count === 1) {
+    await redis.expire(attemptKey, OTP_ATTEMPT_BLOCK_SECONDS);
+  }
+  const attemptsLeft = Math.max(0, OTP_ATTEMPT_LIMIT - count);
+  if (count >= OTP_ATTEMPT_LIMIT) {
+    const ttl = await redis.ttl(attemptKey);
+    const retrySec = ttl > 0 ? ttl : OTP_ATTEMPT_BLOCK_SECONDS;
+    res.setHeader('Retry-After', String(retrySec));
+    res.status(429).json({
+      message: `Too many invalid codes for this email. Please wait ${Math.ceil(retrySec / 60)} minute(s) before trying again.`,
+      success: false,
+      retryAfter: retrySec,
+      attemptsLeft: 0,
+    });
+    return;
+  }
+  res.status(401).json({
+    message: msg,
+    success: false,
+    attemptsLeft,
+  });
+}
+
+async function createUserFromEmailSignup(
+  req: Request,
+  normalizedEmail: string,
+  signupFullName: string
+): Promise<{ user: InstanceType<typeof UserModel>; isNewUser: true }> {
+  const randomNumber = Math.floor(1000 + Math.random() * 9000);
+  const username = signupFullName.trim().toLowerCase().replaceAll(/\s+/g, '') + randomNumber;
+  const user = new UserModel({
+    fullName: signupFullName,
+    username,
+    email: normalizedEmail,
+    isGoogleAccount: false,
+    isGitAccount: false,
+    isFacebookAccount: false,
+    isXAccount: false,
+    isAppleAccount: false,
+    isDiscordAccount: false,
+    emailVerified: true,
+  });
+  await user.save();
+  const subscription = await SubscriptionModel.create({
+    userId: user._id,
+    plan: 'free',
+    status: 'active',
+  });
+  user.subscription = subscription._id;
+  await user.save();
+  await logSecurityEvent(String(user._id), 'login_success', req, { source: 'signup_email' });
+  void writeAuditLog(req, AuditAction.USER_SIGNUP, { actorId: String(user._id), metadata: { source: 'email' } });
+  return { user, isNewUser: true };
+}
+
+async function rejectVerifyIfOtpRateLimited(
+  redis: ReturnType<typeof getRedis>,
+  normalizedEmail: string,
+  res: Response
+): Promise<boolean> {
+  if (!redis) return false;
+  const attemptKey = redisKeys.auth.otpAttempts(normalizedEmail);
+  const attemptRaw = await redis.get(attemptKey);
+  const attempts = attemptRaw ? Number.parseInt(attemptRaw, 10) || 0 : 0;
+  if (attempts < OTP_ATTEMPT_LIMIT) return false;
+  const blockTtl = await redis.ttl(attemptKey);
+  const waitMin = blockTtl > 0 ? Math.ceil(blockTtl / 60) : Math.ceil(OTP_ATTEMPT_BLOCK_SECONDS / 60);
+  res.status(429).json({
+    message: `Too many invalid codes for this email. Please wait ${waitMin} minute(s) before trying again.`,
+    success: false,
+    retryAfter: blockTtl > 0 ? blockTtl : OTP_ATTEMPT_BLOCK_SECONDS,
+    attemptsLeft: 0,
+  });
+  return true;
+}
+
+async function resolveUserAfterOtpVerified(
+  req: Request,
+  res: Response,
+  userPrecheck: InstanceType<typeof UserModel> | null,
+  purpose: EmailOtpPurpose,
+  stored: StoredLoginOtp | StoredSignupOtp,
+  normalizedEmail: string
+): Promise<{ user: InstanceType<typeof UserModel>; isNewUser: boolean } | null> {
+  const signupFullName = purpose === 'signup' ? (stored as StoredSignupOtp).fullName : undefined;
+  if (signupFullName && !userPrecheck) {
+    const created = await createUserFromEmailSignup(req, normalizedEmail, signupFullName);
+    return { user: created.user, isNewUser: created.isNewUser };
+  }
+  if (userPrecheck) {
+    await logSecurityEvent(String(userPrecheck._id), 'login_success', req, { source: 'otp' });
+    return { user: userPrecheck, isNewUser: false };
+  }
+  res.status(400).json({ message: 'No account found. Sign up first.', success: false });
+  return null;
 }
 
 export async function verifyOtp(req: Request, res: Response): Promise<void> {
@@ -206,7 +333,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       otpVersion?: number;
     };
     const normalizedEmail = email.toLowerCase().trim();
-    const otpCode = String(code ?? '').replace(/\D/g, '').slice(0, 6);
+    const otpCode = String(code ?? '').replaceAll(/\D/g, '').slice(0, 6);
     if (otpCode.length !== 6) {
       res.status(400).json({
         message: 'Enter the 6-digit code from your email.',
@@ -215,23 +342,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       return;
     }
     const redis = getRedis();
-
-    if (redis) {
-      const attemptKey = redisKeys.auth.otpAttempts(normalizedEmail);
-      const attemptRaw = await redis.get(attemptKey);
-      const attempts = attemptRaw ? parseInt(attemptRaw, 10) || 0 : 0;
-      if (attempts >= OTP_ATTEMPT_LIMIT) {
-        const blockTtl = await redis.ttl(attemptKey);
-        const waitMin = blockTtl > 0 ? Math.ceil(blockTtl / 60) : Math.ceil(OTP_ATTEMPT_BLOCK_SECONDS / 60);
-        res.status(429).json({
-          message: `Too many invalid codes for this email. Please wait ${waitMin} minute(s) before trying again.`,
-          success: false,
-          retryAfter: blockTtl > 0 ? blockTtl : OTP_ATTEMPT_BLOCK_SECONDS,
-          attemptsLeft: 0,
-        });
-        return;
-      }
-    }
+    if (await rejectVerifyIfOtpRateLimited(redis, normalizedEmail, res)) return;
 
     const userPrecheck = await UserModel.findOne({ email: normalizedEmail });
     const purpose: EmailOtpPurpose = userPrecheck ? 'login' : 'signup';
@@ -247,108 +358,30 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       verifyEmailOtpHash(stored.h, normalizedEmail, otpCode)
     );
 
-    async function failVerify(reason: 'invalid_otp' | 'stale_otp_version'): Promise<void> {
-      bumpOtpMetric('otp_verify_fail_total');
-      await logSecurityEvent(null, 'login_failure', req, { email: normalizedEmail, reason });
-      void writeAuditLog(req, AuditAction.OTP_FAILED, { metadata: { email: normalizedEmail, reason } });
-
-      if (redis) {
-        const attemptKey = redisKeys.auth.otpAttempts(normalizedEmail);
-        const count = await redis.incr(attemptKey);
-        if (count === 1) {
-          await redis.expire(attemptKey, OTP_ATTEMPT_BLOCK_SECONDS);
-        }
-        const attemptsLeft = Math.max(0, OTP_ATTEMPT_LIMIT - count);
-        if (count >= OTP_ATTEMPT_LIMIT) {
-          const ttl = await redis.ttl(attemptKey);
-          res.setHeader('Retry-After', String(ttl > 0 ? ttl : OTP_ATTEMPT_BLOCK_SECONDS));
-          res.status(429).json({
-            message: `Too many invalid codes for this email. Please wait ${Math.ceil((ttl > 0 ? ttl : OTP_ATTEMPT_BLOCK_SECONDS) / 60)} minute(s) before trying again.`,
-            success: false,
-            retryAfter: ttl > 0 ? ttl : OTP_ATTEMPT_BLOCK_SECONDS,
-            attemptsLeft: 0,
-          });
-          return;
-        }
-        res.status(401).json({
-          message:
-            reason === 'stale_otp_version'
-              ? 'That code is no longer valid. Use the code from your latest email or request a new one.'
-              : 'Invalid or expired code. Use Resend code or go back to request a new one.',
-          success: false,
-          attemptsLeft,
-        });
-        return;
-      }
-
-      res.status(401).json({
-        message:
-          reason === 'stale_otp_version'
-            ? 'That code is no longer valid. Use the code from your latest email or request a new one.'
-            : 'Invalid or expired code. Use Resend code or go back to request a new one.',
-        success: false,
-      });
-    }
-
     if (versionBad) {
-      await failVerify('stale_otp_version');
+      await failOtpVerification(req, res, redis, normalizedEmail, 'stale_otp_version');
       return;
     }
     if (!otpValid) {
-      await failVerify('invalid_otp');
+      await failOtpVerification(req, res, redis, normalizedEmail, 'invalid_otp');
       return;
     }
 
     await deleteEmailOtp(purpose, normalizedEmail);
 
     if (redis) {
-      const attemptKey = redisKeys.auth.otpAttempts(normalizedEmail);
-      await redis.del(attemptKey);
+      await redis.del(redisKeys.auth.otpAttempts(normalizedEmail));
     }
-    let user = userPrecheck;
-    let isNewUser = false;
-    const signupFullName =
-      purpose === 'signup' ? (stored as StoredSignupOtp).fullName : undefined;
-    if (signupFullName && !user) {
-      const randomNumber = Math.floor(1000 + Math.random() * 9000);
-      const username =
-        signupFullName.trim().toLowerCase().replace(/\s+/g, '') + randomNumber;
-      user = new UserModel({
-        fullName: signupFullName,
-        username,
-        email: normalizedEmail,
-        isGoogleAccount: false,
-        isGitAccount: false,
-        isFacebookAccount: false,
-        isXAccount: false,
-        isAppleAccount: false,
-        isDiscordAccount: false,
-        emailVerified: true,
-      });
-      await user.save();
-      isNewUser = true;
-      const subscription = await SubscriptionModel.create({
-        userId: user._id,
-        plan: 'free',
-        status: 'active',
-      });
-      user.subscription = subscription._id;
-      await user.save();
-      await logSecurityEvent(String(user._id), 'login_success', req, { source: 'signup_email' });
-      void writeAuditLog(req, AuditAction.USER_SIGNUP, { actorId: String(user._id), metadata: { source: 'email' } });
-    } else if (user) {
-      await logSecurityEvent(String(user._id), 'login_success', req, { source: 'otp' });
-    } else {
-      res.status(400).json({ message: 'No account found. Sign up first.', success: false });
-      return;
-    }
+
+    const resolved = await resolveUserAfterOtpVerified(req, res, userPrecheck, purpose, stored, normalizedEmail);
+    if (!resolved) return;
 
     bumpOtpMetric('otp_verify_success_total');
     void writeAuditLog(req, AuditAction.OTP_VERIFIED, {
-      actorId: String(user._id),
+      actorId: String(resolved.user._id),
       metadata: { email: normalizedEmail, purpose },
     });
-    await respondWithSessionAfterEmailAuth(req, res, user, isNewUser);
+    await respondWithSessionAfterEmailAuth(req, res, resolved.user, resolved.isNewUser);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error 💀', success: false });

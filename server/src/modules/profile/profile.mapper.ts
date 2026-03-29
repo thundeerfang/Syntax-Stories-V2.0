@@ -1,4 +1,4 @@
-import { normalizeProfileImg } from '../../models/User';
+import { normalizeProfileImg } from '../../models/User.js';
 
 /**
  * Account-owner projection: `GET /auth/me`, `PATCH /auth/profile*`.

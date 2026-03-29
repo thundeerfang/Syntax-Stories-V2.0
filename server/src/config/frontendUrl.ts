@@ -1,4 +1,4 @@
-import { env } from './env';
+import { env } from './env.js';
 
 /** First `FRONTEND_URL` entry — OAuth redirects and similar. */
 export function getFrontendRedirectBase(): string {

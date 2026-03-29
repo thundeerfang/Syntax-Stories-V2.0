@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { ZodTypeAny } from 'zod';
-import { isProfileUpdateSection } from '../../modules/profile/profile.types';
+import { isProfileUpdateSection } from '../../modules/profile/profile.types.js';
 import {
   updateProfileBasicSchema,
   updateProfileCertificationsSchema,
@@ -9,8 +9,8 @@ import {
   updateProfileSetupSchema,
   updateProfileSocialSchema,
   updateProfileWorkSchema,
-} from './profileZodSchemas';
-import { formatZodError } from './zodFormat';
+} from './profileZodSchemas.js';
+import { formatZodError } from './zodFormat.js';
 
 function sectionValidation(schema: ZodTypeAny, req: Request, res: Response, next: NextFunction): void {
   const r = schema.safeParse(req.body);

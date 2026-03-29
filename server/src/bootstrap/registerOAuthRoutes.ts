@@ -1,9 +1,9 @@
 import type { Express } from 'express';
 import passport from 'passport';
-import { oauthCallbackHandler, oauthLinkHandler } from '../oauth/oauthExpress';
-import { getOAuthProviderRegistrations, type OAuthProviderRegistration } from '../oauth/oauth.providers';
-import { hasFacebookConfig, hasXConfig, hasDiscordConfig } from '../passport/index';
-import { getFrontendRedirectBase } from '../config/frontendUrl';
+import { oauthCallbackHandler, oauthLinkHandler } from '../oauth/oauthExpress.js';
+import { getOAuthProviderRegistrations, type OAuthProviderRegistration } from '../oauth/oauth.providers.js';
+import { hasFacebookConfig, hasXConfig, hasDiscordConfig } from '../passport/index.js';
+import { getFrontendRedirectBase } from '../config/frontendUrl.js';
 
 function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): void {
   const base = `/auth/${def.routeKey}`;

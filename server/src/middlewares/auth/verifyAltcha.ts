@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifySolution } from 'altcha-lib';
-import { env } from '../../config/env';
+import { env } from '../../config/env.js';
 
 function hmacKey(): string | null {
   const explicit = env.ALTCHA_HMAC_KEY?.trim();

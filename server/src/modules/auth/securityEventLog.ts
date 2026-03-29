@@ -1,10 +1,10 @@
 import type { Request } from 'express';
-import { SecurityEventModel } from '../../models/SecurityEvent';
+import { SecurityEventModel } from '../../models/SecurityEvent.js';
 
 function getClientMeta(req: Request): { ip: string; userAgent: string } {
   const ip =
     req.ip ??
-    (req.connection as { remoteAddress?: string })?.remoteAddress ??
+    req.socket?.remoteAddress ??
     req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ??
     'unknown';
   const userAgent = req.get('User-Agent') ?? '';

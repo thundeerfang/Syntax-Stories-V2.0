@@ -1,5 +1,5 @@
-import { DEFAULT_AVATAR_URL } from '../models/User';
-import type { NormalizedOAuthProfile } from './oauth.types';
+import { DEFAULT_AVATAR_URL } from '../models/User.js';
+import type { NormalizedOAuthProfile } from './oauth.types.js';
 
 type GoogleLikeProfile = {
   id: string;

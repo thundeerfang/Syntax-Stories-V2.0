@@ -1,15 +1,15 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
-import { UserModel } from '../../../models/User';
-import { SessionModel } from '../../../models/Session';
-import { SecurityEventModel } from '../../../models/SecurityEvent';
-import { authConfig } from '../../../config/auth.config';
-import { signAccessToken } from '../../../config/jwt';
-import type { AuthUser } from '../../../middlewares/auth';
-import { writeAuditLog } from '../../../shared/audit/auditLog';
-import { AuditAction } from '../../../shared/audit/events';
-import { logSecurityEvent } from '../securityEventLog';
-import { SESSION_DURATION_MS } from '../../../services/session.service';
+import { UserModel } from '../../../models/User.js';
+import { SessionModel } from '../../../models/Session.js';
+import { SecurityEventModel } from '../../../models/SecurityEvent.js';
+import { authConfig } from '../../../config/auth.config.js';
+import { signAccessToken } from '../../../config/jwt.js';
+import type { AuthUser } from '../../../middlewares/auth/index.js';
+import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { AuditAction } from '../../../shared/audit/events.js';
+import { logSecurityEvent } from '../securityEventLog.js';
+import { SESSION_DURATION_MS } from '../../../services/session.service.js';
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -124,7 +124,7 @@ export async function listSessions(req: Request, res: Response): Promise<void> {
       return;
     }
     const limitRaw = (req.query.limit as string | undefined) ?? '20';
-    const limit = Math.max(1, Math.min(parseInt(limitRaw, 10) || 20, 50));
+    const limit = Math.max(1, Math.min(Number.parseInt(limitRaw, 10) || 20, 50));
     const sessions = await SessionModel.find({
       userId: user._id,
       revoked: false,
@@ -244,7 +244,7 @@ export async function listSecurityEvents(req: Request, res: Response): Promise<v
       return;
     }
     const limitRaw = (req.query.limit as string | undefined) ?? '20';
-    const limit = Math.max(1, Math.min(parseInt(limitRaw, 10) || 20, 50));
+    const limit = Math.max(1, Math.min(Number.parseInt(limitRaw, 10) || 20, 50));
 
     const events = await SecurityEventModel.find({ userId: user._id })
       .sort({ createdAt: -1 })

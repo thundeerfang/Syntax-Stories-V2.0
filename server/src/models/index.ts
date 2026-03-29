@@ -1,12 +1,12 @@
-export { UserModel, type IUser } from './User';
-export { SessionModel, type ISession } from './Session';
-export { SecurityEventModel, type ISecurityEvent } from './SecurityEvent';
+export { UserModel, type IUser } from './User.js';
+export { SessionModel, type ISession } from './Session.js';
+export { SecurityEventModel, type ISecurityEvent } from './SecurityEvent.js';
 export {
   ProfileViewEventModel,
   type IProfileViewEvent,
   ProfileDailyMetricsModel,
   type IProfileDailyMetrics,
-} from './ProfileAnalytics';
-export { AnalyticsEventModel, type IAnalyticsEvent } from './AnalyticsEvent';
-export { AuditLogModel, type IAuditLog, AUDIT_ACTIONS, type AuditAction } from './AuditLog';
-export { BlogPostModel, type IBlogPost, type BlogPostStatus } from './BlogPost';
+} from './ProfileAnalytics.js';
+export { AnalyticsEventModel, type IAnalyticsEvent } from './AnalyticsEvent.js';
+export { AuditLogModel, type IAuditLog, AUDIT_ACTIONS, type AuditAction } from './AuditLog.js';
+export { BlogPostModel, type IBlogPost, type BlogPostStatus } from './BlogPost.js';

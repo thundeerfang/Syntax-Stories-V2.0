@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { recordProfileView, getProfileOverview, getProfileTimeSeries } from '../controllers/analytics.controller';
-import { rateLimitProfileView } from '../middlewares/analytics/rateLimitProfileView';
+import { recordProfileView, getProfileOverview, getProfileTimeSeries } from '../controllers/analytics.controller.js';
+import { rateLimitProfileView } from '../middlewares/analytics/rateLimitProfileView.js';
 
 const router = Router();
 

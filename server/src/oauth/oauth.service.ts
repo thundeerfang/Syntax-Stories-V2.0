@@ -1,12 +1,12 @@
 import type { Request } from 'express';
-import { UserModel, DEFAULT_AVATAR_URL, type IUser } from '../models/User';
-import { SubscriptionModel } from '../models/Subscription';
-import { getRedis } from '../config/redis';
-import { writeAuditLog } from '../shared/audit/auditLog';
-import { AuditAction } from '../shared/audit/events';
-import { redisKeys } from '../shared/redis/keys';
-import type { HandleOAuthInput, NormalizedOAuthProfile, OAuthPassportUser, OAuthProviderKey } from './oauth.types';
-import { sealProviderToken } from '../shared/crypto/providerTokenCrypto';
+import { UserModel, DEFAULT_AVATAR_URL, type IUser } from '../models/User.js';
+import { SubscriptionModel } from '../models/Subscription.js';
+import { getRedis } from '../config/redis.js';
+import { writeAuditLog } from '../shared/audit/auditLog.js';
+import { AuditAction } from '../shared/audit/events.js';
+import { redisKeys } from '../shared/redis/keys.js';
+import type { HandleOAuthInput, NormalizedOAuthProfile, OAuthPassportUser, OAuthProviderKey } from './oauth.types.js';
+import { sealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
 
 const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
   google: 'Google',
@@ -134,6 +134,38 @@ function passportShape(provider: OAuthProviderKey, user: IUser): OAuthPassportUs
   return out;
 }
 
+type FinalizeOAuthLinkInput = {
+  req: Request;
+  redis: NonNullable<ReturnType<typeof getRedis>>;
+  linkKey: string;
+  userId: string;
+  label: string;
+  normalized: NormalizedOAuthProfile;
+  accessToken: string;
+  selectFields: string;
+  provider: OAuthProviderKey;
+  apply: (user: IUser, token: string) => void;
+};
+
+async function finalizeOAuthAccountLink(input: FinalizeOAuthLinkInput): Promise<OAuthPassportUser> {
+  const { req, redis, linkKey, userId, label, normalized, accessToken, selectFields, provider, apply } = input;
+  const user = await UserModel.findById(userId).select(selectFields);
+  if (!user) throw new Error('User not found');
+  const accountEmail = (user.email ?? '').toLowerCase();
+  const providerEmail = normalized.email.toLowerCase();
+  if (accountEmail !== providerEmail) {
+    throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
+  }
+  apply(user, accessToken);
+  await user.save();
+  await redis.del(redisKeys.oauth.link(linkKey));
+  void writeAuditLog(req, AuditAction.OAUTH_CONNECTED, {
+    actorId: String(user._id),
+    metadata: { provider },
+  });
+  return passportShape(provider, user);
+}
+
 async function handleLink(
   req: Request,
   provider: OAuthProviderKey,
@@ -148,100 +180,91 @@ async function handleLink(
   if (!userId) throw new Error('Link expired or invalid');
 
   switch (provider) {
-    case 'google': {
-      const user = await UserModel.findById(userId).select('+googleToken');
-      if (!user) throw new Error('User not found');
-      const accountEmail = (user.email ?? '').toLowerCase();
-      const providerEmail = n.email.toLowerCase();
-      if (accountEmail !== providerEmail) {
-        throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
-      }
-      user.googleId = n.providerId;
-      user.googleToken = sealTok(accessToken);
-      user.isGoogleAccount = true;
-      await user.save();
-      await redis.del(redisKeys.oauth.link(linkKey));
-      void writeAuditLog(req, AuditAction.OAUTH_CONNECTED, {
-        actorId: String(user._id),
-        metadata: { provider: 'google' },
+    case 'google':
+      return finalizeOAuthAccountLink({
+        req,
+        redis,
+        linkKey,
+        userId,
+        label,
+        normalized: n,
+        accessToken,
+        selectFields: '+googleToken',
+        provider: 'google',
+        apply: (user, tok) => {
+          user.googleId = n.providerId;
+          user.googleToken = sealTok(tok);
+          user.isGoogleAccount = true;
+        },
       });
-      return passportShape('google', user);
-    }
-    case 'github': {
-      const user = await UserModel.findById(userId).select('+githubToken');
-      if (!user) throw new Error('User not found');
-      const accountEmail = (user.email ?? '').toLowerCase();
-      const providerEmail = n.email.toLowerCase();
-      if (accountEmail !== providerEmail) {
-        throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
-      }
-      user.gitId = n.providerId;
-      user.githubToken = sealTok(accessToken);
-      user.isGitAccount = true;
-      await user.save();
-      await redis.del(redisKeys.oauth.link(linkKey));
-      void writeAuditLog(req, AuditAction.OAUTH_CONNECTED, {
-        actorId: String(user._id),
-        metadata: { provider: 'github' },
+    case 'github':
+      return finalizeOAuthAccountLink({
+        req,
+        redis,
+        linkKey,
+        userId,
+        label,
+        normalized: n,
+        accessToken,
+        selectFields: '+githubToken',
+        provider: 'github',
+        apply: (user, tok) => {
+          user.gitId = n.providerId;
+          user.githubToken = sealTok(tok);
+          user.isGitAccount = true;
+        },
       });
-      return passportShape('github', user);
-    }
-    case 'facebook': {
-      const user = await UserModel.findById(userId).select('+facebookToken');
-      if (!user) throw new Error('User not found');
-      const accountEmail = (user.email ?? '').toLowerCase();
-      const providerEmail = n.email.toLowerCase();
-      if (accountEmail !== providerEmail) {
-        throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
-      }
-      user.facebookId = n.providerId;
-      user.facebookToken = sealTok(accessToken);
-      user.isFacebookAccount = true;
-      await user.save();
-      await redis.del(redisKeys.oauth.link(linkKey));
-      void writeAuditLog(req, AuditAction.OAUTH_CONNECTED, {
-        actorId: String(user._id),
-        metadata: { provider: 'facebook' },
+    case 'facebook':
+      return finalizeOAuthAccountLink({
+        req,
+        redis,
+        linkKey,
+        userId,
+        label,
+        normalized: n,
+        accessToken,
+        selectFields: '+facebookToken',
+        provider: 'facebook',
+        apply: (user, tok) => {
+          user.facebookId = n.providerId;
+          user.facebookToken = sealTok(tok);
+          user.isFacebookAccount = true;
+        },
       });
-      return passportShape('facebook', user);
-    }
-    case 'x': {
-      const user = await UserModel.findById(userId).select('+xToken');
-      if (!user) throw new Error('User not found');
-      const accountEmail = (user.email ?? '').toLowerCase();
-      const providerEmail = n.email.toLowerCase();
-      if (accountEmail !== providerEmail) {
-        throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
-      }
-      user.xId = n.providerId;
-      user.xToken = sealTok(accessToken);
-      user.isXAccount = true;
-      await user.save();
-      await redis.del(redisKeys.oauth.link(linkKey));
-      void writeAuditLog(req, AuditAction.OAUTH_CONNECTED, {
-        actorId: String(user._id),
-        metadata: { provider: 'x' },
+    case 'x':
+      return finalizeOAuthAccountLink({
+        req,
+        redis,
+        linkKey,
+        userId,
+        label,
+        normalized: n,
+        accessToken,
+        selectFields: '+xToken',
+        provider: 'x',
+        apply: (user, tok) => {
+          user.xId = n.providerId;
+          user.xToken = sealTok(tok);
+          user.isXAccount = true;
+        },
       });
-      return passportShape('x', user);
-    }
-    case 'discord': {
-      const user = await UserModel.findById(userId).select('+discordToken');
-      if (!user) throw new Error('User not found');
-      const accountEmail = (user.email ?? '').toLowerCase();
-      if (accountEmail !== n.email) {
-        throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
-      }
-      user.discordId = n.providerId;
-      user.discordToken = sealTok(accessToken);
-      user.isDiscordAccount = true;
-      await user.save();
-      await redis.del(redisKeys.oauth.link(linkKey));
-      void writeAuditLog(req, AuditAction.OAUTH_CONNECTED, {
-        actorId: String(user._id),
-        metadata: { provider: 'discord' },
+    case 'discord':
+      return finalizeOAuthAccountLink({
+        req,
+        redis,
+        linkKey,
+        userId,
+        label,
+        normalized: n,
+        accessToken,
+        selectFields: '+discordToken',
+        provider: 'discord',
+        apply: (user, tok) => {
+          user.discordId = n.providerId;
+          user.discordToken = sealTok(tok);
+          user.isDiscordAccount = true;
+        },
       });
-      return passportShape('discord', user);
-    }
     default:
       throw new Error('Unknown provider');
   }

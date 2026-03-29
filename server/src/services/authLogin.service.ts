@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import type { HydratedDocument } from 'mongoose';
-import { normalizeProfileImg, type IUser } from '../models/User';
-import { authConfig } from '../config/auth.config';
-import { signAccessToken } from '../config/jwt';
-import { createAuthChallenge } from '../utils/authChallenge';
-import { writeAuditLog } from '../shared/audit/auditLog';
-import { AuditAction } from '../shared/audit/events';
-import { createSession, generateRefreshToken } from './session.service';
-import { emitAppEvent } from '../shared/events/appEvents';
+import { normalizeProfileImg, type IUser } from '../models/User.js';
+import { authConfig } from '../config/auth.config.js';
+import { signAccessToken } from '../config/jwt.js';
+import { createAuthChallenge } from '../utils/authChallenge.js';
+import { writeAuditLog } from '../shared/audit/auditLog.js';
+import { AuditAction } from '../shared/audit/events.js';
+import { createSession, generateRefreshToken } from './session.service.js';
+import { emitAppEvent } from '../shared/events/appEvents.js';
 
 /**
  * After email OTP is verified: 2FA branch, or issue JWT + session JSON (same shape as verifyOtp).

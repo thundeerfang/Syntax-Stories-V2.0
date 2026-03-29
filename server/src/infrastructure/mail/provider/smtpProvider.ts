@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
-import { env } from '../../../config/env';
-import { MailSendError } from '../types';
+import { env } from '../../../config/env.js';
+import { MailSendError } from '../types.js';
 
 let transporter: nodemailer.Transporter | null = null;
 

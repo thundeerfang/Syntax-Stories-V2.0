@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { updateProfileSchema } from './profileZodSchemas';
-import { formatZodError } from './zodFormat';
+import { updateProfileSchema } from './profileZodSchemas.js';
+import { formatZodError } from './zodFormat.js';
 
-export * from './profileZodSchemas';
+export * from './profileZodSchemas.js';
 
 const altchaField = z.union([z.string().max(20000), z.record(z.unknown())]).optional();
 

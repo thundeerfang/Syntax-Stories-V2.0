@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
-import type { AuthUser } from '../../middlewares/auth';
-import { ProfileErrorCode, isProfileUpdateSection } from './profile.types';
-import { profileService } from './profile.service';
+import type { AuthUser } from '../../middlewares/auth/index.js';
+import { ProfileErrorCode, isProfileUpdateSection } from './profile.types.js';
+import { profileService } from './profile.service.js';
 
 function sendProfileSuccess(res: Response, user: Record<string, unknown>): void {
   res.status(200).json({

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import type { Request } from 'express';
-import { SessionModel } from '../models/Session';
-import { signAccessToken } from '../config/jwt';
+import { SessionModel } from '../models/Session.js';
+import { signAccessToken } from '../config/jwt.js';
 
 /** Session duration and sliding window (matches prior auth.controller / authLogin behavior). */
 export const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -9,7 +9,7 @@ export const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 function getClientMeta(req: Request): { ip: string; userAgent: string } {
   const ip =
     req.ip ??
-    (req.connection as { remoteAddress?: string })?.remoteAddress ??
+    req.socket?.remoteAddress ??
     req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ??
     'unknown';
   const userAgent = req.get('User-Agent') ?? '';
@@ -26,7 +26,8 @@ export function generateRefreshToken(): string {
 
 function parseUserAgent(ua: string): string {
   if (!ua) return 'Unknown device';
-  const match = ua.match(/\((.*?)\)/);
+  const parenRe = /\((.*?)\)/;
+  const match = parenRe.exec(ua);
   const os = match ? match[1] : ua.substring(0, 50);
   const mobile = /Mobile|Android|iPhone/i.test(ua) ? 'Mobile' : 'Desktop';
   return `${mobile} - ${os}`;

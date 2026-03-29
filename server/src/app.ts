@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
-import { errorHandler } from './middlewares';
-import { requestContextMiddleware } from './middlewares/requestContext';
-import { registerAppListeners } from './bootstrap/registerAppListeners';
-import passport from './passport/index';
-import { env } from './config/env';
-import { getProductionAllowedOrigins, isOriginAllowed } from './config/frontendUrl';
-import { getRedis } from './config/redis';
+import { errorHandler } from './middlewares/index.js';
+import { requestContextMiddleware } from './middlewares/requestContext.js';
+import { registerAppListeners } from './bootstrap/registerAppListeners.js';
+import passport from './passport/index.js';
+import { env } from './config/env.js';
+import { getProductionAllowedOrigins, isOriginAllowed } from './config/frontendUrl.js';
+import { getRedis } from './config/redis.js';
 import { RedisStore } from 'connect-redis';
 import cookieParser from 'cookie-parser';
 import {
@@ -17,7 +17,7 @@ import {
   registerUploadApiRoutes,
   registerAuthModuleRoutes,
   registerOAuthRoutes,
-} from './bootstrap';
+} from './bootstrap/index.js';
 
 const app = express();
 

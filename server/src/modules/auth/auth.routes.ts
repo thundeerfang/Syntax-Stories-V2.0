@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller';
-import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller';
-import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller';
-import { me, updateProfile, updateProfileSection, parseCv } from '../profile/profile.controller';
-import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller';
-import { setupTwoFactor, enableTwoFactor, disableTwoFactor, verifyTwoFactorLogin } from './controllers/twoFactor.controller';
-import { refresh, logout, revokeSessionByRefreshToken } from './controllers/session.controller';
-import { exchangeOAuthCode } from './controllers/oauthExchange.controller';
+import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller.js';
+import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller.js';
+import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller.js';
+import { me, updateProfile, updateProfileSection, parseCv } from '../profile/profile.controller.js';
+import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller.js';
+import { setupTwoFactor, enableTwoFactor, disableTwoFactor, verifyTwoFactorLogin } from './controllers/twoFactor.controller.js';
+import { refresh, logout, revokeSessionByRefreshToken } from './controllers/session.controller.js';
+import { exchangeOAuthCode } from './controllers/oauthExchange.controller.js';
 import {
   idempotency,
   sendOtpValidation,
@@ -22,7 +22,7 @@ import {
   rateLimitSignupEmail,
   rateLimitRefresh,
   rateLimitUpdateProfile,
-} from '../../middlewares/auth';
+} from '../../middlewares/auth/index.js';
 
 const router = Router();
 

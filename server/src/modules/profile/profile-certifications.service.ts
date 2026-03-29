@@ -1,4 +1,4 @@
-import { profileRepository } from './profile.repository';
+import { profileRepository } from './profile.repository.js';
 
 /** Assigns `certId` / `certValType` when missing (certifications section). */
 export async function normalizeCertifications(userId: string, updates: Record<string, unknown>): Promise<void> {
@@ -18,12 +18,12 @@ export async function normalizeCertifications(userId: string, updates: Record<st
 
   for (const cert of certifications) {
     const id = (cert.certId ?? '').trim();
-    if (!id) {
-      cert.certId = String(nextNum);
-      nextNum += 1;
-    } else {
+    if (id) {
       const n = Number.parseInt(id, 10);
       if (!Number.isNaN(n) && n >= nextNum) nextNum = n + 1;
+    } else {
+      cert.certId = String(nextNum);
+      nextNum += 1;
     }
     if (!cert.certValType || !String(cert.certValType).trim()) {
       cert.certValType = baseValType;

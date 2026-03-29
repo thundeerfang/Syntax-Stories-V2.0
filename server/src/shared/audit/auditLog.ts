@@ -1,12 +1,23 @@
 import type { Request } from 'express';
 import mongoose from 'mongoose';
-import { AuditLogModel } from '../../models/AuditLog';
+import { AuditLogModel } from '../../models/AuditLog.js';
+
+function toObjectId(id: string | mongoose.Types.ObjectId): mongoose.Types.ObjectId {
+  return typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id;
+}
+
+function objectIdField(
+  id: string | mongoose.Types.ObjectId | null | undefined
+): mongoose.Types.ObjectId | undefined {
+  if (id == null) return undefined;
+  return toObjectId(id);
+}
 
 function getClientMeta(req: Request | null): { ip?: string; userAgent?: string } {
   if (!req) return {};
   const ip =
     req.ip ??
-    (req.connection as { remoteAddress?: string })?.remoteAddress ??
+    req.socket?.remoteAddress ??
     req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ??
     undefined;
   const userAgent = req.get('User-Agent') ?? undefined;
@@ -33,9 +44,9 @@ export async function writeAuditLog(
   try {
     await AuditLogModel.create({
       action,
-      actorId: actorId != null ? (typeof actorId === 'string' ? new mongoose.Types.ObjectId(actorId) : actorId) : undefined,
+      actorId: objectIdField(actorId),
       targetType: targetType ?? undefined,
-      targetId: targetId != null ? (typeof targetId === 'string' ? new mongoose.Types.ObjectId(targetId) : targetId) : undefined,
+      targetId: objectIdField(targetId),
       metadata: metadata ?? {},
       ip,
       userAgent,

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
-import { getRedis } from '../config/redis';
-import { redisKeys } from '../shared/redis/keys';
+import { getRedis } from '../config/redis.js';
+import { redisKeys } from '../shared/redis/keys.js';
 
 const AUTH_CHALLENGE_TTL_SECONDS = 10 * 60;
 

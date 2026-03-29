@@ -1,6 +1,6 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request } from 'express';
-import { RedisRateLimitStore } from '../auth/redisRateLimitStore';
+import { RedisRateLimitStore } from '../auth/redisRateLimitStore.js';
 
 // Follow/unfollow endpoints are write-heavy and attractive for abuse.
 // We rate-limit per authenticated user when possible, otherwise fallback to IP.

@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import crypto from 'node:crypto';
-import { UserModel } from '../models/User';
-import { ProfileViewEventModel, ProfileDailyMetricsModel, AnalyticsEventModel } from '../models';
-import type { AuthUser } from '../middlewares/auth';
-import { getRedis } from '../config/redis';
-import { writeAuditLog } from '../shared/audit/auditLog';
-import { AuditAction } from '../shared/audit/events';
-import { redisKeys } from '../shared/redis/keys';
+import { UserModel } from '../models/User.js';
+import { ProfileViewEventModel, ProfileDailyMetricsModel, AnalyticsEventModel } from '../models/index.js';
+import type { AuthUser } from '../middlewares/auth/index.js';
+import { getRedis } from '../config/redis.js';
+import { writeAuditLog } from '../shared/audit/auditLog.js';
+import { AuditAction } from '../shared/audit/events.js';
+import { redisKeys } from '../shared/redis/keys.js';
 
 const BOT_UA_SUBSTRINGS = ['googlebot', 'bingbot', 'curl', 'wget', 'headlesschrome'] as const;
 

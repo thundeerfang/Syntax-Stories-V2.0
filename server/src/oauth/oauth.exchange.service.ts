@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
-import { getRedis } from '../config/redis';
-import { redisKeys } from '../shared/redis/keys';
+import { getRedis } from '../config/redis.js';
+import { redisKeys } from '../shared/redis/keys.js';
 
 /** Short-lived: user must open callback and POST exchange quickly. */
 const EXCHANGE_TTL_SEC = 90;

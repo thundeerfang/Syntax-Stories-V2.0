@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
-import { UserModel } from '../../../models/User';
-import { getRedis } from '../../../config/redis';
-import type { AuthUser } from '../../../middlewares/auth';
-import { writeAuditLog } from '../../../shared/audit/auditLog';
-import { AuditAction } from '../../../shared/audit/events';
-import { sendAuthEmail, isAuthEmailConfigured } from '../../../infrastructure/mail/sendAuthEmail';
-import { redisKeys } from '../../../shared/redis/keys';
-import { generateEmailOtpDigits } from '../../../services/emailOtp.service';
-import { logSecurityEvent } from '../securityEventLog';
+import { UserModel } from '../../../models/User.js';
+import { getRedis } from '../../../config/redis.js';
+import type { AuthUser } from '../../../middlewares/auth/index.js';
+import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { AuditAction } from '../../../shared/audit/events.js';
+import { sendAuthEmail, isAuthEmailConfigured } from '../../../infrastructure/mail/sendAuthEmail.js';
+import { redisKeys } from '../../../shared/redis/keys.js';
+import { generateEmailOtpDigits } from '../../../services/emailOtp.service.js';
+import { logSecurityEvent } from '../securityEventLog.js';
 
 const EMAIL_CHANGE_TTL_SEC = 600; // 10 min
 

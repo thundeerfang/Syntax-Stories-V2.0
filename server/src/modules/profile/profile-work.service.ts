@@ -1,4 +1,4 @@
-import { profileRepository } from './profile.repository';
+import { profileRepository } from './profile.repository.js';
 
 /** Assigns numeric `workId` values when missing (work section). */
 export async function normalizeWorkExperiences(
@@ -17,12 +17,12 @@ export async function normalizeWorkExperiences(
   let nextNum = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
   for (const we of workExperiences) {
     const id = (we.workId ?? '').trim();
-    if (!id) {
-      we.workId = String(nextNum);
-      nextNum += 1;
-    } else {
+    if (id) {
       const n = Number.parseInt(id, 10);
       if (!Number.isNaN(n) && n >= nextNum) nextNum = n + 1;
+    } else {
+      we.workId = String(nextNum);
+      nextNum += 1;
     }
   }
   updates.workExperiences = workExperiences;

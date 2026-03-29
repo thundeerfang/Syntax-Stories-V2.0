@@ -1,14 +1,14 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
-import { UserModel } from '../../../models/User';
-import { SessionModel } from '../../../models/Session';
-import { getRedis } from '../../../config/redis';
-import { env } from '../../../config/env';
-import type { AuthUser } from '../../../middlewares/auth';
-import { writeAuditLog } from '../../../shared/audit/auditLog';
-import { AuditAction } from '../../../shared/audit/events';
-import { redisKeys } from '../../../shared/redis/keys';
-import { logSecurityEvent } from '../securityEventLog';
+import { UserModel } from '../../../models/User.js';
+import { SessionModel } from '../../../models/Session.js';
+import { getRedis } from '../../../config/redis.js';
+import { env } from '../../../config/env.js';
+import type { AuthUser } from '../../../middlewares/auth/index.js';
+import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { AuditAction } from '../../../shared/audit/events.js';
+import { redisKeys } from '../../../shared/redis/keys.js';
+import { logSecurityEvent } from '../securityEventLog.js';
 
 const LINK_TTL_SEC = 300; // 5 min
 const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord'] as const;

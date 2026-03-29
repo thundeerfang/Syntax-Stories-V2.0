@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
 import type { Response } from 'express';
-import { authConfig } from '../config/auth.config';
-import { env } from '../config/env';
-import { getRedis } from '../config/redis';
-import { redisKeys } from '../shared/redis/keys';
+import { authConfig } from '../config/auth.config.js';
+import { env } from '../config/env.js';
+import { getRedis } from '../config/redis.js';
+import { redisKeys } from '../shared/redis/keys.js';
 
 export type EmailOtpPurpose = 'login' | 'signup';
 

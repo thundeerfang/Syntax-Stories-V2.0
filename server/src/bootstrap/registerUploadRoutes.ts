@@ -1,6 +1,6 @@
 import express, { type Express } from 'express';
-import uploadRoutes from '../routes/upload.routes';
-import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage';
+import uploadRoutes from '../routes/upload.routes.js';
+import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage.js';
 
 /** Public URLs for processed images (`/uploads/...`). */
 export function registerStaticUploads(app: Express): void {

@@ -1,15 +1,15 @@
 import mongoose from 'mongoose';
 import { Request, Response } from 'express';
-import { UserModel, normalizeProfileImg } from '../models/User';
-import { FollowModel } from '../models/Follow';
-import type { AuthUser } from '../middlewares/auth';
-import { getRedis } from '../config/redis';
-import { AnalyticsEventModel } from '../models';
-import { writeAuditLog } from '../shared/audit/auditLog';
-import { AuditAction } from '../shared/audit/events';
-import { redisKeys } from '../shared/redis/keys';
-import { RateLimitHttpError, isAppHttpError } from '../errors/httpErrors';
-import { sendAppHttpError } from '../errors/sendAppHttpError';
+import { UserModel, normalizeProfileImg } from '../models/User.js';
+import { FollowModel } from '../models/Follow.js';
+import type { AuthUser } from '../middlewares/auth/index.js';
+import { getRedis } from '../config/redis.js';
+import { AnalyticsEventModel } from '../models/index.js';
+import { writeAuditLog } from '../shared/audit/auditLog.js';
+import { AuditAction } from '../shared/audit/events.js';
+import { redisKeys } from '../shared/redis/keys.js';
+import { RateLimitHttpError, isAppHttpError } from '../errors/httpErrors.js';
+import { sendAppHttpError } from '../errors/sendAppHttpError.js';
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
 const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount';

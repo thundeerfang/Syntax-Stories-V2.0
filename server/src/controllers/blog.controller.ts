@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import type { AuthUser } from '../middlewares/auth';
-import { BlogPostModel } from '../models/BlogPost';
+import type { AuthUser } from '../middlewares/auth/index.js';
+import { BlogPostModel } from '../models/BlogPost.js';
 
 function slugify(text: string): string {
   return (

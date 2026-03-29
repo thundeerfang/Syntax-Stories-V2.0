@@ -1,4 +1,4 @@
-import { profileRepository } from './profile.repository';
+import { profileRepository } from './profile.repository.js';
 
 /** Assigns `eduId` / `refCode` when missing (education section). */
 export async function normalizeEducation(userId: string, updates: Record<string, unknown>): Promise<void> {
@@ -15,12 +15,12 @@ export async function normalizeEducation(userId: string, updates: Record<string,
   const year = new Date().getFullYear();
   for (const ed of education) {
     const id = (ed.eduId ?? '').trim();
-    if (!id) {
-      ed.eduId = String(nextNum);
-      nextNum += 1;
-    } else {
+    if (id) {
       const n = Number.parseInt(id, 10);
       if (!Number.isNaN(n) && n >= nextNum) nextNum = n + 1;
+    } else {
+      ed.eduId = String(nextNum);
+      nextNum += 1;
     }
     ed.refCode = `${year}_EDU_DOC`;
   }

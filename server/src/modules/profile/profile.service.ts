@@ -1,15 +1,15 @@
 import type { Request } from 'express';
-import { emitAppEvent } from '../../shared/events/appEvents';
-import type { AuthUser } from '../../middlewares/auth';
-import { applyBasicProfileRules } from './profile-basic.service';
-import { normalizeCertifications } from './profile-certifications.service';
-import { normalizeEducation } from './profile-education.service';
-import { toAccountUser } from './profile.mapper';
-import { normalizeProjectsPrjLog } from './profile-projects.service';
-import { profileRepository } from './profile.repository';
-import type { ProfileSections, ProfileUpdateSection } from './profile.types';
-import { ProfileErrorCode, PROFILE_SECTION_KEYS } from './profile.types';
-import { normalizeWorkExperiences } from './profile-work.service';
+import { emitAppEvent } from '../../shared/events/appEvents.js';
+import type { AuthUser } from '../../middlewares/auth/index.js';
+import { applyBasicProfileRules } from './profile-basic.service.js';
+import { normalizeCertifications } from './profile-certifications.service.js';
+import { normalizeEducation } from './profile-education.service.js';
+import { toAccountUser } from './profile.mapper.js';
+import { normalizeProjectsPrjLog } from './profile-projects.service.js';
+import { profileRepository } from './profile.repository.js';
+import type { ProfileSections, ProfileUpdateSection } from './profile.types.js';
+import { ProfileErrorCode, PROFILE_SECTION_KEYS } from './profile.types.js';
+import { normalizeWorkExperiences } from './profile-work.service.js';
 
 const UPDATE_PROFILE_KEYS = [
   'fullName',
@@ -163,7 +163,7 @@ export const profileService = {
   }> {
     const pdfParse = (await import('pdf-parse')).default as (buf: Buffer) => Promise<{ text: string }>;
     const { text } = await pdfParse(buffer);
-    const { parseCvFromText } = await import('../../utils/parseCvFromPdf');
+    const { parseCvFromText } = await import('../../utils/parseCvFromPdf.js');
     const { extracted, missingFields, incompleteItemHints } = parseCvFromText(text ?? '');
     return {
       extracted: extracted as Record<string, unknown>,

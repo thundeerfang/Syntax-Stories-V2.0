@@ -1,8 +1,8 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request } from 'express';
-import { authConfig } from '../../config/auth.config';
-import { redisKeys } from '../../shared/redis/keys';
-import { RedisRateLimitStore } from './redisRateLimitStore';
+import { authConfig } from '../../config/auth.config.js';
+import { redisKeys } from '../../shared/redis/keys.js';
+import { RedisRateLimitStore } from './redisRateLimitStore.js';
 
 const FP_HEADER = 'x-device-fingerprint';
 
