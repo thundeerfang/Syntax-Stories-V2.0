@@ -5,9 +5,9 @@ import { getOAuthCallbackProviderLabel } from '@/lib/oauthCallbackProviders';
 
 export default async function OAuthCallbackPage({
   params,
-}: {
+}: Readonly<{
   params: Promise<{ provider: string }>;
-}) {
+}>) {
   const { provider } = await params;
   const label = getOAuthCallbackProviderLabel(provider);
   if (!label) redirect('/login');

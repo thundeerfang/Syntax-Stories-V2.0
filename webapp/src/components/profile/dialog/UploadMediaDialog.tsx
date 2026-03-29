@@ -119,6 +119,8 @@ export function UploadMediaDialog({
     onClose();
   };
 
+  const uploadProgressWidth = `${Math.round(progress * 100)}%`;
+
   return (
     <Dialog
       open={open}
@@ -195,7 +197,7 @@ export function UploadMediaDialog({
             {uploadMode === 'crop' && (
               <div className="space-y-4">
                 <CropperKeyboardWrapper
-                  imageReady={!!imageUrl && uploadMode === 'crop'}
+                  imageReady
                   setCrop={setCrop}
                   className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border"
                 >
@@ -209,17 +211,23 @@ export function UploadMediaDialog({
                     onCropComplete={onCropComplete}
                   />
                 </CropperKeyboardWrapper>
-                <div className="flex items-center justify-between gap-4">
+                <div className={cn('flex', 'items-center', 'justify-between', 'gap-4')}>
                   <input
                     type="range"
                     min={1}
                     max={3}
-                    step={0.1}
+                    step="0.1"
                     value={zoom}
                     onChange={(e) => setZoom(Number(e.target.value))}
                     className="flex-1"
                   />
-                  <span className="text-[10px] font-bold text-muted-foreground w-16 text-right">{zoom.toFixed(1)}x</span>
+                  <span
+                    className={cn(
+                      'text-[10px] font-bold text-muted-foreground w-16 text-right'
+                    )}
+                  >
+                    {zoom.toFixed(1)}x
+                  </span>
                 </div>
                 <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
                   Tip: click the crop area, then arrow keys to move (Shift for larger steps).
@@ -245,12 +253,15 @@ export function UploadMediaDialog({
             </div>
 
             {uploading && (
-              <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-primary transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
+              <div className={cn('w-full h-2 rounded-full bg-muted overflow-hidden')}>
+                <div
+                  className={cn('h-full bg-primary transition-all')}
+                  style={{ width: uploadProgressWidth }}
+                />
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className={cn('flex justify-end gap-2 pt-2')}>
               <button
                 type="button"
                 disabled={uploading}
@@ -258,7 +269,9 @@ export function UploadMediaDialog({
                   if (imageUrl) URL.revokeObjectURL(imageUrl);
                   resetState();
                 }}
-                className="px-3 py-1.5 text-[10px] font-bold uppercase rounded border border-border text-muted-foreground hover:bg-muted/40"
+                className={cn(
+                  'px-3 py-1.5 text-[10px] font-bold uppercase rounded border border-border text-muted-foreground hover:bg-muted/40'
+                )}
               >
                 Cancel
               </button>
@@ -266,7 +279,10 @@ export function UploadMediaDialog({
                 type="button"
                 disabled={uploading}
                 onClick={handleUpload}
-                className="px-4 py-1.5 text-[10px] font-bold uppercase rounded border-2 border-border bg-primary text-primary-foreground shadow-[2px_2px_0px_0px_var(--border)] hover:brightness-110 disabled:opacity-60"
+                className={cn(
+                  'px-4 py-1.5 text-[10px] font-bold uppercase rounded border-2 border-border bg-primary text-primary-foreground',
+                  'shadow-[2px_2px_0px_0px_var(--border)] hover:brightness-110 disabled:opacity-60'
+                )}
               >
                 {uploading ? 'Uploading…' : 'Save & add'}
               </button>

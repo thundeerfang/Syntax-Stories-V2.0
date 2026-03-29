@@ -60,9 +60,13 @@ export const profileProjectsPatchSchema = z
     openSourceContributions: z.array(z.record(z.unknown())).max(30).optional(),
   })
   .strict()
-  .refine((o) => o.projects !== undefined || o.openSourceContributions !== undefined, {
-    message: 'Provide projects and/or openSourceContributions',
-  });
+  .refine(
+    (o: { projects?: unknown; openSourceContributions?: unknown }) =>
+      o.projects !== undefined || o.openSourceContributions !== undefined,
+    {
+      message: 'Provide projects and/or openSourceContributions',
+    }
+  );
 
 export const profileSetupPatchSchema = z
   .object({

@@ -18,8 +18,42 @@ import {
 import { cn } from '@/lib/utils';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
+import type { WorkExperience } from '@/api/auth';
 
 type MediaItem = { url: string; title?: string; altText?: string };
+
+/** Work card uses backend fields beyond the base `WorkExperience` type. */
+export type WorkExperienceForCard = WorkExperience & {
+  companyLogo?: string;
+  promotions?: Array<{
+    jobTitle?: string;
+    startDate?: string;
+    media?: MediaItem[];
+    mediaItems?: MediaItem[];
+  }>;
+  mediaItems?: MediaItem[];
+};
+
+function mediaItemsOf(entry: { media?: MediaItem[]; mediaItems?: MediaItem[] }): MediaItem[] {
+  if (Array.isArray(entry.mediaItems)) return entry.mediaItems;
+  if (Array.isArray(entry.media)) return entry.media;
+  return [];
+}
+
+export type WorkExperienceCardProps = {
+  /** experience.workId is from DB (backend auto-generates when saving work experience) */
+  experience: WorkExperienceForCard;
+  index: number;
+  saving: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+  onPreviewMedia: (item: MediaItem) => void;
+  formatMonthYear: (value: string) => string;
+  locationWithoutType: (value: string) => string;
+  normalizeDomain: (value: string) => string;
+  isImageUrl: (url: string) => boolean;
+  hideActions?: boolean;
+};
 
 export function WorkExperienceCard({
   experience: e,
@@ -33,23 +67,10 @@ export function WorkExperienceCard({
   normalizeDomain,
   isImageUrl,
   hideActions = false,
-}: {
-  /** experience.workId is from DB (backend auto-generates when saving work experience) */
-  experience: any;
-  index: number;
-  saving: boolean;
-  onEdit: () => void;
-  onRemove: () => void;
-  onPreviewMedia: (item: MediaItem) => void;
-  formatMonthYear: (value: string) => string;
-  locationWithoutType: (value: string) => string;
-  normalizeDomain: (value: string) => string;
-  isImageUrl: (url: string) => boolean;
-  hideActions?: boolean;
-}) {
+}: Readonly<WorkExperienceCardProps>) {
   const promosSorted = (e.promotions ?? [])
-    .filter((p: any) => p?.jobTitle)
-    .sort((a: any, b: any) => (Date.parse(a.startDate ?? '') || 0) - (Date.parse(b.startDate ?? '') || 0));
+    .filter((p) => p?.jobTitle)
+    .sort((a, b) => (Date.parse(a.startDate ?? '') || 0) - (Date.parse(b.startDate ?? '') || 0));
 
   // Build full career timeline: initial role (from main job) + promotions
   const timelineEntries: Array<{
@@ -61,28 +82,25 @@ export function WorkExperienceCard({
     timelineEntries.push({
       jobTitle: e.jobTitle,
       startDate: e.startDate,
-      mediaItems: ((e as { mediaItems?: MediaItem[] }).mediaItems ?? []) as MediaItem[],
+      mediaItems: mediaItemsOf(e),
     });
   }
   for (const p of promosSorted) {
     timelineEntries.push({
       jobTitle: p.jobTitle,
       startDate: p.startDate,
-      mediaItems: ((p as { mediaItems?: MediaItem[] }).mediaItems ?? []) as MediaItem[],
+      mediaItems: mediaItemsOf(p),
     });
   }
 
-  const latestTitle =
-    (timelineEntries[timelineEntries.length - 1]?.jobTitle as string | undefined) ||
-    (e.jobTitle as string | undefined) ||
-    'Role';
+  const latestTitle = timelineEntries.at(-1)?.jobTitle ?? e.jobTitle ?? 'Role';
 
   // One badge per image: flatten to { label, item } so each card = one badge + one image
-  const mainMedia = (e.media ?? (e as { mediaItems?: MediaItem[] }).mediaItems ?? []) as MediaItem[];
+  const mainMedia = mediaItemsOf(e);
   const artifactCards: { label: string; item: MediaItem }[] = [];
   mainMedia.forEach((item) => artifactCards.push({ label: 'Initial role', item }));
-  (e.promotions ?? []).forEach((p: any, idx: number) => {
-    const items = (p.media ?? (p as { mediaItems?: MediaItem[] }).mediaItems ?? []) as MediaItem[];
+  (e.promotions ?? []).forEach((p, idx) => {
+    const items = mediaItemsOf(p);
     items.forEach((item) => artifactCards.push({ label: `Promotion_${idx + 1}`, item }));
   });
   const hasAnyArtifacts = artifactCards.length > 0;
@@ -90,11 +108,11 @@ export function WorkExperienceCard({
 
   // workId comes from DB (backend auto-generates on save); fallback to index+1 for legacy entries
   const rawId = (e.workId ?? '').trim() || String(index + 1);
-  const numId = parseInt(rawId, 10);
-  const displayWorkId = !Number.isNaN(numId) ? String(numId).padStart(2, '0') : rawId;
+  const numId = Number.parseInt(rawId, 10);
+  const displayWorkId = Number.isNaN(numId) ? rawId : String(numId).padStart(2, '0');
 
   return (
-    <div key={index} className="group relative ss-settings-card ss-settings-card--work">
+    <div className="group relative ss-settings-card ss-settings-card--work">
       {/* Industrial Hardware Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card">
         
@@ -227,7 +245,12 @@ export function WorkExperienceCard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsBriefExpanded((v) => !v)}
+                  onClick={(ev) => {
+                    const t = ev.target;
+                    const el = t instanceof Element ? t : (t as Node).parentElement;
+                    if (el?.closest('[data-ss-brief-scroll]')) return;
+                    setIsBriefExpanded((v) => !v);
+                  }}
                   className={cn(
                     'w-full text-left p-4 pt-5 cursor-pointer block',
                     isBriefExpanded && 'overflow-hidden'
@@ -236,11 +259,7 @@ export function WorkExperienceCard({
                   aria-label={isBriefExpanded ? 'Collapse description' : 'Expand to read full description'}
                 >
                   {isBriefExpanded ? (
-                    <div
-                      className="max-h-[180px] overflow-y-auto pr-1"
-                      onClick={(ev) => ev.stopPropagation()}
-                      role="presentation"
-                    >
+                    <div className="max-h-[180px] overflow-y-auto pr-1" data-ss-brief-scroll>
                       <p className="text-[11px] font-medium leading-relaxed text-muted-foreground whitespace-pre-wrap italic">
                         &quot;{e.description.trim()}&quot;
                       </p>
@@ -262,7 +281,10 @@ export function WorkExperienceCard({
                 </h5>
                 <div className="space-y-2 pl-4 border-l-2 border-primary/30">
                   {timelineEntries.map((p, pidx) => (
-                    <div key={pidx} className="relative pl-4 before:absolute before:left-0 before:top-1/2 before:w-3 before:h-[1px] before:bg-primary/30">
+                    <div
+                      key={JSON.stringify([p.jobTitle, p.startDate])}
+                      className="relative pl-4 before:absolute before:left-0 before:top-1/2 before:w-3 before:h-[1px] before:bg-primary/30"
+                    >
                       <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-muted-foreground">
                         <span className="font-bold uppercase text-foreground">
                           {p.jobTitle ?? (pidx === 0 ? 'Initial role' : `Promotion ${pidx}`)}
@@ -286,9 +308,9 @@ export function WorkExperienceCard({
                 Tech_Stack_Used
               </h5>
               <div className="flex flex-wrap gap-1.5">
-                {(e.skills ?? []).map((s: string, sidx: number) => (
+                {[...new Set((e.skills ?? []).map(String))].map((s) => (
                   <div
-                    key={sidx}
+                    key={s}
                     className="ss-meta-pill px-2 py-0.5 border border-border bg-card text-[9px] font-mono font-bold text-muted-foreground"
                   >
                     {s.toUpperCase()}
@@ -304,10 +326,13 @@ export function WorkExperienceCard({
               </h5>
               {hasAnyArtifacts ? (
                 <div className="overflow-y-auto min-h-0 flex-1 pr-1 grid grid-cols-2 gap-3 content-start">
-                  {artifactCards.map(({ label, item: m }, cidx) => {
+                  {artifactCards.map(({ label, item: m }) => {
                     const isImage = isImageUrl(m.url);
                     return (
-                      <div key={cidx} className="flex min-w-0 flex-col gap-1.5 rounded border border-border/60 bg-card/50 p-2 overflow-hidden">
+                      <div
+                        key={`${label}:${m.url}`}
+                        className="flex min-w-0 flex-col gap-1.5 rounded border border-border/60 bg-card/50 p-2 overflow-hidden"
+                      >
                         <span className="shrink-0 w-full px-2 py-0.5 border border-primary/50 bg-primary/10 text-[9px] font-mono font-black uppercase tracking-wider text-primary text-center truncate">
                           {label}
                         </span>
@@ -368,8 +393,11 @@ export function WorkExperienceCard({
         <div className="border-t-[3px] border-border bg-muted/20 px-4 py-1.5 flex justify-between items-center">
           <div className="flex gap-1.5 items-center">
             <div className="flex gap-1">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className={cn("h-2.5 w-[1px] bg-foreground/20", i % 2 === 0 && "w-[2px]")} />
+              {(['deco-0', 'deco-1', 'deco-2', 'deco-3', 'deco-4', 'deco-5'] as const).map((decoId, i) => (
+                <div
+                  key={decoId}
+                  className={cn('h-2.5 w-[1px] bg-foreground/20', i % 2 === 0 && 'w-[2px]')}
+                />
               ))}
             </div>
             <span className="text-[8px] font-mono font-bold text-muted-foreground/40 tracking-[0.2em] uppercase">

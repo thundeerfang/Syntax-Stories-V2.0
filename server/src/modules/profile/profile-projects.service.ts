@@ -7,5 +7,4 @@ export function normalizeProjectsPrjLog(updates: Record<string, unknown>): void 
   for (const p of projects) {
     p.prjLog = logValue;
   }
-  updates.projects = projects;
 }
