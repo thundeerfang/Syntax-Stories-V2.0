@@ -3,7 +3,7 @@ import multer from 'multer';
 import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller';
 import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller';
 import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller';
-import { me, updateProfile, parseCv } from './controllers/profile.controller';
+import { me, updateProfile, updateProfileSection, parseCv } from '../profile/profile.controller';
 import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller';
 import { setupTwoFactor, enableTwoFactor, disableTwoFactor, verifyTwoFactorLogin } from './controllers/twoFactor.controller';
 import { refresh, logout, revokeSessionByRefreshToken } from './controllers/session.controller';
@@ -14,12 +14,14 @@ import {
   signupEmailValidation,
   verifyOtpValidation,
   updateProfileValidation,
+  updateProfileSectionBodyValidation,
   verifyToken,
   verifyAltchaIfConfigured,
   rateLimitSendOtp,
   rateLimitVerifyOtp,
   rateLimitSignupEmail,
   rateLimitRefresh,
+  rateLimitUpdateProfile,
 } from '../../middlewares/auth';
 
 const router = Router();
@@ -40,7 +42,14 @@ router.post('/refresh', rateLimitRefresh, refresh);
 router.post('/logout', verifyToken, logout);
 router.post('/revoke-session', revokeSessionByRefreshToken);
 router.get('/me', verifyToken, me);
-router.patch('/profile', verifyToken, updateProfileValidation, updateProfile);
+router.patch('/profile', verifyToken, rateLimitUpdateProfile, updateProfileValidation, updateProfile);
+router.patch(
+  '/profile/:section',
+  verifyToken,
+  rateLimitUpdateProfile,
+  updateProfileSectionBodyValidation,
+  updateProfileSection
+);
 
 const cvUpload = multer({
   storage: multer.memoryStorage(),

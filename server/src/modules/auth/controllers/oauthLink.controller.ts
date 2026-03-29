@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 import { UserModel } from '../../../models/User';
 import { SessionModel } from '../../../models/Session';

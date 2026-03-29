@@ -137,7 +137,7 @@ export function normalizeDiscordProfile(discordUser: DiscordMeProfile): Normaliz
     );
   }
   const baseUsername =
-    (discordUser.username || 'user').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || 'user';
+    (discordUser.username || 'user').replaceAll(/\W/g, '').slice(0, 20) || 'user';
   const fullName = (discordUser.global_name ?? discordUser.username ?? 'User').trim() || 'User';
   return {
     providerId: discordUser.id,

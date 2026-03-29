@@ -21,7 +21,7 @@ export interface DialogProps {
   panelClassName?: string;
   /** Optional class for the inner content wrapper (padding). */
   contentClassName?: string;
-  /** Show the close (X) button. Default true. */
+  /** Show the floating close (X) and reserve pt-11/pr-11 on the content wrapper. Set false when the panel lays out its own header (e.g. FormDialog). */
   showCloseButton?: boolean;
   /** Close when backdrop is clicked. Default true. */
   closeOnBackdropClick?: boolean;

@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { Request } from 'express';
 import { SessionModel } from '../models/Session';
 import { signAccessToken } from '../config/jwt';

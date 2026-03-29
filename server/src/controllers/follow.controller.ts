@@ -116,13 +116,112 @@ function isMongooseTransactionUnsupportedError(e: unknown): boolean {
   );
 }
 
+async function enforceFollowDailyCap(
+  redis: NonNullable<ReturnType<typeof getRedis>>,
+  currentUserId: string,
+  dayKey: string
+): Promise<void> {
+  const capKey = redisKeys.follow.dailyCap(String(currentUserId), dayKey);
+  const n = await redis.incr(capKey);
+  if (n === 1) await redis.expire(capKey, 48 * 60 * 60);
+  if (n > DAILY_FOLLOW_LIMIT) throw dailyFollowLimitError();
+}
+
+async function applyFollowSideEffectsTransaction(
+  session: mongoose.ClientSession,
+  currentUser: AuthUser,
+  target: { _id: mongoose.Types.ObjectId },
+  dayKey: string,
+  now: Date
+): Promise<void> {
+  await Promise.all([
+    UserModel.updateOne({ _id: target._id }, { $inc: { followersCount: 1 } }, { session }),
+    UserModel.updateOne({ _id: currentUser._id }, { $inc: { followingCount: 1 } }, { session }),
+  ]);
+  await AnalyticsEventModel.create(
+    [
+      {
+        type: 'follow',
+        actorId: new mongoose.Types.ObjectId(String(currentUser._id)),
+        targetType: 'profile',
+        targetId: new mongoose.Types.ObjectId(String(target._id)),
+        visitorId: `user:${currentUser._id}`,
+        metadata: { day: dayKey },
+        timestamp: now,
+      },
+    ],
+    { session }
+  );
+}
+
+async function applyFollowSideEffectsFallback(
+  currentUser: AuthUser,
+  target: { _id: mongoose.Types.ObjectId },
+  dayKey: string,
+  now: Date
+): Promise<void> {
+  await Promise.all([
+    UserModel.updateOne({ _id: target._id }, { $inc: { followersCount: 1 } }),
+    UserModel.updateOne({ _id: currentUser._id }, { $inc: { followingCount: 1 } }),
+  ]);
+  void AnalyticsEventModel.create({
+    type: 'follow',
+    actorId: new mongoose.Types.ObjectId(String(currentUser._id)),
+    targetType: 'profile',
+    targetId: new mongoose.Types.ObjectId(String(target._id)),
+    visitorId: `user:${currentUser._id}`,
+    metadata: { day: dayKey, txn: 'fallback' },
+    timestamp: now,
+  }).catch(() => {});
+}
+
+/**
+ * Standalone Mongo (no replica set): upsert follow, enforce cap, bump counts.
+ * Returns whether the handler should stop (response already sent) and the `created` flag when continuing.
+ */
+async function followUserNonTransactionalFallback(
+  res: Response,
+  currentUser: AuthUser,
+  target: { _id: mongoose.Types.ObjectId },
+  redis: ReturnType<typeof getRedis>,
+  dayKey: string,
+  now: Date
+): Promise<{ done: boolean; created: boolean }> {
+  const updateResult = await FollowModel.updateOne(
+    { follower: currentUser._id, following: target._id },
+    { $setOnInsert: { follower: currentUser._id, following: target._id } },
+    { upsert: true }
+  );
+  const created = updateResult.upsertedCount === 1;
+  if (!created) {
+    res.status(200).json({ success: true, message: 'Already following' });
+    return { done: true, created: false };
+  }
+
+  if (redis) {
+    try {
+      await enforceFollowDailyCap(redis, currentUser._id, dayKey);
+    } catch (e) {
+      if (isAppHttpError(e)) {
+        await FollowModel.deleteOne({ follower: currentUser._id, following: target._id }).catch(() => {});
+        sendAppHttpError(res, e);
+        return { done: true, created: false };
+      }
+      throw e;
+    }
+  }
+
+  await applyFollowSideEffectsFallback(currentUser, target, dayKey, now);
+  return { done: false, created: true };
+}
+
 /** Parses limit + optional cursor; sends 400 on bad cursor and returns null. */
 function parseFollowListQuery(req: Request, res: Response): { limit: number; cursor?: Date } | null {
   const limit = Math.min(Number(req.query?.limit) || DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
   const cursorRaw = (req.query?.cursor as string)?.trim();
   if (!cursorRaw) return { limit };
   const cursor = new Date(cursorRaw);
-  if (isNaN(cursor.getTime())) {
+  if (Number.isNaN(cursor.getTime())) {
     res.status(400).json({ success: false, message: 'Invalid cursor' });
     return null;
   }
@@ -165,9 +264,10 @@ async function paginatedFollowEdges(
       profileImg: normalizeProfileImg(u.profileImg),
     };
   });
+  const last = slice.at(-1) as { createdAt?: Date } | undefined;
   const nextCursor =
-    hasMore && slice.length > 0
-      ? (slice[slice.length - 1] as { createdAt: Date }).createdAt?.toISOString() ?? null
+    hasMore && slice.length > 0 && last?.createdAt
+      ? last.createdAt.toISOString() ?? null
       : null;
   return { list, nextCursor };
 }
@@ -254,32 +354,8 @@ export async function followUser(req: Request, res: Response): Promise<void> {
         created = updateResult.upsertedCount === 1;
         if (!created) return;
 
-        // Daily follow cap (counts only NEW follows)
-        if (redis) {
-          const capKey = redisKeys.follow.dailyCap(String(currentUser._id), dayKey);
-          const n = await redis.incr(capKey);
-          if (n === 1) await redis.expire(capKey, 48 * 60 * 60);
-          if (n > DAILY_FOLLOW_LIMIT) {
-            // Roll back by throwing; transaction will abort
-            throw dailyFollowLimitError();
-          }
-        }
-
-        await Promise.all([
-          UserModel.updateOne({ _id: target._id }, { $inc: { followersCount: 1 } }, { session }),
-          UserModel.updateOne({ _id: currentUser._id }, { $inc: { followingCount: 1 } }, { session }),
-        ]);
-
-        // Audit event (best effort inside txn)
-        await AnalyticsEventModel.create([{
-          type: 'follow',
-          actorId: new mongoose.Types.ObjectId(String(currentUser._id)),
-          targetType: 'profile',
-          targetId: new mongoose.Types.ObjectId(String(target._id)),
-          visitorId: `user:${currentUser._id}`,
-          metadata: { day: dayKey },
-          timestamp: now,
-        }], { session });
+        if (redis) await enforceFollowDailyCap(redis, currentUser._id, dayKey);
+        await applyFollowSideEffectsTransaction(session, currentUser, target, dayKey, now);
       });
     } catch (e) {
       if (isAppHttpError(e)) {
@@ -289,41 +365,9 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       // If transactions aren't supported (standalone Mongo), fallback to non-transactional behavior
       if (!isMongooseTransactionUnsupportedError(e)) throw e;
 
-      const updateResult = await FollowModel.updateOne(
-        { follower: currentUser._id, following: target._id },
-        { $setOnInsert: { follower: currentUser._id, following: target._id } },
-        { upsert: true }
-      );
-      created = updateResult.upsertedCount === 1;
-      if (!created) {
-        res.status(200).json({ success: true, message: 'Already following' });
-        return;
-      }
-
-      if (redis) {
-        const capKey = redisKeys.follow.dailyCap(String(currentUser._id), dayKey);
-        const n = await redis.incr(capKey);
-        if (n === 1) await redis.expire(capKey, 48 * 60 * 60);
-        if (n > DAILY_FOLLOW_LIMIT) {
-          await FollowModel.deleteOne({ follower: currentUser._id, following: target._id }).catch(() => {});
-          sendAppHttpError(res, dailyFollowLimitError());
-          return;
-        }
-      }
-
-      await Promise.all([
-        UserModel.updateOne({ _id: target._id }, { $inc: { followersCount: 1 } }),
-        UserModel.updateOne({ _id: currentUser._id }, { $inc: { followingCount: 1 } }),
-      ]);
-      void AnalyticsEventModel.create({
-        type: 'follow',
-        actorId: new mongoose.Types.ObjectId(String(currentUser._id)),
-        targetType: 'profile',
-        targetId: new mongoose.Types.ObjectId(String(target._id)),
-        visitorId: `user:${currentUser._id}`,
-        metadata: { day: dayKey, txn: 'fallback' },
-        timestamp: now,
-      }).catch(() => {});
+      const fb = await followUserNonTransactionalFallback(res, currentUser, target, redis, dayKey, now);
+      if (fb.done) return;
+      created = fb.created;
     } finally {
       session.endSession();
     }
@@ -442,7 +486,8 @@ export async function searchUsers(req: Request, res: Response): Promise<void> {
       res.status(200).json({ success: true, list: [] });
       return;
     }
-    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const RE_ESCAPE = /[.*+?^${}()|[\]\\]/g;
+    const safe = q.replaceAll(RE_ESCAPE, (c) => `\\${c}`);
     const regex = new RegExp(safe, 'i');
     const users = await UserModel.find({
       isActive: true,

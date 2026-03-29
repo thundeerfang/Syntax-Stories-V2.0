@@ -7,6 +7,7 @@ import {
   AuthError,
   normalizeUser,
   type AuthUser,
+  type ProfileUpdateSection,
   type UpdateProfilePayload,
 } from '@/api/auth';
 import { setLastUserName } from '@/lib/lastUser';
@@ -52,7 +53,7 @@ type AuthState = {
   setHydrated: () => void;
   setAuth: (user: AuthUser | null, token: string | null, refreshToken?: string | null) => void;
   refreshUser: () => Promise<void>;
-  updateProfile: (data: UpdateProfilePayload) => Promise<void>;
+  updateProfile: (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => Promise<void>;
   sendLoginOtp: (email: string, altcha?: string) => Promise<void>;
   signUp: (fullName: string, email: string, altcha?: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<void>;
@@ -89,17 +90,21 @@ export const useAuthStore = create<AuthState>()(
           }
         }
       },
-      updateProfile: async (data: UpdateProfilePayload) => {
+      updateProfile: async (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => {
         const { token, refreshToken } = get();
         if (!token) throw new Error('Not logged in');
+        const section = opts?.section;
+        const patch = section
+          ? (t: string) => authApi.updateProfileSection(t, section, data)
+          : (t: string) => authApi.updateProfile(t, data);
         try {
-          const res = await authApi.updateProfile(token, data);
+          const res = await patch(token);
           set({ user: normalizeUser(res.user) });
         } catch (e) {
           if (e instanceof AuthError && e.status === 401 && refreshToken) {
             const refreshed = await authApi.refresh(refreshToken);
             set({ token: refreshed.accessToken });
-            const res = await authApi.updateProfile(refreshed.accessToken, data);
+            const res = await patch(refreshed.accessToken);
             set({ user: normalizeUser(res.user) });
             return;
           }

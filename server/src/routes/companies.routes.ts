@@ -15,8 +15,8 @@ function nameToDomain(name: string): string {
   const slug = name
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/[^a-z0-9]/g, '');
+    .replaceAll(/\s+/g, '')
+    .replaceAll(/[^a-z0-9]/g, '');
   return slug ? `${slug}.com` : '';
 }
 

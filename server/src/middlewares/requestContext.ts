@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 declare module 'express-serve-static-core' {
   interface Request {

@@ -59,6 +59,7 @@ export const redisKeys = {
     verifyOtp: 'rl:verifyotp:',
     signupEmail: 'rl:signupemail:',
     refresh: 'rl:refresh:',
+    updateProfile: 'rl:updateprofile:',
     authHttpKey: (prefix: string, keySuffix: string) => `${prefix}${keySuffix}`,
   },
 } as const;

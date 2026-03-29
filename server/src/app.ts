@@ -41,16 +41,22 @@ function allowCorsOrigin(origin: string | undefined): boolean {
   if (!allowedOrigins?.length) return false;
   return isOriginAllowed(origin, allowedOrigins);
 }
+
+function corsOriginOption():
+  | boolean
+  | string
+  | string[]
+  | ((origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => void) {
+  if (env.NODE_ENV !== 'production') return env.FRONTEND_URL ?? true;
+  if (!allowedOrigins?.length) return false;
+  return (origin, cb) => {
+    cb(null, allowCorsOrigin(origin));
+  };
+}
+
 app.use(
   cors({
-    origin:
-      env.NODE_ENV === 'production'
-        ? allowedOrigins?.length
-          ? (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-              cb(null, allowCorsOrigin(origin));
-            }
-          : false
-        : (env.FRONTEND_URL ?? true),
+    origin: corsOriginOption(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

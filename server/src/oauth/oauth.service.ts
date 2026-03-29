@@ -36,11 +36,11 @@ function signupUsername(provider: OAuthProviderKey, n: NormalizedOAuthProfile): 
   const r = randomSuffix();
   switch (provider) {
     case 'google':
-      return (n.fullName || 'user').trim().replace(/\s+/g, '').toLowerCase() + r;
+      return (n.fullName || 'user').trim().replaceAll(/\s+/g, '').toLowerCase() + r;
     case 'github':
       return (n.githubUsername ?? 'user') + r;
     case 'facebook':
-      return (n.fullName || 'user').trim().toLowerCase().replace(/\s+/g, '') + r;
+      return (n.fullName || 'user').trim().toLowerCase().replaceAll(/\s+/g, '') + r;
     case 'x':
       return (n.xHandle ?? 'user') + r;
     case 'discord':

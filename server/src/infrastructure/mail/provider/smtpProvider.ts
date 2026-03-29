@@ -8,14 +8,12 @@ export function getSmtpTransporter(): nodemailer.Transporter | null {
   const user = env.EMAIL_USER?.trim();
   const pass = (env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS)?.trim();
   if (!user || !pass) return null;
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: env.EMAIL_HOST,
-      port: env.EMAIL_PORT,
-      secure: env.EMAIL_PORT === 465,
-      auth: { user, pass },
-    });
-  }
+  transporter ??= nodemailer.createTransport({
+    host: env.EMAIL_HOST,
+    port: env.EMAIL_PORT,
+    secure: env.EMAIL_PORT === 465,
+    auth: { user, pass },
+  });
   return transporter;
 }
 

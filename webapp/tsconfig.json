@@ -29,6 +29,12 @@
       ],
       "@contracts/*": [
         "./src/contracts/*"
+      ],
+      "@syntax-stories/shared": [
+        "../packages/shared/index.ts"
+      ],
+      "@syntax-stories/shared/*": [
+        "../packages/shared/*"
       ]
     }
   },

@@ -146,37 +146,46 @@ export function SearchDialog() {
       contentClassName="relative p-0"
       showCloseButton={false}
     >
-      {/* 1. Terminal Header */}
-      <div className="bg-foreground text-background px-4 py-2 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Command className="size-3" />
-          <span className="text-[10px] font-black uppercase tracking-widest">User_Query_Terminal</span>
-        </div>
-        <button 
-          onClick={close} 
-          className="hover:bg-destructive hover:text-destructive-foreground p-1 transition-colors"
-          aria-label="Close dialog"
+      {/* Terminal chrome — title bar uses primary (purple); input row uses muted/card tokens */}
+      <div className="border-b-4 border-border bg-card text-card-foreground">
+        <div
+          id="search-dialog-title"
+          className="flex items-center justify-between border-b-2 border-border bg-primary px-4 py-2 text-primary-foreground"
         >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      {/* 2. Input Section */}
-      <form onSubmit={(e) => e.preventDefault()} className="border-b-4 border-border">
-        <div className="flex items-center gap-3 px-4 py-5 bg-background">
-          <span className="font-mono font-black text-xl text-primary" aria-hidden="true">{'>'}</span>
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search database by identity..."
-            className="flex-1 bg-transparent text-lg font-mono font-black uppercase outline-none placeholder:text-muted-foreground/30 placeholder:normal-case placeholder:font-bold"
-            autoComplete="off"
-          />
-          {loading && <Loader2 className="h-5 w-5 animate-spin text-foreground" strokeWidth={3} />}
+          <div className="flex items-center gap-2">
+            <Command className="size-3 shrink-0 text-primary-foreground" aria-hidden />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              User_Query_Terminal
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={close}
+            className="rounded-sm p-1 transition-colors hover:bg-primary-foreground/20 hover:text-primary-foreground"
+            aria-label="Close dialog"
+          >
+            <X className="size-4" />
+          </button>
         </div>
-      </form>
+
+        <form onSubmit={(e) => e.preventDefault()}>
+          <div className="flex items-center gap-3 bg-muted/50 px-4 py-5 dark:bg-muted/30">
+            <span className="font-mono text-xl font-black text-primary" aria-hidden="true">
+              {'>'}
+            </span>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search database by identity..."
+              className="flex-1 bg-transparent text-lg font-mono font-black uppercase text-foreground outline-none placeholder:text-muted-foreground/30 placeholder:normal-case placeholder:font-bold"
+              autoComplete="off"
+            />
+            {loading && <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" strokeWidth={3} />}
+          </div>
+        </form>
+      </div>
 
       {/* 3. Results Area - Fixed to prevent horizontal scroll */}
       <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden bg-muted/10">
@@ -209,9 +218,9 @@ export function SearchDialog() {
                         selected={selectedIndex === index}
                         onPick={() => handleUserSelect(u.username)}
                         onHover={() => setSelectedIndex(index)}
-                        className={`w-full flex items-center gap-4 px-4 py-4 text-left transition-all outline-none ${
+                        className={`w-full flex items-center gap-4 px-4 py-4 text-left transition-colors outline-none ${
                           selectedIndex === index
-                            ? 'bg-primary text-primary-foreground translate-x-1'
+                            ? 'bg-primary text-primary-foreground'
                             : 'bg-background hover:bg-muted/30'
                         }`}
                       >
@@ -286,7 +295,7 @@ export function SearchDialog() {
       {/* 4. Footer Status Bar */}
       <div className="border-t-4 border-border bg-background px-4 py-2 flex justify-between items-center">
         <div className="flex items-center gap-2">
-           <div className={`size-1.5 rounded-full ${loading ? 'bg-primary animate-pulse' : 'bg-green-500'}`} />
+           <div className={`size-1.5 rounded-full ${loading ? 'animate-pulse bg-primary' : 'bg-primary/70'}`} />
            <span className="text-[9px] font-black uppercase text-muted-foreground">{footerStatusLabel}</span>
         </div>
         <span className="text-[9px] font-black uppercase text-muted-foreground/30">Query_Interface_v2</span>

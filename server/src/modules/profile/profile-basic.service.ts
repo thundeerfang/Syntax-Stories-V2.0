@@ -1,0 +1,34 @@
+import { STACK_AND_TOOLS_MAX } from '../../constants/profileLimits';
+import { ProfileErrorCode } from './profile.types';
+import { profileRepository } from './profile.repository';
+
+export type BasicRulesResult =
+  | { ok: true }
+  | { ok: false; status: number; message: string; code: string };
+
+/**
+ * Caps stack list and resolves username uniqueness + lowercase (basic section).
+ */
+export async function applyBasicProfileRules(userId: string, updates: Record<string, unknown>): Promise<BasicRulesResult> {
+  const stackRaw = updates.stackAndTools;
+  if (Array.isArray(stackRaw)) {
+    const arr = stackRaw.filter((t): t is string => typeof t === 'string');
+    updates.stackAndTools = arr.slice(0, STACK_AND_TOOLS_MAX);
+  }
+
+  if (typeof updates.username === 'string') {
+    const lower = updates.username.trim().toLowerCase();
+    const existing = await profileRepository.findOneUsernameConflict(lower, userId);
+    if (existing) {
+      return {
+        ok: false,
+        status: 409,
+        message: 'Username is already taken. Choose another.',
+        code: ProfileErrorCode.USERNAME_TAKEN,
+      };
+    }
+    updates.username = lower;
+  }
+
+  return { ok: true };
+}

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { UserModel } from '../../../models/User';
 import { SessionModel } from '../../../models/Session';
 import { getRedis } from '../../../config/redis';

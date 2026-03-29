@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Render Secret Files are mounted at /etc/secrets/<filename>
 const RENDER_SECRETS_DIR = '/etc/secrets';
