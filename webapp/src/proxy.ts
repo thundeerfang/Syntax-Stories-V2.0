@@ -59,7 +59,8 @@ export const config = {
   matcher: [
     /*
      * Skip Next internals, static assets, and the unsupported page itself.
+     * Plain string only — Next.js 16 cannot extract String.raw`…` in config (segment config build error).
      */
-    String.raw`/((?!_next/static|_next/image|unsupported\.html|favicon\.ico|favicon/|svg/|icons/|developers/).*)`,
+    '/((?!_next/static|_next/image|unsupported\\.html|favicon\\.ico|favicon/|svg/|icons/|developers/).*)', // NOSONAR — String.raw breaks Next.js 16 config extraction
   ],
 };

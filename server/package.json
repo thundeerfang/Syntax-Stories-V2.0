@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only --esm src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "dev:clean": "rimraf dist && npm run dev",
     "generate-keys": "node scripts/generate-keys.js",
     "reconcile:follow-counts": "node --loader ts-node/esm src/scripts/reconcileFollowCounts.ts",
@@ -76,6 +76,7 @@
     "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsx": "^4.19.3",
     "typescript-eslint": "^8.26.1"
   }
 }
