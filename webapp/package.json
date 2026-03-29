@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@syntax-stories/shared": "file:../packages/shared",
+    "@syntax-stories/shared": "file:./packages/shared",
     "@lottiefiles/dotlottie-react": "^0.18.3",
     "@tanstack/react-query": "^5.95.2",
     "altcha": "^2.3.0",

@@ -101,17 +101,10 @@ jobs:
           cache: npm
           cache-dependency-path: |
             webapp/package-lock.json
-            packages/shared/package-lock.json
+            webapp/packages/shared/package-lock.json
 
       - name: Clean install (CI)
         run: rm -rf node_modules .next && npm ci
-
-      # Linked `file:../packages/shared` resolves to source under `packages/shared/`.
-      # TypeScript resolves bare `zod` from that folder unless `paths` applies; installing
-      # here matches a clean clone and keeps `tsc` / tooling consistent across environments.
-      - name: Install @syntax-stories/shared package dependencies
-        working-directory: packages/shared
-        run: npm ci
 
       - name: TypeScript (no emit)
         run: npx tsc --noEmit
@@ -182,7 +175,7 @@ jobs:
         run: |
           rm -rf node_modules .next
           npm ci
-          (cd ../packages/shared && npm ci)
+          (cd packages/shared && npm ci)
           npm run build
           echo "## Production clean — webapp" >> "$GITHUB_STEP_SUMMARY"
           echo "- Removed \`node_modules\` and \`.next\`, ran \`npm ci\` + \`npm run build\` ✓" >> "$GITHUB_STEP_SUMMARY"

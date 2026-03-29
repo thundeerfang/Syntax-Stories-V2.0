@@ -43,7 +43,7 @@ UI → Zustand (session) → authApi → Express (/auth, /api/upload, /api/githu
 
 **Auth module** (`server/src/modules/auth/`): OTP, refresh, OAuth, etc. — not profile business rules.
 
-**Shared contracts (Zod)** (`packages/shared/profile.schema.ts`): lighter DTOs for the webapp; **server canonical validation** lives in `server/src/middlewares/auth/profileZodSchemas.ts` (nested work/education/projects, OTP, etc.).
+**Shared contracts (Zod)** (`webapp/packages/shared/profile.schema.ts`): lighter DTOs for the webapp; **server canonical validation** lives in `server/src/middlewares/auth/profileZodSchemas.ts` (nested work/education/projects, OTP, etc.).
 
 ## Base URLs
 
@@ -101,7 +101,7 @@ Defined in `server/src/modules/auth/auth.routes.ts` (mounted at `/auth`). Handle
 | Layer | Location | Role |
 |-------|-----------|------|
 | HTTP | `webapp/src/api/auth.ts` | `updateProfile`, **`updateProfileSection`**, unwrap, `ProfileUpdateSection` re-export, optional Zod re-exports from `@syntax-stories/shared`. |
-| Path alias | `webapp/tsconfig.json` | `@syntax-stories/shared` → `../packages/shared/index.ts` |
+| Path alias | `webapp/package.json` | `@syntax-stories/shared` → `file:./packages/shared` (under app) |
 | State | `webapp/src/store/auth.ts` | `updateProfile(data, { section? })` — section uses section URL. |
 | Mutations | `webapp/src/hooks/useUpdateProfileMutation.ts` | `mutate({ data, section? })`. |
 | Providers | `QueryProvider` + `app/providers.tsx` | React Query. |
@@ -119,7 +119,7 @@ Defined in `server/src/modules/auth/auth.routes.ts` (mounted at `/auth`). Handle
 |---|------|--------|
 | 1 | Split `profile.service` by section | **Done** — `profile-*-service.ts` + orchestrator in `profile.service.ts`. |
 | 2 | Split `PATCH` into section endpoints | **Done** — `PATCH /auth/profile/:section`. |
-| 3 | Shared Zod DTOs | **Done** — `packages/shared/profile.schema.ts` + server `profileZodSchemas.ts` (deep rules). |
+| 3 | Shared Zod DTOs | **Done** — `webapp/packages/shared/profile.schema.ts` + server `profileZodSchemas.ts` (deep rules). |
 | 4 | Semantic repository methods | **Done** — `updateWork`, `updateProjects`, `updateBySection`, etc. |
 | 5 | Typed events | **Done** — `ProfileUpdatedPayload` + `section`; `ProfileUpdatedEvent` alias. |
 | 6 | Mapper as response firewall | **Partial** — `toAccountUser`, `toPublicProfile`; ensure new routes use mappers only. |
