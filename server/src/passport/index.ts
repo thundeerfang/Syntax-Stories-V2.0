@@ -1,10 +1,10 @@
 import passport from 'passport';
-import { UserModel } from '../models/User';
-import { registerGoogle } from './google';
-import { registerGithub } from './github';
-import { registerFacebook, hasFacebookConfig } from './facebook';
-import { registerX, hasXConfig } from './x';
-import { registerDiscord, hasDiscordConfig } from './discord';
+import { UserModel } from '../models/User.js';
+import { registerGoogle } from './google.js';
+import { registerGithub } from './github.js';
+import { registerFacebook } from './facebook.js';
+import { registerX } from './x.js';
+import { registerDiscord } from './discord.js';
 
 registerGoogle(passport);
 registerGithub(passport);
@@ -69,4 +69,6 @@ passport.deserializeUser(
 );
 
 export default passport;
-export { hasFacebookConfig, hasXConfig, hasDiscordConfig };
+export { hasFacebookConfig } from './facebook.js';
+export { hasXConfig } from './x.js';
+export { hasDiscordConfig } from './discord.js';

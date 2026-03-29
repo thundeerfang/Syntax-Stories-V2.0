@@ -1,6 +1,6 @@
 import type { Options } from 'express-rate-limit';
-import { getRedis } from '../../config/redis';
-import { redisKeys } from '../../shared/redis/keys';
+import { getRedis } from '../../config/redis.js';
+import { redisKeys } from '../../shared/redis/keys.js';
 
 interface StoreResult {
   totalHits: number;

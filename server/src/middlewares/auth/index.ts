@@ -3,13 +3,15 @@ export {
   signupEmailValidation,
   verifyOtpValidation,
   updateProfileValidation,
-} from './authValidation';
-export { verifyToken, type AuthUser } from './verifyToken';
+} from './authValidation.js';
+export { updateProfileSectionBodyValidation } from './profileSection.validation.js';
+export { verifyToken, type AuthUser } from './verifyToken.js';
 export {
   rateLimitSendOtp,
   rateLimitVerifyOtp,
   rateLimitSignupEmail,
   rateLimitRefresh,
-} from './rateLimitAuth';
-export { verifyAltchaIfConfigured } from './verifyAltcha';
-export { idempotency } from './idempotency';
+  rateLimitUpdateProfile,
+} from './rateLimitAuth.js';
+export { verifyAltchaIfConfigured } from './verifyAltcha.js';
+export { idempotency } from './idempotency.js';

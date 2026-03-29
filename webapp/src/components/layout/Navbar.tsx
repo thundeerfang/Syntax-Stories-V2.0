@@ -8,11 +8,10 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useSearchDialogStore } from '@/store/searchDialog';
-import { Button } from '@/components/ui';
+import { Button, FireLottie, RocketLottie } from '@/components/ui';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { AccountDropdown } from './AccountDropdown';
 import { cn } from '@/lib/utils';
-import { FireLottie, RocketLottie } from '@/components/ui';
 import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
 
 const navLinks = [
@@ -97,8 +96,8 @@ export function Navbar() {
             >
               <Menu className="h-5 w-5 group-hover:text-primary transition-colors" strokeWidth={2.5} />
             </button>
-            <Link href="/" className="shrink-0 transition-transform hover:scale-105 active:scale-95">
-              <img src="/svg/logo_hori.svg" alt="Syntax Stories" className="h-8 sm:h-9 w-auto object-contain" />
+            <Link href="/" className="shrink-0">
+              <img src="/svg/logo_hori.png" alt="Syntax Stories" className="h-8 sm:h-9 w-auto object-contain" />
             </Link>
           </div>
 
@@ -113,8 +112,14 @@ export function Navbar() {
                 <Link
                   key={href}
                   href={href}
-                  onMouseEnter={() => isExplore ? setExploreHovered(true) : isTrending ? setTrendingHovered(true) : null}
-                  onMouseLeave={() => isExplore ? setExploreHovered(false) : isTrending ? setTrendingHovered(false) : null}
+                  onMouseEnter={() => {
+                    if (isExplore) setExploreHovered(true);
+                    else if (isTrending) setTrendingHovered(true);
+                  }}
+                  onMouseLeave={() => {
+                    if (isExplore) setExploreHovered(false);
+                    else if (isTrending) setTrendingHovered(false);
+                  }}
                   className={cn(
                     'group relative px-4 py-2 text-[11px] font-black tracking-widest transition-all overflow-hidden',
                     isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'

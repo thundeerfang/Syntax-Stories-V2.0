@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { MulterError } from 'multer';
-import { isAppHttpError } from '../errors/httpErrors';
-import { sendAppHttpError } from '../errors/sendAppHttpError';
+import { isAppHttpError } from '../errors/httpErrors.js';
+import { sendAppHttpError } from '../errors/sendAppHttpError.js';
 
 export function errorHandler(
   err: Error,

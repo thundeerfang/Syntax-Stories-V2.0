@@ -1,6 +1,6 @@
-import path from 'path';
-import fs from 'fs';
-import type { UploadDirectoryLayout, UploadStorage } from './uploadStorage.types';
+import path from 'node:path';
+import fs from 'node:fs';
+import type { UploadDirectoryLayout, UploadStorage } from './uploadStorage.types.js';
 
 function layoutFromRoot(root: string): UploadDirectoryLayout {
   return {

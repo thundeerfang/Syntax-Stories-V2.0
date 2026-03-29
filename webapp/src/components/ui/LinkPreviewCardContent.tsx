@@ -17,7 +17,7 @@ export interface LinkPreviewCardContentProps {
 }
 
 /** Link preview card: header opens in new tab; body shows screenshot preview via Microlink API. */
-export function LinkPreviewCardContent({ domain, title }: LinkPreviewCardContentProps) {
+export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCardContentProps>) {
   const url = normalizeDomain(domain);
   const displayDomain = domain.replace(/^https?:\/\//i, '').replace(/\/$/, '');
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -97,7 +97,6 @@ export function LinkPreviewCardContent({ domain, title }: LinkPreviewCardContent
             className="absolute inset-0 block"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={screenshotUrl}
               alt={`Preview of ${displayDomain}`}

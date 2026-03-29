@@ -12,7 +12,7 @@ export function FloatingActions() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2 pointer-events-none">
+    <div className="fixed bottom-6 right-6 z-20 flex flex-col items-end gap-2 pointer-events-none">
       <div className="pointer-events-auto flex flex-col items-stretch gap-2">
         <AnimatePresence>
           {feedbackVisible && (

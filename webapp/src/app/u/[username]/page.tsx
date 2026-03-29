@@ -3,12 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ExternalLink, Github, Instagram, Linkedin, Monitor, Users, Wrench, Youtube, UserPlus, Terminal, Activity, ChevronRight, Globe } from 'lucide-react';
+import { ExternalLink, FolderGit2, Link2, Monitor, Users, Wrench, Share2, Play, UserPlus, Terminal, Activity, ChevronRight, Globe } from 'lucide-react';
 import { followApi, type PublicProfileUser } from '@/api/follow';
 import { analyticsApi } from '@/api/analytics';
 import { useAuthStore } from '@/store/auth';
-import { FollowersFollowingDialog } from '@/components/profile/dialog';
+import { FollowersFollowingDialog, MediaFullViewDialog } from '@/components/profile/dialog';
 import { cn } from '@/lib/utils';
+import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
 import { toast } from 'sonner';
 import { getSkillIconUrl } from '@/lib/skillIcons';
 import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/components/ui/ProfileSectionAccordion';
@@ -23,7 +24,183 @@ import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 
-export default function PublicProfilePage() {
+function formatMonthYear(val: string): string {
+  if (!val || val.length < 7) return '';
+  const [y, m] = val.split('-');
+  const monthNum = Number.parseInt(m ?? '', 10);
+  if (Number.isNaN(monthNum) || monthNum < 1 || monthNum > 12) return val;
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${MONTHS[monthNum - 1]} ${y}`;
+}
+
+function isImageUrl(url: string): boolean {
+  return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url);
+}
+
+function domainFromUrl(url: string): string {
+  const u = (url ?? '').trim();
+  if (!u) return '';
+  try {
+    const withProto = /^https?:\/\//i.test(u) ? u : `https://${u}`;
+    return new URL(withProto).host;
+  } catch {
+    return u.replaceAll(/^https?:\/\//gi, '').split('/')[0] || u;
+  }
+}
+
+function normalizeDomain(domain: string | undefined): string {
+  if (!domain?.trim()) return '';
+  const d = domain.trim().replaceAll(/^https?:\/\//gi, '').replaceAll(/\/$/g, '');
+  return d ? `https://${d}` : '';
+}
+
+function locationWithoutType(location: string | undefined): string {
+  if (!location?.trim()) return '';
+  return location.trim().replaceAll(/\s*\([^)]+\)/g, '').replaceAll(/\s+/g, ' ').trim();
+}
+
+function entriesCountSubtitle(count: number): string | undefined {
+  if (count <= 0) return undefined;
+  return count === 1 ? `${count} entry` : `${count} entries`;
+}
+
+function reposCountSubtitle(count: number): string | undefined {
+  if (count <= 0) return undefined;
+  return count === 1 ? `${count} repo` : `${count} repos`;
+}
+
+function minVisibleAfterOpen(variant: ProfileSectionVariant, prior: number | undefined): number {
+  const floor = variant === 'openSource' || variant === 'mySetup' ? 2 : 1;
+  return Math.max(prior ?? floor, floor);
+}
+
+function markdownToHtml(raw: string): string {
+  const escapeHtml = (s: string) =>
+    s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  let s = escapeHtml(raw || '');
+  s = s.replaceAll(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replaceAll(/__([^_\n]+)__/g, '<u>$1</u>');
+  s = s.replaceAll(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  return s.replaceAll('\n', '<br>');
+}
+
+const PROFILE_CARD_SKELETON_KEYS = ['sk-a', 'sk-b', 'sk-c', 'sk-d', 'sk-e', 'sk-f'] as const;
+
+function ProfileCardSkeleton(props: Readonly<{ lines?: number }>) {
+  const lines = props.lines ?? 3;
+  const keys = PROFILE_CARD_SKELETON_KEYS.slice(0, Math.min(lines, PROFILE_CARD_SKELETON_KEYS.length));
+  return (
+    <div className="border-2 border-border bg-muted/10 p-4 animate-pulse">
+      <div className="h-4 w-40 bg-muted rounded" />
+      <div className="mt-3 space-y-2">
+        {keys.map((key) => (
+          <div key={key} className="h-3 w-full bg-muted rounded" />
+        ))}
+        <div className="h-3 w-2/3 bg-muted rounded" />
+      </div>
+    </div>
+  );
+}
+
+function workExperienceListKey(e: Record<string, unknown>): string {
+  const id = e.id ?? e.workId;
+  if (typeof id === 'string' && id.length > 0) return `we-${id}`;
+  const company = typeof e.company === 'string' ? e.company : '';
+  const start = typeof e.startDate === 'string' ? e.startDate : '';
+  const title = typeof e.title === 'string' ? e.title : '';
+  return `we-${company}-${start}-${title}`.replaceAll(/\s+/g, '-');
+}
+
+function educationListKey(e: Record<string, unknown>): string {
+  const id = e.eduId ?? e.id;
+  if (typeof id === 'string' && id.length > 0) return `edu-${id}`;
+  const school = typeof e.school === 'string' ? e.school : '';
+  const start = typeof e.startDate === 'string' ? e.startDate : '';
+  return `edu-${school}-${start}`.replaceAll(/\s+/g, '-');
+}
+
+function certificationListKey(c: Record<string, unknown>): string {
+  const id = c.certId ?? c.id;
+  if (typeof id === 'string' && id.length > 0) return `cert-${id}`;
+  const name = typeof c.name === 'string' ? c.name : '';
+  const org = typeof c.issuingOrganization === 'string' ? c.issuingOrganization : '';
+  return `cert-${name}-${org}`.replaceAll(/\s+/g, '-');
+}
+
+function projectListKey(p: Record<string, unknown>): string {
+  const id = p.id ?? p._id;
+  if (typeof id === 'string' && id.length > 0) return `proj-${id}`;
+  const title = typeof p.title === 'string' ? p.title : '';
+  const url = typeof p.publicationUrl === 'string' ? p.publicationUrl : '';
+  return `proj-${title}-${url}`.replaceAll(/\s+/g, '-');
+}
+
+function openSourceListKey(item: Record<string, unknown>): string {
+  const repo = typeof item.repoFullName === 'string' ? item.repoFullName : '';
+  const url = typeof item.publicationUrl === 'string' ? item.publicationUrl : '';
+  return `os-${repo || url || 'item'}`.replaceAll(/\s+/g, '-');
+}
+
+type PublicProfileFollowCtaProps = Readonly<{
+  isSelf: boolean;
+  token: string | null | undefined;
+  username: string;
+  paramsUsername: string | undefined;
+  followLoading: boolean;
+  following: boolean;
+  onFollowClick: () => void;
+}>;
+
+function PublicProfileFollowCta({
+  isSelf,
+  token,
+  username,
+  paramsUsername,
+  followLoading,
+  following,
+  onFollowClick,
+}: PublicProfileFollowCtaProps) {
+  if (isSelf) return null;
+  const loginPath = `/u/${paramsUsername ?? username}`;
+  const loginNext = encodeURIComponent(loginPath);
+  const loginHref = `/login?next=${loginNext}`;
+  if (!token) {
+    return (
+      <Link
+        href={loginHref}
+        className={cn(
+          'inline-flex items-center justify-center px-6 py-2.5 border-2 font-black text-[10px] uppercase tracking-widest shrink-0 shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none transition-all',
+          'border-primary bg-primary text-primary-foreground hover:opacity-90',
+        )}
+      >
+        Follow
+      </Link>
+    );
+  }
+  let followLabel: string;
+  if (followLoading) followLabel = '…';
+  else if (following) followLabel = 'Following';
+  else followLabel = 'Follow';
+  return (
+    <button
+      type="button"
+      disabled={followLoading}
+      onClick={onFollowClick}
+      className={cn(
+        'px-6 py-2.5 border-2 font-black text-[10px] uppercase tracking-widest shrink-0 shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none transition-all',
+        following ? 'border-border bg-card hover:bg-muted' : 'border-primary bg-primary text-primary-foreground',
+      )}
+    >
+      {followLabel}
+    </button>
+  );
+}
+
+export default function PublicProfilePage() { // NOSONAR S3776 — large public profile view; split into section components incrementally
   const params = useParams();
   const router = useRouter();
   const username = typeof params?.username === 'string' ? params.username.trim().toLowerCase() : '';
@@ -35,6 +212,7 @@ export default function PublicProfilePage() {
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
   const [activityTab, setActivityTab] = useState<'posts' | 'repost'>('posts');
 
   useEffect(() => {
@@ -68,7 +246,7 @@ export default function PublicProfilePage() {
   useEffect(() => {
     if (!username || !profile) return;
     // Do not count when owner views their own public profile
-    if (currentUser?.username && currentUser.username.toLowerCase() === username.toLowerCase()) return;
+    if (currentUser?.username?.toLowerCase() === username.toLowerCase()) return;
     void analyticsApi.recordProfileView(username);
   }, [username, profile, currentUser?.username]);
 
@@ -107,41 +285,6 @@ export default function PublicProfilePage() {
       }
     }).catch(() => {});
   };
-
-  function formatMonthYear(val: string): string {
-    if (!val || val.length < 7) return '';
-    const [y, m] = val.split('-');
-    const monthNum = parseInt(m ?? '', 10);
-    if (Number.isNaN(monthNum) || monthNum < 1 || monthNum > 12) return val;
-    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${MONTHS[monthNum - 1]} ${y}`;
-  }
-
-  function isImageUrl(url: string): boolean {
-    return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url);
-  }
-
-  function domainFromUrl(url: string): string {
-    const u = (url ?? '').trim();
-    if (!u) return '';
-    try {
-      const withProto = /^https?:\/\//i.test(u) ? u : `https://${u}`;
-      return new URL(withProto).host;
-    } catch {
-      return u.replace(/^https?:\/\//i, '').split('/')[0] || u;
-    }
-  }
-
-  function normalizeDomain(domain: string | undefined): string {
-    if (!domain?.trim()) return '';
-    const d = domain.trim().replace(/^https?:\/\//i, '').replace(/\/$/, '');
-    return d ? `https://${d}` : '';
-  }
-
-  function locationWithoutType(location: string | undefined): string {
-    if (!location?.trim()) return '';
-    return location.trim().replace(/\s*\([^)]+\)/g, '').replace(/\s+/g, ' ').trim();
-  }
 
   const profileProjects = useMemo(() => {
     const full = ((profile?.projects ?? []) as any[]);
@@ -200,36 +343,19 @@ export default function PublicProfilePage() {
     setOpenSectionId(variant);
     setVisibleCounts((prev) => ({
       ...prev,
-      [variant]:
-        variant === 'openSource'
-          ? Math.max(prev[variant] ?? 2, 2)
-          : variant === 'mySetup'
-            ? Math.max(prev[variant] ?? 2, 2)
-            : Math.max(prev[variant] ?? 1, 1),
+      [variant]: minVisibleAfterOpen(variant, prev[variant]),
     }));
     setSectionLoading((prev) => ({ ...prev, [variant]: true }));
-    window.setTimeout(() => setSectionLoading((prev) => ({ ...prev, [variant]: false })), 420);
+    globalThis.setTimeout(() => setSectionLoading((prev) => ({ ...prev, [variant]: false })), 420);
   };
 
   const viewMore = (variant: ProfileSectionVariant, step = 1) => {
     setSectionLoading((prev) => ({ ...prev, [variant]: true }));
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
       setVisibleCounts((prev) => ({ ...prev, [variant]: (prev[variant] ?? 0) + step }));
       setSectionLoading((prev) => ({ ...prev, [variant]: false }));
     }, 420);
   };
-
-  const CardSkeleton = ({ lines = 3 }: { lines?: number }) => (
-    <div className="border-2 border-border bg-muted/10 p-4 animate-pulse">
-      <div className="h-4 w-40 bg-muted rounded" />
-      <div className="mt-3 space-y-2">
-        {Array.from({ length: lines }).map((_, i) => (
-          <div key={i} className="h-3 w-full bg-muted rounded" />
-        ))}
-        <div className="h-3 w-2/3 bg-muted rounded" />
-      </div>
-    </div>
-  );
 
   const publicLinks = useMemo(() => {
     const items: Array<{
@@ -253,21 +379,12 @@ export default function PublicProfilePage() {
       const withProto = /^https?:\/\//i.test(url) ? url : `https://${url}`;
       items.push({ key, label, url: withProto, Icon, iconBg, iconColor });
     };
-    add('linkedin', 'LinkedIn', profile?.linkedin, Linkedin, 'bg-[#0A66C2]/10', 'text-[#0A66C2]');
-    add('github', 'GitHub', profile?.github, Github, 'bg-foreground/10', 'text-foreground');
-    add('instagram', 'Instagram', profile?.instagram, Instagram, 'bg-[#E4405F]/10', 'text-[#E4405F]');
-    add('youtube', 'YouTube', profile?.youtube, Youtube, 'bg-[#FF0000]/10', 'text-[#FF0000]');
+    add('linkedin', 'LinkedIn', profile?.linkedin, Link2, 'bg-[#0A66C2]/10', 'text-[#0A66C2]');
+    add('github', 'GitHub', profile?.github, FolderGit2, 'bg-foreground/10', 'text-foreground');
+    add('instagram', 'Instagram', profile?.instagram, Share2, 'bg-[#E4405F]/10', 'text-[#E4405F]');
+    add('youtube', 'YouTube', profile?.youtube, Play, 'bg-[#FF0000]/10', 'text-[#FF0000]');
     return items;
   }, [profile?.github, profile?.instagram, profile?.linkedin, profile?.youtube]);
-
-  const markdownToHtml = (raw: string) => {
-    const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    let s = escape(raw || '');
-    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-    s = s.replace(/__([^_\n]+)__/g, '<u>$1</u>');
-    s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-    return s.replace(/\n/g, '<br>');
-  };
 
   if (loading || !profile) {
     return (
@@ -334,29 +451,15 @@ export default function PublicProfilePage() {
                     ) : null}
                   </div>
                 </div>
-                {isSelf ? null : token ? (
-                  <button
-                    type="button"
-                    disabled={followLoading}
-                    onClick={handleFollowClick}
-                    className={cn(
-                      'px-6 py-2.5 border-2 font-black text-[10px] uppercase tracking-widest shrink-0 shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none transition-all',
-                      following ? 'border-border bg-card hover:bg-muted' : 'border-primary bg-primary text-primary-foreground'
-                    )}
-                  >
-                    {followLoading ? '…' : following ? 'Following' : 'Follow'}
-                  </button>
-                ) : (
-                  <Link
-                    href={`/login?next=${encodeURIComponent(`/u/${params?.username ?? username}`)}`}
-                    className={cn(
-                      'inline-flex items-center justify-center px-6 py-2.5 border-2 font-black text-[10px] uppercase tracking-widest shrink-0 shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none transition-all',
-                      'border-primary bg-primary text-primary-foreground hover:opacity-90'
-                    )}
-                  >
-                    Follow
-                  </Link>
-                )}
+                <PublicProfileFollowCta
+                  isSelf={isSelf}
+                  token={token}
+                  username={username}
+                  paramsUsername={typeof params?.username === 'string' ? params.username : undefined}
+                  followLoading={followLoading}
+                  following={following}
+                  onFollowClick={handleFollowClick}
+                />
               </div>
 
               {profile.bio?.trim() ? (
@@ -445,20 +548,24 @@ export default function PublicProfilePage() {
                 </h2>
               </div>
               {profile.stackAndTools?.length ? (
-                <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
-                  {profile.stackAndTools.map((t, i) => {
+                <div className="flex flex-wrap gap-3 py-1">
+                  {profile.stackAndTools.slice(0, STACK_AND_TOOLS_MAX).map((t, i) => {
                     const iconUrl = getSkillIconUrl(t);
                     return (
-                      <div key={i} className="snap-start shrink-0 border-2 border-border bg-muted/10 px-3 py-2 shadow-[2px_2px_0px_0px_var(--border)]" title={t}>
+                      <div
+                        key={`stack-${t}`}
+                        className="border-2 border-border bg-muted/10 px-3 py-2 shadow-[2px_2px_0px_0px_var(--border)] max-w-full"
+                        title={t}
+                      >
                         <div className="flex items-center gap-2">
-                          <div className="size-7 flex items-center justify-center overflow-hidden">
+                          <div className="size-7 shrink-0 flex items-center justify-center overflow-hidden">
                             {iconUrl ? (
                               <img src={iconUrl} alt={t} className="size-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                             ) : (
                               <Monitor className="size-4 text-muted-foreground" />
                             )}
                           </div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">{t}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground break-words text-left">{t}</span>
                         </div>
                       </div>
                     );
@@ -479,11 +586,16 @@ export default function PublicProfilePage() {
               </div>
               {(profile as any)?.mySetup?.length ? (
                 <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
-                  {((profile as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string }>).slice(0, 5).map((it, i) => (
-                    <div key={`${it.imageUrl}-${i}`} className="snap-start shrink-0 w-[240px] border-2 border-border bg-muted/10 shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden">
-                      <div className="h-28 border-b-2 border-border bg-muted/20 overflow-hidden">
-                        <img src={it.imageUrl} alt={it.label} className="h-full w-full object-cover" loading="lazy" />
-                      </div>
+                  {((profile as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string }>).slice(0, 5).map((it) => (
+                    <div key={`setup-${it.imageUrl}-${it.label}`} className="snap-start shrink-0 w-[240px] border-2 border-border bg-muted/10 shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setMySetupPreview({ src: it.imageUrl, title: it.label })}
+                        className="relative block h-28 w-full cursor-zoom-in border-b-2 border-border bg-muted/20 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label={`View ${it.label} image larger`}
+                      >
+                        <img src={it.imageUrl} alt={it.label} className="h-full w-full object-cover transition-opacity hover:opacity-90" loading="lazy" />
+                      </button>
                       <div className="p-3">
                         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate">{it.label}</div>
                         {it.productUrl ? (
@@ -522,16 +634,16 @@ export default function PublicProfilePage() {
               variant="workExperience"
               open={openSectionId === 'workExperience'}
               onOpenChange={(open) => setSectionOpen('workExperience', open)}
-              subtitle={profile.workExperiences?.length ? `${profile.workExperiences.length} ${profile.workExperiences.length === 1 ? 'entry' : 'entries'}` : undefined}
+              subtitle={entriesCountSubtitle(profile.workExperiences?.length ?? 0)}
             >
               {profile.workExperiences?.length ? (
                 <div className="space-y-4">
                   {sectionLoading.workExperience ? (
-                    <CardSkeleton lines={4} />
+                    <ProfileCardSkeleton lines={4} />
                   ) : (
                     (profile.workExperiences as any[]).slice(0, visibleCounts.workExperience).map((e, i) => (
                       <WorkExperienceCard
-                        key={i}
+                        key={workExperienceListKey(e as Record<string, unknown>)}
                         experience={e}
                         index={i}
                         saving={false}
@@ -568,16 +680,16 @@ export default function PublicProfilePage() {
               variant="education"
               open={openSectionId === 'education'}
               onOpenChange={(open) => setSectionOpen('education', open)}
-              subtitle={profile.education?.length ? `${profile.education.length} ${profile.education.length === 1 ? 'entry' : 'entries'}` : undefined}
+              subtitle={entriesCountSubtitle(profile.education?.length ?? 0)}
             >
               {profile.education?.length ? (
                 <div className="space-y-4">
                   {sectionLoading.education ? (
-                    <CardSkeleton lines={3} />
+                    <ProfileCardSkeleton lines={3} />
                   ) : (
                     (profile.education as any[]).slice(0, visibleCounts.education).map((e, i) => (
                       <EducationCard
-                        key={i}
+                        key={educationListKey(e as Record<string, unknown>)}
                         education={e}
                         index={i}
                         saving={false}
@@ -610,16 +722,16 @@ export default function PublicProfilePage() {
               variant="certification"
               open={openSectionId === 'certification'}
               onOpenChange={(open) => setSectionOpen('certification', open)}
-              subtitle={profile.certifications?.length ? `${profile.certifications.length} ${profile.certifications.length === 1 ? 'entry' : 'entries'}` : undefined}
+              subtitle={entriesCountSubtitle(profile.certifications?.length ?? 0)}
             >
               {profile.certifications?.length ? (
                 <div className="space-y-4">
                   {sectionLoading.certification ? (
-                    <CardSkeleton lines={4} />
+                    <ProfileCardSkeleton lines={4} />
                   ) : (
                     (profile.certifications as any[]).slice(0, visibleCounts.certification).map((c, i) => (
                       <CertificationCard
-                        key={i}
+                        key={certificationListKey(c as Record<string, unknown>)}
                         cert={c}
                         index={i}
                         saving={false}
@@ -655,16 +767,16 @@ export default function PublicProfilePage() {
               variant="project"
               open={openSectionId === 'project'}
               onOpenChange={(open) => setSectionOpen('project', open)}
-              subtitle={profileProjects.nonGithub.length ? `${profileProjects.nonGithub.length} ${profileProjects.nonGithub.length === 1 ? 'entry' : 'entries'}` : undefined}
+              subtitle={entriesCountSubtitle(profileProjects.nonGithub.length)}
             >
               {profileProjects.nonGithub.length ? (
                 <div className="space-y-4">
                   {sectionLoading.project ? (
-                    <CardSkeleton lines={4} />
+                    <ProfileCardSkeleton lines={4} />
                   ) : (
                     profileProjects.nonGithub.slice(0, visibleCounts.project).map((p, i) => (
                       <ProjectCard
-                        key={i}
+                        key={projectListKey(p as Record<string, unknown>)}
                         project={p}
                         index={i}
                         saving={false}
@@ -700,25 +812,30 @@ export default function PublicProfilePage() {
               variant="openSource"
               open={openSectionId === 'openSource'}
               onOpenChange={(open) => setSectionOpen('openSource', open)}
-              subtitle={openSourceList.length ? `${openSourceList.length} ${openSourceList.length === 1 ? 'repo' : 'repos'}` : undefined}
+              subtitle={reposCountSubtitle(openSourceList.length)}
             >
               {openSourceList.length ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {sectionLoading.openSource ? (
                     <>
-                      <CardSkeleton lines={3} />
-                      <CardSkeleton lines={3} />
+                      <ProfileCardSkeleton lines={3} />
+                      <ProfileCardSkeleton lines={3} />
                     </>
                   ) : (
                     openSourceList.slice(0, visibleCounts.openSource).map((item, i) => (
                       <OpenSourceCard
-                        key={(item as { repoFullName?: string }).repoFullName ?? i}
+                        key={openSourceListKey(item as Record<string, unknown>)}
                         item={item}
                         index={i}
                         saving={false}
                         onOpen={() => {
-                          const url = (item as any).publicationUrl ?? (item as any).url ?? (item as any).repositoryUrl;
-                          if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                          const rec = item as Record<string, unknown>;
+                          const url =
+                            (typeof rec.publicationUrl === 'string' && rec.publicationUrl) ||
+                            (typeof rec.url === 'string' && rec.url) ||
+                            (typeof rec.repositoryUrl === 'string' && rec.repositoryUrl) ||
+                            '';
+                          if (url) globalThis.open(url, '_blank', 'noopener,noreferrer');
                         }}
                         onDetach={() => {}}
                         hideActions
@@ -927,6 +1044,13 @@ export default function PublicProfilePage() {
           followersCount={followersCount}
           followingCount={followingCount}
           onFollowChange={refreshCounts}
+        />
+        <MediaFullViewDialog
+          open={!!mySetupPreview}
+          onClose={() => setMySetupPreview(null)}
+          src={mySetupPreview?.src ?? ''}
+          title={mySetupPreview?.title}
+          altText={mySetupPreview?.title}
         />
       </div>
     </div>

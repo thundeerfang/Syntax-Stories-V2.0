@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export const AUDIT_ACTIONS = [
+  /** @deprecated Historical rows only — query both old and `auth.*` when aggregating sign-in. */
   'user_signup',
   'user_signin',
   'user_signout',
@@ -13,6 +14,25 @@ export const AUDIT_ACTIONS = [
   'oauth_disconnected',
   'twofa_enabled',
   'twofa_disabled',
+  'OTP_SENT',
+  'OTP_FAILED',
+  'OTP_VERIFIED',
+  'auth.email.otp_sent',
+  'auth.email.otp_failed',
+  'auth.email.otp_verified',
+  'auth.session.created',
+  'auth.session.revoked',
+  'auth.user.signin',
+  'auth.user.signout',
+  'auth.user.signup',
+  'auth.oauth.login',
+  'auth.oauth.connected',
+  'auth.oauth.disconnected',
+  'auth.twofa.enabled',
+  'auth.twofa.disabled',
+  'auth.email.change',
+  'auth.account.locked',
+  'auth.account.deleted',
   'follow',
   'unfollow',
   'profile_updated',
@@ -57,7 +77,7 @@ export interface IAuditLog extends Document {
 
 const AuditLogSchema = new Schema<IAuditLog>(
   {
-    action: { type: String, required: true, index: true, maxlength: 64 },
+    action: { type: String, required: true, index: true, maxlength: 80 },
     actorId: { type: Schema.Types.ObjectId, ref: 'users', index: true },
     targetType: { type: String, index: true, maxlength: 64 },
     targetId: { type: Schema.Types.ObjectId, index: true },

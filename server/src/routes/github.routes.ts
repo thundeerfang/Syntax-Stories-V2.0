@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { verifyToken, type AuthUser } from '../middlewares/auth';
-import { UserModel } from '../models/User';
+import { verifyToken, type AuthUser } from '../middlewares/auth/index.js';
+import { UserModel } from '../models/User.js';
+import { unsealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
 
 const router = Router();
 
@@ -65,7 +66,9 @@ function monthYearFromIso(iso: string): string {
 async function getGithubToken(userId: string): Promise<string | null> {
   const u = await UserModel.findById(userId).select('+githubToken isGitAccount githubToken');
   if (!u || !u.isGitAccount) return null;
-  return (u.githubToken ?? null) as string | null;
+  const raw = u.githubToken;
+  if (raw == null || raw === '') return null;
+  return unsealProviderToken(raw) ?? null;
 }
 
 router.get('/repos', verifyToken, async (req: Request, res: Response) => {
@@ -105,7 +108,7 @@ router.get('/repo/:fullName', verifyToken, async (req: Request, res: Response) =
       return;
     }
     const fullName = String(req.params.fullName || '').trim();
-    if (!fullName || !fullName.includes('/')) {
+    if (!fullName?.includes('/')) {
       res.status(400).json({ success: false, message: 'Invalid repo name.' });
       return;
     }

@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
-import { errorHandler } from './middlewares';
-import { requestContextMiddleware } from './middlewares/requestContext';
-import { registerAppListeners } from './bootstrap/registerAppListeners';
-import passport from './passport/index';
-import { env } from './config/env';
-import { getProductionAllowedOrigins, isOriginAllowed } from './config/frontendUrl';
-import { getRedis } from './config/redis';
+import { errorHandler } from './middlewares/index.js';
+import { requestContextMiddleware } from './middlewares/requestContext.js';
+import { registerAppListeners } from './bootstrap/registerAppListeners.js';
+import passport from './passport/index.js';
+import { env } from './config/env.js';
+import { getProductionAllowedOrigins, isOriginAllowed } from './config/frontendUrl.js';
+import { getRedis } from './config/redis.js';
 import { RedisStore } from 'connect-redis';
 import cookieParser from 'cookie-parser';
 import {
@@ -17,7 +17,7 @@ import {
   registerUploadApiRoutes,
   registerAuthModuleRoutes,
   registerOAuthRoutes,
-} from './bootstrap';
+} from './bootstrap/index.js';
 
 const app = express();
 
@@ -41,16 +41,22 @@ function allowCorsOrigin(origin: string | undefined): boolean {
   if (!allowedOrigins?.length) return false;
   return isOriginAllowed(origin, allowedOrigins);
 }
+
+function corsOriginOption():
+  | boolean
+  | string
+  | string[]
+  | ((origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => void) {
+  if (env.NODE_ENV !== 'production') return env.FRONTEND_URL ?? true;
+  if (!allowedOrigins?.length) return false;
+  return (origin, cb) => {
+    cb(null, allowCorsOrigin(origin));
+  };
+}
+
 app.use(
   cors({
-    origin:
-      env.NODE_ENV === 'production'
-        ? allowedOrigins?.length
-          ? (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-              cb(null, allowCorsOrigin(origin));
-            }
-          : false
-        : (env.FRONTEND_URL ?? true),
+    origin: corsOriginOption(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

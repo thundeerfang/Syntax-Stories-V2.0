@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Dialog } from '@/components/ui/Dialog';
 import { cn } from '@/lib/utils';
 
@@ -12,7 +11,7 @@ export interface MediaFullViewDialogProps {
   altText?: string;
 }
 
-export function MediaFullViewDialog({ open, onClose, src, title, altText }: MediaFullViewDialogProps) {
+export function MediaFullViewDialog({ open, onClose, src, title, altText }: Readonly<MediaFullViewDialogProps>) {
   const isImage = /\.(jpe?g|png|gif|webp)(\?|$)/i.test(src) || src.startsWith('data:image');
   return (
     <Dialog

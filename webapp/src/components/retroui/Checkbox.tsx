@@ -14,8 +14,13 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
       onCheckedChange?.(e.target.checked);
     };
 
-    const controlProps =
-      checked !== undefined ? { checked } : defaultChecked !== undefined ? { defaultChecked } : {};
+    let controlProps: Pick<React.InputHTMLAttributes<HTMLInputElement>, 'checked' | 'defaultChecked'> =
+      {};
+    if (checked !== undefined) {
+      controlProps = { checked };
+    } else if (defaultChecked !== undefined) {
+      controlProps = { defaultChecked };
+    }
 
     return (
       <input

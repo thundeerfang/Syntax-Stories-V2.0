@@ -1,5 +1,6 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Render Secret Files are mounted at /etc/secrets/<filename>
 const RENDER_SECRETS_DIR = '/etc/secrets';
@@ -7,7 +8,7 @@ const privateKeyPem = 'privateKey.pem';
 const publicKeyPem = 'publicKey.pem';
 
 // From dist/config/keys.js, keys live in server/keys/
-const keysDir = path.resolve(__dirname, '..', '..', 'keys');
+const keysDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'keys');
 
 function readKey(filePath: string): string | null {
   try {

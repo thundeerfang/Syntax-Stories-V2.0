@@ -1,5 +1,5 @@
-import { env } from '../../../config/env';
-import { MailSendError } from '../types';
+import { env } from '../../../config/env.js';
+import { MailSendError } from '../types.js';
 
 function mailFrom(): string {
   return (

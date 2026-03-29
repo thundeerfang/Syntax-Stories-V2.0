@@ -21,7 +21,7 @@ export interface DialogProps {
   panelClassName?: string;
   /** Optional class for the inner content wrapper (padding). */
   contentClassName?: string;
-  /** Show the close (X) button. Default true. */
+  /** Show the floating close (X) and reserve pt-11/pr-11 on the content wrapper. Set false when the panel lays out its own header (e.g. FormDialog). */
   showCloseButton?: boolean;
   /** Close when backdrop is clicked. Default true. */
   closeOnBackdropClick?: boolean;
@@ -45,14 +45,14 @@ export function Dialog({
   showCloseButton = true,
   closeOnBackdropClick = true,
   closeOnEscape = true,
-}: DialogProps) {
+}: Readonly<DialogProps>) {
   useEffect(() => {
     if (!open || !closeOnEscape) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose, closeOnEscape]);
 
   useEffect(() => {
@@ -87,27 +87,33 @@ export function Dialog({
           >
             <motion.div
               key="dialog-panel"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className={cn(defaultPanelClass, panelClassName)}
+              className={cn(defaultPanelClass, panelClassName, 'relative')}
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
             >
-              <div className={cn('relative', contentClassName)}>
-                {showCloseButton && (
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="absolute right-4 top-4 p-2 cursor-pointer text-muted-foreground transition-all hover:text-card-foreground hover:opacity-100"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
+              {showCloseButton && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="absolute right-2 top-2 z-30 flex size-9 shrink-0 items-center justify-center rounded-sm border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0_0_var(--border)] transition-colors hover:text-foreground hover:border-primary"
+                  aria-label="Close"
+                >
+                  <X className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                </button>
+              )}
+              <div
+                className={cn(
+                  'relative',
+                  contentClassName,
+                  showCloseButton && 'pt-11 pr-11 sm:pt-12 sm:pr-12'
                 )}
+              >
                 {children}
               </div>
             </motion.div>

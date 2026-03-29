@@ -12,7 +12,7 @@ interface WalletLottieProps {
   size?: number;
 }
 
-export function WalletLottie({ play = false, size = 28 }: WalletLottieProps) {
+export function WalletLottie({ play = false, size = 28 }: Readonly<WalletLottieProps>) {
   return (
     <span
       className="inline-flex shrink-0 pointer-events-none overflow-hidden"

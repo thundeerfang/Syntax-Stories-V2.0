@@ -33,7 +33,6 @@ export const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
       <button
         ref={ref}
         type="button"
-        role="button"
         aria-pressed={pressed}
         data-state={pressed ? 'on' : 'off'}
         onClick={handleClick}

@@ -7,11 +7,39 @@ import {
   AuthError,
   normalizeUser,
   type AuthUser,
+  type ProfileUpdateSection,
   type UpdateProfilePayload,
 } from '@/api/auth';
 import { setLastUserName } from '@/lib/lastUser';
 
 const AUTH_KEY = 'syntax-stories-auth';
+
+async function recoverSessionAfterGetAccount401(
+  get: () => AuthState,
+  set: (partial: Partial<AuthState>) => void,
+): Promise<void> {
+  const refreshToken = get().refreshToken;
+  if (!refreshToken) {
+    set({ user: null, token: null, refreshToken: null });
+    return;
+  }
+  try {
+    const refreshed = await authApi.refresh(refreshToken);
+    set({ token: refreshed.accessToken });
+    const res = await authApi.getAccount(refreshed.accessToken);
+    set({ user: normalizeUser(res.user) });
+  } catch (refreshErr) {
+    if (refreshErr instanceof AuthError && refreshErr.status === 401) {
+      const rt = get().refreshToken;
+      try {
+        if (rt) await authApi.revokeSession(rt);
+      } catch {
+        /* ignore */
+      }
+      set({ user: null, token: null, refreshToken: null });
+    }
+  }
+}
 
 type AuthState = {
   user: AuthUser | null;
@@ -25,7 +53,7 @@ type AuthState = {
   setHydrated: () => void;
   setAuth: (user: AuthUser | null, token: string | null, refreshToken?: string | null) => void;
   refreshUser: () => Promise<void>;
-  updateProfile: (data: UpdateProfilePayload) => Promise<void>;
+  updateProfile: (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => Promise<void>;
   sendLoginOtp: (email: string, altcha?: string) => Promise<void>;
   signUp: (fullName: string, email: string, altcha?: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<void>;
@@ -51,48 +79,32 @@ export const useAuthStore = create<AuthState>()(
         set({ user, token, refreshToken: refreshToken ?? null });
       },
       refreshUser: async () => {
-        const { token, refreshToken } = get();
+        const { token } = get();
         if (!token) return;
         try {
           const res = await authApi.getAccount(token);
           set({ user: normalizeUser(res.user) });
         } catch (e) {
           if (e instanceof AuthError && e.status === 401) {
-            if (refreshToken) {
-              try {
-                const refreshed = await authApi.refresh(refreshToken);
-                set({ token: refreshed.accessToken });
-                const res = await authApi.getAccount(refreshed.accessToken);
-                set({ user: normalizeUser(res.user) });
-              } catch (refreshErr) {
-                // Only clear state when refresh says session is invalid (401)
-                if (refreshErr instanceof AuthError && refreshErr.status === 401) {
-                  const rt = get().refreshToken;
-                  try {
-                    if (rt) await authApi.revokeSession(rt);
-                  } catch {
-                    /* ignore */
-                  }
-                  set({ user: null, token: null, refreshToken: null });
-                }
-              }
-            } else {
-              set({ user: null, token: null, refreshToken: null });
-            }
+            await recoverSessionAfterGetAccount401(get, set);
           }
         }
       },
-      updateProfile: async (data: UpdateProfilePayload) => {
+      updateProfile: async (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => {
         const { token, refreshToken } = get();
         if (!token) throw new Error('Not logged in');
+        const section = opts?.section;
+        const patch = section
+          ? (t: string) => authApi.updateProfileSection(t, section, data)
+          : (t: string) => authApi.updateProfile(t, data);
         try {
-          const res = await authApi.updateProfile(token, data);
+          const res = await patch(token);
           set({ user: normalizeUser(res.user) });
         } catch (e) {
           if (e instanceof AuthError && e.status === 401 && refreshToken) {
             const refreshed = await authApi.refresh(refreshToken);
             set({ token: refreshed.accessToken });
-            const res = await authApi.updateProfile(refreshed.accessToken, data);
+            const res = await patch(refreshed.accessToken);
             set({ user: normalizeUser(res.user) });
             return;
           }
@@ -132,11 +144,11 @@ export const useAuthStore = create<AuthState>()(
       verifyCode: async (email: string, code: string) => {
         set({ isLoading: true });
         try {
-          const otpVersion = get().pendingOtpVersion ?? undefined;
+          const otpVersion = get().pendingOtpVersion;
           const res = await authApi.verifyOtp({
             email,
             code,
-            ...(otpVersion != null ? { otpVersion } : {}),
+            ...(typeof otpVersion === 'number' ? { otpVersion } : {}),
           });
           if (res.twoFactorRequired && res.challengeToken) {
             set({

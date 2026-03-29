@@ -47,10 +47,22 @@ import {
   Search,
   Building2,
   Globe,
+  Lock,
+  Loader2,
 } from 'lucide-react';
 import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
 import { OptimizedRemoteImage } from '@/components/ui/OptimizedRemoteImage';
 import { cn } from '@/lib/utils';
+import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
+import {
+  PROFILE_INSTAGRAM_MAX,
+  PROFILE_PORTFOLIO_URL_MAX,
+  PROFILE_PORTFOLIO_URL_MIN,
+  PROFILE_SOCIAL_URL_MAX,
+  PROFILE_SOCIAL_URL_MIN,
+  STACK_TOOL_NAME_MAX,
+  STACK_TOOL_NAME_MIN,
+} from '@/lib/profileLinkLimits';
 import {
   settingsBtnPrimary,
   settingsBtnShadowLg,
@@ -96,19 +108,15 @@ interface NavGroup {
   items: NavItem[];
 }
 
-/** Empty state for settings sections (work experience, education, etc.) when no entries exist. */
+/** Empty state when a section has no entries; primary actions live in `SettingsSectionHeader`. */
 function SettingsSectionEmptyState({
   icon: Icon,
   title,
   tagline,
-  addLabel,
-  onAdd,
 }: {
   icon: React.ElementType;
   title: string;
   tagline: string;
-  addLabel: string;
-  onAdd: () => void;
 }) {
   return (
     <div className="flex flex-col items-center justify-center border-2 border-dashed border-border bg-muted/10 py-12 px-6 text-center">
@@ -117,13 +125,6 @@ function SettingsSectionEmptyState({
       </span>
       <h3 className="text-sm font-black uppercase tracking-wide text-foreground">{title}</h3>
       <p className="mt-2 max-w-sm text-xs text-muted-foreground">{tagline}</p>
-      <button
-        type="button"
-        onClick={onAdd}
-        className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'mt-6 px-4 py-2.5 text-[10px] font-bold tracking-wide')}
-      >
-        <Plus className="size-3.5" /> {addLabel}
-      </button>
     </div>
   );
 }
@@ -674,14 +675,15 @@ function EditProfileContent() {
           <input
             type="url"
             value={portfolioUrl}
-            onChange={(e) => setPortfolioUrl(e.target.value)}
+            onChange={(e) => setPortfolioUrl(e.target.value.slice(0, PROFILE_PORTFOLIO_URL_MAX))}
             placeholder="https://your-portfolio.com"
-            maxLength={500}
+            maxLength={PROFILE_PORTFOLIO_URL_MAX}
             className={cn(
-              'w-full border-2 border-border bg-background py-3 pr-10 pl-3 font-medium text-sm outline-none transition-colors',
+              'w-full border-2 border-border bg-background py-2.5 pr-10 pl-3 font-medium text-sm outline-none transition-colors rounded-md',
               'placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20'
             )}
             aria-label="Portfolio URL"
+            aria-describedby="portfolio-url-hint"
           />
           {portfolioUrl.trim() && (
             <a
@@ -695,6 +697,9 @@ function EditProfileContent() {
             </a>
           )}
         </div>
+        <p id="portfolio-url-hint" className="mt-1.5 text-[9px] text-muted-foreground">
+          {PROFILE_PORTFOLIO_URL_MIN}–{PROFILE_PORTFOLIO_URL_MAX} characters (leave blank if none).
+        </p>
       </section>
 
       {/* Social links — card */}
@@ -708,13 +713,16 @@ function EditProfileContent() {
             <p className="text-[9px] font-medium text-muted-foreground/80">Add your profiles so others can find you.</p>
           </div>
         </div>
+        <p className="text-[9px] text-muted-foreground mb-3">
+          URL fields: up to {PROFILE_SOCIAL_URL_MAX} characters (at least {PROFILE_SOCIAL_URL_MIN} when not empty). Instagram: up to {PROFILE_INSTAGRAM_MAX} characters.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { key: 'linkedin' as const, label: 'LinkedIn', value: linkedin, set: setLinkedin, placeholder: 'https://linkedin.com/in/username', Icon: Linkedin, iconBg: 'bg-[#0A66C2]/10', iconColor: 'text-[#0A66C2]' },
-            { key: 'github' as const, label: 'GitHub', value: github, set: setGithub, placeholder: 'https://github.com/username', Icon: Github, iconBg: 'bg-foreground/10', iconColor: 'text-foreground' },
-            { key: 'instagram' as const, label: 'Instagram', value: instagram, set: setInstagram, placeholder: 'https://instagram.com/username', Icon: Instagram, iconBg: 'bg-[#E4405F]/10', iconColor: 'text-[#E4405F]' },
-            { key: 'youtube' as const, label: 'YouTube', value: youtube, set: setYoutube, placeholder: 'https://youtube.com/@channel', Icon: Youtube, iconColor: 'text-[#FF0000]', iconBg: 'bg-[#FF0000]/10' },
-          ].map(({ key, label, value, set, placeholder, Icon, iconBg, iconColor }) => (
+            { key: 'linkedin' as const, label: 'LinkedIn', value: linkedin, set: setLinkedin, placeholder: 'https://linkedin.com/in/username', Icon: Linkedin, iconBg: 'bg-[#0A66C2]/10', iconColor: 'text-[#0A66C2]', maxLen: PROFILE_SOCIAL_URL_MAX },
+            { key: 'github' as const, label: 'GitHub', value: github, set: setGithub, placeholder: 'https://github.com/username', Icon: Github, iconBg: 'bg-foreground/10', iconColor: 'text-foreground', maxLen: PROFILE_SOCIAL_URL_MAX },
+            { key: 'instagram' as const, label: 'Instagram', value: instagram, set: setInstagram, placeholder: 'https://instagram.com/username', Icon: Instagram, iconBg: 'bg-[#E4405F]/10', iconColor: 'text-[#E4405F]', maxLen: PROFILE_INSTAGRAM_MAX },
+            { key: 'youtube' as const, label: 'YouTube', value: youtube, set: setYoutube, placeholder: 'https://youtube.com/@channel', Icon: Youtube, iconColor: 'text-[#FF0000]', iconBg: 'bg-[#FF0000]/10', maxLen: PROFILE_SOCIAL_URL_MAX },
+          ].map(({ key, label, value, set, placeholder, Icon, iconBg, iconColor, maxLen }) => (
             <div key={key} className="group space-y-1.5">
               <label className="flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground">
                 <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center border-2 border-border', iconBg, iconColor)}>
@@ -726,11 +734,11 @@ function EditProfileContent() {
                 <input
                   type={key === 'instagram' ? 'text' : 'url'}
                   value={value}
-                  onChange={(e) => set(e.target.value)}
+                  onChange={(e) => set(e.target.value.slice(0, maxLen))}
                   placeholder={placeholder}
-                  maxLength={500}
+                  maxLength={maxLen}
                   className={cn(
-                    'w-full border-2 border-border bg-background py-3 pr-10 pl-3 font-medium text-sm outline-none transition-colors',
+                    'w-full border-2 border-border bg-background py-2.5 pr-10 pl-3 font-medium text-sm outline-none transition-colors rounded-md',
                     'placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20'
                   )}
                   aria-label={label}
@@ -1105,24 +1113,42 @@ function StackToolIcon({ name }: { name: string }) {
 
 function StackAndToolsContent() {
   const { user, updateProfile } = useAuthStore();
-  const [items, setItems] = useState<string[]>(user?.stackAndTools ?? []);
+  const [items, setItems] = useState<string[]>(
+    () => (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX)
+  );
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const suggestions = useMemo(() => searchTechStack(input, 12), [input]);
-  const showSuggestions = open && input.trim().length >= 2;
+  const atMax = items.length >= STACK_AND_TOOLS_MAX;
+  const showSuggestions = open && input.trim().length >= 2 && !atMax;
 
   useEffect(() => {
-    setItems(user?.stackAndTools ?? []);
+    setItems((user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX));
   }, [user?.stackAndTools]);
 
   const addByName = (name: string) => {
-    if (name && !items.includes(name)) {
-      setItems([...items, name]);
-      toast.success(`${name} added to arsenal.`);
+    const trimmed = name.trim().slice(0, STACK_TOOL_NAME_MAX);
+    if (!trimmed) {
+      setInput('');
+      setOpen(false);
+      setHighlight(0);
+      return;
     }
+    if (items.length >= STACK_AND_TOOLS_MAX) {
+      toast.error(`You can add up to ${STACK_AND_TOOLS_MAX} languages and tools.`);
+      return;
+    }
+    if (items.includes(trimmed)) {
+      setInput('');
+      setOpen(false);
+      setHighlight(0);
+      return;
+    }
+    setItems([...items, trimmed]);
+    toast.success(`${trimmed} added to arsenal.`);
     setInput('');
     setOpen(false);
     setHighlight(0);
@@ -1135,7 +1161,7 @@ function StackAndToolsContent() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({ stackAndTools: items });
+      await updateProfile({ stackAndTools: items.slice(0, STACK_AND_TOOLS_MAX) });
       toast.success('Stack & Tools Synchronized.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Sync failed.');
@@ -1174,7 +1200,7 @@ function StackAndToolsContent() {
           <h2 className="text-2xl font-black uppercase tracking-tighter">Stack & Tools</h2>
         </div>
         <p className="text-sm font-medium text-muted-foreground">
-          Search and add tools to your development stack.
+          Search and add up to {STACK_AND_TOOLS_MAX} languages, frameworks, and tools.
         </p>
       </header>
 
@@ -1214,32 +1240,40 @@ function StackAndToolsContent() {
           </div>
         </div>
 
-        <div className="relative group">
-          <div className="absolute -top-3 left-4 px-2 bg-background z-10">
-            <span className="text-[9px] font-black uppercase tracking-widest text-primary">Module_Search</span>
-          </div>
-          <div className="flex items-center border-4 border-border bg-background focus-within:border-primary transition-colors">
-            <div className="pl-4 pr-2">
-              <Search className="size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            </div>
+        <div className="relative group space-y-1.5">
+          <label htmlFor="stack-module-search" className="text-[10px] font-bold uppercase text-muted-foreground">
+            Module search
+          </label>
+          <div className="flex items-center rounded-md border-2 border-border bg-background transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+            <Search className="ml-3 size-4 shrink-0 text-muted-foreground group-focus-within:text-primary transition-colors" aria-hidden />
             <input
+              id="stack-module-search"
               type="text"
               value={input}
+              disabled={atMax}
+              maxLength={STACK_TOOL_NAME_MAX}
               onChange={(e) => {
-                setInput(e.target.value);
+                setInput(e.target.value.slice(0, STACK_TOOL_NAME_MAX));
                 setOpen(true);
                 setHighlight(0);
               }}
               onFocus={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 200)}
               onKeyDown={onKeyDown}
-              placeholder="E.G. REACT, TYPESCRIPT, DOCKER..."
-              className="w-full py-4 px-2 bg-transparent font-mono text-xs font-bold uppercase tracking-widest outline-none placeholder:text-muted-foreground/50"
+              placeholder={
+                atMax
+                  ? `MAX ${STACK_AND_TOOLS_MAX} — REMOVE ONE TO ADD MORE`
+                  : 'e.g. React, TypeScript, Docker…'
+              }
+              className="min-w-0 flex-1 bg-transparent py-2.5 pl-2 pr-3 text-sm font-medium outline-none placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <div className="pr-4 hidden md:block">
+            <div className="pr-3 hidden md:block">
               <kbd className="px-1.5 py-0.5 border-2 border-border bg-muted text-[8px] font-black uppercase">Enter</kbd>
             </div>
           </div>
+          <p className="text-[9px] text-muted-foreground">
+            {STACK_TOOL_NAME_MIN}–{STACK_TOOL_NAME_MAX} characters per skill (same limits as work experience skills).
+          </p>
 
           <AnimatePresence>
             {showSuggestions && (
@@ -1297,7 +1331,7 @@ function StackAndToolsContent() {
 
       <div className="flex items-center justify-between pt-2">
         <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-          Total Modules: {items.length}
+          Total modules: {items.length} / {STACK_AND_TOOLS_MAX}
         </p>
         <button
           type="button"
@@ -2143,8 +2177,6 @@ function WorkExperiencesContent() {
             icon={Briefcase}
             title="Empty Resume"
             tagline="You haven't added any work experiences. Start by adding your current or past roles."
-            addLabel="Add Experience"
-            onAdd={openAdd}
           />
         ) : (
           <>
@@ -2903,8 +2935,6 @@ function EducationContent() {
             icon={GraduationCap}
             title="No education added yet"
             tagline="Add your degrees and schools. Help others see your learning journey."
-            addLabel="Add education"
-            onAdd={openAdd}
           />
         ) : (
           <>
@@ -3239,8 +3269,6 @@ function CertificationsContent() {
             icon={Award}
             title="No licenses or certifications yet"
             tagline="Add credentials to stand out. Show what you've earned."
-            addLabel="Add license or certification"
-            onAdd={openAdd}
           />
         ) : (
           <>
@@ -3603,8 +3631,6 @@ function ProjectsContent() {
             icon={FolderGit2}
             title="No projects or publications yet"
             tagline="Share what you've built or published. Add your first project to get started."
-            addLabel="Add project"
-            onAdd={openAdd}
           />
         ) : (
           <>
@@ -3793,10 +3819,7 @@ function OpenSourceContent() {
 
   const fetchRepos = async () => {
     if (!token) return;
-    if (!user?.isGitAccount) {
-      toast.error('Link GitHub first in Security → Connected accounts.');
-      return;
-    }
+    if (!user?.isGitAccount) return;
     setError('');
     setLoading(true);
     try {
@@ -3812,6 +3835,11 @@ function OpenSourceContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openImportDialog = () => {
+    setDialogOpen(true);
+    if (user?.isGitAccount) void fetchRepos();
   };
 
   const addRepo = async (fullName: string) => {
@@ -3837,7 +3865,7 @@ function OpenSourceContent() {
       // Preserve GitHub-linked state so Connected accounts and sync dialog stay in sync.
       // Cast to any because auth flags live on the outer user object, while updateProfile
       // helper is typed for profile fields only.
-      await updateProfile({ projects: next, isGitAccount: true } as any);
+      await updateProfile({ projects: next, isGitAccount: true });
       toast.success('Added to projects.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
@@ -3865,11 +3893,58 @@ function OpenSourceContent() {
     return repos.filter((r) => (r.full_name || '').toLowerCase().includes(q) || (r.name || '').toLowerCase().includes(q));
   }, [repos, query]);
 
+  const openSourceDialogLocked = !user?.isGitAccount || loading || saving;
+
+  const openSourceLockOverlayContent =
+    !user?.isGitAccount ? (
+      <div className="w-full max-w-md border-2 border-border bg-card p-6 shadow-[4px_4px_0px_0px_var(--border)]">
+        <div className="flex items-center justify-center gap-4">
+          <span
+            className="flex size-14 shrink-0 items-center justify-center border-2 border-border bg-muted/40 text-muted-foreground shadow-[3px_3px_0px_0px_var(--border)]"
+            aria-hidden
+          >
+            <Lock className="size-7" strokeWidth={2} />
+          </span>
+          <span
+            className="flex size-14 shrink-0 items-center justify-center border-2 border-primary/35 bg-primary/10 text-primary shadow-[3px_3px_0px_0px_var(--border)]"
+            aria-hidden
+          >
+            <Github className="size-7" strokeWidth={2} />
+          </span>
+        </div>
+        <p className="mt-5 text-center text-[10px] font-black uppercase tracking-[0.2em] text-primary">GitHub not connected</p>
+        <p className="mt-3 text-center text-sm font-black uppercase leading-snug tracking-tight text-foreground">
+          GitHub is not linked. This dialog is locked until you connect your account.
+        </p>
+        <div className="mt-5 border-t-2 border-border pt-5">
+          <div className="flex gap-3">
+            <span
+              className="mt-0.5 flex size-9 shrink-0 items-center justify-center border-2 border-border bg-muted/30 text-primary"
+              aria-hidden
+            >
+              <Plug className="size-4" strokeWidth={2} />
+            </span>
+            <p className="text-left text-xs font-medium leading-relaxed text-muted-foreground">
+              Go to <span className="font-black text-foreground">Security → Connected accounts</span>, link GitHub, then return here and open{' '}
+              <span className="font-black text-foreground">Add open source</span> again.
+            </p>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="flex flex-col items-center gap-4 text-center">
+        <Loader2 className="size-10 shrink-0 animate-spin text-primary" aria-hidden />
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+          {saving ? 'Saving…' : 'Loading repositories…'}
+        </p>
+      </div>
+    );
+
   return (
     <div className="space-y-8">
       <SettingsSectionHeader
         variant="openSource"
-        onPrimaryAction={() => { setDialogOpen(true); void fetchRepos(); }}
+        onPrimaryAction={openImportDialog}
         disabled={loading || saving}
       />
 
@@ -3880,8 +3955,6 @@ function OpenSourceContent() {
               icon={Code2}
               title="No Repositories Linked"
               tagline="Sync your GitHub projects to display your coding activity."
-              addLabel="Initialize Sync"
-              onAdd={() => { setDialogOpen(true); void fetchRepos(); }}
             />
           </div>
         ) : (
@@ -3910,19 +3983,27 @@ function OpenSourceContent() {
           </span>
         }
         titleId="open-source-import"
-        subtitle={user?.isGitAccount ? 'Pick a repo to add to Projects.' : 'Link GitHub in Security → Connected accounts to import repos.'}
+        subtitle={
+          user?.isGitAccount && !openSourceDialogLocked ? 'Pick a repo to add to Projects.' : undefined
+        }
         panelClassName="max-w-2xl"
         footer={
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-              {user?.isGitAccount ? 'Uses your linked GitHub token' : 'GitHub not linked'}
-            </p>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Close</button>
-              <button type="button" onClick={() => void fetchRepos()} disabled={!user?.isGitAccount || loading} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{loading ? 'Loading…' : 'Refresh'}</button>
+          user?.isGitAccount && !openSourceDialogLocked ? (
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Uses your linked GitHub token</p>
+              <button
+                type="button"
+                onClick={() => void fetchRepos()}
+                disabled={loading || saving}
+                className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}
+              >
+                Refresh
+              </button>
             </div>
-          </div>
+          ) : undefined
         }
+        interactionLock={openSourceDialogLocked}
+        interactionLockContent={openSourceLockOverlayContent}
       >
         <div className="space-y-4">
           {error && (
@@ -3945,9 +4026,7 @@ function OpenSourceContent() {
             </div>
             <div className="max-h-[55vh] overflow-y-auto">
               {!user?.isGitAccount ? (
-                <div className="p-4 text-xs text-muted-foreground">
-                  GitHub is not linked. Go to <span className="font-bold">Security → Connected accounts</span> and connect GitHub.
-                </div>
+                <div className="min-h-[120px]" aria-hidden />
               ) : loading ? (
                 <div className="p-4 text-xs text-muted-foreground">Loading…</div>
               ) : filtered.length === 0 ? (

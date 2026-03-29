@@ -3,17 +3,24 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "postinstall": "node scripts/install-shared-deps.cjs",
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "eslint . --max-warnings 50",
+    "lint:src": "eslint src --max-warnings 50",
+    "lint:strict": "eslint src --max-warnings 0",
+    "lint:report": "node -e \"require('fs').mkdirSync('reports',{recursive:true})\" && eslint src -f json -o reports/eslint-report.json",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@syntax-stories/shared": "file:./packages/shared",
     "@lottiefiles/dotlottie-react": "^0.18.3",
+    "@tanstack/react-query": "^5.95.2",
     "altcha": "^2.3.0",
     "appwrite": "^23.0.0",
     "clsx": "^2.1.1",
@@ -34,6 +41,7 @@
     "recharts": "^3.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.0.0",
+    "zod": "^3.24.1",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

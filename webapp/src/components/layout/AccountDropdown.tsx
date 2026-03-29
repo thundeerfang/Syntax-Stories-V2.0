@@ -63,6 +63,7 @@ export function AccountDropdown() {
 
   const menuSections = [
     {
+      id: 'account-profile-stack',
       items: [
         { href: '/profile', label: 'Your profile', icon: User },
         { href: '/wallet', label: 'Wallet', icon: Wallet },
@@ -71,6 +72,7 @@ export function AccountDropdown() {
       ],
     },
     {
+      id: 'account-settings-stack',
       items: [
         { href: '/settings', label: 'Settings', icon: Settings },
         { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
@@ -168,7 +170,7 @@ export function AccountDropdown() {
             {/* Menu Sections */}
             <div className="flex flex-col">
               {menuSections.map((section, sectionIdx) => (
-                <div key={sectionIdx} className="py-0.5 border-b-2 border-border last:border-b-0">
+                <div key={section.id} className="py-0.5 border-b-2 border-border last:border-b-0">
                   {section.items.map((item, itemIdx) => (
                     <motion.div
                         key={item.label}

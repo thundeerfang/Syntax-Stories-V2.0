@@ -9,6 +9,26 @@ import { getLogoUrl } from '@/data/entities';
 
 const DEBOUNCE_MS = 300;
 
+const ENTITY_SEARCH_LISTBOX_CLASS =
+  'absolute z-50 mt-1 w-full rounded-md border-2 border-border bg-card shadow-lg overflow-hidden max-h-60 overflow-y-auto';
+
+const ENTITY_OPTION_BTN_CLASS =
+  'w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm font-medium hover:bg-muted/50 transition-colors border-b border-border last:border-b-0';
+
+function EntitySearchSuggestionsListbox({
+  listboxId,
+  children,
+}: Readonly<{ listboxId: string; children: React.ReactNode }>) {
+  return <ul id={listboxId} className={ENTITY_SEARCH_LISTBOX_CLASS} role="listbox">{children}</ul>; // NOSONAR S6819 S6842
+}
+
+function EntityComboboxOptionButton({
+  onSelect,
+  children,
+}: Readonly<{ onSelect: () => void; children: React.ReactNode }>) {
+  return <button type="button" role="option" aria-selected={false} onClick={onSelect} className={ENTITY_OPTION_BTN_CLASS}>{children}</button>; // NOSONAR S6819
+}
+
 export interface EntitySearchInputProps {
   id: string;
   label: string;
@@ -37,7 +57,8 @@ export function EntitySearchInput({
   disabled = false,
   className,
   maxLength = 200,
-}: EntitySearchInputProps) {
+}: Readonly<EntitySearchInputProps>) {
+  const listboxId = React.useId();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<EntityOption[]>([]);
@@ -138,14 +159,12 @@ export function EntitySearchInput({
           )}
           aria-invalid={!!error}
           aria-expanded={open}
+          aria-controls={listboxId}
           aria-autocomplete="list"
           role="combobox"
         />
         {open && (loading || suggestions.length > 0) && (
-          <ul
-            className="absolute z-50 mt-1 w-full rounded-md border-2 border-border bg-card shadow-lg overflow-hidden max-h-60 overflow-y-auto"
-            role="listbox"
-          >
+          <EntitySearchSuggestionsListbox listboxId={listboxId}>
             {loading && suggestions.length === 0 ? (
               <li className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground justify-center">
                 <Loader2 className="size-4 animate-spin" /> Searching…
@@ -159,7 +178,7 @@ export function EntitySearchInput({
                 />
               ))
             )}
-          </ul>
+          </EntitySearchSuggestionsListbox>
         )}
       </div>
       {error && <p className="text-xs text-destructive font-medium">{error}</p>}
@@ -167,18 +186,17 @@ export function EntitySearchInput({
   );
 }
 
-function EntityOptionRow({ option, onSelect }: { option: EntityOption; onSelect: () => void }) {
+function EntityOptionRow({
+  option,
+  onSelect,
+}: Readonly<{ option: EntityOption; onSelect: () => void }>) {
   const logoUrl = getLogoUrl(option.domain);
   const [imgError, setImgError] = React.useState(false);
   const showDefault = !logoUrl || imgError;
 
   return (
-    <li role="option">
-      <button
-        type="button"
-        onClick={onSelect}
-        className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm font-medium hover:bg-muted/50 transition-colors border-b border-border last:border-b-0"
-      >
+    <li>
+      <EntityComboboxOptionButton onSelect={onSelect}>
         <span className="size-8 rounded border border-border bg-muted shrink-0 overflow-hidden flex items-center justify-center">
           {showDefault ? (
             <Building2 className="size-4 text-muted-foreground" />
@@ -192,7 +210,7 @@ function EntityOptionRow({ option, onSelect }: { option: EntityOption; onSelect:
           )}
         </span>
         <span className="min-w-0 truncate">{option.name}</span>
-      </button>
+      </EntityComboboxOptionButton>
     </li>
   );
 }

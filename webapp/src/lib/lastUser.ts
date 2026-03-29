@@ -3,7 +3,7 @@ const KEY = 'syntax-stories-last-user';
 
 
 export function setLastUserName(fullName: string): void {
-  if (typeof window === 'undefined') return;
+  if (globalThis.window === undefined) return;
   try {
     localStorage.setItem(KEY, JSON.stringify({ fullName }));
   } catch {
@@ -12,7 +12,7 @@ export function setLastUserName(fullName: string): void {
 }
 
 export function clearLastUser(): void {
-  if (typeof window === 'undefined') return;
+  if (globalThis.window === undefined) return;
   try {
     localStorage.removeItem(KEY);
   } catch {

@@ -8,6 +8,21 @@ import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 
 type MediaItem = { url: string; title?: string; altText?: string };
 
+const CERT_CARD_FOOTER_MARKS = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5'] as const;
+
+type CertificationCardProps = Readonly<{
+  cert: any;
+  index: number;
+  saving: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+  onPreviewMedia: (item: MediaItem) => void;
+  formatMonthYear: (value: string) => string;
+  domainFromUrl: (value: string) => string;
+  isImageUrl: (url: string) => boolean;
+  hideActions?: boolean;
+}>;
+
 export function CertificationCard({
   cert: e,
   index,
@@ -19,23 +34,12 @@ export function CertificationCard({
   domainFromUrl,
   isImageUrl,
   hideActions = false,
-}: {
-  cert: any;
-  index: number;
-  saving: boolean;
-  onEdit: () => void;
-  onRemove: () => void;
-  onPreviewMedia: (item: MediaItem) => void;
-  formatMonthYear: (value: string) => string;
-  domainFromUrl: (value: string) => string;
-  isImageUrl: (url: string) => boolean;
-  hideActions?: boolean;
-}) {
+}: CertificationCardProps) {
   const issueStr = formatMonthYear(e.issueDate ?? '');
   const expStr = e.expirationDate ? formatMonthYear(e.expirationDate) : null;
   const rawId = (e.certId ?? '').trim() || String(index + 1);
-  const numId = parseInt(rawId, 10);
-  const displayCertId = !Number.isNaN(numId) ? String(numId).padStart(2, '0') : rawId;
+  const numId = Number.parseInt(rawId, 10);
+  const displayCertId = Number.isNaN(numId) ? rawId : String(numId).padStart(2, '0');
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [skillsExpanded, setSkillsExpanded] = useState(false);
   const descRef = useRef<HTMLDivElement>(null);
@@ -57,7 +61,7 @@ export function CertificationCard({
   }, [isDescExpanded]);
 
   return (
-    <div key={index} className="group relative ss-settings-card">
+    <div className="group relative ss-settings-card">
       {/* Industrial Frame - Fixed Position */}
       <div className="ss-card-border relative border-[3px] border-border bg-card">
         
@@ -184,9 +188,9 @@ export function CertificationCard({
               )}
               {e.skills && e.skills.length > 0 && (
                 <>
-                  {visibleSkills.map((s: string, j: number) => (
+                  {visibleSkills.map((s: string) => (
                     <span
-                      key={j}
+                      key={`${displayCertId}-skill-${s}`}
                       className="ss-meta-pill inline-flex items-center gap-1.5 px-2 py-0.5 bg-muted/40 border border-border text-[9px] font-mono font-bold text-muted-foreground"
                     >
                       <Code2 className="size-2.5 text-primary/60" /> {s.toUpperCase()}
@@ -211,17 +215,18 @@ export function CertificationCard({
               <div ref={descRef} className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5">
                 <button
                   type="button"
-                  onClick={() => setIsDescExpanded((v: boolean) => !v)}
+                  onClick={(ev) => {
+                    if ((ev.target as HTMLElement).closest('.ss-card-desc-scroll')) return;
+                    setIsDescExpanded((v: boolean) => !v);
+                  }}
                   className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                   aria-expanded={isDescExpanded}
                   aria-label={isDescExpanded ? 'Collapse description' : 'Expand to read full description'}
                 >
                   {isDescExpanded ? (
                     <div
-                      className="min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
+                      className="ss-card-desc-scroll min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
                       style={{ scrollbarGutter: 'stable' }}
-                      onClick={(ev) => ev.stopPropagation()}
-                      role="presentation"
                     >
                       <p className="text-[11px] font-medium text-muted-foreground break-words">
                         <span className="text-primary font-bold mr-2">SUMMARY_LOG:</span>
@@ -243,9 +248,9 @@ export function CertificationCard({
               <div className="pt-1 space-y-1.5">
                 <p className="text-[8px] font-black uppercase text-muted-foreground tracking-[0.2em]">Attached_Media</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {e.mediaItems.slice(0, 3).map((m: MediaItem, j: number) => (
+                  {e.mediaItems.slice(0, 3).map((m: MediaItem) => (
                     <button
-                      key={j}
+                      key={`${displayCertId}-media-${m.url}`}
                       type="button"
                       onClick={() => onPreviewMedia(m)}
                       className="ss-cert-media-wrap size-8 border-2 border-border bg-background overflow-hidden flex items-center justify-center relative"
@@ -267,8 +272,8 @@ export function CertificationCard({
         {/* Footer Hardware Deco — reduced padding */}
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1 opacity-30">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className={cn("h-2 w-[1px] bg-foreground", i % 2 === 0 && "w-[3px]")} />
+            {CERT_CARD_FOOTER_MARKS.map((mark, i) => (
+              <div key={mark} className={cn('h-2 w-[1px] bg-foreground', i % 2 === 0 && 'w-[3px]')} />
             ))}
           </div>
           <span className="text-[9px] font-mono font-bold text-muted-foreground/40 tracking-[0.2em]">

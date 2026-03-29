@@ -44,7 +44,8 @@ export default function WriteBlogPage() {
       await blogApi.createPost({ title, content, thumbnailUrl: thumbnailUrl.trim() || undefined, status }, token);
       toast.success(status === 'published' ? 'POST_LIVE' : 'DRAFT_SYNCED');
       if (status === 'published') { setTitle(''); setBlocks([createBlockInSection('paragraph', WRITE_DEFAULT_SECTION_ID)]); }
-    } catch (e) {
+    } catch (err) {
+      console.error(err);
       toast.error('FATAL: UPLOAD_FAILED');
     } finally {
       setSubmitting(false);
@@ -173,8 +174,11 @@ export default function WriteBlogPage() {
               <Globe className="h-4 w-4 text-primary" /> Asset_Configuration
             </h3>
             <div>
-              <label className="text-[9px] font-bold text-muted-foreground uppercase">Thumbnail_URL</label>
+              <label htmlFor="write-thumbnail-url" className="text-[9px] font-bold text-muted-foreground uppercase">
+                Thumbnail_URL
+              </label>
               <input
+                id="write-thumbnail-url"
                 type="url"
                 value={thumbnailUrl}
                 onChange={(e) => setThumbnailUrl(e.target.value)}

@@ -8,6 +8,9 @@ declare global {
           challengeurl?: string;
           credentials?: 'omit' | 'same-origin' | 'include';
           overlay?: boolean;
+          floating?: 'auto' | 'top' | 'bottom';
+          floatinganchor?: string;
+          floatingoffset?: number | string;
         },
         HTMLElement
       >;

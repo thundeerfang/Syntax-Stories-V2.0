@@ -14,8 +14,8 @@ type ThemeState = {
 };
 
 function getEffectiveTheme(theme: Theme): 'light' | 'dark' {
-  if (theme === 'system' && typeof window !== 'undefined') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (theme === 'system' && globalThis.window !== undefined) {
+    return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   return theme === 'system' ? 'light' : theme;
 }

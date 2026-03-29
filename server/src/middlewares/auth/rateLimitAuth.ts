@@ -1,8 +1,8 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request } from 'express';
-import { authConfig } from '../../config/auth.config';
-import { redisKeys } from '../../shared/redis/keys';
-import { RedisRateLimitStore } from './redisRateLimitStore';
+import { authConfig } from '../../config/auth.config.js';
+import { redisKeys } from '../../shared/redis/keys.js';
+import { RedisRateLimitStore } from './redisRateLimitStore.js';
 
 const FP_HEADER = 'x-device-fingerprint';
 
@@ -26,7 +26,7 @@ function createRateLimiter(
     message: { message: 'Too many attempts. Please try again later.', success: false },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req, res) =>
+    keyGenerator: (req, _res) =>
       ipKeyGenerator(req.ip ?? req.socket?.remoteAddress ?? '0.0.0.0') +
       (useFingerprint ? fingerprintSuffix(req) : ''),
     handler: (req, res) => {
@@ -63,4 +63,10 @@ export const rateLimitRefresh = createRateLimiter(
   authConfig.RATE_LIMIT_REFRESH.windowMs,
   authConfig.RATE_LIMIT_REFRESH.max,
   redisKeys.rateLimit.refresh
+);
+
+export const rateLimitUpdateProfile = createRateLimiter(
+  authConfig.RATE_LIMIT_UPDATE_PROFILE.windowMs,
+  authConfig.RATE_LIMIT_UPDATE_PROFILE.max,
+  redisKeys.rateLimit.updateProfile
 );

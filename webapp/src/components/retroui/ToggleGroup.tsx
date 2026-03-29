@@ -17,7 +17,7 @@ function useToggleGroup() {
   return ctx;
 }
 
-export interface ToggleGroupProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface ToggleGroupProps extends Omit<React.FieldsetHTMLAttributes<HTMLFieldSetElement>, 'onChange'> {
   type?: 'single' | 'multiple';
   value?: string | string[];
   defaultValue?: string | string[];
@@ -25,7 +25,7 @@ export interface ToggleGroupProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   variant?: 'default' | 'outline';
 }
 
-export const ToggleGroup = React.forwardRef<HTMLDivElement, ToggleGroupProps>(
+export const ToggleGroup = React.forwardRef<HTMLFieldSetElement, ToggleGroupProps>(
   (
     {
       type = 'single',
@@ -61,22 +61,24 @@ export const ToggleGroup = React.forwardRef<HTMLDivElement, ToggleGroupProps>(
       [type, value, isControlled, onValueChange]
     );
 
-    const ctx: ToggleGroupContextValue = { type, value, onItemClick, variant };
+    const ctx = React.useMemo<ToggleGroupContextValue>(
+      () => ({ type, value, onItemClick, variant }),
+      [type, value, onItemClick, variant]
+    );
 
     return (
       <ToggleGroupContext.Provider value={ctx}>
-        <div
+        <fieldset
           ref={ref}
-          role="group"
           className={cn(
-            'inline-flex rounded-md border-2 border-border bg-card p-0.5 shadow-[2px_2px_0px_0px_var(--border)]',
+            'inline-flex min-w-0 m-0 rounded-md border-2 border-border bg-card p-0.5 shadow-[2px_2px_0px_0px_var(--border)]',
             variant === 'outline' && 'bg-transparent',
             className
           )}
           {...props}
         >
           {children}
-        </div>
+        </fieldset>
       </ToggleGroupContext.Provider>
     );
   }
@@ -90,11 +92,14 @@ export interface ToggleGroupItemProps extends React.ButtonHTMLAttributes<HTMLBut
 export const ToggleGroupItem = React.forwardRef<HTMLButtonElement, ToggleGroupItemProps>(
   ({ value, className, onClick, ...props }, ref) => {
     const ctx = useToggleGroup();
-    const isActive = ctx
-      ? ctx.type === 'multiple'
-        ? (ctx.value as string[])?.includes(value)
-        : (ctx.value as string) === value
-      : false;
+    let isActive = false;
+    if (ctx) {
+      if (ctx.type === 'multiple') {
+        isActive = (ctx.value as string[])?.includes(value) ?? false;
+      } else {
+        isActive = (ctx.value as string) === value;
+      }
+    }
 
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       ctx?.onItemClick(value);
@@ -111,7 +116,6 @@ export const ToggleGroupItem = React.forwardRef<HTMLButtonElement, ToggleGroupIt
       <button
         ref={ref}
         type="button"
-        role="button"
         aria-pressed={isActive}
         data-state={isActive ? 'on' : 'off'}
         onClick={handleClick}

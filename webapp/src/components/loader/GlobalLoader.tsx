@@ -10,6 +10,27 @@ const TITLE = 'SYSTEM SYNTAX STORIES — BASH';
 const MIN_SHOW_MS = 5000;
 const FADE_DURATION_MS = 300;
 
+function scheduleRouteLoaderFadeOut(
+  timeouts: ReturnType<typeof setTimeout>[],
+  shownAt: number,
+  setExiting: React.Dispatch<React.SetStateAction<boolean>>,
+  setShow: React.Dispatch<React.SetStateAction<boolean>>,
+) {
+  const elapsed = Date.now() - shownAt;
+  const waitMin = Math.max(0, MIN_SHOW_MS - elapsed);
+  timeouts.push(
+    setTimeout(() => {
+      setExiting(true);
+      timeouts.push(
+        setTimeout(() => {
+          setShow(false);
+          setExiting(false);
+        }, FADE_DURATION_MS),
+      );
+    }, waitMin),
+  );
+}
+
 const PATH_MAP: Record<string, string> = {
   about: 'about', profile: 'profile', settings: 'settings', login: 'login',
   signup: 'signup', explore: 'explore', trending: 'trending', u: 'profile',
@@ -18,13 +39,13 @@ const PATH_MAP: Record<string, string> = {
 
 export function pathnameToPageName(pathname: string): string {
   if (!pathname || pathname === '/') return 'home';
-  const segment = pathname.split('/').filter(Boolean)[0] ?? 'app';
+  const segment = pathname.split('/').find((s) => s.length > 0) ?? 'app';
   return PATH_MAP[segment] ?? segment;
 }
 
 type GlobalLoaderProps = { pageName?: string; status?: string };
 
-export function GlobalLoader({ pageName = 'app', status }: GlobalLoaderProps) {
+export function GlobalLoader({ pageName = 'app', status }: Readonly<GlobalLoaderProps>) {
   const [dots, setDots] = useState('');
   useEffect(() => {
     const t = setInterval(() => setDots((p) => (p.length >= 3 ? '' : p + '.')), 400);
@@ -119,11 +140,11 @@ export function GlobalLoaderOverlay() {
       clearStuckOverlay();
       syncClearIfOAuthReturn();
     };
-    window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('popstate', onPopState);
+    globalThis.addEventListener('pageshow', onPageShow);
+    globalThis.addEventListener('popstate', onPopState);
     return () => {
-      window.removeEventListener('pageshow', onPageShow);
-      window.removeEventListener('popstate', onPopState);
+      globalThis.removeEventListener('pageshow', onPageShow);
+      globalThis.removeEventListener('popstate', onPopState);
     };
   }, []);
 
@@ -135,8 +156,8 @@ export function GlobalLoaderOverlay() {
       setShow(false);
       setExiting(false);
     };
-    window.addEventListener(OAUTH_LEAVING_EVENT, onOAuthLeaving);
-    return () => window.removeEventListener(OAUTH_LEAVING_EVENT, onOAuthLeaving);
+    globalThis.addEventListener(OAUTH_LEAVING_EVENT, onOAuthLeaving);
+    return () => globalThis.removeEventListener(OAUTH_LEAVING_EVENT, onOAuthLeaving);
   }, []);
 
   useEffect(() => {
@@ -154,16 +175,9 @@ export function GlobalLoaderOverlay() {
     }
     const timeouts: ReturnType<typeof setTimeout>[] = [];
     routeLoaderTimeoutsRef.current = timeouts;
-    const hide = () => {
-      const elapsed = Date.now() - shownAtRef.current;
-      timeouts.push(setTimeout(() => {
-        setExiting(true);
-        timeouts.push(setTimeout(() => setShow(false), FADE_DURATION_MS));
-      }, Math.max(0, MIN_SHOW_MS - elapsed)));
-    };
     shownAtRef.current = Date.now();
     setShow(true);
-    hide();
+    scheduleRouteLoaderFadeOut(timeouts, shownAtRef.current, setExiting, setShow);
     return () => {
       timeouts.forEach(clearTimeout);
       routeLoaderTimeoutsRef.current = [];
@@ -203,7 +217,11 @@ export function GlobalLoaderOverlay() {
 
 type TerminalLoaderPageProps = { pageName?: string; inline?: boolean; status?: string };
 
-export function TerminalLoaderPage({ pageName = 'app', inline = false, status }: TerminalLoaderPageProps) {
+export function TerminalLoaderPage({
+  pageName = 'app',
+  inline = false,
+  status,
+}: Readonly<TerminalLoaderPageProps>) {
   const content = <GlobalLoader pageName={pageName} status={status} />;
   if (inline) return <div className="flex items-center justify-center py-12">{content}</div>;
   return <div className="min-h-screen flex items-center justify-center bg-background p-4">{content}</div>;

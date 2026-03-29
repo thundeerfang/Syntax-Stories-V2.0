@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-type Props = {
+type Props = Readonly<{
   src: string;
   alt: string;
   blurDataUrl?: string | null;
@@ -13,7 +13,7 @@ type Props = {
   height?: number;
   sizes?: string;
   priority?: boolean;
-};
+}>;
 
 /**
  * Uses `next/image` with blur placeholder when `blurDataUrl` is set (e.g. from Sharp on upload).
@@ -55,8 +55,20 @@ export function OptimizedRemoteImage({
         className={cn('object-cover', className)}
         sizes={sizes}
         placeholder="blur"
-        blurDataURL={blurDataUrl!}
+        blurDataURL={blurDataUrl ?? ''}
         priority={priority}
+      />
+    );
+  }
+
+  if (width == null || height == null) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={cn(className)}
+        decoding="async"
+        sizes={sizes}
       />
     );
   }
@@ -65,12 +77,12 @@ export function OptimizedRemoteImage({
     <Image
       src={src}
       alt={alt}
-      width={width!}
-      height={height!}
+      width={width}
+      height={height}
       className={className}
       sizes={sizes}
       placeholder="blur"
-      blurDataURL={blurDataUrl!}
+      blurDataURL={blurDataUrl ?? ''}
       priority={priority}
     />
   );

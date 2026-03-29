@@ -1,5 +1,5 @@
 // Global middlewares (at root)
-export { errorHandler } from './errorHandler';
+export { errorHandler } from './errorHandler.js';
 
 // Auth middlewares (subfolder)
-export * from './auth';
+export * from './auth/index.js';

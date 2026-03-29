@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Image } from 'lucide-react';
+import { Image as ImageIconLucide } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
+import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
 import { ImageDropzone } from '@/components/ui/ImageDropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -23,7 +24,7 @@ export function UploadCoverDialog({
   onClose,
   token,
   onSuccess,
-}: UploadCoverDialogProps) {
+}: Readonly<UploadCoverDialogProps>) {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export function UploadCoverDialog({
       backdropClassName="fixed inset-0 z-50 bg-black/40"
     >
       <h2 id="upload-cover-title" className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-4">
-        <Image className="size-4 text-primary" /> Upload cover image
+        <ImageIconLucide className="size-4 text-primary" aria-hidden /> Upload cover image
       </h2>
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
         JPEG, PNG, GIF or WebP. Max {MAX_MB}MB. Recommended width 1200px+.
@@ -127,7 +128,7 @@ export function UploadCoverDialog({
 
       {imageUrl && (
         <div className="space-y-4">
-          <div className="relative w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
+          <CropperKeyboardWrapper imageReady={!!imageUrl} setCrop={setCrop} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
             <Cropper
               image={imageUrl}
               crop={crop}
@@ -137,7 +138,7 @@ export function UploadCoverDialog({
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
             />
-          </div>
+          </CropperKeyboardWrapper>
           <div className="flex items-center justify-between gap-4">
             <input
               type="range"
@@ -152,6 +153,9 @@ export function UploadCoverDialog({
               {zoom.toFixed(1)}x
             </span>
           </div>
+          <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+            Tip: click the crop area, then arrow keys to move (Shift for larger steps).
+          </p>
           {uploading && (
             <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div

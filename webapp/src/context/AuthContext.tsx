@@ -12,7 +12,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);

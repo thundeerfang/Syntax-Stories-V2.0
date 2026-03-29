@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
-import path from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import fs from 'node:fs';
 import multer from 'multer';
 import sharp from 'sharp';
-import { verifyToken } from '../middlewares/auth';
-import { MAX_FILE_SIZE_BYTES, checkImageResolution } from '../config/uploadValidation';
-import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder';
-import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage';
+import { verifyToken } from '../middlewares/auth/index.js';
+import { MAX_FILE_SIZE_BYTES, imageBufferMatchesClaimedMime, imageDimensionsAllowed } from '../config/uploadValidation.js';
+import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder.js';
+import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage.js';
 
 async function tryBlurDataUrl(imagePath: string): Promise<string | undefined> {
   try {
@@ -124,6 +124,29 @@ const uploadOrgLogo = multer({
   fileFilter: logoFilter,
 });
 
+/** Reject polyglot uploads where `mimetype` does not match file header (non-SVG raster images). */
+function assertRasterMagicBytesOrCleanup(filePath: string, mimetype: string): boolean {
+  const m = mimetype.toLowerCase();
+  if (m.includes('svg')) return true;
+  let fd: number;
+  try {
+    fd = fs.openSync(filePath, 'r');
+  } catch {
+    return false;
+  }
+  try {
+    const buf = Buffer.alloc(32);
+    fs.readSync(fd, buf, 0, 32, 0);
+    return imageBufferMatchesClaimedMime(buf, mimetype);
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 function getPublicUrl(req: Request, pathSegment: string): string {
   const host = req.get('host') ?? 'localhost';
   const protocol = req.protocol ?? 'http';
@@ -131,33 +154,64 @@ function getPublicUrl(req: Request, pathSegment: string): string {
   return pathSegment.startsWith('http') ? pathSegment : `${base}/${pathSegment.replace(/^\/+/, '')}`;
 }
 
+/** Multer fields may be strings or numbers; never stringify arbitrary objects. */
+function formCropCoord(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return t.length > 0 ? t : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return undefined;
+}
+
+function applyOptionalRasterCrop(
+  image: sharp.Sharp,
+  body: Record<string, string | undefined>,
+  meta: sharp.Metadata
+): sharp.Sharp {
+  const { cropX, cropY, cropWidth, cropHeight } = body;
+  if (!cropX || !cropY || !cropWidth || !cropHeight || !meta.width || !meta.height) {
+    return image;
+  }
+  const left = Math.max(0, Math.round(Number.parseFloat(cropX)));
+  const top = Math.max(0, Math.round(Number.parseFloat(cropY)));
+  const width = Math.min(meta.width - left, Math.round(Number.parseFloat(cropWidth)));
+  const height = Math.min(meta.height - top, Math.round(Number.parseFloat(cropHeight)));
+  if (width > 0 && height > 0) {
+    return image.extract({ left, top, width, height });
+  }
+  return image;
+}
+
 router.post('/avatar', verifyToken, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
   if (!req.file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
     return;
   }
+  if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch {
+      /* ignore */
+    }
+    res.status(400).json({ success: false, message: 'File content does not match declared image type.' });
+    return;
+  }
   try {
     let image = sharp(req.file.path);
     const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !checkImageResolution(meta.width, meta.height)) {
+    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
       try { fs.unlinkSync(req.file.path); } catch {}
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
     }
-    const { cropX, cropY, cropWidth, cropHeight } = req.body as Record<string, string | undefined>;
     const inputPath = req.file.path;
     const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
     const outputPath = path.join(AVATARS_DIR, outputFilename);
 
-    if (cropX && cropY && cropWidth && cropHeight && meta.width && meta.height) {
-      const left = Math.max(0, Math.round(parseFloat(cropX)));
-      const top = Math.max(0, Math.round(parseFloat(cropY)));
-      const width = Math.min(meta.width - left, Math.round(parseFloat(cropWidth)));
-      const height = Math.min(meta.height - top, Math.round(parseFloat(cropHeight)));
-      if (width > 0 && height > 0) {
-        image = image.extract({ left, top, width, height });
-      }
-    }
+    image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
 
     await image
       .resize(256, 256, { fit: 'cover' })
@@ -182,28 +236,28 @@ router.post('/cover', verifyToken, uploadCover.single('cover'), async (req: Requ
     res.status(400).json({ success: false, message: 'No file uploaded' });
     return;
   }
+  if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch {
+      /* ignore */
+    }
+    res.status(400).json({ success: false, message: 'File content does not match declared image type.' });
+    return;
+  }
   try {
     let image = sharp(req.file.path);
     const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !checkImageResolution(meta.width, meta.height)) {
+    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
       try { fs.unlinkSync(req.file.path); } catch {}
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
     }
-    const { cropX, cropY, cropWidth, cropHeight } = req.body as Record<string, string | undefined>;
     const inputPath = req.file.path;
     const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
     const outputPath = path.join(COVERS_DIR, outputFilename);
 
-    if (cropX && cropY && cropWidth && cropHeight && meta.width && meta.height) {
-      const left = Math.max(0, Math.round(parseFloat(cropX)));
-      const top = Math.max(0, Math.round(parseFloat(cropY)));
-      const width = Math.min(meta.width - left, Math.round(parseFloat(cropWidth)));
-      const height = Math.min(meta.height - top, Math.round(parseFloat(cropHeight)));
-      if (width > 0 && height > 0) {
-        image = image.extract({ left, top, width, height });
-      }
-    }
+    image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
 
     await image
       .resize(1600, 400, { fit: 'cover' })
@@ -229,28 +283,35 @@ router.post('/media', verifyToken, uploadMedia.single('media'), async (req: Requ
     res.status(400).json({ success: false, message: 'No file uploaded' });
     return;
   }
+  if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch {
+      /* ignore */
+    }
+    res.status(400).json({ success: false, message: 'File content does not match declared image type.' });
+    return;
+  }
   try {
     let image = sharp(req.file.path);
     const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !checkImageResolution(meta.width, meta.height)) {
+    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
       try { fs.unlinkSync(req.file.path); } catch {}
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
     }
-    const { cropX, cropY, cropWidth, cropHeight } = req.body as Record<string, string | undefined>;
+    const rawBody = req.body as Record<string, unknown>;
+    const cropBody: Record<string, string | undefined> = {
+      cropX: formCropCoord(rawBody.cropX),
+      cropY: formCropCoord(rawBody.cropY),
+      cropWidth: formCropCoord(rawBody.cropWidth),
+      cropHeight: formCropCoord(rawBody.cropHeight),
+    };
     const inputPath = req.file.path;
     const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-thumb.jpg';
     const outputPath = path.join(MEDIA_DIR, outputFilename);
 
-    if (cropX != null && cropY != null && cropWidth != null && cropHeight != null && meta.width && meta.height) {
-      const left = Math.max(0, Math.round(parseFloat(String(cropX))));
-      const top = Math.max(0, Math.round(parseFloat(String(cropY))));
-      const width = Math.min(meta.width - left, Math.round(parseFloat(String(cropWidth))));
-      const height = Math.min(meta.height - top, Math.round(parseFloat(String(cropHeight))));
-      if (width > 0 && height > 0) {
-        image = image.extract({ left, top, width, height });
-      }
-    }
+    image = applyOptionalRasterCrop(image, cropBody, meta);
 
     await image
       .resize(MEDIA_THUMB_SIZE, MEDIA_THUMB_SIZE, { fit: 'cover' })
@@ -289,7 +350,7 @@ router.post('/company-logo', verifyToken, uploadLogo.single('logo'), async (req:
 
     const image = sharp(inputPath);
     const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !checkImageResolution(meta.width, meta.height)) {
+    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
       try { fs.unlinkSync(inputPath); } catch {}
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
@@ -333,7 +394,7 @@ router.post('/school-logo', verifyToken, uploadSchoolLogo.single('logo'), async 
 
     const image = sharp(inputPath);
     const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !checkImageResolution(meta.width, meta.height)) {
+    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
       try { fs.unlinkSync(inputPath); } catch {}
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;
@@ -377,7 +438,7 @@ router.post('/org-logo', verifyToken, uploadOrgLogo.single('logo'), async (req: 
 
     const image = sharp(inputPath);
     const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !checkImageResolution(meta.width, meta.height)) {
+    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
       try { fs.unlinkSync(inputPath); } catch {}
       res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
       return;

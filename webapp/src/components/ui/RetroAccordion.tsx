@@ -19,7 +19,7 @@ export function RetroAccordion({
   defaultOpen = false,
   className,
   children,
-}: RetroAccordionProps) {
+}: Readonly<RetroAccordionProps>) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (

@@ -34,7 +34,7 @@ export function CompleteItemDialog({
   missingFields,
   initialValues = {},
   onSave,
-}: CompleteItemDialogProps) {
+}: Readonly<CompleteItemDialogProps>) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 

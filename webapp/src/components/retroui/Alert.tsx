@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, type ReactNode } from 'react';
+import { createContext, useMemo, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export type AlertStatus = 'success' | 'info' | 'error' | 'warning';
@@ -20,9 +20,10 @@ export interface AlertProps {
   children: ReactNode;
 }
 
-export function Alert({ status, className, children }: AlertProps) {
+export function Alert({ status, className, children }: Readonly<AlertProps>) {
+  const contextValue = useMemo(() => ({ status }), [status]);
   return (
-    <AlertContext.Provider value={{ status }}>
+    <AlertContext.Provider value={contextValue}>
       <div
         role="alert"
         className={cn(
@@ -37,7 +38,7 @@ export function Alert({ status, className, children }: AlertProps) {
   );
 }
 
-export function AlertTitle({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+export function AlertTitle({ className, ...props }: Readonly<React.HTMLAttributes<HTMLDivElement>>) {
   return (
     <div
       className={cn('font-semibold', className)}

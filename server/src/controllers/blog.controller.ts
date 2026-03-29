@@ -1,16 +1,19 @@
 import { Request, Response } from 'express';
-import type { AuthUser } from '../middlewares/auth';
-import { BlogPostModel } from '../models/BlogPost';
+import type { AuthUser } from '../middlewares/auth/index.js';
+import { BlogPostModel } from '../models/BlogPost.js';
 
 function slugify(text: string): string {
-  return text
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 200) || 'post';
+  return (
+    text
+      .trim()
+      .toLowerCase()
+      .replaceAll(/\s+/g, '-')
+      .replaceAll(/[^\w-]/g, '')
+      .replaceAll(/-+/g, '-')
+      .replaceAll(/^-+/g, '')
+      .replaceAll(/-+$/g, '')
+      .slice(0, 200) || 'post'
+  );
 }
 
 /** POST /api/blog - create a new blog post (draft or published) */
@@ -94,7 +97,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
     const thumb = typeof thumbnailUrl === 'string' && thumbnailUrl.trim() ? thumbnailUrl.trim().slice(0, 2000) : undefined;
     const finalTitle = titleStr || 'Untitled draft';
 
-    let post = await BlogPostModel.findOne({ authorId: user._id, status: 'draft' })
+    const post = await BlogPostModel.findOne({ authorId: user._id, status: 'draft' })
       .sort({ updatedAt: -1 })
       .limit(1)
       .lean();
@@ -215,7 +218,7 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
     }
     const status = (req.query.status as string) || undefined;
     const filter: { authorId: string; status?: 'draft' | 'published' } = { authorId: user._id };
-    if (status === 'draft' || status === 'published') filter.status = status as 'draft' | 'published';
+    if (status === 'draft' || status === 'published') filter.status = status;
 
     const posts = await BlogPostModel.find(filter)
       .select('title slug summary content thumbnailUrl status createdAt updatedAt')

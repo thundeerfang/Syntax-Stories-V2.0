@@ -2,19 +2,20 @@
   "name": "server",
   "version": "1.0.0",
   "description": "Express TypeScript MVC backend",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "dev:clean": "rimraf dist && npm run dev",
     "generate-keys": "node scripts/generate-keys.js",
-    "reconcile:follow-counts": "ts-node src/scripts/reconcileFollowCounts.ts",
+    "reconcile:follow-counts": "node --loader ts-node/esm src/scripts/reconcileFollowCounts.ts",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage"
   },
   "dependencies": {
     "@types/express": "^5.0.6",
@@ -36,7 +37,6 @@
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.1",
     "helmet": "^8.1.0",
-    "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.0",
     "multer": "^2.1.1",
@@ -52,7 +52,8 @@
     "redis": "^4.7.0",
     "sharp": "^0.33.5",
     "speakeasy": "^2.0.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "zod": "^3.24.1"
   },
   "overrides": {
     "passport-oauth": {
@@ -75,6 +76,7 @@
     "ts-jest": "^29.3.1",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsx": "^4.19.3",
     "typescript-eslint": "^8.26.1"
   }
 }

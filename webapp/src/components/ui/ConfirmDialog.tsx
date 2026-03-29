@@ -38,7 +38,7 @@ export function ConfirmDialog({
   variant = 'danger',
   loading = false,
   defaultFocusConfirm = false,
-}: ConfirmDialogProps) {
+}: Readonly<ConfirmDialogProps>) {
   const confirmRef = useRef<HTMLButtonElement>(null);
   const handleConfirm = () => {
     onConfirm();

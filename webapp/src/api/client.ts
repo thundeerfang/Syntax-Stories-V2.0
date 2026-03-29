@@ -1,7 +1,6 @@
-const getBaseUrl = () =>
-  typeof window !== 'undefined'
-    ? ''
-    : process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+import { resolveFetchBaseForApiClient } from '@/lib/publicApiBase';
+
+const getBaseUrl = () => resolveFetchBaseForApiClient();
 
 export async function apiClient<T>(
   path: string,

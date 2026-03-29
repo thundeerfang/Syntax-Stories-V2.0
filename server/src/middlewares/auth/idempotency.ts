@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { getRedis } from '../../config/redis';
-import { env } from '../../config/env';
-import { redisKeys } from '../../shared/redis/keys';
+import { getRedis } from '../../config/redis.js';
+import { env } from '../../config/env.js';
+import { redisKeys } from '../../shared/redis/keys.js';
 
 const memoryKeys = new Map<string, number>();
 const IDEMPOTENCY_TTL_SEC = env.IDEMPOTENCY_TTL_SEC;

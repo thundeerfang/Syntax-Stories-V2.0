@@ -1,7 +1,6 @@
-function getApiBase(): string {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
-  return base.replace(/\/$/, '');
-}
+import { resolvePublicApiBase } from '@/lib/publicApiBase';
+
+const getApiBase = () => resolvePublicApiBase();
 
 export interface FollowUser {
   id: string;
@@ -64,7 +63,9 @@ export const followApi = {
     if (cursor) params.set('cursor', cursor);
     params.set('limit', String(Math.min(limit, 50)));
     const qs = params.toString();
-    return fetch(`${getApiBase()}/api/follow/followers/${encodeURIComponent(username)}${qs ? `?${qs}` : ''}`).then((r) => {
+    const querySuffix = qs.length > 0 ? `?${qs}` : '';
+    const path = `/api/follow/followers/${encodeURIComponent(username)}${querySuffix}`;
+    return fetch(`${getApiBase()}${path}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
       return r.json() as Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>;
     });
@@ -75,7 +76,9 @@ export const followApi = {
     if (cursor) params.set('cursor', cursor);
     params.set('limit', String(Math.min(limit, 50)));
     const qs = params.toString();
-    return fetch(`${getApiBase()}/api/follow/following/${encodeURIComponent(username)}${qs ? `?${qs}` : ''}`).then((r) => {
+    const querySuffix = qs.length > 0 ? `?${qs}` : '';
+    const path = `/api/follow/following/${encodeURIComponent(username)}${querySuffix}`;
+    return fetch(`${getApiBase()}${path}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
       return r.json() as Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>;
     });

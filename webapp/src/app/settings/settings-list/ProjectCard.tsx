@@ -18,6 +18,19 @@ import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 
 type MediaItem = { url: string; title?: string; altText?: string };
 
+type ProjectCardProps = Readonly<{
+  project: any;
+  index: number;
+  saving: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+  onPreviewMedia: (item: MediaItem) => void;
+  formatMonthYear: (value: string) => string;
+  domainFromUrl: (value: string) => string;
+  isImageUrl: (url: string) => boolean;
+  hideActions?: boolean;
+}>;
+
 export function ProjectCard({
   project: e,
   index,
@@ -29,26 +42,19 @@ export function ProjectCard({
   domainFromUrl,
   isImageUrl,
   hideActions = false,
-}: {
-  project: any;
-  index: number;
-  saving: boolean;
-  onEdit: () => void;
-  onRemove: () => void;
-  onPreviewMedia: (item: MediaItem) => void;
-  formatMonthYear: (value: string) => string;
-  domainFromUrl: (value: string) => string;
-  isImageUrl: (url: string) => boolean;
-  hideActions?: boolean;
-}) {
+}: ProjectCardProps) {
   const pubStr = e.publicationDate ? formatMonthYear(e.publicationDate) : '';
-  const endStr = e.endDate ? formatMonthYear(e.endDate) : e.ongoing ? 'PRESENT' : '';
+  let endStr = '';
+  if (e.endDate) endStr = formatMonthYear(e.endDate);
+  else if (e.ongoing) endStr = 'PRESENT';
   const dateRange = [pubStr, endStr].filter(Boolean).join(' // ');
   const isPub = e.type === 'publication';
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
+  const projectStableKey = String(e.title ?? e.publicationUrl ?? e.id ?? `project-${String(index)}`);
+
   return (
-    <div key={index} className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
+    <div className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
       {/* Archive-style Industrial Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card overflow-hidden">
         
@@ -160,17 +166,18 @@ export function ProjectCard({
               <div className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5 w-full">
                 <button
                   type="button"
-                  onClick={() => setIsSummaryExpanded((v) => !v)}
+                  onClick={(ev) => {
+                    if ((ev.target as HTMLElement).closest('.ss-card-desc-scroll')) return;
+                    setIsSummaryExpanded((v) => !v);
+                  }}
                   className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                   aria-expanded={isSummaryExpanded}
                   aria-label={isSummaryExpanded ? 'Collapse summary' : 'Expand to read full summary'}
                 >
                   {isSummaryExpanded ? (
                     <div
-                      className="min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
+                      className="ss-card-desc-scroll min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
                       style={{ scrollbarGutter: 'stable' }}
-                      onClick={(ev) => ev.stopPropagation()}
-                      role="presentation"
                     >
                       <p className="text-[11px] font-medium text-muted-foreground break-words break-all">
                         <span className="text-primary font-bold mr-2 shrink-0">SUMMARY_LOG:</span>
@@ -191,9 +198,9 @@ export function ProjectCard({
             {e.mediaItems && e.mediaItems.length > 0 && (
               <div className="pt-1">
                 <div className="flex flex-wrap gap-1.5">
-                  {e.mediaItems.slice(0, 4).map((m: MediaItem, j: number) => (
+                  {e.mediaItems.slice(0, 4).map((m: MediaItem) => (
                     <button
-                      key={j}
+                      key={`${projectStableKey}-media-${m.url}`}
                       type="button"
                       onClick={() => onPreviewMedia(m)}
                       className="ss-cert-media-wrap size-8 border-2 border-border bg-background overflow-hidden flex items-center justify-center relative"

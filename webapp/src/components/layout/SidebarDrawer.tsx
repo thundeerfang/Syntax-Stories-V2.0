@@ -136,8 +136,8 @@ function SidebarSkeletonContent() {
         {/* Network skeleton */}
         <div className="space-y-3">
           <div className="h-2 w-16 bg-muted/30 rounded-sm mx-3" />
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-center gap-3 px-3 py-2">
+          {(['sk1', 'sk2', 'sk3', 'sk4', 'sk5'] as const).map((sk, i) => (
+            <div key={sk} className="flex items-center gap-3 px-3 py-2">
               <div className="size-4 bg-muted/40 rounded-sm" />
               <div className="h-2 bg-muted/40 rounded-sm" style={{ width: `${40 + i * 10}%` }} />
             </div>
@@ -147,8 +147,8 @@ function SidebarSkeletonContent() {
         <div className="space-y-4">
           <div className="h-2 w-24 bg-muted/30 rounded-sm mx-3" />
           <div className="flex flex-wrap gap-2 px-3">
-            {[28, 42, 22, 36, 48, 18, 30, 40].map((w, i) => (
-              <div key={i} className="h-6 bg-muted/30 border-2 border-border/15 rounded-sm" style={{ width: w }} />
+            {[28, 42, 22, 36, 48, 18, 30, 40].map((w) => (
+              <div key={w} className="h-6 bg-muted/30 border-2 border-border/15 rounded-sm" style={{ width: w }} />
             ))}
           </div>
         </div>
@@ -344,7 +344,7 @@ export function SidebarDrawer() {
               ].map((link) => (
                 <Link
                   key={link.label}
-                  href={`/archive/${link.label.toLowerCase().replace(/\s/g, '-')}`}
+                  href={`/archive/${link.label.toLowerCase().replaceAll(/\s/g, '-')}`}
                   className="block p-3 border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group cursor-pointer"
                 >
                   <div className="flex items-center gap-3 mb-1">

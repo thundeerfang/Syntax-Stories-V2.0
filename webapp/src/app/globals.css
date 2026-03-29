@@ -53,6 +53,15 @@
   --scrollbar-thumb-border: #e5e5e5;
 }
 
+/* ALTCHA host: theme vars are read into shadow DOM for the floating panel */
+altcha-widget {
+  --altcha-color-base: var(--card);
+  --altcha-color-text: var(--card-foreground);
+  --altcha-color-border: var(--border);
+  --altcha-color-border-focus: var(--primary);
+  --altcha-color-footer-bg: color-mix(in srgb, var(--card) 88%, transparent);
+}
+
 .dark {
   --background: #0f0f12;
   --foreground: #f5f5f5;
@@ -244,38 +253,14 @@ html * {
   animation: gradient-shift 8s ease infinite;
 }
 
-/* Sidebar scrollbar — space always reserved; thumb visible on hover, smooth transition */
+/* Sidebar: scroll works; no scrollbar track/thumb (WebKit + Firefox) */
 .sidebar-drawer {
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-}
-
-.sidebar-drawer:hover {
-  scrollbar-color: var(--border) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .sidebar-drawer::-webkit-scrollbar {
-  width: 8px;
-}
-
-.sidebar-drawer::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-drawer::-webkit-scrollbar-thumb {
-  background: transparent;
-  border: 2px solid transparent;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.sidebar-drawer:hover::-webkit-scrollbar-thumb {
-  background: var(--border);
-}
-
-.sidebar-drawer:hover::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  display: none;
 }
 
 /* Hide scrollbar (e.g. account dropdown) */
@@ -377,6 +362,10 @@ html * {
   background: var(--card) !important;
   border: 2px solid color-mix(in srgb, var(--primary) 70%, var(--border)) !important;
   box-shadow: 2px 2px 0 0 var(--border) !important;
+  /* No library bounce / entrance on icon */
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 .ss-we-timeline .vertical-timeline-element-content {
@@ -394,13 +383,6 @@ html * {
 
 .ss-we-timeline .vertical-timeline-element-content-arrow {
   display: none !important;
-}
-
-/* Remove left-to-right and any entrance animation on timeline positions (library uses bounce-in) */
-.ss-we-timeline .vertical-timeline-element-icon {
-  animation: none !important;
-  transition: none !important;
-  transform: none !important;
 }
 
 /* Catch-all: no animation/transition on timeline elements (except our dot blink) */
@@ -498,11 +480,45 @@ html * {
 .ss-settings-card .ss-cert-media-wrap .ss-overlay { transition: opacity 0.2s; }
 .ss-settings-card .ss-cert-media-wrap:hover .ss-overlay { opacity: 1; }
 
-/* Header primary button (settings section) */
-.ss-settings-header-btn { transition: transform 0.2s, box-shadow 0.2s; }
-.ss-settings-header-btn:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; }
-.ss-settings-header-btn:disabled { cursor: not-allowed; }
-.ss-settings-header-btn:disabled:hover { transform: none; box-shadow: 4px 4px 0 0 var(--border); }
+/* Header primary button (settings section): hover = gray wash only; click = shadow drops + press */
+.ss-settings-header-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.ss-settings-header-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--foreground) 24%, transparent);
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.ss-settings-header-btn:hover:not(:disabled)::after {
+  opacity: 1;
+}
+.ss-settings-header-btn:active:not(:disabled)::after {
+  opacity: 1;
+  background: color-mix(in srgb, var(--foreground) 38%, transparent);
+}
+.ss-settings-header-btn:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+.ss-settings-header-btn:disabled {
+  cursor: not-allowed;
+}
+.ss-settings-header-btn:disabled:hover {
+  transform: none;
+  box-shadow: 4px 4px 0 0 var(--border);
+}
+.ss-settings-header-btn:disabled::after,
+.ss-settings-header-btn:disabled:hover::after {
+  opacity: 0;
+}
 
 /* Profile page: reuse settings cards but hide edit/remove buttons */
 .ss-profile-readonly button.ss-btn-action,

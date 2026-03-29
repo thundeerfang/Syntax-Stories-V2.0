@@ -1,7 +1,6 @@
-function getApiBase(): string {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
-  return base.replace(/\/$/, '');
-}
+import { resolvePublicApiBase } from '@/lib/publicApiBase';
+
+const getApiBase = () => resolvePublicApiBase();
 
 export interface GithubRepoInfo {
   name: string;

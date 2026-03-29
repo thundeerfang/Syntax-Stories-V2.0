@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import { AppHttpError, RateLimitHttpError } from './httpErrors';
+import { AppHttpError, RateLimitHttpError } from './httpErrors.js';
 
 /** Same JSON/headers as `errorHandler` for `AppHttpError` — use when a controller catches and must respond inline (Express 4 async). */
 export function sendAppHttpError(res: Response, err: AppHttpError): void {

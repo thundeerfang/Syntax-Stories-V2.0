@@ -1,14 +1,14 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
-import { authConfig } from '../../../config/auth.config';
-import { signAccessToken } from '../../../config/jwt';
-import { getRedis } from '../../../config/redis';
-import type { AuthUser } from '../../../middlewares/auth';
-import { writeAuditLog } from '../../../shared/audit/auditLog';
-import { AuditAction } from '../../../shared/audit/events';
-import { redisKeys } from '../../../shared/redis/keys';
-import { createSession, generateRefreshToken } from '../../../services/session.service';
-import { logSecurityEvent } from '../securityEventLog';
+import { authConfig } from '../../../config/auth.config.js';
+import { signAccessToken } from '../../../config/jwt.js';
+import { getRedis } from '../../../config/redis.js';
+import type { AuthUser } from '../../../middlewares/auth/index.js';
+import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { AuditAction } from '../../../shared/audit/events.js';
+import { redisKeys } from '../../../shared/redis/keys.js';
+import { createSession, generateRefreshToken } from '../../../services/session.service.js';
+import { logSecurityEvent } from '../securityEventLog.js';
 
 const QR_LOGIN_TTL_SECONDS = 5 * 60;
 

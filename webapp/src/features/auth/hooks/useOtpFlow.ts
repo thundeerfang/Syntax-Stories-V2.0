@@ -6,7 +6,7 @@ import { getAltchaChallengeUrl, AuthError } from '@/api/auth';
 
 export function readAltchaPayload(form: HTMLFormElement | null): string | undefined {
   if (!form) return undefined;
-  const el = form.querySelector('[name="altcha"]') as HTMLInputElement | HTMLTextAreaElement | null;
+  const el = form.querySelector<HTMLInputElement | HTMLTextAreaElement>('[name="altcha"]');
   const v = el?.value?.trim();
   return v || undefined;
 }
@@ -97,7 +97,7 @@ export function useOtpFlow(params: {
       setResendDialogNonce((n) => n + 1);
       setResendOtpOpen(true);
     } else {
-      void runResendWithOptionalAltcha(undefined);
+      void runResendWithOptionalAltcha();
     }
   }, [altchaOn, isLoading, twoFactor, resendCooldownSec, runResendWithOptionalAltcha]);
 

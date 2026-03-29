@@ -191,7 +191,7 @@ Current event bus is good as a seam, but expand it into a real internal event la
 Add events like:
 - `auth.otp.sent`
 - `auth.otp.verify.failed`
-- `auth.login.success`
+- `auth.signin.success`
 - `auth.session.revoked`
 - `mail.send.failed`
 - `upload.completed`

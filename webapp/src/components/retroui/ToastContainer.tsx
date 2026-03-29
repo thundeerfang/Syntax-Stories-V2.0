@@ -1,5 +1,6 @@
 'use client';
 
+import type { ComponentType } from 'react';
 import { useToastStore } from '@/store/toast';
 import { Alert } from '@/components/retroui/Alert';
 import { cn } from '@/lib/utils';
@@ -26,7 +27,6 @@ export function ToastContainer() {
         return (
           <ToastItem
             key={t.id}
-            id={t.id}
             status={t.status}
             title={t.title}
             onDismiss={() => remove(t.id)}
@@ -50,13 +50,12 @@ function ToastItem({
   title,
   onDismiss,
   Icon,
-}: {
-  id: string;
+}: Readonly<{
   status: 'success' | 'info' | 'error' | 'warning';
   title: string;
   onDismiss: () => void;
-  Icon: React.ComponentType<{ className?: string }>;
-}) {
+  Icon: ComponentType<{ className?: string }>;
+}>) {
   return (
     <div className="pointer-events-auto">
       <Alert

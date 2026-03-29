@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
-import crypto from 'crypto';
-import { UserModel } from '../../../models/User';
-import { SessionModel } from '../../../models/Session';
-import { getRedis } from '../../../config/redis';
-import type { AuthUser } from '../../../middlewares/auth';
-import { writeAuditLog } from '../../../shared/audit/auditLog';
-import { AuditAction } from '../../../shared/audit/events';
-import { redisKeys } from '../../../shared/redis/keys';
-import { logSecurityEvent } from '../securityEventLog';
+import crypto from 'node:crypto';
+import { UserModel } from '../../../models/User.js';
+import { SessionModel } from '../../../models/Session.js';
+import { getRedis } from '../../../config/redis.js';
+import type { AuthUser } from '../../../middlewares/auth/index.js';
+import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { AuditAction } from '../../../shared/audit/events.js';
+import { redisKeys } from '../../../shared/redis/keys.js';
+import { logSecurityEvent } from '../securityEventLog.js';
 
 const INTENT_TTL_SECONDS = 5 * 60;
 const ALLOWED_INTENT_ACTIONS = ['delete_account'] as const;

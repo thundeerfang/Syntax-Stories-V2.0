@@ -1,15 +1,16 @@
 import type { Request, RequestHandler, Response, NextFunction } from 'express';
 import passport from 'passport';
 import type { AuthenticateOptions } from 'passport';
-import { getFrontendRedirectBase } from '../config/frontendUrl';
-import { getRedis } from '../config/redis';
-import { UserModel } from '../models/User';
-import { createAuthChallenge } from '../utils/authChallenge';
-import { createSessionAndTokens } from '../services/session.service';
-import { writeAuditLog } from '../shared/audit/auditLog';
-import { AuditAction } from '../shared/audit/events';
-import { emitAppEvent } from '../shared/events/appEvents';
-import { redisKeys } from '../shared/redis/keys';
+import { getFrontendRedirectBase } from '../config/frontendUrl.js';
+import { getRedis } from '../config/redis.js';
+import { UserModel } from '../models/User.js';
+import { createAuthChallenge } from '../utils/authChallenge.js';
+import { createSessionAndTokens } from '../services/session.service.js';
+import { writeAuditLog } from '../shared/audit/auditLog.js';
+import { AuditAction } from '../shared/audit/events.js';
+import { emitAppEvent } from '../shared/events/appEvents.js';
+import { redisKeys } from '../shared/redis/keys.js';
+import { storeOAuthExchange } from './oauth.exchange.service.js';
 
 /** Validate link key in Redis, then Passport with `state: link:<key>`. */
 export function oauthLinkHandler(strategy: string, authenticateOptions: AuthenticateOptions = {}): RequestHandler {
@@ -75,15 +76,25 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
       });
       void writeAuditLog(req, AuditAction.OAUTH_LOGIN, { actorId: String(u._id), metadata: { provider: auditProvider } });
       void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: String(u._id), metadata: { source: auditProvider } });
-      emitAppEvent('auth.login.success', { userId: String(u._id), source: auditProvider });
-      const providerId = String(u[idField] ?? '');
-      const urlParams = new URLSearchParams({
-        token: accessToken,
+      emitAppEvent('auth.signin.success', { userId: String(u._id), source: auditProvider });
+      const rawId = u[idField];
+      const providerId =
+        typeof rawId === 'string' || typeof rawId === 'number' ? String(rawId) : '';
+      const exchangeCode = await storeOAuthExchange({
+        accessToken,
         refreshToken,
         userId: String(u._id),
-        [idField]: providerId,
+        idField,
+        providerId,
       });
-      return res.redirect(`${base}/${clientCallbackSlug}?${urlParams.toString()}`);
+      if (exchangeCode) {
+        return res.redirect(
+          `${base}/${clientCallbackSlug}?code=${encodeURIComponent(exchangeCode)}`
+        );
+      }
+      return res.redirect(
+        `${base}/login?error=${encodeURIComponent('Sign-in is temporarily unavailable (session exchange). Ensure Redis is configured.')}`
+      );
     })(req, res, next);
   };
 }

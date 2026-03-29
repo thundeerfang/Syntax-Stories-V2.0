@@ -5,7 +5,7 @@ import { SidebarDrawer } from '@/components/layout/SidebarDrawer';
 import { GridBackground } from '@/components/ui/grid-background';
 import { cn } from '@/lib/utils';
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+export function MainLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { isOpen } = useSidebar();
 
   return (

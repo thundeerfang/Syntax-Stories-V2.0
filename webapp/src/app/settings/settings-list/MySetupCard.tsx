@@ -6,6 +6,15 @@ import { cn } from '@/lib/utils';
 
 export type SetupItem = { label: string; imageUrl: string; productUrl?: string };
 
+type MySetupCardProps = Readonly<{
+  item: SetupItem;
+  index: number;
+  saving: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+  hideActions?: boolean;
+}>;
+
 export function MySetupCard({
   item,
   index,
@@ -13,14 +22,7 @@ export function MySetupCard({
   onEdit,
   onRemove,
   hideActions = false,
-}: {
-  item: SetupItem;
-  index: number;
-  saving: boolean;
-  onEdit: () => void;
-  onRemove: () => void;
-  hideActions?: boolean;
-}) {
+}: MySetupCardProps) {
   const rawId = String(index + 1);
   const displayId = rawId.padStart(2, '0');
   const hasProduct = Boolean((item.productUrl ?? '').trim());
@@ -39,7 +41,7 @@ export function MySetupCard({
             </span>
           </div>
 
-          {!hideActions ? (
+          {hideActions ? null : (
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -58,13 +60,12 @@ export function MySetupCard({
                 <Trash2 className="size-3.5" /> Delete
               </button>
             </div>
-          ) : null}
+          )}
         </div>
 
         <div className="p-3 flex gap-3">
           <div className="shrink-0">
             <div className="size-12 border-2 border-border bg-muted/30 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.imageUrl}
                 alt={item.label}

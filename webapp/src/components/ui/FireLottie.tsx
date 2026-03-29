@@ -15,7 +15,7 @@ interface FireLottieProps {
   play?: boolean;
 }
 
-export function FireLottie({ play = false }: FireLottieProps) {
+export function FireLottie({ play = false }: Readonly<FireLottieProps>) {
   const dotLottieRef = useRef<{ play: () => void; pause: () => void } | null>(null);
 
   useEffect(() => {

@@ -12,7 +12,7 @@ interface SparkLottieProps {
   size?: number;
 }
 
-export function SparkLottie({ play = false, size = 28 }: SparkLottieProps) {
+export function SparkLottie({ play = false, size = 28 }: Readonly<SparkLottieProps>) {
   return (
     <span
       className="inline-flex shrink-0 pointer-events-none overflow-hidden"

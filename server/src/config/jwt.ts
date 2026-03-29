@@ -1,5 +1,5 @@
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
-import { authConfig } from './auth.config';
+import { authConfig } from './auth.config.js';
 
 export function signAccessToken(payload: object, expiresIn?: string): string {
   const key = authConfig.JWT_ACCESS_PRIVATE_KEY;

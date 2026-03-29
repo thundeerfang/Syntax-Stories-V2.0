@@ -103,8 +103,8 @@ export default function ProfileAnalyticsPage() {
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-32 border-4 border-border bg-card animate-pulse" />
+            {['sk-a', 'sk-b', 'sk-c', 'sk-d', 'sk-e', 'sk-f'].map((id) => (
+              <div key={id} className="h-32 border-4 border-border bg-card animate-pulse" />
             ))}
           </div>
         ) : (
@@ -236,7 +236,11 @@ export default function ProfileAnalyticsPage() {
 
 /** HELPER COMPONENTS **/
 
-function MiniCard({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
+function MiniCard({
+  icon: Icon,
+  label,
+  value,
+}: Readonly<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string }>) {
   return (
     <div className="border-4 border-border bg-card p-4 flex items-center gap-4 hover:border-primary transition-colors">
       <div className="size-10 bg-muted border-2 border-border flex items-center justify-center shrink-0">
@@ -250,7 +254,12 @@ function MiniCard({ icon: Icon, label, value }: { icon: any, label: string, valu
   );
 }
 
-function CompositionBar({ label, value, total, color }: { label: string, value: number, total: number, color: string }) {
+function CompositionBar({
+  label,
+  value,
+  total,
+  color,
+}: Readonly<{ label: string; value: number; total: number; color: string }>) {
   const percentage = Math.min(100, (value / total) * 100);
   return (
     <div className="space-y-1">
@@ -268,15 +277,22 @@ function CompositionBar({ label, value, total, color }: { label: string, value: 
   );
 }
 
-function CustomTooltip({ active, payload }: any) {
-  if (active && payload && payload.length) {
+function CustomTooltip({
+  active,
+  payload,
+}: Readonly<{
+  active?: boolean;
+  payload?: ReadonlyArray<{ value?: number; payload?: { rawDate?: string } }>;
+}>) {
+  const row = payload?.[0];
+  if (active && row) {
     return (
       <div className="border-2 border-black bg-card p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
         <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-1">
-          {payload[0].payload.rawDate}
+          {row.payload?.rawDate}
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-lg font-black italic">{payload[0].value}</span>
+          <span className="text-lg font-black italic">{row.value}</span>
           <span className="text-[10px] font-bold uppercase text-muted-foreground">Hits</span>
         </div>
       </div>

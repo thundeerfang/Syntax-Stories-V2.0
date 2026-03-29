@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { verifyToken } from '../middlewares/auth';
-import { createPost, getDraft, listMyPosts, upsertDraft } from '../controllers/blog.controller';
+import { verifyToken } from '../middlewares/auth/index.js';
+import { createPost, getDraft, listMyPosts, upsertDraft } from '../controllers/blog.controller.js';
 
 const router = Router();
 

@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { getRedis } from '../../config/redis';
-import { redisKeys } from '../../shared/redis/keys';
+import { getRedis } from '../../config/redis.js';
+import { redisKeys } from '../../shared/redis/keys.js';
 
 const LIMIT = 100;
 const WINDOW_SECONDS = 60;

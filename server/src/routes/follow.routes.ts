@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { getPublicProfile, getFollowCounts, getFollowers, getFollowing, followUser, unfollowUser, checkFollowing, searchUsers } from '../controllers/follow.controller';
-import { verifyToken } from '../middlewares/auth';
-import { rateLimitFollowWrite } from '../middlewares/follow/rateLimitFollow';
+import { getPublicProfile, getFollowCounts, getFollowers, getFollowing, followUser, unfollowUser, checkFollowing, searchUsers } from '../controllers/follow.controller.js';
+import { verifyToken } from '../middlewares/auth/index.js';
+import { rateLimitFollowWrite } from '../middlewares/follow/rateLimitFollow.js';
 
 const router = Router();
 

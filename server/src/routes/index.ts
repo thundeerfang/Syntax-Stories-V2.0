@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import healthRoutes from './health.routes';
-import followRoutes from './follow.routes';
-import companiesRoutes from './companies.routes';
-import githubRoutes from './github.routes';
-import analyticsRoutes from './analytics.routes';
-import blogRoutes from './blog.routes';
+import healthRoutes from './health.routes.js';
+import followRoutes from './follow.routes.js';
+import companiesRoutes from './companies.routes.js';
+import githubRoutes from './github.routes.js';
+import analyticsRoutes from './analytics.routes.js';
+import blogRoutes from './blog.routes.js';
 
 const router = Router();
 router.use('/health', healthRoutes);

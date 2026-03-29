@@ -62,8 +62,8 @@ export function getSkillIconSlug(displayName: string): string {
   const trimmed = displayName.trim();
   if (!trimmed) return '';
   const lower = trimmed.toLowerCase();
-  const noSpaces = lower.replace(/\s+/g, '');
-  const noDots = noSpaces.replace(/\./g, '');
+  const noSpaces = lower.replaceAll(/\s+/g, '');
+  const noDots = noSpaces.replaceAll('.', '');
   return SLUG_OVERRIDES[noDots] ?? SLUG_OVERRIDES[lower] ?? SLUG_OVERRIDES[noSpaces] ?? noDots;
 }
 

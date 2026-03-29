@@ -1,17 +1,17 @@
 import type { Request, Response } from 'express';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
-import { UserModel, normalizeProfileImg } from '../../../models/User';
-import { authConfig } from '../../../config/auth.config';
-import { signAccessToken } from '../../../config/jwt';
-import { getRedis } from '../../../config/redis';
-import type { AuthUser } from '../../../middlewares/auth';
-import { consumeAuthChallenge } from '../../../utils/authChallenge';
-import { writeAuditLog } from '../../../shared/audit/auditLog';
-import { AuditAction } from '../../../shared/audit/events';
-import { redisKeys } from '../../../shared/redis/keys';
-import { logSecurityEvent } from '../securityEventLog';
-import { createSession, generateRefreshToken } from '../../../services/session.service';
+import { UserModel, normalizeProfileImg } from '../../../models/User.js';
+import { authConfig } from '../../../config/auth.config.js';
+import { signAccessToken } from '../../../config/jwt.js';
+import { getRedis } from '../../../config/redis.js';
+import type { AuthUser } from '../../../middlewares/auth/index.js';
+import { consumeAuthChallenge } from '../../../utils/authChallenge.js';
+import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { AuditAction } from '../../../shared/audit/events.js';
+import { redisKeys } from '../../../shared/redis/keys.js';
+import { logSecurityEvent } from '../securityEventLog.js';
+import { createSession, generateRefreshToken } from '../../../services/session.service.js';
 
 const TWO_FA_SETUP_TTL_SECONDS = 10 * 60;
 

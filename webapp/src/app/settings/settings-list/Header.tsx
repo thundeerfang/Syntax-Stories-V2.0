@@ -4,7 +4,6 @@ import React from 'react';
 import {
   Briefcase,
   FolderGit2,
-  Github,
   GraduationCap,
   Plus,
   RefreshCw,
@@ -14,11 +13,11 @@ import { cn } from '@/lib/utils';
 
 type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';
 
-interface SettingsSectionHeaderProps {
+type SettingsSectionHeaderProps = Readonly<{
   variant: HeaderVariant;
   onPrimaryAction: () => void;
   disabled?: boolean;
-}
+}>;
 
 // Reusable Button Component based on the "Education" style you liked
 const HeaderActionButton = ({ 
@@ -37,21 +36,23 @@ const HeaderActionButton = ({
     onClick={onClick}
     disabled={disabled}
     className={cn(
-      'ss-settings-header-btn inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground border-2 border-border font-black text-[10px] uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] h-fit self-start sm:self-center',
+      'ss-settings-header-btn inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground border-2 border-border font-black text-[10px] uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] h-fit self-start sm:self-center',
       disabled && 'opacity-50'
     )}
   >
-    <Icon className="size-3.5" /> {label}
+    <span className="relative z-[1] inline-flex items-center gap-2">
+      <Icon className="size-3.5" /> {label}
+    </span>
   </button>
 );
 
 function HeaderWrapper({
   children,
   border = true,
-}: {
+}: Readonly<{
   children: React.ReactNode;
   border?: boolean;
-}) {
+}>) {
   return (
     <header
       className={cn(
@@ -156,7 +157,7 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
       <HeaderWrapper>
         <div className="flex items-center gap-4">
           <div className="size-12 bg-foreground text-background flex items-center justify-center border-2 border-border shadow-[3px_3px_0px_0px_var(--primary)]">
-            <Github className="size-7" />
+            <FolderGit2 className="size-7" />
           </div>
           <div>
             <h2 className="text-3xl font-black uppercase tracking-tighter">Open Source Sync</h2>
