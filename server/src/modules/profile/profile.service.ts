@@ -62,6 +62,10 @@ async function applyProfileUpdate(
   section: ProfileUpdateSection | 'legacy'
 ): Promise<ProfileUpdateResult> {
   const userId = String(user._id);
+  const rawEv = body.expectedProfileVersion;
+  const expectedVersion =
+    typeof rawEv === 'number' && Number.isInteger(rawEv) && rawEv >= 0 ? rawEv : undefined;
+
   const updates: Record<string, unknown> = {};
   for (const key of allowedKeys) {
     if (body[key] !== undefined) updates[key] = body[key];
@@ -104,8 +108,16 @@ async function applyProfileUpdate(
     normalizeProjectsPrjLog(updates);
   }
 
-  const updated = await profileRepository.updateBySection(userId, section, updates);
+  const updated = await profileRepository.updateBySection(userId, section, updates, expectedVersion);
   if (!updated) {
+    if (expectedVersion !== undefined) {
+      return {
+        ok: false,
+        status: 409,
+        message: 'Profile was updated elsewhere. Refresh and try again.',
+        code: ProfileErrorCode.PROFILE_VERSION_CONFLICT,
+      };
+    }
     return {
       ok: false,
       status: 404,

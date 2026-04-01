@@ -45,7 +45,7 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     id: 'image',
     label: 'Image block',
     icon: ImageIcon,
-    description: 'Upload an image and add alt/caption metadata.',
+    description: 'Upload an image; add an optional title for the caption and accessibility.',
   },
   {
     id: 'gif',

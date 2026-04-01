@@ -37,6 +37,7 @@ import {
 
 import { useSidebar } from '@/hooks/useSidebar';
 import { cn } from '@/lib/utils';
+import { blockShadowButtonClassNames, ghostOutlineButtonClassNames } from '@/components/ui';
 
 /* ==========================================================================
    DATA STRUCTURES - Rich Content Arrays
@@ -94,7 +95,7 @@ function SidebarSkeletonContent() {
   return (
     <div className="animate-pulse">
       {/* Create button skeleton */}
-      <div className="p-4 border-b-2 border-border">
+      <div className="border-b-2 border-border px-4 pb-4 pt-3">
         <div className="h-11 bg-muted/40 border-2 border-border/30" />
       </div>
       <div className="px-4 py-6 space-y-10">
@@ -199,7 +200,7 @@ export function SidebarDrawer() {
 
       <aside
         className={cn(
-          'sidebar-drawer fixed left-0 z-40 flex w-60 flex-col border-t-2 border-r-2 border-border bg-background transition-transform duration-300 ease-in-out',
+          'sidebar-drawer fixed left-0 z-40 flex w-60 flex-col border-r-2 border-border bg-background transition-transform duration-300 ease-in-out',
           'bottom-0 overflow-y-auto overflow-x-hidden',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -210,13 +211,13 @@ export function SidebarDrawer() {
           <SidebarSkeletonContent />
         ) : (
           <>
-          <div className="p-4 border-b-2 border-border sticky top-0 bg-background z-10">
+          <div className="sticky top-0 z-10 border-b-2 border-border bg-background px-4 pb-4 pt-3">
           <Link
             href="/create"
             onClick={close}
-            className="flex items-center justify-center gap-2 w-full border-2 border-border bg-primary py-3 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-[4px_4px_0px_0px_var(--border)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer"
+            className={blockShadowButtonClassNames({ variant: 'primary', size: 'md', fullWidth: true })}
           >
-            <PlusSquare className="size-4" strokeWidth={3} />
+            <PlusSquare className="size-4 shrink-0" strokeWidth={3} />
             Create New Post
           </Link>
         </div>
@@ -237,10 +238,14 @@ export function SidebarDrawer() {
                       href={href}
                       onClick={close}
                       className={cn(
-                        'group flex items-center gap-3 px-3 py-2.5 text-[11px] font-black uppercase tracking-widest border-2 transition-all cursor-pointer',
+                        'group flex cursor-pointer items-center transition-[box-shadow,border-color,color] duration-150 ease-out',
                         isActive
-                          ? 'bg-primary text-primary-foreground border-border shadow-[4px_4px_0px_0px_var(--border)]'
-                          : 'bg-transparent text-foreground/70 border-transparent hover:border-border hover:bg-muted/30'
+                          ? 'gap-3 border-2 px-3 py-2.5 text-[11px] font-black uppercase tracking-widest border-border bg-primary text-primary-foreground shadow-[4px_4px_0px_0px_var(--border)]'
+                          : ghostOutlineButtonClassNames({
+                              fullWidth: true,
+                              className:
+                                'justify-start gap-3 px-3 py-2.5 text-[11px] font-black uppercase tracking-widest text-foreground/70 hover:text-foreground',
+                            }),
                       )}
                     >
                       <Icon className={cn("size-4 shrink-0", isActive ? "text-primary-foreground" : "text-primary")} strokeWidth={isActive ? 3 : 2.5} />

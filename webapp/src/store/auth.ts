@@ -2,14 +2,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  authApi,
-  AuthError,
-  normalizeUser,
-  type AuthUser,
-  type ProfileUpdateSection,
-  type UpdateProfilePayload,
-} from '@/api/auth';
+import { authApi, AuthError, normalizeUser, type AuthUser, type ProfileUpdateSection, type UpdateProfilePayload } from '@/api/auth';
+import { runProfilePatch } from '@/lib/auth/runProfilePatch';
 import { setLastUserName } from '@/lib/lastUser';
 
 const AUTH_KEY = 'syntax-stories-auth';
@@ -59,6 +53,8 @@ type AuthState = {
   verifyCode: (email: string, code: string) => Promise<void>;
   verifyTwoFactor: (token: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Clear OTP pairing state when the auth dialog closes (does not touch 2FA OAuth challenge). */
+  resetEphemeralOtpState: () => void;
   /** Used by auth API 401 retry: try refresh and return new access token or null. */
   tryRefreshAndReturnNewToken: () => Promise<string | null>;
 };
@@ -74,6 +70,7 @@ export const useAuthStore = create<AuthState>()(
       twoFactor: null,
       pendingOtpVersion: null,
       setHydrated: () => set({ isLoading: false, isHydrated: true }),
+      resetEphemeralOtpState: () => set({ pendingOtpVersion: null }),
       setAuth: (user, token, refreshToken = null) => {
         if (user?.fullName) setLastUserName(user.fullName);
         set({ user, token, refreshToken: refreshToken ?? null });
@@ -91,25 +88,19 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       updateProfile: async (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => {
-        const { token, refreshToken } = get();
-        if (!token) throw new Error('Not logged in');
-        const section = opts?.section;
-        const patch = section
-          ? (t: string) => authApi.updateProfileSection(t, section, data)
-          : (t: string) => authApi.updateProfile(t, data);
-        try {
-          const res = await patch(token);
-          set({ user: normalizeUser(res.user) });
-        } catch (e) {
-          if (e instanceof AuthError && e.status === 401 && refreshToken) {
-            const refreshed = await authApi.refresh(refreshToken);
-            set({ token: refreshed.accessToken });
-            const res = await patch(refreshed.accessToken);
-            set({ user: normalizeUser(res.user) });
-            return;
-          }
-          throw e;
-        }
+        await runProfilePatch(
+          {
+            getSnapshot: () => ({
+              token: get().token,
+              refreshToken: get().refreshToken,
+              user: get().user,
+            }),
+            setSession: (partial) => set(partial),
+            refreshUser: () => get().refreshUser(),
+          },
+          data,
+          opts?.section
+        );
       },
       sendLoginOtp: async (email: string, altcha?: string) => {
         set({ isLoading: true });
@@ -173,7 +164,9 @@ export const useAuthStore = create<AuthState>()(
           });
           if (user?.fullName) setLastUserName(user.fullName);
         } catch (err) {
-          set({ isLoading: false });
+          const stale =
+            err instanceof AuthError && err.extras?.code === 'OTP_STALE_VERSION';
+          set({ isLoading: false, ...(stale ? { pendingOtpVersion: null } : {}) });
           const message =
             err instanceof Error ? err.message : 'Invalid code';
           throw new Error(message);
@@ -197,8 +190,10 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: async () => {
         const token = get().token;
+        const refreshToken = get().refreshToken;
         try {
-          if (token) await authApi.logout(token);
+          if (token) await authApi.logout(token, refreshToken);
+          else if (refreshToken) await authApi.revokeSession(refreshToken);
         } catch {
           /* ignore */
         }

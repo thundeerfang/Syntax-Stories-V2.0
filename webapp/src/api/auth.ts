@@ -30,6 +30,11 @@ function getAuthBase(): string {
   return base ? `${base.replace(/\/$/, '')}/auth` : '/auth';
 }
 
+function getGithubImportBatchUrl(): string {
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+  return base ? `${base}/api/github/repos/import-batch` : '/api/github/repos/import-batch';
+}
+
 export function getAltchaChallengeUrl(): string {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
   return base ? `${base}/auth/altcha/challenge` : '';
@@ -174,8 +179,8 @@ export interface WorkExperience {
   skills?: string[];
   /** @deprecated use media */
   mediaUrls?: string[];
-  /** Media items: links or uploaded images (url, title, altText) */
-  media?: { url: string; title?: string; altText?: string }[];
+  /** Media items: links or uploaded images (url, title — title is used for display and image alt) */
+  media?: { url: string; title?: string }[];
   /** @deprecated use jobTitle */
   role?: string;
 }
@@ -212,7 +217,7 @@ export interface CertificationItem {
   credentialUrl?: string;
   description?: string;
   skills?: string[];
-  media?: { url: string; title?: string; altText?: string }[];
+  media?: { url: string; title?: string }[];
 }
 export interface ProjectItem {
   type?: 'project' | 'publication';
@@ -226,7 +231,7 @@ export interface ProjectItem {
   endDate?: string;
   publicationUrl?: string;
   description?: string;
-  media?: { url: string; title?: string; altText?: string }[];
+  media?: { url: string; title?: string }[];
   /** Last updated year log from backend, e.g. "2025_prd_log". */
   prjLog?: string;
   /** @deprecated use title */
@@ -285,6 +290,9 @@ export interface AuthUser {
   isAppleAccount?: boolean;
   isDiscordAccount?: boolean;
   createdAt?: string;
+  /** Optimistic concurrency: incremented on each successful profile write. */
+  profileVersion?: number;
+  profileUpdatedAt?: string;
 }
 
 /** User object returned inside API envelopes (`data.user` or legacy `user`). */
@@ -317,6 +325,8 @@ export type AccountUser = {
   isDiscordAccount?: boolean;
   twoFactorEnabled?: boolean;
   createdAt?: string;
+  profileVersion?: number;
+  profileUpdatedAt?: string;
 };
 
 /** Raw JSON from `GET /auth/me` or `PATCH /auth/profile` (envelope + backward-compatible top-level `user`). */
@@ -365,6 +375,8 @@ export type UpdateProfilePayload = Partial<{
   isXAccount: boolean;
   isAppleAccount: boolean;
   isDiscordAccount: boolean;
+  /** When set, overrides the version taken from the current session user (advanced). */
+  expectedProfileVersion: number;
 }>;
 
 /** Re-export for callers that import profile types from `auth` only. */
@@ -376,6 +388,7 @@ export {
   profileProjectsPatchSchema,
   profileSetupPatchSchema,
   profileSocialPatchSchema,
+  profileStackPatchSchema,
   profileWorkPatchSchema,
 } from '@syntax-stories/shared';
 
@@ -445,10 +458,11 @@ export const authApi = {
       body: JSON.stringify({ code }),
     }),
 
-  logout: (accessToken: string) =>
+  logout: (accessToken: string, refreshToken?: string | null) =>
     authFetch<SimpleSuccessMessage & { message: string }>(`${getAuthBase()}/logout`, {
       method: 'POST',
       token: accessToken,
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     }),
 
   /** Revoke session by refresh token (no JWT). Call when clearing state after token expiry. */
@@ -555,6 +569,22 @@ export const authApi = {
       method: 'POST',
       token: accessToken,
     }),
+
+  /** Batch import GitHub repos as project payloads (replaces N× GET /github/repo/:fullName). */
+  importGithubReposBatch: (
+    accessToken: string,
+    fullNames: string[]
+  ): Promise<{
+    success: boolean;
+    projects?: ProjectItem[];
+    failed?: { fullName: string; message: string }[];
+    message?: string;
+  }> =>
+    authFetch(getGithubImportBatchUrl(), {
+      method: 'POST',
+      token: accessToken,
+      body: JSON.stringify({ fullNames }),
+    }),
 };
 
 export function normalizeUser(backendUser: AccountUser): AuthUser {
@@ -589,5 +619,7 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     isXAccount: backendUser.isXAccount,
     isAppleAccount: backendUser.isAppleAccount,
     createdAt: backendUser.createdAt,
+    profileVersion: typeof backendUser.profileVersion === 'number' ? backendUser.profileVersion : 0,
+    profileUpdatedAt: backendUser.profileUpdatedAt,
   };
 }

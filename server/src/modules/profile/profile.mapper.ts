@@ -35,6 +35,13 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     isDiscordAccount: (found as { isDiscordAccount?: boolean }).isDiscordAccount ?? false,
     twoFactorEnabled: found.twoFactorEnabled,
     createdAt: f.createdAt,
+    profileVersion: typeof found.profileVersion === 'number' ? found.profileVersion : 0,
+    profileUpdatedAt:
+      found.profileUpdatedAt instanceof Date
+        ? found.profileUpdatedAt.toISOString()
+        : typeof found.profileUpdatedAt === 'string'
+          ? found.profileUpdatedAt
+          : undefined,
   };
 }
 

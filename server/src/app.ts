@@ -47,7 +47,9 @@ function corsOriginOption():
   | string
   | string[]
   | ((origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => void) {
-  if (env.NODE_ENV !== 'production') return env.FRONTEND_URL ?? true;
+  // Dev: reflect request Origin so localhost vs 127.0.0.1 and any dev port work (ALTCHA, fetch, etc.).
+  // A single FRONTEND_URL string rejects the other hostname and breaks the PoW challenge fetch.
+  if (env.NODE_ENV !== 'production') return true;
   if (!allowedOrigins?.length) return false;
   return (origin, cb) => {
     cb(null, allowCorsOrigin(origin));

@@ -62,13 +62,15 @@ export function FormDialog({
     >
       <div className="relative flex min-h-0 min-h-[max(16rem,32vh)] flex-1 flex-col overflow-hidden">
         {/* Header: reserve right space for the floating close (sibling below) so title never sits under the X */}
-        <header className="flex-shrink-0 border-b-2 border-border bg-muted/30 px-6 py-4 pr-14">
+        <header className="flex-shrink-0 border-b-2 border-border bg-muted/30 px-6 py-4 pr-[4.75rem] sm:pr-[5.75rem]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id={titleId} className="text-base font-black uppercase tracking-wide text-foreground">
+              <h2 id={titleId} className="min-w-0 flex-1 text-base font-black uppercase tracking-wide text-foreground">
                 {title}
               </h2>
-              {headerRight != null && <div className="flex items-center">{headerRight}</div>}
+              {headerRight != null && (
+                <div className="flex shrink-0 items-center gap-2 pr-1 sm:pr-2">{headerRight}</div>
+              )}
             </div>
             {subtitle != null && (
               <p className="mt-1 text-xs font-medium text-muted-foreground max-w-md">{subtitle}</p>

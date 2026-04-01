@@ -49,7 +49,8 @@ export function Navbar() {
 
   useEffect(() => {
     const showBanner = mounted && !bannerDismissed;
-    const headerHeight = showBanner ? '6.5rem' : '4rem';
+    /** Match outer `<header>` height: inner row (+ optional banner) + `border-b-2` so fixed sidebar starts below the navbar line. */
+    const headerHeight = showBanner ? 'calc(6.5rem + 2px)' : 'calc(4rem + 2px)';
     document.documentElement.style.setProperty('--header-height', headerHeight);
   }, [mounted, bannerDismissed]);
 
@@ -63,7 +64,7 @@ export function Navbar() {
   return (
     <header 
       className={cn(
-        "sticky top-0 z-40 w-full transition-all duration-300",
+        "sticky top-0 z-50 w-full transition-all duration-300",
         isScrolled ? "border-b-2 border-primary shadow-[4px_4px_0px_0px_rgba(var(--primary),0.1)]" : "border-b-2 border-border"
       )}
     >

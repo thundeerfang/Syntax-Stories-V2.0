@@ -15,6 +15,7 @@ export type ProfileSections = {
 export type ProfileUpdateSection =
   | 'basic'
   | 'social'
+  | 'stack'
   | 'work'
   | 'education'
   | 'certifications'
@@ -24,6 +25,7 @@ export type ProfileUpdateSection =
 export const PROFILE_UPDATE_SECTIONS = [
   'basic',
   'social',
+  'stack',
   'work',
   'education',
   'certifications',
@@ -45,7 +47,6 @@ export const PROFILE_SECTION_KEYS: Record<ProfileUpdateSection, readonly string[
     'coverBanner',
     'job',
     'portfolioUrl',
-    'stackAndTools',
     'isGoogleAccount',
     'isGitAccount',
     'isFacebookAccount',
@@ -54,10 +55,11 @@ export const PROFILE_SECTION_KEYS: Record<ProfileUpdateSection, readonly string[
     'isDiscordAccount',
   ],
   social: ['linkedin', 'instagram', 'github', 'youtube'],
+  stack: ['stackAndTools'],
   work: ['workExperiences'],
   education: ['education'],
   certifications: ['certifications'],
-  projects: ['projects', 'openSourceContributions'],
+  projects: ['projects', 'openSourceContributions', 'isGitAccount'],
   setup: ['mySetup'],
 };
 
@@ -67,4 +69,6 @@ export const ProfileErrorCode = {
   USER_NOT_FOUND: 'USER_NOT_FOUND',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  /** Client `expectedProfileVersion` does not match server (multi-tab / stale write). */
+  PROFILE_VERSION_CONFLICT: 'PROFILE_VERSION_CONFLICT',
 } as const;

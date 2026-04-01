@@ -111,7 +111,8 @@ export function Dialog({
                 className={cn(
                   'relative',
                   contentClassName,
-                  showCloseButton && 'pt-11 pr-11 sm:pt-12 sm:pr-12'
+                  /* Match left/right so body isn’t optically shifted left while space is reserved for the X */
+                  showCloseButton && 'pt-11 px-11 sm:pt-12 sm:px-12'
                 )}
               >
                 {children}

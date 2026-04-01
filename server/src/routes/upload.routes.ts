@@ -185,6 +185,47 @@ function applyOptionalRasterCrop(
   return image;
 }
 
+const LOGO_SIZE = 128;
+
+/** Crop (optional via multipart fields), then resize to logo square. Deletes input file on success. */
+async function finalizeRasterLogo(
+  req: Request,
+  inputPath: string,
+  outDir: string,
+  file: Express.Multer.File
+): Promise<{ outputPath: string; outputFilename: string }> {
+  let image = sharp(inputPath);
+  const meta = await image.metadata();
+  if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
+    try {
+      fs.unlinkSync(inputPath);
+    } catch {
+      /* ignore */
+    }
+    throw new Error('RESOLUTION');
+  }
+  const rawBody = req.body as Record<string, unknown>;
+  const cropBody: Record<string, string | undefined> = {
+    cropX: formCropCoord(rawBody.cropX),
+    cropY: formCropCoord(rawBody.cropY),
+    cropWidth: formCropCoord(rawBody.cropWidth),
+    cropHeight: formCropCoord(rawBody.cropHeight),
+  };
+  image = applyOptionalRasterCrop(image, cropBody, meta);
+  const outputFilename = file.filename.replace(/\.[^.]+$/, '') + '-processed.png';
+  const outputPath = path.join(outDir, outputFilename);
+  await image
+    .resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png({ quality: 90 })
+    .toFile(outputPath);
+  try {
+    fs.unlinkSync(inputPath);
+  } catch {
+    /* ignore */
+  }
+  return { outputPath, outputFilename };
+}
+
 router.post('/avatar', verifyToken, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
   if (!req.file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -330,8 +371,6 @@ router.post('/media', verifyToken, uploadMedia.single('media'), async (req: Requ
   }
 });
 
-const LOGO_SIZE = 128;
-
 router.post('/company-logo', verifyToken, uploadLogo.single('logo'), async (req: Request, res: Response) => {
   if (!req.file) {
     res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -348,30 +387,17 @@ router.post('/company-logo', verifyToken, uploadLogo.single('logo'), async (req:
       return;
     }
 
-    const image = sharp(inputPath);
-    const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
-      try { fs.unlinkSync(inputPath); } catch {}
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
-      return;
-    }
-
-    const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.png';
-    const outputPath = path.join(LOGOS_DIR, outputFilename);
-
-    await image
-      .resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png({ quality: 90 })
-      .toFile(outputPath);
-
-    try { fs.unlinkSync(inputPath); } catch {}
-
+    const { outputPath, outputFilename } = await finalizeRasterLogo(req, inputPath, LOGOS_DIR, req.file);
     const pathSegment = `uploads/logos/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
     const blurDataUrl = await tryBlurDataUrl(outputPath);
     res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
+    if (err instanceof Error && err.message === 'RESOLUTION') {
+      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+      return;
+    }
     res.status(500).json({ success: false, message: 'Failed to process logo' });
   }
 });
@@ -392,30 +418,17 @@ router.post('/school-logo', verifyToken, uploadSchoolLogo.single('logo'), async 
       return;
     }
 
-    const image = sharp(inputPath);
-    const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
-      try { fs.unlinkSync(inputPath); } catch {}
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
-      return;
-    }
-
-    const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.png';
-    const outputPath = path.join(SCHOOL_LOGOS_DIR, outputFilename);
-
-    await image
-      .resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png({ quality: 90 })
-      .toFile(outputPath);
-
-    try { fs.unlinkSync(inputPath); } catch {}
-
+    const { outputPath, outputFilename } = await finalizeRasterLogo(req, inputPath, SCHOOL_LOGOS_DIR, req.file);
     const pathSegment = `uploads/school-logos/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
     const blurDataUrl = await tryBlurDataUrl(outputPath);
     res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
+    if (err instanceof Error && err.message === 'RESOLUTION') {
+      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+      return;
+    }
     res.status(500).json({ success: false, message: 'Failed to process school logo' });
   }
 });
@@ -436,30 +449,17 @@ router.post('/org-logo', verifyToken, uploadOrgLogo.single('logo'), async (req: 
       return;
     }
 
-    const image = sharp(inputPath);
-    const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
-      try { fs.unlinkSync(inputPath); } catch {}
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
-      return;
-    }
-
-    const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.png';
-    const outputPath = path.join(ORG_LOGOS_DIR, outputFilename);
-
-    await image
-      .resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png({ quality: 90 })
-      .toFile(outputPath);
-
-    try { fs.unlinkSync(inputPath); } catch {}
-
+    const { outputPath, outputFilename } = await finalizeRasterLogo(req, inputPath, ORG_LOGOS_DIR, req.file);
     const pathSegment = `uploads/org-logos/${outputFilename}`;
     const url = getPublicUrl(req, pathSegment);
     const blurDataUrl = await tryBlurDataUrl(outputPath);
     res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
   } catch (err) {
     console.error(err);
+    if (err instanceof Error && err.message === 'RESOLUTION') {
+      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+      return;
+    }
     res.status(500).json({ success: false, message: 'Failed to process organization logo' });
   }
 });

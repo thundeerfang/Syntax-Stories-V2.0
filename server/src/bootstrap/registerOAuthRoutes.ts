@@ -41,7 +41,7 @@ function registerDisabledStubs(
   redirectBaseUrl: string
 ): void {
   if (def.whenDisabled === 'redirectLoginSignup' && def.redirectErrorMessage) {
-    const targetBase = redirectBaseUrl || 'http://localhost:3000';
+    const targetBase = redirectBaseUrl || 'http://localhost:3001';
     const err = def.redirectErrorMessage;
     app.get(`/auth/${def.routeKey}/login`, (_req, res) => {
       res.redirect(`${targetBase}/login?error=${err}`);

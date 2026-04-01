@@ -33,7 +33,12 @@ import { Switch, AreaChart } from '@/components/retroui';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
-import { authApi, type ParseCvMissingFieldKey, type IncompleteItemHints } from '@/api/auth';
+import {
+  authApi,
+  type IncompleteItemHints,
+  type ParseCvMissingFieldKey,
+  type ProfileUpdateSection,
+} from '@/api/auth';
 import type { CompleteItemDialogSection } from '@/components/profile/dialog';
 import { ProfileCardSkeleton } from '@/components/profile/ProfileCardSkeleton';
 import { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader';
@@ -109,6 +114,13 @@ function completeItemSectionToSettingsId(section: CompleteItemDialogSection): st
   if (section === 'certifications') return 'certifications';
   return 'projects';
 }
+
+const COMPLETE_ITEM_PROFILE_SECTION: Record<CompleteItemDialogSection, ProfileUpdateSection> = {
+  workExperiences: 'work',
+  education: 'education',
+  certifications: 'certifications',
+  projects: 'projects',
+};
 
 export default function ProfilePage() { // NOSONAR S3776 — large owner dashboard; split into section components incrementally
   const router = useRouter();
@@ -310,7 +322,10 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
       const updated = [...arr];
       if (!updated[index]) return;
       updated[index] = { ...updated[index], ...newValues };
-      await updateProfile({ [section]: updated } as Parameters<typeof updateProfile>[0]);
+      await updateProfile(
+        { [section]: updated } as Parameters<typeof updateProfile>[0],
+        { section: COMPLETE_ITEM_PROFILE_SECTION[section] }
+      );
       bumpHints();
       toast.success('Fields saved.');
     },
@@ -604,7 +619,6 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             onClose={() => setMySetupPreview(null)}
             src={mySetupPreview?.src ?? ''}
             title={mySetupPreview?.title}
-            altText={mySetupPreview?.title}
           />
 
           {/* DYNAMIC SECTIONS — data from backend */}

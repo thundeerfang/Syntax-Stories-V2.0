@@ -59,10 +59,12 @@ function SocialButton({
               }
             : undefined
         }
-        className="w-full flex items-center justify-center gap-3 border-2 border-border bg-background py-3 px-4 text-xs font-black uppercase tracking-widest text-card-foreground hover:border-primary hover:bg-muted/50 transition-all active:scale-[0.98]"
+        className="relative flex w-full items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-card-foreground hover:border-primary hover:bg-muted/50 transition-all active:scale-[0.98]"
       >
-        {iconEl}
-        {label}
+        <span className="pointer-events-none absolute left-4 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
+          {iconEl}
+        </span>
+        <span className="text-center">{label}</span>
       </a>
     );
   }
@@ -70,10 +72,12 @@ function SocialButton({
     <button
       type="button"
       disabled
-      className="w-full flex items-center justify-center gap-3 border-2 border-border bg-background py-3 px-4 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 cursor-not-allowed"
+      className="relative flex w-full items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 cursor-not-allowed"
     >
-      {iconEl}
-      {label}
+      <span className="pointer-events-none absolute left-4 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
+        {iconEl}
+      </span>
+      <span className="text-center">{label}</span>
     </button>
   );
 }
@@ -82,13 +86,21 @@ function AuthFooter({
   children,
   showHelp = false,
   closeDialog,
+  compact = false,
 }: Readonly<{
   children: React.ReactNode;
   showHelp?: boolean;
   closeDialog?: () => void;
+  /** Tighter top spacing so tall steps (e.g. signup + back link) stay inside the dialog without a sliver of scroll. */
+  compact?: boolean;
 }>) {
   return (
-    <div className="mt-8 pt-6 border-t-2 border-border space-y-4 text-center">
+    <div
+      className={cn(
+        'border-t-2 border-border text-center',
+        compact ? 'mt-6 space-y-3 pt-5' : 'mt-8 space-y-4 pt-6',
+      )}
+    >
       <div className="space-y-2">
         {children}
         {showHelp && (
@@ -158,7 +170,7 @@ function renderAuthWelcomeStep(p: AuthDialogRenderProps): ReactNode {
         <>
           <h2
             id="auth-dialog-title"
-            className="text-xl font-black italic tracking-tighter text-card-foreground uppercase pr-10"
+            className="text-center text-xl font-black italic tracking-tighter text-card-foreground uppercase"
           >
             Welcome_back.
           </h2>
@@ -207,11 +219,14 @@ function renderAuthWelcomeStep(p: AuthDialogRenderProps): ReactNode {
           <Button
             type="button"
             variant="outline"
-            className="w-full py-6 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
+            className="relative w-full justify-center py-6 pl-12 pr-4 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
             onClick={() => p.goToStep('login-email')}
           >
-            <Mail className="mr-2 h-4 w-4" />
-            Sign in with email
+            <Mail
+              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 shrink-0"
+              aria-hidden
+            />
+            <span>Sign in with email</span>
           </Button>
           <AuthFooter showHelp closeDialog={p.close}>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -264,7 +279,7 @@ function renderAuthLoginEmailStep(p: AuthDialogRenderProps): ReactNode {
                 value={p.email}
                 onChange={(e) => p.setEmail(e.target.value)}
                 required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
+                className="w-full border-2 border-border bg-background px-4 py-3 text-sm font-medium normal-case text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
               />
             </div>
             <div className="flex w-full flex-col">
@@ -306,7 +321,7 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
           <button
             type="button"
             onClick={() => p.goToStep('welcome')}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4 transition-colors"
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-3 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -317,7 +332,7 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
           >
             Create_Account
           </h2>
-          <div className="mt-6 space-y-3">
+          <div className="mt-5 space-y-2.5">
             <SocialButton
               icon={GoogleIcon}
               label="Sign up with Google"
@@ -349,7 +364,7 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
               onBeforeNavigate={p.close}
             />
           </div>
-          <div className="relative my-6">
+          <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t-2 border-border" />
             </div>
@@ -362,13 +377,16 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
           <Button
             type="button"
             variant="outline"
-            className="w-full py-6 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
+            className="relative w-full justify-center py-6 pl-12 pr-4 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
             onClick={() => p.goToStep('signup-email')}
           >
-            <Mail className="mr-2 h-4 w-4" />
-            Sign up with email
+            <Mail
+              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 shrink-0"
+              aria-hidden
+            />
+            <span>Sign up with email</span>
           </Button>
-          <AuthFooter>
+          <AuthFooter compact>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Already joined?{' '}
               <button
@@ -390,7 +408,7 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
           <button
             type="button"
             onClick={() => p.goToStep('signup')}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4 transition-colors"
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-3 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -401,7 +419,7 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
           >
             Sign_up_with_email
           </h2>
-          <form ref={p.signupFormRef} onSubmit={p.handleSignUp} className="mt-6 space-y-4">
+          <form ref={p.signupFormRef} onSubmit={p.handleSignUp} className="mt-5 space-y-3.5">
             <div className="space-y-1.5">
               <label
                 htmlFor="auth-signup-name"
@@ -416,7 +434,7 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
                 value={p.name}
                 onChange={(e) => p.setName(e.target.value)}
                 required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
+                className="w-full border-2 border-border bg-background px-4 py-3 text-sm font-medium normal-case text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
               />
             </div>
             <div className="space-y-1.5">
@@ -433,7 +451,7 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
                 value={p.signupEmail}
                 onChange={(e) => p.setSignupEmail(e.target.value)}
                 required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-xs font-black uppercase tracking-widest text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
+                className="w-full border-2 border-border bg-background px-4 py-3 text-sm font-medium normal-case text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
               />
             </div>
             <div className="flex w-full flex-col">
@@ -453,7 +471,7 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
               </Button>
             </div>
           </form>
-          <AuthFooter>
+          <AuthFooter compact>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Already joined?{' '}
               <button

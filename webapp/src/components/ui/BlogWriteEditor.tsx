@@ -1,7 +1,28 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { Trash2, Image as ImageIcon, Gauge, Film, Link2, Camera, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AtSign, ExternalLink, X, Type, GripVertical, Globe } from 'lucide-react';
+import {
+  Trash2,
+  Image as ImageIcon,
+  Gauge,
+  Film,
+  Link2,
+  Camera,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  List,
+  ListOrdered,
+  AtSign,
+  ExternalLink,
+  X,
+  Type,
+  GripVertical,
+  Globe,
+  AlignLeft,
+  Square,
+  StretchHorizontal,
+} from 'lucide-react';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { followApi, type FollowUser } from '@/api/follow';
@@ -11,6 +32,7 @@ import { uploadMedia } from '@/api/upload';
 import { searchGifs, type GiphyGif } from '@/api/giphy';
 import { searchUnsplashPhotos, type UnsplashPhoto } from '@/api/unsplash';
 import { fetchRepoByUrl, fetchMyRepos, parseGithubRepoUrl, type GithubRepoListItem } from '@/api/github';
+import type { ImageBlockLayout, ImagePayload } from '@/types/blog';
 
 export type BlockType =
   | 'paragraph'
@@ -98,6 +120,9 @@ function consumeMarkdownListBlock(
   return { html: wrap(inner), next: i };
 }
 
+/** Stored in paragraph `payload.text` (persisted in `BlogPost.content` JSON). */
+const MENTION_WITH_ID_RE = /\[(@[^\]]+)\]\(mention:([a-fA-F0-9]{24})\)/g;
+
 // Fast inline markdown: non-greedy (.+?) so "**a** ****" parses correctly. Plus lists.
 function markdownToHtml(raw: string): string {
   const escape = (s: string) =>
@@ -108,12 +133,21 @@ function markdownToHtml(raw: string): string {
       .replaceAll('"', '&quot;');
   const inline = (s: string) => {
     let t = escape(s);
+    const mentionChunks: string[] = [];
+    t = t.replace(MENTION_WITH_ID_RE, (_m, label: string, id: string) => {
+      const i = mentionChunks.length;
+      mentionChunks.push(`<span class="ss-mention" data-user-id="${id}">${label}</span>`);
+      return `__SS_MENTION_PH_${i}__`;
+    });
     t = t
       .replaceAll(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replaceAll(/__(.+?)__/g, '<u>$1</u>')
       .replaceAll(/\*(.+?)\*/g, '<em>$1</em>');
     t = t.replaceAll(/\[([^\]]*)\]\(([^)]*)\)/g, '<a href="$2" rel="noopener noreferrer" target="_blank">$1</a>');
     t = t.replaceAll(/@(\w+)/g, '<span class="ss-mention">@$1</span>');
+    for (let i = mentionChunks.length - 1; i >= 0; i--) {
+      t = t.replaceAll(`__SS_MENTION_PH_${i}__`, mentionChunks[i]!);
+    }
     return t;
   };
   const lines = (raw || '').split('\n');
@@ -143,12 +177,20 @@ type HtmlToMdState = { out: string; olNum: number };
 function walkElementToMarkdown(e: HTMLElement, walk: (n: Node) => void, state: HtmlToMdState): boolean {
   const tag = e.tagName?.toLowerCase();
   if (tag === 'br') {
+    /* Invisible caret anchor at end of block — not an extra markdown newline */
+    if (e.hasAttribute('data-ss-pad')) return true;
     state.out += '\n';
     return true;
   }
   if (tag === 'p') {
     e.childNodes.forEach((n) => walk(n));
     state.out += '\n';
+    return true;
+  }
+  /* contenteditable Enter creates sibling <div>s; without a block boundary they collapse into one line. */
+  if (tag === 'div') {
+    e.childNodes.forEach((n) => walk(n));
+    if (!state.out.endsWith('\n')) state.out += '\n';
     return true;
   }
   if (tag === 'a') {
@@ -159,6 +201,13 @@ function walkElementToMarkdown(e: HTMLElement, walk: (n: Node) => void, state: H
     return true;
   }
   if (tag === 'span' && e.classList?.contains('ss-mention')) {
+    const uid = e.getAttribute('data-user-id')?.trim() ?? '';
+    if (/^[a-fA-F0-9]{24}$/.test(uid)) {
+      const label = (e.textContent ?? '').trim() || '@user';
+      const bracketLabel = label.startsWith('@') ? label : `@${label}`;
+      state.out += `[${bracketLabel}](mention:${uid})`;
+      return true;
+    }
     e.childNodes.forEach((n) => walk(n));
     return true;
   }
@@ -218,7 +267,46 @@ function htmlToMarkdown(el: HTMLElement): string {
     e.childNodes.forEach((n) => walk(n));
   };
   el.childNodes.forEach((n) => walk(n));
-  return state.out.replaceAll(/\n{2,}/g, '\n').trim();
+  return state.out.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+}
+
+/**
+ * Inserts a real line break for the paragraph editor. When the caret is at the end of a line
+ * with no node after it, browsers need a second <br data-ss-pad> so the caret can sit on a new
+ * empty row; without it, extra Enters often collapse to a single blank line.
+ */
+function insertParagraphLineBreak(editorEl: HTMLElement): void {
+  const sel = getBrowserSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  if (!editorEl.contains(range.commonAncestorContainer)) return;
+
+  range.deleteContents();
+  const br = document.createElement('br');
+  range.insertNode(br);
+
+  let newRange = document.createRange();
+  if (!br.nextSibling) {
+    const pad = document.createElement('br');
+    pad.setAttribute('data-ss-pad', '');
+    br.parentNode?.appendChild(pad);
+    newRange.setStartBefore(pad);
+  } else {
+    newRange.setStartAfter(br);
+  }
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+}
+
+/** Medium-style: collapse spaces/tabs on each line only; keep newlines so blank lines survive. */
+function collapseHorizontalWhitespacePreservingNewlines(s: string): string {
+  return s
+    .replaceAll('\r\n', '\n')
+    .replaceAll('\r', '\n')
+    .split('\n')
+    .map((line) => line.replace(/[ \t\u00a0]+/g, ' '))
+    .join('\n');
 }
 
 function ParagraphBlockEditor({
@@ -279,7 +367,8 @@ function ParagraphBlockEditor({
     }
     // Never overwrite DOM while user is focused in this editor — prevents caret jumping to left
     if (document.activeElement && el.contains(document.activeElement)) return;
-    if (text.trim()) {
+    // Use length, not trim(): newline-only buffers must re-render as multiple breaks
+    if (text.length > 0) {
       el.innerHTML = markdownToHtml(text);
     } else {
       el.innerHTML = '<br>';
@@ -289,9 +378,13 @@ function ParagraphBlockEditor({
   const handleInput = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
-    let newText = htmlToMarkdown(el);
-    if (newText === '\n') newText = '';
-    newText = newText.replaceAll(/\s+/g, ' ');
+    let newText = collapseHorizontalWhitespacePreservingNewlines(htmlToMarkdown(el));
+    /* Only the initial empty placeholder `<br>` — not `\n` from a real line break */
+    const htmlCompact = el.innerHTML
+      .replaceAll(/&nbsp;/gi, ' ')
+      .replaceAll(/\s+/g, '')
+      .toLowerCase();
+    if (htmlCompact === '<br>' || htmlCompact === '') newText = '';
     onUpdate({ text: newText });
     updateFromEditorRef.current = true;
   }, [onUpdate]);
@@ -300,11 +393,11 @@ function ParagraphBlockEditor({
     (e: React.ClipboardEvent) => {
       e.preventDefault();
       const raw = e.clipboardData.getData('text/plain') ?? '';
-      const plain = raw.replaceAll(/\s+/g, ' ');
+      const plain = collapseHorizontalWhitespacePreservingNewlines(raw);
       richExecCommand('insertText', false, plain);
       const el = editorRef.current;
       if (el) {
-        let newText = htmlToMarkdown(el).replaceAll(/\s+/g, ' ');
+        let newText = collapseHorizontalWhitespacePreservingNewlines(htmlToMarkdown(el));
         onUpdate({ text: newText });
         updateFromEditorRef.current = true;
       }
@@ -318,7 +411,7 @@ function ParagraphBlockEditor({
       if (!el) return;
       el.focus();
       richExecCommand(command, false);
-      const newText = htmlToMarkdown(el).replaceAll(/\s+/g, ' ');
+      const newText = collapseHorizontalWhitespacePreservingNewlines(htmlToMarkdown(el));
       onUpdate({ text: newText });
       updateFromEditorRef.current = true;
       setTimeout(updateFormatState, 0);
@@ -332,7 +425,7 @@ function ParagraphBlockEditor({
       if (!el) return;
       el.focus();
       richExecCommand(type === 'bullet' ? 'insertUnorderedList' : 'insertOrderedList', false);
-      const newText = htmlToMarkdown(el).replaceAll(/\s+/g, ' ');
+      const newText = collapseHorizontalWhitespacePreservingNewlines(htmlToMarkdown(el));
       onUpdate({ text: newText });
       updateFromEditorRef.current = true;
       setTimeout(updateFormatState, 0);
@@ -414,19 +507,23 @@ function ParagraphBlockEditor({
         newLink.classList.remove('ss-newlink-temp');
       }
     }
-    const newText = htmlToMarkdown(el).replaceAll(/\s+/g, ' ');
+    const newText = collapseHorizontalWhitespacePreservingNewlines(htmlToMarkdown(el));
     onUpdate({ text: newText });
     updateFromEditorRef.current = true;
     setLinkCardOpen(false);
   }, [onUpdate, linkUrl, linkText]);
 
   const applyMentionFromCard = useCallback(
-    (username: string) => {
+    (user: FollowUser) => {
       const el = editorRef.current;
       if (!el) return;
       el.focus();
-      richExecCommand('insertText', false, username.trim() ? `@${username.trim()}` : '@');
-      const newText = htmlToMarkdown(el).replaceAll(/\s+/g, ' ');
+      const u = user.username.trim();
+      const id = user.id.trim();
+      const token =
+        u && /^[a-fA-F0-9]{24}$/.test(id) ? `[@${u}](mention:${id})` : u ? `@${u}` : '@';
+      richExecCommand('insertText', false, token);
+      const newText = collapseHorizontalWhitespacePreservingNewlines(htmlToMarkdown(el));
       onUpdate({ text: newText });
       updateFromEditorRef.current = true;
       setMentionCardOpen(false);
@@ -747,7 +844,7 @@ function ParagraphBlockEditor({
                         <li key={user.id}>
                           <button
                             type="button"
-                            onClick={() => applyMentionFromCard(user.username)}
+                            onClick={() => applyMentionFromCard(user)}
                             className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-muted/50 transition-colors border-b border-border/50 last:border-b-0"
                           >
                             <img
@@ -793,6 +890,20 @@ function ParagraphBlockEditor({
             if (!el || !sel || sel.rangeCount === 0) return;
             const anchor = sel.anchorNode;
             if (!anchor || !el.contains(anchor)) return;
+            /* Enter outside lists: insert <br> so blank lines round-trip; default Enter uses <div> and broke htmlToMarkdown */
+            if (e.key === 'Enter' && !e.shiftKey) {
+              const li =
+                anchor.nodeType === Node.TEXT_NODE
+                  ? (anchor as Text).parentElement?.closest?.('li')
+                  : (anchor as Element).closest?.('li');
+              const inList = !!(li && el.contains(li));
+              if (!inList) {
+                e.preventDefault();
+                insertParagraphLineBreak(el);
+                queueMicrotask(() => handleInput());
+                return;
+              }
+            }
             const link = anchor.nodeType === Node.TEXT_NODE ? (anchor as Text).parentElement?.closest?.('a') : (anchor as Element).closest?.('a');
             const atEndOfLink = link && (() => {
               const r = sel.getRangeAt(0).cloneRange();
@@ -843,7 +954,7 @@ function ParagraphBlockEditor({
             '[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:list-item [&_strong]:font-bold [&_em]:italic [&_u]:underline ss-markdown-links [&_a]:bg-primary [&_a]:text-white [&_a]:no-underline [&_a]:px-1 [&_a]:py-0.5 [&_a]:rounded [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1 [&_.ss-mention]:bg-primary/25 [&_.ss-mention]:text-primary [&_.ss-mention]:font-bold [&_.ss-mention]:px-1.5 [&_.ss-mention]:py-0.5 [&_.ss-mention]:rounded [&_.ss-mention]:inline-flex [&_.ss-mention]:items-center [&_.ss-mention]:border [&_.ss-mention]:border-primary/50',
           )}
         />
-        {!text.trim() && (
+        {text.length === 0 && (
           <div
             className="absolute left-3 top-3 pointer-events-none text-sm text-muted-foreground italic select-none"
             aria-hidden
@@ -946,6 +1057,90 @@ function BlockCard({
   );
 }
 
+function coerceImageLayout(raw: ImagePayload['layout']): ImageBlockLayout {
+  if (raw === 'landscape' || raw === 'square' || raw === 'fullWidth') return raw;
+  if (raw === 'natural' || raw === 'center') return 'landscape';
+  return 'landscape';
+}
+
+type ImagePayloadWithLegacy = ImagePayload & { altText?: string };
+
+function imageBlockCaption(p: ImagePayloadWithLegacy): string {
+  const t = p.title?.trim();
+  if (t) return t;
+  return p.altText?.trim() ?? '';
+}
+
+function patchImagePayload(p: ImagePayloadWithLegacy, patch: Partial<ImagePayload>): ImagePayload {
+  const { altText: _legacy, ...rest } = p;
+  return { ...rest, ...patch };
+}
+
+const IMAGE_LAYOUT_OPTIONS: ReadonlyArray<{
+  id: ImageBlockLayout;
+  label: string;
+  icon: typeof AlignLeft;
+}> = [
+  { id: 'landscape', label: 'Landscape', icon: AlignLeft },
+  { id: 'square', label: 'Square', icon: Square },
+  { id: 'fullWidth', label: 'Full width', icon: StretchHorizontal },
+];
+
+function ImageLayoutTitlePanel({
+  layout,
+  onLayout,
+  title,
+  onTitleChange,
+  fieldId,
+  titleInputSuffix = '',
+  className,
+}: Readonly<{
+  layout: ImageBlockLayout;
+  onLayout: (next: ImageBlockLayout) => void;
+  title: string;
+  onTitleChange: (value: string) => void;
+  fieldId: string;
+  titleInputSuffix?: string;
+  className?: string;
+}>) {
+  const titleInputId = `${fieldId}-img-title${titleInputSuffix}`;
+  return (
+    <div className={cn('rounded-md border border-border bg-card/95 p-2 shadow-sm backdrop-blur-sm space-y-2', className)}>
+      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">Layout</p>
+      <div className="flex gap-1">
+        {IMAGE_LAYOUT_OPTIONS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            title={label}
+            onClick={() => onLayout(id)}
+            className={cn(
+              'flex-1 rounded border px-1 py-1.5 transition-colors',
+              layout === id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted/80 text-muted-foreground',
+            )}
+          >
+            <Icon className="h-3.5 w-3.5 mx-auto" strokeWidth={2} />
+            <span className="text-[8px] font-bold block text-center mt-0.5 leading-tight">{label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="space-y-1">
+        <label htmlFor={titleInputId} className="text-[9px] font-bold text-muted-foreground uppercase">
+          Title
+        </label>
+        <input
+          id={titleInputId}
+          type="text"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder="Optional — shown as caption; also used as image description for accessibility"
+          className="w-full bg-background border border-border p-2 text-xs rounded focus:outline-none focus:border-primary"
+        />
+      </div>
+    </div>
+  );
+}
+
 function ImageBlockEditor({
   blockId: _blockId,
   payload,
@@ -954,15 +1149,19 @@ function ImageBlockEditor({
   onRemove,
 }: Readonly<{
   blockId: string;
-  payload: { url?: string; altText?: string; caption?: string };
+  payload: ImagePayload;
   token: string | null;
-  onUpdate: (p: { url?: string; altText?: string; caption?: string }) => void;
+  onUpdate: (p: ImagePayload) => void;
   onRemove: () => void;
 }>) {
   const fieldId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const { url, altText = '', caption = '' } = payload;
+  const p = payload as ImagePayloadWithLegacy;
+  const { url, layout: layoutRaw } = p;
+  const layout = coerceImageLayout(layoutRaw);
+  const caption = imageBlockCaption(p);
+  const altForImg = caption || 'Blog image';
 
   const handleFile = useCallback(
     async (file: File | null) => {
@@ -978,15 +1177,57 @@ function ImageBlockEditor({
       setUploading(true);
       try {
         const data = await uploadMedia(token, file, undefined, () => {});
-        if (data.url) onUpdate({ ...payload, url: data.url });
+        if (data.url) onUpdate(patchImagePayload(p, { url: data.url }));
       } catch {
         toast.error('Upload failed.');
       } finally {
         setUploading(false);
       }
     },
-    [token, payload, onUpdate],
+    [token, p, onUpdate],
   );
+
+  const renderImagePreview = () => {
+    if (!url) return null;
+    if (layout === 'fullWidth') {
+      return (
+        <div className="min-w-0 w-full rounded-lg overflow-hidden border border-border bg-muted">
+          <div className="flex w-full min-w-0 items-center justify-center bg-muted/80 p-1">
+            <img
+              src={url}
+              alt={altForImg}
+              className="h-auto w-full min-w-0 max-h-[min(48rem,88vh)] object-contain"
+            />
+          </div>
+        </div>
+      );
+    }
+    if (layout === 'square') {
+      return (
+        <div className="rounded-lg border border-border bg-muted flex justify-center p-3">
+          {/* Fixed square viewport so “Square” is always 1:1 crop, not “bigger square when the card is wide”. */}
+          <div className="size-52 shrink-0 overflow-hidden rounded-md bg-background ring-1 ring-border/80">
+            <img src={url} alt={altForImg} className="h-full w-full object-cover object-center" />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="min-w-0 w-full rounded-lg overflow-hidden border border-border bg-muted">
+        <div className="flex min-h-[8rem] w-full min-w-0 items-center justify-center p-2 sm:p-3">
+          {/*
+            Tall max-height (not max-h-64) so wide screenshots scale to the full block width first.
+            A low max-height forces object-contain to shrink width and leaves empty side gutters.
+          */}
+          <img
+            src={url}
+            alt={altForImg}
+            className="h-auto w-full min-w-0 max-h-[min(40rem,82vh)] object-contain object-center"
+          />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <BlockCard title="Image" icon={ImageIcon} onRemove={onRemove}>
@@ -998,34 +1239,18 @@ function ImageBlockEditor({
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
       {url ? (
-        <div className="space-y-2">
-          <div className="rounded-lg overflow-hidden border border-border bg-muted">
-            <img src={url} alt={altText || 'Uploaded'} className="w-full max-h-64 object-contain" />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor={`${fieldId}-img-alt`} className="text-[9px] font-bold text-muted-foreground uppercase">
-              Alt text
-            </label>
-            <input
-              id={`${fieldId}-img-alt`}
-              type="text"
-              value={altText}
-              onChange={(e) => onUpdate({ ...payload, altText: e.target.value })}
-              placeholder="Describe the image"
-              className="w-full bg-background border border-border p-2 text-xs rounded focus:outline-none focus:border-primary"
-            />
-            <label htmlFor={`${fieldId}-img-caption`} className="text-[9px] font-bold text-muted-foreground uppercase">
-              Caption (optional)
-            </label>
-            <input
-              id={`${fieldId}-img-caption`}
-              type="text"
-              value={caption}
-              onChange={(e) => onUpdate({ ...payload, caption: e.target.value })}
-              placeholder="Caption"
-              className="w-full bg-background border border-border p-2 text-xs rounded focus:outline-none focus:border-primary"
-            />
-          </div>
+        <div className="min-w-0 w-full space-y-2">
+          {renderImagePreview()}
+
+          <ImageLayoutTitlePanel
+            layout={layout}
+            onLayout={(next) => onUpdate(patchImagePayload(p, { layout: next }))}
+            title={caption}
+            onTitleChange={(value) => onUpdate(patchImagePayload(p, { title: value }))}
+            fieldId={fieldId}
+            className="bg-muted/40 border-dashed"
+          />
+
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
@@ -1575,12 +1800,25 @@ export function BlogWriteEditor({
     (b) => (b.sectionId ?? activeSectionId) === activeSectionId,
   );
 
+  /** Global index to insert *before* (equals `blocks.length` to append after last block in doc). */
+  const appendSlotIndex = useMemo(() => {
+    if (visibleBlocks.length === 0) return blocks.length;
+    const last = visibleBlocks[visibleBlocks.length - 1];
+    const lastGlobal = blocks.findIndex((b) => b.id === last.id);
+    return lastGlobal >= 0 ? lastGlobal + 1 : blocks.length;
+  }, [visibleBlocks, blocks]);
+
   const moveBlock = useCallback(
     (fromIndex: number, toIndex: number) => {
-      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= blocks.length || toIndex >= blocks.length) return;
+      if (fromIndex < 0 || fromIndex >= blocks.length) return;
+      if (toIndex < 0 || toIndex > blocks.length) return;
+      if (fromIndex === toIndex) return;
       const reordered = [...blocks];
       const [removed] = reordered.splice(fromIndex, 1);
-      reordered.splice(toIndex, 0, removed);
+      let insertAt = toIndex;
+      if (fromIndex < toIndex) insertAt -= 1;
+      insertAt = Math.max(0, Math.min(insertAt, reordered.length));
+      reordered.splice(insertAt, 0, removed);
       onBlocksChange(reordered);
     },
     [blocks, onBlocksChange],
@@ -1588,54 +1826,77 @@ export function BlogWriteEditor({
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+  const dropTargetIndexRef = useRef<number | null>(null);
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', String(index));
     e.dataTransfer.effectAllowed = 'move';
     setDraggedIndex(index);
     setDropTargetIndex(null);
+    dropTargetIndexRef.current = null;
   }, []);
 
   const handleDragEnd = useCallback(() => {
     setDraggedIndex(null);
     setDropTargetIndex(null);
+    dropTargetIndexRef.current = null;
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, overIndex: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (draggedIndex !== null && overIndex !== draggedIndex) {
-      setDropTargetIndex(overIndex);
-    }
-  }, [draggedIndex]);
-
-  const blockListDropRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = blockListDropRef.current;
-    if (!el) return;
-    const onDragLeave = (e: DragEvent) => {
-      const t = e.currentTarget;
-      if (!(t instanceof Element)) return;
-      const related = e.relatedTarget;
-      if (related instanceof Node && t.contains(related)) return;
-      setDropTargetIndex(null);
-    };
-    el.addEventListener('dragleave', onDragLeave);
-    return () => el.removeEventListener('dragleave', onDragLeave);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent, toIndex: number) => {
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, overIndex: number) => {
       e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggedIndex === null) return;
+      if (overIndex === draggedIndex) return;
+      dropTargetIndexRef.current = overIndex;
+      setDropTargetIndex(overIndex);
+    },
+    [draggedIndex],
+  );
+
+  const handleDragOverAppendZone = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggedIndex === null) return;
+      dropTargetIndexRef.current = appendSlotIndex;
+      setDropTargetIndex(appendSlotIndex);
+    },
+    [draggedIndex, appendSlotIndex],
+  );
+
+  const handleDropOnRow = useCallback(
+    (e: React.DragEvent, rowInsertBeforeIndex: number) => {
+      e.preventDefault();
+      e.stopPropagation();
       const fromIndex = Number.parseInt(e.dataTransfer.getData('text/plain'), 10);
       if (Number.isNaN(fromIndex)) return;
+      const toIndex = dropTargetIndexRef.current ?? rowInsertBeforeIndex;
+      dropTargetIndexRef.current = null;
       setDraggedIndex(null);
       setDropTargetIndex(null);
       moveBlock(fromIndex, toIndex);
     },
     [moveBlock],
   );
+
+  const handleDropOnAppendZone = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const fromIndex = Number.parseInt(e.dataTransfer.getData('text/plain'), 10);
+      if (Number.isNaN(fromIndex)) return;
+      dropTargetIndexRef.current = null;
+      setDraggedIndex(null);
+      setDropTargetIndex(null);
+      moveBlock(fromIndex, appendSlotIndex);
+    },
+    [moveBlock, appendSlotIndex],
+  );
+
+  const blockListDropRef = useRef<HTMLDivElement>(null);
 
   if (visibleBlocks.length === 0) {
     return (
@@ -1759,11 +2020,8 @@ export function BlogWriteEditor({
           return (
             <li
               key={block.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, blockIndex)}
-              onDragEnd={handleDragEnd}
               onDragOver={(e) => handleDragOver(e, blockIndex)}
-              onDrop={(e) => handleDrop(e, blockIndex)}
+              onDrop={(e) => handleDropOnRow(e, blockIndex)}
               className={cn(
                 'relative list-none flex items-start gap-2 group/drag rounded-md transition-all duration-150',
                 isDragging && 'opacity-50',
@@ -1776,16 +2034,35 @@ export function BlogWriteEditor({
                 />
               )}
               <div
-                className="mt-2 p-1 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground hover:bg-muted/50 touch-none"
+                draggable
+                onDragStart={(e) => handleDragStart(e, blockIndex)}
+                onDragEnd={handleDragEnd}
+                className="mt-2 shrink-0 p-1 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground hover:bg-muted/50 touch-none select-none"
                 aria-label="Drag to reorder"
+                title="Drag to reorder"
               >
-                <GripVertical className="h-4 w-4" />
+                <GripVertical className="h-4 w-4 pointer-events-none" />
               </div>
-              <div className="flex-1 min-w-0">{blockContent}</div>
+              <div className="flex-1 min-w-0" draggable={false} onDragStart={(ev) => ev.preventDefault()}>
+                {blockContent}
+              </div>
             </li>
           );
         })}
       </ul>
+      <div
+        className={cn(
+          'min-h-14 rounded-md border-2 border-dashed transition-colors',
+          dropTargetIndex === appendSlotIndex ? 'border-primary bg-primary/10' : 'border-transparent hover:border-border/70',
+        )}
+        onDragOver={handleDragOverAppendZone}
+        onDrop={handleDropOnAppendZone}
+        role="presentation"
+      >
+        <p className="pointer-events-none py-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Drop here to place at end of section
+        </p>
+      </div>
     </div>
   );
 }

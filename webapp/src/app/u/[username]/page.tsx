@@ -1050,7 +1050,6 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
           onClose={() => setMySetupPreview(null)}
           src={mySetupPreview?.src ?? ''}
           title={mySetupPreview?.title}
-          altText={mySetupPreview?.title}
         />
       </div>
     </div>

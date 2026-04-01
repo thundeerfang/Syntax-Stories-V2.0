@@ -3,15 +3,17 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export type BlogPostStatus = 'draft' | 'published';
 
 /**
- * Blog post or draft. content is a JSON string of editor blocks (paragraph, heading,
- * image, gif, videoEmbed, githubRepo, unsplashImage, etc.) with payloads for styles/links.
+ * Blog post or draft. `content` is **`JSON.stringify(Block[])`**: an array of blocks with `id`, `type`,
+ * `sectionId?`, `payload`. Types include `paragraph` (markdown: bold/italic/underline/links/lists,
+ * `[@username](mention:24hexMongoUserId)`, plain `@user`), `heading`, `partition`, `image`, `gif`,
+ * `videoEmbed`, `githubRepo`, `unsplashImage`, etc.
  */
 export interface IBlogPost extends Document {
   authorId: mongoose.Types.ObjectId;
   title: string;
   slug: string;
   summary?: string;
-  /** JSON string of Block[] (matches frontend editor: blocks, styles, links) */
+  /** JSON string of Block[] (full editor state per block, no server-side stripping) */
   content: string;
   thumbnailUrl?: string;
   status: BlogPostStatus;
