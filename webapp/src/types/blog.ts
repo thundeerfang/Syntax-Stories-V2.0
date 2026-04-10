@@ -6,7 +6,7 @@
  *
  * Supported **`type`** values (editor + DB):
  * `paragraph` (markdown buffer: bold/italic/underline/links/lists, `[@user](mention:24hexUserId)`, plain `@user`),
- * `heading` (H2/H3 text), `partition` (divider), `image`, `gif`, `videoEmbed`, `githubRepo`, `unsplashImage`,
+ * `heading` (H2/H3 text), `partition` (divider), `image`, `videoEmbed`, `githubRepo`, `unsplashImage`,
  * plus `code` / `link` if present in legacy content.
  */
 
@@ -16,7 +16,6 @@ export type BlockType =
   | 'code'
   | 'partition'
   | 'image'
-  | 'gif'
   | 'videoEmbed'
   | 'link'
   | 'githubRepo'
@@ -30,9 +29,23 @@ export interface BlockBase {
   sectionId?: string;
 }
 
-/** Markdown string: `**bold**`, `*italic*`, `__underline__`, `[label](https://...)`, `[@handle](mention:ObjectId24)`, `- list` / `1. list`, newlines. */
+/** ProseMirror-style JSON document used for rich-text paragraphs. */
+export type RichTextDoc = any;
+
+/**
+ * Paragraph content.
+ *
+ * Historically this was a plain markdown-ish string in `text`. Going forward,
+ * `doc` is the source of truth for rich-text content (inline formatting, GIFs, etc.).
+ * `text` is kept for backwards compatibility and as an optional denormalised summary.
+ */
 export interface ParagraphPayload {
-  text: string;
+  /** Legacy markdown/plain text buffer. May be empty when `doc` is present. */
+  text?: string;
+  /** Rich-text document (ProseMirror/TipTap JSON). */
+  doc?: RichTextDoc;
+  /** Optional flag to indicate whether this payload was authored with rich-text. */
+  version?: 'plain' | 'rich-text';
 }
 
 export interface HeadingPayload {
@@ -50,13 +63,16 @@ export interface ImagePayload {
   layout?: ImageBlockLayout;
 }
 
-export interface GifPayload {
-  url?: string;
-  caption?: string;
-}
+export type VideoEmbedLayoutDirection = 'row' | 'column';
+export type VideoEmbedDisplaySize = 'sm' | 'md' | 'lg';
 
 export interface VideoEmbedPayload {
+  /** @deprecated Prefer `videos`. Kept for older drafts. */
   url?: string;
+  /** Up to 3 iframe-safe embed URLs (e.g. youtube.com/embed/…). */
+  videos?: string[];
+  layout?: VideoEmbedLayoutDirection;
+  size?: VideoEmbedDisplaySize;
 }
 
 export interface GithubRepoPayload {
@@ -78,7 +94,6 @@ export type BlockPayload =
   | ParagraphPayload
   | HeadingPayload
   | ImagePayload
-  | GifPayload
   | VideoEmbedPayload
   | GithubRepoPayload
   | UnsplashPayload
@@ -116,4 +131,53 @@ export interface BlogPostResponse {
   status: 'draft' | 'published';
   createdAt: string;
   updatedAt: string;
+}
+
+/** Public home feed item (`GET /api/blog/feed`). */
+export interface PublicFeedPostAuthor {
+  username: string;
+  fullName: string;
+  profileImg: string;
+}
+
+export interface PublicFeedPost {
+  _id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  thumbnailUrl?: string;
+  updatedAt: string;
+  createdAt: string;
+  author: PublicFeedPostAuthor;
+}
+
+/** Public single post (`GET /api/blog/p/:username/:slug`). */
+export interface PublicBlogPostDetail {
+  _id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  thumbnailUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  author: PublicFeedPostAuthor;
+}
+
+/**
+ * Helper: ensure we always have a rich-text doc for a paragraph, even when only the
+ * legacy `text` field is present. This does not mutate the original payload.
+ */
+export function coerceParagraphDoc(payload: ParagraphPayload): RichTextDoc {
+  if (payload.doc) return payload.doc;
+  const text = (payload.text ?? '').toString();
+  return {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: text ? [{ type: 'text', text }] : [],
+      },
+    ],
+  };
 }

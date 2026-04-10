@@ -15,7 +15,22 @@ export interface UploadMediaDialogProps {
   open: boolean;
   onClose: () => void;
   token: string;
-  onSuccess: (item: { url: string; title?: string; blurDataUrl?: string }) => void;
+  onSuccess: (item: {
+    url: string;
+    title?: string;
+    blurDataUrl?: string;
+    /** When true, this item is only staged locally and must be uploaded by the caller later. */
+    isPending?: boolean;
+    /** Original file and crop, for callers that want to defer upload until final Save. */
+    pendingFile?: File;
+    pendingCrop?: CropArea;
+  }) => void;
+  /**
+   * Upload mode:
+   * - 'immediate' (default): upload to media API here and return a final URL
+   * - 'staged': do not call the API; return a blob URL + pendingFile/crop so caller can upload later
+   */
+  mode?: 'immediate' | 'staged';
 }
 
 const MAX_MB = 5;
@@ -25,6 +40,7 @@ export function UploadMediaDialog({
   onClose,
   token,
   onSuccess,
+  mode = 'immediate',
 }: Readonly<UploadMediaDialogProps>) {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -73,8 +89,7 @@ export function UploadMediaDialog({
       toast.error('Adjust the crop area, then save.');
       return;
     }
-    setUploading(true);
-    setProgress(0);
+
     const cropArea: CropArea = {
       x: croppedAreaPixels.x,
       y: croppedAreaPixels.y,
@@ -82,12 +97,35 @@ export function UploadMediaDialog({
       height: croppedAreaPixels.height,
     };
 
+    // Staged mode: do not hit the upload API yet; hand back a blob URL + pending data.
+    if (mode === 'staged') {
+      const fallbackTitle = 'Media image';
+      const stagedTitle = title.trim() || fallbackTitle;
+      const blobUrl = imageUrl ?? URL.createObjectURL(selectedFile);
+      onSuccess({
+        url: blobUrl,
+        title: stagedTitle,
+        isPending: true,
+        pendingFile: selectedFile,
+        pendingCrop: cropArea,
+      });
+      toast.success('Media staged. It will upload when you save.');
+      if (imageUrl && blobUrl !== imageUrl) URL.revokeObjectURL(imageUrl);
+      resetState();
+      onClose();
+      return;
+    }
+
+    setUploading(true);
+    setProgress(0);
+
     try {
       const data = await uploadMedia(token, selectedFile, cropArea, (p) => setProgress(p));
       if (data.url) {
+        const fallbackTitle = 'Media image';
         onSuccess({
           url: data.url,
-          title: title.trim() || undefined,
+          title: title.trim() || fallbackTitle,
           blurDataUrl: data.blurDataUrl,
         });
         toast.success('Media added.');

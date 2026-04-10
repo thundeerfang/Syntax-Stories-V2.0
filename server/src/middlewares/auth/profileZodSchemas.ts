@@ -31,7 +31,13 @@ export const expectedProfileVersionField = z.coerce.number().int().min(0).option
 
 const mediaItemSchema = z.object({
   url: z.string().url().max(500).trim(),
-  title: z.string().max(120).trim().optional(),
+  // When present, title must be non-empty after trimming.
+  title: z
+    .string()
+    .max(120)
+    .trim()
+    .min(1, { message: 'Media title, if provided, cannot be empty.' })
+    .optional(),
 });
 
 const promotionItemSchema = z.object({

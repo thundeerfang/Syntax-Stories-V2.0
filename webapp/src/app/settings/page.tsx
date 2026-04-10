@@ -89,6 +89,7 @@ import { GhostOutlineButton } from '@/components/ui';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { Dialog } from '@/components/ui/Dialog';
+import { uploadMedia } from '@/api/upload';
 import { getSkillIconUrl, getSkillIconUrlBySlug } from '@/lib/skillIcons';
 import { searchTechStack, type TechStackItem } from '@/data/techStack';
 import { Toggle, ToggleGroup, ToggleGroupItem, FormInput, FormTextarea, FormCheckbox, Input, Label, SearchableSelect, EntitySearchInput, Textarea } from '@/components/retroui';
@@ -171,12 +172,14 @@ const accordionVariants = {
   expanded: { height: 'auto', opacity: 1 },
 };
 
-const FormSection = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <div className="space-y-4 pt-6 border-t-2 border-border/50 first:border-t-0 first:pt-0 min-w-0">
-    {title ? <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{title}</h3> : null}
-    <div className="grid gap-4 min-w-0">{children}</div>
-  </div>
-);
+function FormSection({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-4 pt-6 border-t-2 border-border/50 first:border-t-0 first:pt-0 min-w-0">
+      {title ? <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{title}</h3> : null}
+      <div className="grid gap-4 min-w-0">{children}</div>
+    </div>
+  );
+}
 
 function SyntaxCardContent() {
   return (
@@ -776,6 +779,10 @@ function EditProfileContent() {
             </div>
           ))}
         </div>
+        <p className="mt-3 text-[9px] text-muted-foreground">
+          LinkedIn, GitHub, YouTube: {PROFILE_SOCIAL_URL_MIN}–{PROFILE_SOCIAL_URL_MAX} characters per URL when non-empty.
+          Instagram: up to {PROFILE_INSTAGRAM_MAX} characters.
+        </p>
       </section>
 
       <div className="flex items-center justify-end gap-3 pt-2">
@@ -1612,7 +1619,14 @@ function MySetupContent() {
   );
 }
 
-type MediaItem = { url: string; title?: string };
+type MediaItem = {
+  url: string;
+  title?: string;
+  /** When true, this media item only exists locally and must be uploaded on Save. */
+  isPending?: boolean;
+  pendingFile?: File;
+  pendingCrop?: import('@/api/upload').CropArea;
+};
 
 /** Normalize link input: full http(s) URLs, or bare domains / www… → https://… */
 function normalizeMediaLinkInput(raw: string): string | null {
@@ -1682,7 +1696,12 @@ function AddMediaLinksDialog({
       toast.error('Enter a valid URL (https://… or domain.com).', { id: 'syntax-invalid-url' });
       return;
     }
-    const effectiveTitle = title.trim() || undefined;
+    const explicit = title.trim();
+    const inferred =
+      !explicit && normalized
+        ? domainFromUrl(normalized) || 'Link'
+        : undefined;
+    const effectiveTitle = explicit || inferred || 'Link';
     const items: MediaItem[] = [{ url: normalized, title: effectiveTitle }];
 
     onAdd(items);
@@ -2246,7 +2265,7 @@ function WorkExperiencesContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRef.current = true;
     openEdit(idx);
-    router.replace('/settings?section=work-experiences', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
@@ -2286,8 +2305,48 @@ function WorkExperiencesContent() {
     }
     setFieldErrors({});
     const endDateVal = form.currentPosition ? undefined : monthYearToValue(form.endMonth, form.endYear) || undefined;
-    const promotionsVal = mapWorkExpPromotionsForSubmit(form);
-    const entry = buildWorkExperienceProfileEntry(form, startDateVal, endDateVal, promotionsVal);
+
+    // Resolve pending media items (work experience + promotions) before building the entry.
+    const resolveItems = async (items: MediaItem[]): Promise<MediaItem[]> => {
+      if (!items.length || !token) {
+        return items
+          .filter((m) => m.url.trim())
+          .slice(0, 5)
+          .map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined }));
+      }
+      const out: MediaItem[] = [];
+      for (const m of items.slice(0, 5)) {
+        if (!m.isPending || !m.pendingFile || !m.pendingCrop) {
+          if (m.url.trim()) out.push({ url: m.url.trim(), title: m.title?.trim() || undefined });
+        } else {
+          try {
+            const data = await uploadMedia(token, m.pendingFile, m.pendingCrop, () => {});
+            if (data.url) out.push({ url: data.url.trim(), title: m.title?.trim() || undefined });
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Failed to upload media.', {
+              id: 'syntax-media-upload',
+            });
+          }
+        }
+      }
+      return out.slice(0, 5);
+    };
+
+    const resolvedMainMedia = await resolveItems(form.mediaItems);
+    const resolvedPromotions: PromotionForm[] = [];
+    for (const p of form.promotions) {
+      const resolvedPromoMedia = await resolveItems(p.mediaItems ?? []);
+      resolvedPromotions.push({ ...p, mediaItems: resolvedPromoMedia });
+    }
+
+    const formForSubmit: WorkExpForm = {
+      ...form,
+      mediaItems: resolvedMainMedia,
+      promotions: resolvedPromotions,
+    };
+
+    const promotionsVal = mapWorkExpPromotionsForSubmit(formForSubmit);
+    const entry = buildWorkExperienceProfileEntry(formForSubmit, startDateVal, endDateVal, promotionsVal);
     const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
     setSaving(true);
     try {
@@ -2876,6 +2935,7 @@ function WorkExperiencesContent() {
                 open={uploadMediaDialogOpen}
                 onClose={() => setUploadMediaDialogOpen(false)}
                 token={token}
+                mode="staged"
                 onSuccess={(item) => {
                   setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
                   setUploadMediaDialogOpen(false);
@@ -2900,6 +2960,7 @@ function WorkExperiencesContent() {
                 open={promoMediaUploadIndex !== null}
                 onClose={() => setPromoMediaUploadIndex(null)}
                 token={token}
+                mode="staged"
                 onSuccess={(item) => {
                   if (promoMediaUploadIndex !== null) {
                     setForm((f) => ({
@@ -3048,7 +3109,7 @@ function EducationContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRefEd.current = true;
     openEdit(idx);
-    router.replace('/settings?section=education', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((e) => ({
@@ -3376,7 +3437,7 @@ function CertificationsContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRefCert.current = true;
     openEdit(idx);
-    router.replace('/settings?section=certifications', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((c) => ({
@@ -3760,7 +3821,18 @@ function CertificationsContent() {
               </div>
             )}
           </div>
-          {token && <UploadMediaDialog open={certUploadMediaDialogOpen} onClose={() => setCertUploadMediaDialogOpen(false)} token={token} onSuccess={(item) => { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) })); setCertUploadMediaDialogOpen(false); }} />}
+          {token && (
+            <UploadMediaDialog
+              open={certUploadMediaDialogOpen}
+              onClose={() => setCertUploadMediaDialogOpen(false)}
+              token={token}
+              mode="staged"
+              onSuccess={(item) => {
+                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
+                setCertUploadMediaDialogOpen(false);
+              }}
+            />
+          )}
           <FormTextarea id="cert-desc" label="Description (optional)" placeholder="Topics, skills validated" maxLength={2000} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))} />
         </div>
       </FormDialog>
@@ -3854,7 +3926,7 @@ function ProjectsContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRefProj.current = true;
     openEdit(idx);
-    router.replace('/settings?section=projects', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
@@ -4142,7 +4214,18 @@ function ProjectsContent() {
               </div>
             )}
           </div>
-          {token && <UploadMediaDialog open={projUploadMediaDialogOpen} onClose={() => setProjUploadMediaDialogOpen(false)} token={token} onSuccess={(item) => { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) })); setProjUploadMediaDialogOpen(false); }} />}
+          {token && (
+            <UploadMediaDialog
+              open={projUploadMediaDialogOpen}
+              onClose={() => setProjUploadMediaDialogOpen(false)}
+              token={token}
+              mode="staged"
+              onSuccess={(item) => {
+                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
+                setProjUploadMediaDialogOpen(false);
+              }}
+            />
+          )}
           <FormTextarea id="proj-desc" label="Description — Summary of the work" placeholder="Summary of the work" maxLength={2000} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))} />
         </div>
       </FormDialog>
@@ -4150,25 +4233,25 @@ function ProjectsContent() {
   );
 }
 
+type OpenSourceGitHubRepo = {
+  id: number;
+  name: string;
+  full_name: string;
+  html_url: string;
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  updated_at: string;
+  created_at: string;
+  owner: { login: string };
+  archived?: boolean;
+};
+
 function OpenSourceContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
   const apiBase = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '') : '';
   const MAX_OPEN_SOURCE_REPOS = 7;
-
-  type GitHubRepo = {
-    id: number;
-    name: string;
-    full_name: string;
-    html_url: string;
-    description: string | null;
-    language: string | null;
-    stargazers_count: number;
-    forks_count: number;
-    updated_at: string;
-    created_at: string;
-    owner: { login: string };
-    archived?: boolean;
-  };
 
   const imported = (user?.projects ?? []).filter((p) => (p as { source?: string }).source === 'github');
 
@@ -4176,7 +4259,7 @@ function OpenSourceContent() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [repos, setRepos] = useState<OpenSourceGitHubRepo[]>([]);
   const [query, setQuery] = useState('');
 
   const fetchRepos = async () => {
@@ -4188,7 +4271,7 @@ function OpenSourceContent() {
       const res = await fetch(`${apiBase}/api/github/repos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = (await res.json().catch(() => null)) as { success?: boolean; message?: string; repos?: GitHubRepo[] } | null;
+      const data = (await res.json().catch(() => null)) as { success?: boolean; message?: string; repos?: OpenSourceGitHubRepo[] } | null;
       if (!res.ok || !data?.success) throw new Error(data?.message || 'Failed to fetch repos.');
       setRepos((data.repos ?? []).filter((r) => !r.archived));
     } catch (e) {
@@ -4502,6 +4585,18 @@ function ContentSkeleton() {
 
 type TransitionPhase = 'idle' | 'fade-out' | 'skeleton' | 'fade-in';
 
+function SettingsComingSoonPlaceholder({ title }: Readonly<{ title: string | undefined }>) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-20 text-center">
+      <div className="size-16 bg-muted flex items-center justify-center border-2 border-border mb-4">
+        <Settings className="size-8 text-muted-foreground" />
+      </div>
+      <h2 className="text-xl font-black uppercase">{title}</h2>
+      <p className="text-sm text-muted-foreground mt-2 font-medium">Coming soon.</p>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -4543,8 +4638,26 @@ export default function SettingsPage() {
       router.replace('/settings', { scroll: false });
     } else if (section && validSectionIds.includes(section as SectionId)) {
       setActiveSection(section as SectionId);
+      // Clean up the URL so only `/settings` is visible, even when opened with ?section=...
+      router.replace('/settings', { scroll: false });
     }
   }, [searchParams, router, refreshUser, validSectionIds]);
+
+  // Support section targeting from profile without exposing ?section= in the URL:
+  // profile page stores `settingsTargetSection` (and optional `settingsTargetEditIndex`) in sessionStorage,
+  // then navigates to `/settings`. On first load we read and clear that hint.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const target = window.sessionStorage.getItem('settingsTargetSection');
+      if (target && validSectionIds.includes(target as SectionId)) {
+        setActiveSection(target as SectionId);
+        window.sessionStorage.removeItem('settingsTargetSection');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [validSectionIds]);
 
   const handleSectionChange = (id: SectionId) => {
     if (id === activeSection) return;
@@ -4719,22 +4832,10 @@ export default function SettingsPage() {
                     {activeSection === 'connected-accounts' && <ConnectedAccountsContent />}
                     {activeSection === 'syntax-card' && <SyntaxCardContent />}
                     {activeSection === 'notifications' && (
-                      <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-                        <div className="size-16 bg-muted flex items-center justify-center border-2 border-border mb-4">
-                          <Settings className="size-8 text-muted-foreground" />
-                        </div>
-                        <h2 className="text-xl font-black uppercase">{activeItemLabel}</h2>
-                        <p className="text-sm text-muted-foreground mt-2 font-medium">Coming soon.</p>
-                      </div>
+                      <SettingsComingSoonPlaceholder title={activeItemLabel} />
                     )}
                     {!['edit-profile', 'stack-tools', 'my-setup', 'work-experiences', 'education', 'certifications', 'projects', 'open-source', 'security-email', 'connected-accounts', 'syntax-card', 'notifications'].includes(activeSection) && (
-                      <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-                        <div className="size-16 bg-muted flex items-center justify-center border-2 border-border mb-4">
-                          <Settings className="size-8 text-muted-foreground" />
-                        </div>
-                        <h2 className="text-xl font-black uppercase">{activeItemLabel}</h2>
-                        <p className="text-sm text-muted-foreground mt-2 font-medium">Coming soon.</p>
-                      </div>
+                      <SettingsComingSoonPlaceholder title={activeItemLabel} />
                     )}
                   </motion.div>
                 )}

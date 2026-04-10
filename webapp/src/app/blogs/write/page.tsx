@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSidebar } from '@/hooks/useSidebar';
-import { blogApi } from '@/api/blog';
+import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
 import { uploadCover, type CropArea } from '@/api/upload';
 import { TerminalLoaderPage } from '@/components/loader';
 import { Dialog } from '@/components/ui/Dialog';
@@ -21,7 +21,13 @@ import { RetroAccordion } from '@/components/ui/RetroAccordion';
 import Cropper, { Area } from 'react-easy-crop';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { BlogWriteEditor, Block, createBlockInSection, type BlockType } from '@/components/ui/BlogWriteEditor';
+import {
+  BlogWriteEditor,
+  Block,
+  createBlockInSection,
+  stripLegacyGifBlocks,
+  type BlockType,
+} from '@/components/ui/BlogWriteEditor';
 import { DEFAULT_ITEMS } from '@/components/ui/BottomToolbar';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { StoredDraftPayload } from '@/types/blog';
@@ -823,7 +829,7 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
         saveDraftToStorage({
           title: t,
           summary: s && s !== '<br>' ? s : '',
-          content: JSON.stringify(b),
+          content: JSON.stringify(stripLegacyGifBlocks(b)),
           thumbnailPreviewUrl: thumb ?? undefined,
         });
       }
@@ -856,7 +862,7 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
         saveDraftToStorage({
           title,
           summary: summary && summary !== '<br>' ? summary : '',
-          content: JSON.stringify(blocks),
+          content: JSON.stringify(stripLegacyGifBlocks(blocks)),
           thumbnailPreviewUrl,
         });
         e.preventDefault();
@@ -894,6 +900,7 @@ async function runBlogWriteSubmit(args: Readonly<{
   blocks: Block[];
   thumbnailFile: File | null;
   thumbnailCropArea: CropArea | null;
+  thumbnailPreviewUrl: string | null;
   clearThumbnail: () => void;
   setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
   setTitle: React.Dispatch<React.SetStateAction<string>>;
@@ -908,18 +915,27 @@ async function runBlogWriteSubmit(args: Readonly<{
     blocks,
     thumbnailFile,
     thumbnailCropArea,
+    thumbnailPreviewUrl,
     clearThumbnail,
     setDraftSyncStatus,
     setTitle,
     setSummary,
     setBlocks,
   } = args;
-  const content = JSON.stringify(blocks);
+  const content = JSON.stringify(stripLegacyGifBlocks(blocks));
   const summaryToSend =
     summary && summary !== '<br>' && summaryTextLength(summary) > 0 ? summary.trim() : undefined;
 
   if (status === 'draft') {
-    await blogApi.saveDraft({ title: title.trim(), summary: summaryToSend, content }, token);
+    await blogApi.saveDraft(
+      {
+        title: title.trim(),
+        summary: summaryToSend,
+        content,
+        thumbnailUrl: pickRemoteThumbnailForApi(thumbnailPreviewUrl),
+      },
+      token,
+    );
     toast.success('DRAFT_SYNCED');
     setDraftSyncStatus('synced');
     return;
@@ -930,6 +946,8 @@ async function runBlogWriteSubmit(args: Readonly<{
     const data = await uploadCover(token, thumbnailFile, thumbnailCropArea, () => {});
     thumbnailUrl = data.url;
     clearThumbnail();
+  } else {
+    thumbnailUrl = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
   }
   await blogApi.createPost({ title, summary: summaryToSend, content, thumbnailUrl, status: 'published' }, token);
   toast.success('POST_LIVE');
@@ -988,7 +1006,7 @@ function useBlogWriteDraftHandlers(input: BlogWriteDraftHandlersInput): {
   } = input;
 
   const saveDraftToLocal = useCallback(() => {
-    const content = JSON.stringify(blocks);
+    const content = JSON.stringify(stripLegacyGifBlocks(blocks));
     const summaryVal = summary && summary !== '<br>' && summaryTextLength(summary) > 0 ? summary : '';
     saveDraftToStorage({
       title,
@@ -1006,7 +1024,7 @@ function useBlogWriteDraftHandlers(input: BlogWriteDraftHandlersInput): {
     try {
       const parsed = JSON.parse(draft.content) as unknown;
       if (Array.isArray(parsed) && parsed.length <= MAX_BLOCKS_PER_SECTION) {
-        setBlocks(parsed as Block[]);
+        setBlocks(stripLegacyGifBlocks(parsed as Block[]));
       }
     } catch {
       // ignore invalid content
@@ -1021,10 +1039,10 @@ function useBlogWriteDraftHandlers(input: BlogWriteDraftHandlersInput): {
     if (!navigator.onLine) return;
     const currentToken = tokenRef.current;
     if (!currentToken) return;
-    const { title: t, summary: s, blocks: b } = latestForSyncRef.current;
+    const { title: t, summary: s, blocks: b, thumbnailPreviewUrl: thumb } = latestForSyncRef.current;
     if (!t.trim() && b.length === 0) return;
     setDraftSyncStatus('syncing');
-    const content = JSON.stringify(b);
+    const content = JSON.stringify(stripLegacyGifBlocks(b));
     const summaryToSend = s && s !== '<br>' && summaryTextLength(s) > 0 ? s : undefined;
     blogApi
       .saveDraft(
@@ -1032,6 +1050,7 @@ function useBlogWriteDraftHandlers(input: BlogWriteDraftHandlersInput): {
           title: t.trim() || 'Untitled draft',
           summary: summaryToSend,
           content,
+          thumbnailUrl: pickRemoteThumbnailForApi(thumb ?? null),
         },
         currentToken,
       )
@@ -1263,6 +1282,7 @@ export default function WriteBlogPage() {
           blocks,
           thumbnailFile,
           thumbnailCropArea,
+          thumbnailPreviewUrl,
           clearThumbnail,
           setDraftSyncStatus,
           setTitle,
@@ -1284,6 +1304,7 @@ export default function WriteBlogPage() {
       blocks,
       thumbnailFile,
       thumbnailCropArea,
+      thumbnailPreviewUrl,
       clearThumbnail,
       setDraftSyncStatus,
     ],

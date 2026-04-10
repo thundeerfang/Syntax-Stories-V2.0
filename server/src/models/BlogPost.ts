@@ -5,8 +5,11 @@ export type BlogPostStatus = 'draft' | 'published';
 /**
  * Blog post or draft. `content` is **`JSON.stringify(Block[])`**: an array of blocks with `id`, `type`,
  * `sectionId?`, `payload`. Types include `paragraph` (markdown: bold/italic/underline/links/lists,
- * `[@username](mention:24hexMongoUserId)`, plain `@user`), `heading`, `partition`, `image`, `gif`,
+ * `[@username](mention:24hexMongoUserId)`, plain `@user`), `heading`, `partition`, `image`,
  * `videoEmbed`, `githubRepo`, `unsplashImage`, etc.
+ *
+ * **`content` validation:** `POST /api/blog` and `PUT /api/blog/draft` run server-side checks
+ * (max size, allowed `type` values, payload limits, strip legacy `gif` blocks) before persisting.
  */
 export interface IBlogPost extends Document {
   authorId: mongoose.Types.ObjectId;

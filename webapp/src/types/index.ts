@@ -1,7 +1,9 @@
 export interface User {
   id: string;
-  email: string;
+  email?: string;
   name: string;
+  /** Public profile handle; used in blog URLs `/blogs/[username]/[slug]`. */
+  username?: string;
   image?: string;
 }
 
@@ -24,4 +26,7 @@ export type {
   BlogDraftPayload,
   StoredDraftPayload,
   BlogPostResponse,
+  PublicFeedPost,
+  PublicFeedPostAuthor,
+  PublicBlogPostDetail,
 } from './blog';

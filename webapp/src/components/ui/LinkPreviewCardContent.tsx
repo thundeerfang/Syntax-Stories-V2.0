@@ -5,7 +5,12 @@ import { ExternalLink, Globe } from 'lucide-react';
 
 function normalizeDomain(domain: string | undefined): string {
   if (!domain?.trim()) return '';
-  const d = domain.trim().replace(/^https?:\/\//i, '').replace(/\/$/, '');
+  const t = domain.trim();
+  /** Keep explicit http(s) so previews match the link the user saved. */
+  if (/^https?:\/\//i.test(t)) {
+    return t.replace(/\/$/, '');
+  }
+  const d = t.replace(/^\/+/, '').replace(/\/$/, '');
   return d ? `https://${d}` : '';
 }
 

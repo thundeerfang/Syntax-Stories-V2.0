@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Users, Search, UserPlus, Compass } from 'lucide-react';
+import { Users, Search, UserPlus, Compass, X } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { cn } from '@/lib/utils';
 import { followApi, type FollowUser } from '@/api/follow';
@@ -322,11 +322,26 @@ export function FollowersFollowingDialog({
       open={open}
       onClose={onClose}
       titleId="followers-dialog-title"
-      contentClassName="relative p-0 pt-10 flex flex-col flex-1 min-h-0"
+      showCloseButton={false}
+      panelClassName="max-w-lg"
+      contentClassName="relative p-0 flex flex-col min-h-0 max-h-[80vh]"
     >
-      <h2 id="followers-dialog-title" className="text-sm font-black uppercase tracking-widest flex items-center gap-2 px-6 mb-4">
-        <Users className="size-4 text-primary" /> Followers & Following
-      </h2>
+      <div className="flex items-center justify-between gap-3 border-b-2 border-border px-6 py-4">
+        <h2
+          id="followers-dialog-title"
+          className="text-sm font-black uppercase tracking-widest flex items-center gap-2"
+        >
+          <Users className="size-4 text-primary" /> Followers & Following
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex size-9 shrink-0 items-center justify-center rounded-sm border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0_0_var(--border)] hover:text-foreground hover:border-primary"
+          aria-label="Close"
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      </div>
       <div className="flex border-b-2 border-border px-6">
         <button
           type="button"

@@ -25,7 +25,14 @@ function renderAddControl(
   if (!showAdd || isPreviewMode) return null;
   if (settingsSection) {
     return (
-      <Link href={settingsUrl(settingsSection)} className={ADD_BTN_CLASS}>
+      <Link
+        href={settingsUrl(settingsSection)}
+        className={ADD_BTN_CLASS}
+        onClick={(e) => {
+          // let the parent handle navigation via settingsUrl side effects; avoid default <Link> routing
+          e.preventDefault();
+        }}
+      >
         <Plus className="size-3" /> Add
       </Link>
     );

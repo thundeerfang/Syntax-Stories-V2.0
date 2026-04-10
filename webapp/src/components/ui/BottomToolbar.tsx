@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { AlignLeft, Camera, Film, Gauge, Image as ImageIcon, Minus, Type } from 'lucide-react';
+import { AlignLeft, Camera, Film, Image as ImageIcon, Minus, Type } from 'lucide-react';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/utils';
 
@@ -46,12 +46,6 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     label: 'Image block',
     icon: ImageIcon,
     description: 'Upload an image; add an optional title for the caption and accessibility.',
-  },
-  {
-    id: 'gif',
-    label: 'GIF block',
-    icon: Gauge,
-    description: 'Search and embed a GIF as its own block.',
   },
   {
     id: 'videoEmbed',
