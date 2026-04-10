@@ -1,23 +1,13 @@
 import React, { useCallback, useId, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
 import {
   Trash2,
   Image as ImageIcon,
   Film,
-  Link2,
   Camera,
-  Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  List,
-  ListOrdered,
-  AtSign,
   ExternalLink,
   X,
   Type,
   GripVertical,
-  Globe,
   Info,
   AlignLeft,
   Square,
@@ -26,8 +16,6 @@ import {
   Upload,
 } from 'lucide-react';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
-import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
-import { followApi, type FollowUser } from '@/api/follow';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { uploadMedia } from '@/api/upload';
@@ -37,7 +25,6 @@ import type {
   ImageBlockLayout,
   ImagePayload,
   ParagraphPayload,
-  RichTextDoc,
   VideoEmbedDisplaySize,
   VideoEmbedLayoutDirection,
   VideoEmbedPayload,
@@ -106,14 +93,6 @@ const VIDEO_EMBED_MAX = 3;
 const UL_ITEM_LINE = /^\s*[-*]\s+(.*)$/;
 const OL_ITEM_LINE = /^\s*\d+\.\s+(.*)$/;
 
-function richExecCommand(commandId: string, showUI = false, value?: string | null): boolean {
-  return document.execCommand(commandId, showUI, value ?? undefined); // NOSONAR S1874
-}
-
-function richQueryCommandState(commandId: string): boolean {
-  return document.queryCommandState(commandId); // NOSONAR S1874
-}
-
 function getBrowserSelection(): Selection | null {
   if (typeof document === 'undefined') return null;
   return document.getSelection();
@@ -141,192 +120,6 @@ function consumeMarkdownListBlock(
 /** Stored in paragraph `payload.text` (persisted in `BlogPost.content` JSON). */
 const MENTION_WITH_ID_RE = /\[(@[^\]]+)\]\(mention:([a-fA-F0-9]{24})\)/g;
 
-// Fast inline markdown: non-greedy (.+?) so "**a** ****" parses correctly. Plus lists.
-function markdownToHtml(raw: string): string {
-  const escape = (s: string) =>
-    s
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;');
-  const inline = (s: string) => {
-    let t = escape(s);
-    const mentionChunks: string[] = [];
-    t = t.replace(MENTION_WITH_ID_RE, (_m, label: string, id: string) => {
-      const i = mentionChunks.length;
-      mentionChunks.push(`<span class="ss-mention" data-user-id="${id}">${label}</span>`);
-      return `__SS_MENTION_PH_${i}__`;
-    });
-    t = t
-      .replaceAll(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replaceAll(/__(.+?)__/g, '<u>$1</u>')
-      .replaceAll(/\*(.+?)\*/g, '<em>$1</em>');
-    t = t.replaceAll(/\[([^\]]*)\]\(([^)]*)\)/g, '<a href="$2" rel="noopener noreferrer" target="_blank">$1</a>');
-    t = t.replaceAll(/@(\w+)/g, '<span class="ss-mention">@$1</span>');
-    for (let i = mentionChunks.length - 1; i >= 0; i--) {
-      t = t.replaceAll(`__SS_MENTION_PH_${i}__`, mentionChunks[i]!);
-    }
-    return t;
-  };
-  const lines = (raw || '').split('\n');
-  const out: string[] = [];
-  let i = 0;
-  while (i < lines.length) {
-    const ulBlock = consumeMarkdownListBlock(lines, i, UL_ITEM_LINE, (h) => '<ul>' + h + '</ul>', inline);
-    if (ulBlock) {
-      out.push(ulBlock.html);
-      i = ulBlock.next;
-      continue;
-    }
-    const olBlock = consumeMarkdownListBlock(lines, i, OL_ITEM_LINE, (h) => '<ol>' + h + '</ol>', inline);
-    if (olBlock) {
-      out.push(olBlock.html);
-      i = olBlock.next;
-      continue;
-    }
-    out.push(inline(lines[i] ?? '') + '<br>');
-    i++;
-  }
-  return out.join('');
-}
-
-type HtmlToMdState = { out: string; olNum: number };
-
-function walkElementToMarkdown(e: HTMLElement, walk: (n: Node) => void, state: HtmlToMdState): boolean {
-  const tag = e.tagName?.toLowerCase();
-  if (tag === 'br') {
-    /* Invisible caret anchor at end of block — not an extra markdown newline */
-    if (e.hasAttribute('data-ss-pad')) return true;
-    state.out += '\n';
-    return true;
-  }
-  if (tag === 'p') {
-    e.childNodes.forEach((n) => walk(n));
-    state.out += '\n';
-    return true;
-  }
-  /* contenteditable Enter creates sibling <div>s; without a block boundary they collapse into one line. */
-  if (tag === 'div') {
-    e.childNodes.forEach((n) => walk(n));
-    if (!state.out.endsWith('\n')) state.out += '\n';
-    return true;
-  }
-  if (tag === 'a') {
-    const href = e.getAttribute('href') ?? '';
-    state.out += '[';
-    e.childNodes.forEach((n) => walk(n));
-    state.out += '](' + href + ')';
-    return true;
-  }
-  if (tag === 'span' && e.classList?.contains('ss-mention')) {
-    const uid = e.getAttribute('data-user-id')?.trim() ?? '';
-    if (/^[a-fA-F0-9]{24}$/.test(uid)) {
-      const label = (e.textContent ?? '').trim() || '@user';
-      const bracketLabel = label.startsWith('@') ? label : `@${label}`;
-      state.out += `[${bracketLabel}](mention:${uid})`;
-      return true;
-    }
-    e.childNodes.forEach((n) => walk(n));
-    return true;
-  }
-  if (tag === 'strong' || tag === 'b') {
-    state.out += '**';
-    e.childNodes.forEach((n) => walk(n));
-    state.out += '**';
-    return true;
-  }
-  if (tag === 'em' || tag === 'i') {
-    state.out += '*';
-    e.childNodes.forEach((n) => walk(n));
-    state.out += '*';
-    return true;
-  }
-  if (tag === 'u') {
-    state.out += '__';
-    e.childNodes.forEach((n) => walk(n));
-    state.out += '__';
-    return true;
-  }
-  if (tag === 'li') {
-    const parent = e.parentElement?.tagName?.toLowerCase();
-    if (parent === 'ol') {
-      state.olNum++;
-      state.out += state.olNum + '. ';
-    } else {
-      state.out += '- ';
-    }
-    e.childNodes.forEach((n) => walk(n));
-    state.out += '\n';
-    return true;
-  }
-  if (tag === 'ul') {
-    state.olNum = 0;
-    e.childNodes.forEach((n) => walk(n));
-    return true;
-  }
-  if (tag === 'ol') {
-    state.olNum = 0;
-    e.childNodes.forEach((n) => walk(n));
-    return true;
-  }
-  return false;
-}
-
-function htmlToMarkdown(el: HTMLElement): string {
-  const state: HtmlToMdState = { out: '', olNum: 0 };
-  const walk = (node: Node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      state.out += node.textContent ?? '';
-      return;
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return;
-    const e = node as HTMLElement;
-    if (walkElementToMarkdown(e, walk, state)) return;
-    e.childNodes.forEach((n) => walk(n));
-  };
-  el.childNodes.forEach((n) => walk(n));
-  return state.out.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-}
-
-/**
- * Inserts a real line break for the paragraph editor. When the caret is at the end of a line
- * with no node after it, browsers need a second <br data-ss-pad> so the caret can sit on a new
- * empty row; without it, extra Enters often collapse to a single blank line.
- */
-function insertParagraphLineBreak(editorEl: HTMLElement): void {
-  const sel = getBrowserSelection();
-  if (!sel || sel.rangeCount === 0) return;
-  const range = sel.getRangeAt(0);
-  if (!editorEl.contains(range.commonAncestorContainer)) return;
-
-  range.deleteContents();
-  const br = document.createElement('br');
-  range.insertNode(br);
-
-  let newRange = document.createRange();
-  if (!br.nextSibling) {
-    const pad = document.createElement('br');
-    pad.setAttribute('data-ss-pad', '');
-    br.parentNode?.appendChild(pad);
-    newRange.setStartBefore(pad);
-  } else {
-    newRange.setStartAfter(br);
-  }
-  newRange.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
-}
-
-/** Medium-style: collapse spaces/tabs on each line only; keep newlines so blank lines survive. */
-function collapseHorizontalWhitespacePreservingNewlines(s: string): string {
-  return s
-    .replaceAll('\r\n', '\n')
-    .replaceAll('\r', '\n')
-    .split('\n')
-    .map((line) => line.replace(/[ \t\u00a0]+/g, ' '))
-    .join('\n');
-}
-
 function ParagraphBlockEditor({
   blockId: _blockId,
   payload,
@@ -339,7 +132,7 @@ function ParagraphBlockEditor({
   onRemove: () => void;
 }>) {
   const [helpOpen, setHelpOpen] = useState(false);
-  const effectiveDoc: RichTextDoc | undefined = payload.doc ?? coerceParagraphDoc(payload);
+  const effectiveDoc: any = payload.doc ?? coerceParagraphDoc(payload);
 
   return (
     <div className="group border-2 border-border bg-card p-3 space-y-2 rounded-md">
@@ -583,14 +376,13 @@ function UnsplashImageWithOverlays({
     <div className={cn('group relative isolate h-full w-full overflow-hidden', frameClassName)}>
       <img src={url} alt={imgAlt} className={imgClassName} />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/85 via-black/35 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-linear-to-t from-black/85 via-black/35 to-transparent"
         aria-hidden
       />
-      {/* Hover: layout + delete + caption */}
       <div
         className={cn(
           'absolute inset-0 z-10 flex flex-col justify-between p-2 sm:p-3',
-          'bg-gradient-to-b from-black/65 via-black/20 to-black/50',
+          'bg-linear-to-b from-black/65 via-black/20 to-black/50',
           'transition-all duration-200 ease-out',
           /* Touch / small: keep controls usable without hover */
           'max-md:pointer-events-auto max-md:opacity-100',
@@ -701,13 +493,13 @@ function UploadedImageWithOverlays({
     <div className={cn('group relative isolate h-full w-full overflow-hidden', frameClassName)}>
       <img src={url} alt={imgAlt} className={imgClassName} />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/85 via-black/35 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-linear-to-t from-black/85 via-black/35 to-transparent"
         aria-hidden
       />
       <div
         className={cn(
           'absolute inset-0 z-10 flex flex-col justify-between p-2 sm:p-3',
-          'bg-gradient-to-b from-black/65 via-black/20 to-black/50',
+          'bg-linear-to-b from-black/65 via-black/20 to-black/50',
           'transition-all duration-200 ease-out',
           'max-md:pointer-events-auto max-md:opacity-100',
           'md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100',
@@ -846,7 +638,7 @@ function ImageBlockEditor({
     );
     if (layout === 'square') {
       return (
-        <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-[4px_4px_0_0_var(--border)]">
+        <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-md">
           <div className="mx-auto aspect-square w-full max-w-xl overflow-hidden border-2 border-border bg-background">
             {overlays}
           </div>
@@ -855,14 +647,14 @@ function ImageBlockEditor({
     }
     if (layout === 'fullWidth') {
       return (
-        <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow-[4px_4px_0_0_var(--border)]">
-          <div className="relative h-80 w-full min-w-0 sm:h-[22rem] lg:h-[26rem]">{overlays}</div>
+        <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow-md">
+          <div className="relative h-80 w-full min-w-0 sm:h-88 lg:h-104">{overlays}</div>
         </div>
       );
     }
     return (
-      <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-[4px_4px_0_0_var(--border)]">
-        <div className="mx-auto aspect-[16/9] w-full max-w-3xl overflow-hidden border-2 border-border bg-background">
+      <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-md">
+        <div className="mx-auto aspect-video w-full max-w-3xl overflow-hidden border-2 border-border bg-background">
           {overlays}
         </div>
       </div>
@@ -916,7 +708,7 @@ function ImageBlockEditor({
 function videoSlotsFromPayload(payload: VideoEmbedPayload): string[] {
   const v = (payload.videos ?? []).filter((s) => typeof s === 'string' && s.trim()).slice(0, VIDEO_EMBED_MAX);
   if (v.length > 0) return v.map((s) => s.trim());
-  const u = payload.url?.trim();
+  const u = payload.url?.trim(); // NOSONAR
   return u ? [u] : [''];
 }
 
@@ -948,24 +740,33 @@ function VideoEmbedPreviewThumb({
   size,
 }: Readonly<{ embedUrl: string; size: VideoEmbedDisplaySize }>) {
   const thumb = youtubeThumbnailUrl(embedUrl);
-  const widthClass =
-    size === 'sm'
-      ? 'w-[min(100%,7.75rem)] sm:w-[7.75rem]'
-      : size === 'md'
-        ? 'w-[min(100%,11.5rem)] sm:w-[11.5rem]'
-        : 'w-full max-w-lg';
-  const filmIcon = size === 'sm' ? 'h-5 w-5' : size === 'md' ? 'h-6 w-6' : 'h-8 w-8';
+  let widthClass: string;
+  if (size === 'sm') {
+    widthClass = 'w-[min(100%,7.75rem)] sm:w-[7.75rem]';
+  } else if (size === 'md') {
+    widthClass = 'w-[min(100%,11.5rem)] sm:w-[11.5rem]';
+  } else {
+    widthClass = 'w-full max-w-lg';
+  }
+  let filmIcon: string;
+  if (size === 'sm') {
+    filmIcon = 'h-5 w-5';
+  } else if (size === 'md') {
+    filmIcon = 'h-6 w-6';
+  } else {
+    filmIcon = 'h-8 w-8';
+  }
   if (thumb) {
     return (
       <div
         className={cn(
-          'shrink-0 overflow-hidden border-2 border-border bg-black shadow-[3px_3px_0_0_var(--border)] ring-1 ring-black/20',
+          'shrink-0 overflow-hidden border-2 border-border bg-black shadow ring-1 ring-black/20',
           widthClass,
         )}
       >
         <div className="relative aspect-video w-full">
           <img src={thumb} alt="" className="h-full w-full object-cover" />
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/50 to-transparent">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-linear-to-t from-black/50 to-transparent">
             <div className="flex h-9 w-9 items-center justify-center border-2 border-white/30 bg-black/55 shadow-md backdrop-blur-[2px]">
               <Film className={cn('text-white', filmIcon)} />
             </div>
@@ -974,11 +775,18 @@ function VideoEmbedPreviewThumb({
       </div>
     );
   }
-  const iframeH = size === 'sm' ? 'h-[4.5rem]' : size === 'md' ? 'h-[6.75rem]' : 'h-40';
+  let iframeH: string;
+  if (size === 'sm') {
+    iframeH = 'h-[4.5rem]';
+  } else if (size === 'md') {
+    iframeH = 'h-[6.75rem]';
+  } else {
+    iframeH = 'h-40';
+  }
   return (
     <div
       className={cn(
-        'shrink-0 overflow-hidden border-2 border-border bg-black shadow-[3px_3px_0_0_var(--border)]',
+        'shrink-0 overflow-hidden border-2 border-border bg-black shadow',
         widthClass,
       )}
     >
@@ -1055,7 +863,7 @@ function VideoEmbedBlockEditor({
     const nextSlots = [...slots];
     nextSlots[index] = r.embedUrl ?? raw;
     const videos = normalizeSlotsToVideos(nextSlots);
-    const lastEmpty = nextSlots.length > 0 && nextSlots[nextSlots.length - 1]?.trim() === '';
+    const lastEmpty = nextSlots.length > 0 && nextSlots.at(-1)?.trim() === '';
     let finalSlots = nextSlots;
     if (videos.length < VIDEO_EMBED_MAX && !lastEmpty) {
       finalSlots = [...nextSlots, ''];
@@ -1094,12 +902,14 @@ function VideoEmbedBlockEditor({
     return false;
   };
 
-  const sizeHint =
-    effectiveLayout === 'row' && previewCount >= 3
-      ? 'Row + three videos: small previews only.'
-      : effectiveLayout === 'row' && previewCount === 2
-        ? 'Row + two videos: large size is unavailable.'
-        : null;
+  let sizeHint: string | null;
+  if (effectiveLayout === 'row' && previewCount >= 3) {
+    sizeHint = 'Row + three videos: small previews only.';
+  } else if (effectiveLayout === 'row' && previewCount === 2) {
+    sizeHint = 'Row + two videos: large size is unavailable.';
+  } else {
+    sizeHint = null;
+  }
 
   const showColumnLayout = previewCount >= 2;
   const showAddVideoButton = previewCount >= 2 && slots.length < VIDEO_EMBED_MAX;
@@ -1129,15 +939,13 @@ function VideoEmbedBlockEditor({
           until fixed.
         </p>
 
-        <div className="border-2 border-border bg-muted/25 p-3 shadow-[4px_4px_0_0_var(--border)]">
+        <div className="border-2 border-border bg-muted/25 p-3 shadow-md">
           <div className={cn('grid gap-4', showColumnLayout ? 'sm:grid-cols-2' : 'grid-cols-1')}>
             <div className="space-y-2">
               <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Layout</span>
               {showColumnLayout ? (
                 <div
-                  className="flex overflow-hidden border-2 border-border bg-card shadow-[2px_2px_0_0_var(--border)]"
-                  role="group"
-                  aria-label="Preview layout"
+                  className="flex overflow-hidden border-2 border-border bg-card shadow-sm"
                 >
                   <button
                     type="button"
@@ -1173,9 +981,7 @@ function VideoEmbedBlockEditor({
                 </div>
               ) : (
                 <div
-                  className="flex border-2 border-border bg-card shadow-[2px_2px_0_0_var(--border)]"
-                  role="group"
-                  aria-label="Layout"
+                  className="flex border-2 border-border bg-card shadow-sm"
                 >
                   <div className="flex w-full flex-col items-center gap-1 bg-primary py-2.5 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
                     <StretchHorizontal className="h-4 w-4" strokeWidth={2} />
@@ -1190,9 +996,7 @@ function VideoEmbedBlockEditor({
                 Preview size
               </span>
               <div
-                className="flex overflow-hidden border-2 border-border bg-card shadow-[2px_2px_0_0_var(--border)]"
-                role="group"
-                aria-label="Preview size"
+                className="flex overflow-hidden border-2 border-border bg-card shadow-sm"
               >
                 {(
                   [
@@ -1200,20 +1004,25 @@ function VideoEmbedBlockEditor({
                     { id: 'md' as const, label: 'M' },
                     { id: 'lg' as const, label: 'L' },
                   ] as const
-                ).map(({ id, label }, idx) => (
-                  <React.Fragment key={id}>
+                ).map(({ id, label }, idx) => {
+                  return (
+                    <React.Fragment key={id}>
                     {idx > 0 ? <span className="w-px shrink-0 bg-border" aria-hidden /> : null}
                     <button
                       type="button"
                       aria-pressed={displaySize === id}
                       disabled={sizeOptionDisabled(id)}
-                      title={
-                        sizeOptionDisabled(id)
-                          ? previewCount >= 3
-                            ? 'Unavailable with three videos'
-                            : 'Unavailable with two videos'
-                          : undefined
-                      }
+                      title={(() => {
+                        let titleText: string | undefined;
+                        if (sizeOptionDisabled(id)) {
+                          if (previewCount >= 3) {
+                            titleText = 'Unavailable with three videos';
+                          } else {
+                            titleText = 'Unavailable with two videos';
+                          }
+                        }
+                        return titleText;
+                      })()}
                       onClick={() => {
                         if (sizeOptionDisabled(id)) return;
                         commitAll(slots, layout, id);
@@ -1229,14 +1038,14 @@ function VideoEmbedBlockEditor({
                     >
                       {label}
                     </button>
-                  </React.Fragment>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </div>
               {sizeHint ? <p className="text-[10px] leading-snug text-muted-foreground">{sizeHint}</p> : null}
             </div>
           </div>
         </div>
-
         <div className="space-y-2.5">
           {slots.map((val, i) => (
             <div key={`${fieldId}-slot-${i}`} className="space-y-1">
@@ -1270,7 +1079,7 @@ function VideoEmbedBlockEditor({
                   <button
                     type="button"
                     onClick={() => removeSlotAt(i)}
-                    className="shrink-0 border-2 border-border bg-muted/50 p-2.5 text-muted-foreground shadow-[2px_2px_0_0_var(--border)] transition-colors hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
+                    className="shrink-0 border-2 border-border bg-muted/50 p-2.5 text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
                     aria-label={`Remove video ${i + 1}`}
                   >
                     <X className="h-4 w-4" />
@@ -1286,7 +1095,7 @@ function VideoEmbedBlockEditor({
           <button
             type="button"
             onClick={addSlot}
-            className="inline-flex items-center gap-2 border-2 border-dashed border-border bg-muted/20 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-foreground shadow-[2px_2px_0_0_var(--border)] transition-colors hover:border-primary hover:bg-primary/5"
+            className="inline-flex items-center gap-2 border-2 border-dashed border-border bg-muted/20 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-foreground shadow-sm transition-colors hover:border-primary hover:bg-primary/5"
           >
             <Film className="h-3.5 w-3.5" />
             Add video ({slots.length}/{VIDEO_EMBED_MAX})
@@ -1300,7 +1109,7 @@ function VideoEmbedBlockEditor({
             </span>
             <div
               className={cn(
-                'flex min-h-[5rem] gap-3 border-2 border-border bg-gradient-to-b from-muted/50 to-muted/20 p-4 shadow-[4px_4px_0_0_var(--border)]',
+                'flex min-h-20 gap-3 border-2 border-border bg-linear-to-b from-muted/50 to-muted/20 p-4 shadow-md',
                 effectiveLayout === 'row'
                   ? 'flex-row flex-wrap items-start justify-center content-center'
                   : 'flex-col items-center justify-center',
@@ -1576,7 +1385,7 @@ function UnsplashBlockEditor({
     );
     if (layout === 'square') {
       return (
-        <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-[4px_4px_0_0_var(--border)]">
+        <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-md">
           <div className="mx-auto aspect-square w-full max-w-xl overflow-hidden border-2 border-border bg-background">
             {overlays}
           </div>
@@ -1585,14 +1394,14 @@ function UnsplashBlockEditor({
     }
     if (layout === 'fullWidth') {
       return (
-        <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow-[4px_4px_0_0_var(--border)]">
-          <div className="relative h-80 w-full min-w-0 sm:h-[22rem] lg:h-[26rem]">{overlays}</div>
+        <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow-md">
+          <div className="relative h-80 w-full min-w-0 sm:h-88 lg:h-104">{overlays}</div>
         </div>
       );
     }
     return (
-      <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-[4px_4px_0_0_var(--border)]">
-        <div className="mx-auto aspect-[16/9] w-full max-w-3xl overflow-hidden border-2 border-border bg-background">
+      <div className="border-2 border-border bg-muted/50 p-2 sm:p-3 shadow-md">
+        <div className="mx-auto aspect-video w-full max-w-3xl overflow-hidden border-2 border-border bg-background">
           {overlays}
         </div>
       </div>
@@ -1623,7 +1432,7 @@ function UnsplashBlockEditor({
                 type="button"
                 onClick={handleSearch}
                 disabled={searching || !searchQuery.trim()}
-                className="px-3 py-1.5 text-[10px] font-bold uppercase border-2 border-border bg-primary text-primary-foreground shadow-[3px_3px_0_0_var(--border)] hover:brightness-110 disabled:opacity-50"
+                className="px-3 py-1.5 text-[10px] font-bold uppercase border-2 border-border bg-primary text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
               >
                 {searching ? '…' : 'Search'}
               </button>
@@ -1706,7 +1515,7 @@ export function BlogWriteEditor({
   /** Global index to insert *before* (equals `blocks.length` to append after last block in doc). */
   const appendSlotIndex = useMemo(() => {
     if (visibleBlocks.length === 0) return blocks.length;
-    const last = visibleBlocks[visibleBlocks.length - 1];
+    const last = visibleBlocks.at(-1)!;
     const lastGlobal = blocks.findIndex((b) => b.id === last.id);
     return lastGlobal >= 0 ? lastGlobal + 1 : blocks.length;
   }, [visibleBlocks, blocks]);
@@ -1927,7 +1736,8 @@ export function BlogWriteEditor({
                   aria-hidden
                 />
               )}
-              <div
+              <button
+                type="button"
                 draggable
                 onDragStart={(e) => handleDragStart(e, blockIndex)}
                 onDragEnd={handleDragEnd}
@@ -1936,8 +1746,8 @@ export function BlogWriteEditor({
                 title="Drag to reorder"
               >
                 <GripVertical className="h-4 w-4 pointer-events-none" />
-              </div>
-              <div className="flex-1 min-w-0" draggable={false} onDragStart={(ev) => ev.preventDefault()}>
+              </button>
+              <div className="flex-1 min-w-0" draggable={false}>
                 {blockContent}
               </div>
             </li>
@@ -1951,7 +1761,6 @@ export function BlogWriteEditor({
         )}
         onDragOver={handleDragOverAppendZone}
         onDrop={handleDropOnAppendZone}
-        role="presentation"
       >
         <p className="pointer-events-none py-4 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           Drop here to place at end of section

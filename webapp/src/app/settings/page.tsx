@@ -36,7 +36,7 @@ import {
   List,
   ListOrdered,
   Sigma,
-  Linkedin,
+  LinkedinIcon,
   Github,
   Instagram,
   Youtube,
@@ -69,7 +69,6 @@ import {
   settingsBtnBlockPrimarySm,
   settingsBtnIconFab,
 } from './buttonStyles';
-import { useSidebar } from '@/hooks/useSidebar';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
@@ -103,10 +102,8 @@ import { OpenSourceCard } from './settings-list/OpenSourceCard';
 import { type SetupItem as MySetupItem } from './settings-list/MySetupCard';
 import { SettingsSectionHeader } from './settings-list/Header';
 
-type SectionId = string;
-
 interface NavItem {
-  id: SectionId;
+  id: string;
   label: string;
   icon: React.ElementType;
 }
@@ -260,6 +257,36 @@ function EditProfileContent() {
   const symbolsRef = useRef<HTMLDivElement>(null);
   const [formatActive, setFormatActive] = useState({ bold: false, italic: false, underline: false });
 
+  const selectionHasStyle = useCallback(
+    (
+      root: HTMLElement,
+      predicate: (element: HTMLElement, computed: CSSStyleDeclaration) => boolean,
+    ) => {
+      if (typeof window === 'undefined') return false;
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return false;
+      const range = selection.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+      if (!root.contains(container)) return false;
+
+      let node: Node | null =
+        selection.anchorNode?.nodeType === Node.ELEMENT_NODE
+          ? selection.anchorNode
+          : selection.anchorNode?.parentElement ?? null;
+
+      while (node && root.contains(node)) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement;
+          const computed = window.getComputedStyle(element);
+          if (predicate(element, computed)) return true;
+        }
+        node = node.parentNode;
+      }
+      return false;
+    },
+    [],
+  );
+
   const updateFormatState = useCallback(() => {
     const el = bioEditorRef.current;
     if (!el || typeof document === 'undefined') return;
@@ -268,11 +295,26 @@ function EditProfileContent() {
       return;
     }
     setFormatActive({
-      bold: document.queryCommandState('bold'),
-      italic: document.queryCommandState('italic'),
-      underline: document.queryCommandState('underline'),
+      bold: selectionHasStyle(el, (element, computed) => {
+        const fontWeight = computed.fontWeight;
+        const numericWeight = Number.parseInt(fontWeight, 10);
+        return (
+          element.tagName === 'B' ||
+          element.tagName === 'STRONG' ||
+          fontWeight === 'bold' ||
+          (!Number.isNaN(numericWeight) && numericWeight >= 600)
+        );
+      }),
+      italic: selectionHasStyle(
+        el,
+        (element, computed) => element.tagName === 'I' || element.tagName === 'EM' || computed.fontStyle === 'italic',
+      ),
+      underline: selectionHasStyle(el, (element, computed) => {
+        const textDecoration = computed.textDecorationLine || computed.textDecoration;
+        return element.tagName === 'U' || textDecoration.includes('underline');
+      }),
     });
-  }, []);
+  }, [selectionHasStyle]);
 
   useEffect(() => {
     setFullName(user?.fullName ?? '');
@@ -739,7 +781,7 @@ function EditProfileContent() {
        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { key: 'linkedin' as const, label: 'LinkedIn', value: linkedin, set: setLinkedin, placeholder: 'https://linkedin.com/in/username', Icon: Linkedin, iconBg: 'bg-[#0A66C2]/10', iconColor: 'text-[#0A66C2]', maxLen: PROFILE_SOCIAL_URL_MAX },
+            { key: 'linkedin' as const, label: 'LinkedIn', value: linkedin, set: setLinkedin, placeholder: 'https://linkedin.com/in/username', Icon: LinkedinIcon, iconBg: 'bg-[#0A66C2]/10', iconColor: 'text-[#0A66C2]', maxLen: PROFILE_SOCIAL_URL_MAX },
             { key: 'github' as const, label: 'GitHub', value: github, set: setGithub, placeholder: 'https://github.com/username', Icon: Github, iconBg: 'bg-foreground/10', iconColor: 'text-foreground', maxLen: PROFILE_SOCIAL_URL_MAX },
             { key: 'instagram' as const, label: 'Instagram', value: instagram, set: setInstagram, placeholder: 'https://instagram.com/username', Icon: Instagram, iconBg: 'bg-[#E4405F]/10', iconColor: 'text-[#E4405F]', maxLen: PROFILE_INSTAGRAM_MAX },
             { key: 'youtube' as const, label: 'YouTube', value: youtube, set: setYoutube, placeholder: 'https://youtube.com/@channel', Icon: Youtube, iconColor: 'text-[#FF0000]', iconBg: 'bg-[#FF0000]/10', maxLen: PROFILE_SOCIAL_URL_MAX },
@@ -4527,8 +4569,8 @@ function SidebarSkeleton({ itemCount }: { itemCount: number }) {
       </div>
       {/* Nav skeleton */}
       <div className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-3 space-y-2">
-        {Array.from({ length: itemCount }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-1 py-1.5">
+        {Array.from({ length: itemCount }, (_, idx) => `nav-skeleton-${idx + 1}`).map((itemId, i) => (
+          <div key={itemId} className="flex items-center gap-3 px-1 py-1.5">
             <div className="size-4 bg-muted animate-pulse shrink-0" />
             <SkeletonBar width={`${45 + ((i * 11) % 41)}%`} />
           </div>
@@ -4583,8 +4625,6 @@ function ContentSkeleton() {
   );
 }
 
-type TransitionPhase = 'idle' | 'fade-out' | 'skeleton' | 'fade-in';
-
 function SettingsComingSoonPlaceholder({ title }: Readonly<{ title: string | undefined }>) {
   return (
     <div className="flex flex-col items-center justify-center h-full py-20 text-center">
@@ -4600,12 +4640,10 @@ function SettingsComingSoonPlaceholder({ title }: Readonly<{ title: string | und
 export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isOpen: isSidebarOpen } = useSidebar();
   const { user, token, isHydrated, shouldBlock } = useRequireAuth();
   const refreshUser = useAuthStore((s) => s.refreshUser);
   const logout = useAuthStore((s) => s.logout);
-  const collapsed = isSidebarOpen;
-  const [activeSection, setActiveSection] = useState<SectionId>('edit-profile');
+  const [activeSection, setActiveSection] = useState<string>('edit-profile');
   const [contentLoading, setContentLoading] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     Account: true,
@@ -4636,8 +4674,8 @@ export default function SettingsPage() {
       refreshUser();
       toast.success(`${decodeURIComponent(linked)} connected successfully.`);
       router.replace('/settings', { scroll: false });
-    } else if (section && validSectionIds.includes(section as SectionId)) {
-      setActiveSection(section as SectionId);
+    } else if (section && validSectionIds.includes(section)) {
+      setActiveSection(section);
       // Clean up the URL so only `/settings` is visible, even when opened with ?section=...
       router.replace('/settings', { scroll: false });
     }
@@ -4650,8 +4688,8 @@ export default function SettingsPage() {
     if (typeof window === 'undefined') return;
     try {
       const target = window.sessionStorage.getItem('settingsTargetSection');
-      if (target && validSectionIds.includes(target as SectionId)) {
-        setActiveSection(target as SectionId);
+      if (target && validSectionIds.includes(target)) {
+        setActiveSection(target);
         window.sessionStorage.removeItem('settingsTargetSection');
       }
     } catch {
@@ -4659,33 +4697,14 @@ export default function SettingsPage() {
     }
   }, [validSectionIds]);
 
-  const handleSectionChange = (id: SectionId) => {
+  const handleSectionChange = (id: string) => {
     if (id === activeSection) return;
     setContentLoading(true);
     setActiveSection(id);
     setTimeout(() => setContentLoading(false), 400);
   };
 
-  const prevCollapsed = useRef(collapsed);
-  const [phase, setPhase] = useState<TransitionPhase>('idle');
-  const [renderCollapsed, setRenderCollapsed] = useState(collapsed);
-
   const totalItems = NAV_GROUPS.reduce((sum, g) => sum + g.items.length, 0);
-
-  useEffect(() => {
-    if (prevCollapsed.current === collapsed) return;
-    prevCollapsed.current = collapsed;
-
-    setPhase('fade-out');
-    const t1 = setTimeout(() => {
-      setPhase('skeleton');
-      setRenderCollapsed(collapsed);
-    }, 150);
-    const t2 = setTimeout(() => setPhase('fade-in'), 450);
-    const t3 = setTimeout(() => setPhase('idle'), 600);
-
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [collapsed]);
 
   const toggleGroup = (heading: string) => {
     setOpenGroups((prev) => ({ ...prev, [heading]: !prev[heading] }));

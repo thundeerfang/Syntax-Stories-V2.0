@@ -62,14 +62,19 @@ function clampPublicVideoSize(
 ): VideoEmbedDisplaySize {
   if (layout === 'column') return size === 'sm' || size === 'md' || size === 'lg' ? size : 'md';
   if (count >= 3) return 'sm';
-  if (count === 2) return size === 'lg' ? 'md' : size === 'sm' || size === 'md' || size === 'lg' ? size : 'md';
+  if (count === 2) {
+    if (size === 'lg') return 'md';
+    const isValidSize = size === 'sm' || size === 'md' || size === 'lg';
+    return isValidSize ? size : 'md';
+  }
   return size === 'sm' || size === 'md' || size === 'lg' ? size : 'md';
 }
 
 function videoEmbedUrls(p: VideoEmbedPayload): string[] {
   const v = (p.videos ?? []).filter((s) => typeof s === 'string' && s.trim()).slice(0, 3);
   if (v.length) return v;
-  const u = p.url?.trim();
+  const legacyUrl = (p as Record<string, unknown>).url;
+  const u = typeof legacyUrl === 'string' ? legacyUrl.trim() : '';
   return u ? [u] : [];
 }
 
@@ -78,6 +83,164 @@ const imageLayoutFrame: Record<ImageBlockLayout, string> = {
   square: 'aspect-square max-w-2xl mx-auto',
   fullWidth: 'w-full min-h-[20rem] max-h-[35rem]',
 };
+
+function paragraphPreviewCard(href: string) {
+  return <LinkPreviewCardContent domain={href} />;
+}
+
+function getVideoItemWidthClass(size: VideoEmbedDisplaySize): string {
+  if (size === 'sm') return 'w-full max-w-[16rem]';
+  if (size === 'md') return 'w-full max-w-2xl';
+  return 'w-full max-w-5xl';
+}
+
+function getCodeText(payload?: Record<string, unknown>): string {
+  if (typeof payload?.code === 'string') return payload.code;
+  if (typeof payload?.text === 'string') return payload.text;
+  return '';
+}
+
+function ParagraphBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const p = (payload ?? {}) as ParagraphPayload;
+  const doc = p.doc ?? coerceParagraphDoc(p);
+  return (
+    <div className="relative border-l-4 border-primary/30 pl-6 py-2">
+      <RichParagraphEditor
+        initialDoc={doc}
+        legacyText={p.text}
+        readOnly
+        className="!bg-transparent !p-0 !shadow-none !border-none text-base"
+        readOnlyLinkPreview={paragraphPreviewCard}
+      />
+    </div>
+  );
+}
+
+function HeadingBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const text = (payload?.text as string) ?? '';
+  const level = payload?.level === 3 ? 3 : 2;
+  const Tag = level === 3 ? 'h3' : 'h2';
+  return (
+    <Tag className={cn(
+      "font-mono font-black uppercase tracking-tight text-foreground",
+      level === 3 ? "text-xl sm:text-2xl mt-10 mb-4" : "text-3xl sm:text-4xl mt-14 mb-6 border-b-2 border-border pb-2"
+    )}>
+      <span className="mr-2 text-primary">#</span>
+      {text}
+    </Tag>
+  );
+}
+
+function PartitionBlock() {
+  return (
+    <div className="flex items-center gap-4 py-10" role="separator">
+      <div className="h-[2px] flex-1 bg-border" />
+      <div className="font-mono text-xs font-bold text-muted-foreground tracking-widest">SECTION_BREAK</div>
+      <div className="h-[2px] flex-1 bg-border" />
+    </div>
+  );
+}
+
+function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const url = typeof payload?.url === 'string' ? payload.url : '';
+  if (!url) return null;
+  const title = (payload?.title || payload?.caption) as string;
+  const layoutRaw = payload?.layout as string | undefined;
+  const layout: ImageBlockLayout =
+    layoutRaw === 'square' || layoutRaw === 'fullWidth' ? layoutRaw : 'landscape';
+  const frame = imageLayoutFrame[layout];
+  return (
+    <figure className="my-10">
+      <div className="border-4 border-border p-1.5 shadow-[8px_8px_0px_0px_var(--border)] bg-background">
+         <div className={cn('overflow-hidden border-2 border-border', frame)}>
+           <img src={url} alt={title || 'Content image'} className="h-full w-full object-cover" />
+         </div>
+      </div>
+      {title && (
+        <figcaption className="mt-4 text-center font-mono text-xs uppercase tracking-widest text-muted-foreground">
+            {title}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+function VideoEmbedBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const p = (payload ?? {}) as VideoEmbedPayload;
+  const urls = videoEmbedUrls(p);
+  if (urls.length === 0) return null;
+  const layout: VideoEmbedLayoutDirection = p.layout === 'column' ? 'column' : 'row';
+  const rawSize = p.size === 'sm' || p.size === 'md' || p.size === 'lg' ? p.size : 'md';
+  const size = clampPublicVideoSize(urls.length, rawSize, layout);
+  const itemW = getVideoItemWidthClass(size);
+
+  return (
+    <div
+      className={cn(
+        'flex gap-4 border-2 border-border bg-muted/30 p-4 shadow-[6px_6px_0_0_var(--border)] my-8',
+        layout === 'row' ? 'flex-row flex-wrap justify-center' : 'flex-col items-center',
+      )}
+    >
+      {urls.map((src) => (
+        <div key={src} className={cn('overflow-hidden border-2 border-border bg-black shadow-[4px_4px_0_0_var(--border)]', itemW)}>
+          <div className="aspect-video w-full">
+            <iframe
+              src={src}
+              title="Embedded video"
+              className="h-full w-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CodeBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const code = getCodeText(payload);
+  const lang = typeof payload?.language === 'string' ? payload.language : 'text';
+  if (!code) return null;
+  return (
+    <div className="my-8 overflow-hidden border-2 border-border shadow-[6px_6px_0px_0px_var(--border)]">
+      <div className="flex items-center justify-between border-b-2 border-border bg-zinc-900 px-4 py-2.5">
+        <span className="font-mono text-xs font-bold text-zinc-400 uppercase tracking-wider">{lang}</span>
+        <div className="flex gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-none border border-zinc-700 bg-zinc-800" />
+          <div className="h-2.5 w-2.5 rounded-none border border-zinc-700 bg-zinc-800" />
+        </div>
+      </div>
+      <pre className="overflow-x-auto bg-zinc-950 p-6 text-sm leading-relaxed text-zinc-100 font-mono">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+function GithubRepoBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const owner = typeof payload?.owner === 'string' ? payload.owner : '';
+  const repo = typeof payload?.repo === 'string' ? payload.repo : '';
+  const name = typeof payload?.name === 'string' ? payload.name : repo;
+  const href = (payload?.url as string) || `https://github.com/${owner}/${repo}`;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group my-6 flex items-center gap-5 border-2 border-border bg-card p-5 shadow-[6px_6px_0_0_var(--border)] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0_0_var(--border)]"
+    >
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-border bg-muted group-hover:bg-primary/10">
+         <GithubIcon className="h-7 w-7" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <h4 className="font-mono text-base font-black uppercase text-foreground">{owner}/{name}</h4>
+        <p className="line-clamp-1 text-sm text-muted-foreground">Repository source on GitHub</p>
+      </div>
+      <ArrowUpRight className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+    </a>
+  );
+}
 
 // --- COMPONENTS ---
 
@@ -103,141 +266,21 @@ function PublicBlogBlock({ block }: Readonly<{ block: Block }>) {
   const payload = block.payload as Record<string, unknown> | undefined;
 
   switch (block.type) {
-    case 'paragraph': {
-      const p = (payload ?? {}) as ParagraphPayload;
-      const doc = p.doc ?? coerceParagraphDoc(p);
-      return (
-        <div className="relative border-l-4 border-primary/30 pl-6 py-2">
-          <RichParagraphEditor
-            initialDoc={doc}
-            legacyText={p.text}
-            readOnly
-            className="!bg-transparent !p-0 !shadow-none !border-none text-base"
-            readOnlyLinkPreview={(href) => <LinkPreviewCardContent domain={href} />}
-          />
-        </div>
-      );
-    }
-    case 'heading': {
-      const text = (payload?.text as string) ?? '';
-      const level = payload?.level === 3 ? 3 : 2;
-      const Tag = level === 3 ? 'h3' : 'h2';
-      return (
-        <Tag className={cn(
-          "font-mono font-black uppercase tracking-tight text-foreground",
-          level === 3 ? "text-xl sm:text-2xl mt-10 mb-4" : "text-3xl sm:text-4xl mt-14 mb-6 border-b-2 border-border pb-2"
-        )}>
-          <span className="mr-2 text-primary">#</span>
-          {text}
-        </Tag>
-      );
-    }
+    case 'paragraph':
+      return <ParagraphBlock payload={payload} />;
+    case 'heading':
+      return <HeadingBlock payload={payload} />;
     case 'partition':
-      return (
-        <div className="flex items-center gap-4 py-10" role="separator">
-          <div className="h-[2px] flex-1 bg-border" />
-          <div className="font-mono text-xs font-bold text-muted-foreground tracking-widest">SECTION_BREAK</div>
-          <div className="h-[2px] flex-1 bg-border" />
-        </div>
-      );
+      return <PartitionBlock />;
     case 'image':
-    case 'unsplashImage': {
-      const url = typeof payload?.url === 'string' ? payload.url : '';
-      if (!url) return null;
-      const title = (payload?.title || payload?.caption) as string;
-      const layoutRaw = payload?.layout as string | undefined;
-      const layout: ImageBlockLayout =
-        layoutRaw === 'square' || layoutRaw === 'fullWidth' ? layoutRaw : 'landscape';
-      const frame = imageLayoutFrame[layout];
-      return (
-        <figure className="my-10">
-          <div className="border-4 border-border p-1.5 shadow-[8px_8px_0px_0px_var(--border)] bg-background">
-             <div className={cn('overflow-hidden border-2 border-border', frame)}>
-               <img src={url} alt={title || 'Content image'} className="h-full w-full object-cover" />
-             </div>
-          </div>
-          {title && (
-            <figcaption className="mt-4 text-center font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                {title}
-            </figcaption>
-          )}
-        </figure>
-      );
-    }
-    case 'videoEmbed': {
-      const p = (payload ?? {}) as VideoEmbedPayload;
-      const urls = videoEmbedUrls(p);
-      if (urls.length === 0) return null;
-      const layout: VideoEmbedLayoutDirection = p.layout === 'column' ? 'column' : 'row';
-      const rawSize = p.size === 'sm' || p.size === 'md' || p.size === 'lg' ? p.size : 'md';
-      const size = clampPublicVideoSize(urls.length, rawSize, layout);
-      const itemW =
-        size === 'sm' ? 'w-full max-w-[16rem]' : size === 'md' ? 'w-full max-w-2xl' : 'w-full max-w-5xl';
-      return (
-        <div
-          className={cn(
-            'flex gap-4 border-2 border-border bg-muted/30 p-4 shadow-[6px_6px_0_0_var(--border)] my-8',
-            layout === 'row' ? 'flex-row flex-wrap justify-center' : 'flex-col items-center',
-          )}
-        >
-          {urls.map((src) => (
-            <div key={src} className={cn('overflow-hidden border-2 border-border bg-black shadow-[4px_4px_0_0_var(--border)]', itemW)}>
-              <div className="aspect-video w-full">
-                <iframe
-                  src={src}
-                  title="Embedded video"
-                  className="h-full w-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    case 'code': {
-      const code = typeof payload?.code === 'string' ? payload.code : typeof payload?.text === 'string' ? payload.text : '';
-      const lang = typeof payload?.language === 'string' ? payload.language : 'text';
-      if (!code) return null;
-      return (
-        <div className="my-8 overflow-hidden border-2 border-border shadow-[6px_6px_0px_0px_var(--border)]">
-          <div className="flex items-center justify-between border-b-2 border-border bg-zinc-900 px-4 py-2.5">
-            <span className="font-mono text-xs font-bold text-zinc-400 uppercase tracking-wider">{lang}</span>
-            <div className="flex gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-none border border-zinc-700 bg-zinc-800" />
-              <div className="h-2.5 w-2.5 rounded-none border border-zinc-700 bg-zinc-800" />
-            </div>
-          </div>
-          <pre className="overflow-x-auto bg-zinc-950 p-6 text-sm leading-relaxed text-zinc-100 font-mono">
-            <code>{code}</code>
-          </pre>
-        </div>
-      );
-    }
-    case 'githubRepo': {
-        const owner = typeof payload?.owner === 'string' ? payload.owner : '';
-        const repo = typeof payload?.repo === 'string' ? payload.repo : '';
-        const name = typeof payload?.name === 'string' ? payload.name : repo;
-        const href = (payload?.url as string) || `https://github.com/${owner}/${repo}`;
-        return (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group my-6 flex items-center gap-5 border-2 border-border bg-card p-5 shadow-[6px_6px_0_0_var(--border)] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0_0_var(--border)]"
-          >
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-border bg-muted group-hover:bg-primary/10">
-               <GithubIcon className="h-7 w-7" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="font-mono text-base font-black uppercase text-foreground">{owner}/{name}</h4>
-              <p className="line-clamp-1 text-sm text-muted-foreground">Repository source on GitHub</p>
-            </div>
-            <ArrowUpRight className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-          </a>
-        );
-    }
+    case 'unsplashImage':
+      return <ImageBlock payload={payload} />;
+    case 'videoEmbed':
+      return <VideoEmbedBlock payload={payload} />;
+    case 'code':
+      return <CodeBlock payload={payload} />;
+    case 'githubRepo':
+      return <GithubRepoBlock payload={payload} />;
     default:
       return null;
   }
@@ -334,7 +377,7 @@ export default function PublicBlogPostPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setOrigin(typeof globalThis.window !== 'undefined' ? globalThis.window.location.origin : '');
+    setOrigin(globalThis.window.location.origin);
     const load = async () => {
       if (!username || !slug) return;
       try {

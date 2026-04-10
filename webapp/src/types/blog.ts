@@ -30,7 +30,6 @@ export interface BlockBase {
 }
 
 /** ProseMirror-style JSON document used for rich-text paragraphs. */
-export type RichTextDoc = any;
 
 /**
  * Paragraph content.
@@ -43,7 +42,7 @@ export interface ParagraphPayload {
   /** Legacy markdown/plain text buffer. May be empty when `doc` is present. */
   text?: string;
   /** Rich-text document (ProseMirror/TipTap JSON). */
-  doc?: RichTextDoc;
+  doc?: any;
   /** Optional flag to indicate whether this payload was authored with rich-text. */
   version?: 'plain' | 'rich-text';
 }
@@ -168,7 +167,7 @@ export interface PublicBlogPostDetail {
  * Helper: ensure we always have a rich-text doc for a paragraph, even when only the
  * legacy `text` field is present. This does not mutate the original payload.
  */
-export function coerceParagraphDoc(payload: ParagraphPayload): RichTextDoc {
+export function coerceParagraphDoc(payload: ParagraphPayload): any {
   if (payload.doc) return payload.doc;
   const text = (payload.text ?? '').toString();
   return {

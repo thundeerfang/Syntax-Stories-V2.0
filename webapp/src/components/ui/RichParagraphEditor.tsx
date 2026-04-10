@@ -39,7 +39,6 @@ import { MentionPopoverCard } from '@/components/ui/MentionPopoverCard';
 import { GifPopoverCard } from '@/components/ui/GifPopoverCard';
 import { searchGifs, type GiphyGif } from '@/api/giphy';
 import { followApi, type FollowUser } from '@/api/follow';
-import type { RichTextDoc } from '@/types/blog';
 
 /** Default Link sets `inclusive` from `autolink`, so with autolink on new typing stays inside the link. Force non-inclusive so Space/new text after a link exits the mark (matches user expectation). */
 const LinkMark = Link.extend({
@@ -47,10 +46,10 @@ const LinkMark = Link.extend({
 });
 
 export interface RichParagraphEditorProps {
-  initialDoc?: RichTextDoc;
+  initialDoc?: any;
   legacyText?: string;
   /** Omitted when `readOnly` (e.g. public blog view). */
-  onChange?: (doc: RichTextDoc) => void;
+  onChange?: (doc: any) => void;
   /** Collapse multiple spaces, duplicate line breaks, and consecutive empty paragraphs (default true). */
   normalizeContent?: boolean;
   /** No toolbar; links open on click. */
@@ -223,7 +222,7 @@ function ReadOnlyRichLinkHoverLayer({
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed w-[280px] min-h-[80px] max-h-[320px] overflow-hidden border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] pointer-events-auto p-0"
+            className="fixed w-70 min-h-20 max-h-80 overflow-hidden border-2 border-border bg-card shadow-md pointer-events-auto p-0"
             style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
             role="tooltip"
             onMouseEnter={cancelClose}
@@ -408,7 +407,7 @@ function ReadOnlyMentionHoverLayer({
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed w-[260px] overflow-visible border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] pointer-events-auto p-0"
+            className="fixed w-65 overflow-visible border-2 border-border bg-card shadow-md pointer-events-auto p-0"
             style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
             role="tooltip"
             onMouseEnter={cancelClose}
@@ -617,7 +616,7 @@ function ReadOnlyGifHoverLayer({
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed w-fit max-w-[min(340px,92vw)] overflow-hidden border-2 border-border bg-muted leading-none shadow-[4px_4px_0px_0px_var(--border)] pointer-events-auto p-0"
+            className="fixed w-fit max-w-[min(340px,92vw)] overflow-hidden border-2 border-border bg-muted leading-none shadow-md pointer-events-auto p-0"
             style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
             role="tooltip"
             onMouseEnter={cancelClose}
@@ -1433,7 +1432,7 @@ const MentionNode = TipTapNode.create({
   },
 });
 
-function toInitialDoc(initialDoc?: RichTextDoc, legacyText?: string): RichTextDoc {
+function toInitialDoc(initialDoc?: any, legacyText?: string): any {
   if (initialDoc) return initialDoc;
   const text = (legacyText ?? '').toString();
   return {
@@ -1885,7 +1884,7 @@ export function RichParagraphEditor({
   if (!editor) {
     return (
       <div
-        className={cn('min-h-[3rem] animate-pulse border border-border bg-muted/30', className)}
+        className={cn('min-h-12 animate-pulse border border-border bg-muted/30', className)}
         aria-hidden
       />
     );
@@ -1994,9 +1993,8 @@ export function RichParagraphEditor({
                     </div>
 
                     {linkPreview.valid && (
-                      <div className="w-full shrink-0 overflow-hidden border border-border bg-background sm:w-[min(200px,38%)] sm:max-w-[220px]">
+                      <div className="w-full shrink-0 overflow-hidden border border-border bg-background sm:w-[min(200px,38%)] sm:max-w-55">
                         <p className="border-b border-border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Site preview
                         </p>
                         <LinkPreviewCardContent domain={linkPreview.href} />
                       </div>
@@ -2189,7 +2187,7 @@ export function RichParagraphEditor({
             <UnderlineIcon className="h-3.5 w-3.5" />
           </button>
 
-          <span className="mx-1 h-[18px] w-px bg-border" />
+          <span className="mx-1 h-4.5 w-px bg-border" />
 
           <button
             type="button"
