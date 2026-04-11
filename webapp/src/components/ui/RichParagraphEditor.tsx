@@ -282,7 +282,7 @@ function ReadOnlyMentionHoverLayer({
       openTimerRef.current = setTimeout(() => {
         anchorRef.current = el;
         const rect = el.getBoundingClientRect();
-        const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'center', 155);
+        const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'start', 155, 260, 0);
         setPosition({ top, left });
         setResolvedSide(side);
         const username = el.dataset.username?.trim() ?? '';
@@ -367,7 +367,7 @@ function ReadOnlyMentionHoverLayer({
       const el = anchorRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'center', 155);
+      const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'start', 155, 260, 0);
       setPosition({ top, left });
       setResolvedSide(side);
     };
@@ -407,7 +407,7 @@ function ReadOnlyMentionHoverLayer({
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed w-65 overflow-visible border-2 border-border bg-card shadow-md pointer-events-auto p-0"
+            className="fixed w-[260px] overflow-visible p-0 pointer-events-auto"
             style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
             role="tooltip"
             onMouseEnter={cancelClose}
@@ -417,6 +417,7 @@ function ReadOnlyMentionHoverLayer({
               username={mention.username}
               initialFullName={mention.fullName}
               initialProfileImg={mention.profileImg}
+              profileHref={`/u/${mention.username}`}
             />
           </motion.div>
         )}

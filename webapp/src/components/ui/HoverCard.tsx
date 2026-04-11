@@ -85,6 +85,8 @@ export function computeHoverCardPositionAuto(
   align: Align,
   cardHeight: number,
   cardWidth: number = CARD_WIDTH,
+  /** Distance between anchor and card (default 8px). Use a smaller value to sit closer to the trigger. */
+  gap: number = GAP_BOTTOM,
 ): { top: number; left: number; side: Side } {
   const vw = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1024;
   const vh = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 768;
@@ -102,7 +104,7 @@ export function computeHoverCardPositionAuto(
   }
 
   for (const side of sides) {
-    const raw = computeHoverCardPosition(rect, side, align, h, w);
+    const raw = computeHoverCardPosition(rect, side, align, h, w, gap);
     if (rectFullyInViewport(raw.top, raw.left, w, h, vw, vh)) {
       return { top: raw.top, left: raw.left, side };
     }
@@ -111,7 +113,7 @@ export function computeHoverCardPositionAuto(
   let best: { top: number; left: number; side: Side } | null = null;
   let bestScore = Infinity;
   for (const side of sides) {
-    const raw = computeHoverCardPosition(rect, side, align, h, w);
+    const raw = computeHoverCardPosition(rect, side, align, h, w, gap);
     const clamped = clampViewport(raw.top, raw.left, w, h, vw, vh);
     const dist = Math.abs(clamped.top - raw.top) + Math.abs(clamped.left - raw.left);
     const bias = side === preferredSide ? 0 : 4;
@@ -142,28 +144,29 @@ export function computeHoverCardPosition(
   align: Align,
   cardHeight: number,
   cardWidth: number = CARD_WIDTH,
+  gap: number = GAP_BOTTOM,
 ): { top: number; left: number } {
   if (side === 'bottom') {
     return {
-      top: rect.bottom + GAP_BOTTOM,
+      top: rect.bottom + gap,
       left: horizontalAlign(rect, align, cardWidth),
     };
   }
   if (side === 'top') {
     return {
-      top: rect.top - cardHeight - GAP_TOP,
+      top: rect.top - cardHeight - gap,
       left: horizontalAlign(rect, align, cardWidth),
     };
   }
   if (side === 'right') {
     return {
       top: verticalAlign(rect, align, cardHeight),
-      left: rect.right + GAP_BOTTOM,
+      left: rect.right + gap,
     };
   }
   return {
     top: verticalAlign(rect, align, cardHeight),
-    left: rect.left - cardWidth - GAP_BOTTOM,
+    left: rect.left - cardWidth - gap,
   };
 }
 

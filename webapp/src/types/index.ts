@@ -16,7 +16,12 @@ export interface Post {
   coverImage?: string;
   author: User;
   publishedAt: string;
+  /** When mapped from owner API; feeds omit this. */
+  blogStatus?: 'draft' | 'published';
   tags?: string[];
+  /** ISO time of last substantive edit (from API). */
+  lastEditedAt?: string;
+  lastEditedBy?: { username: string; fullName: string };
 }
 
 export type {
@@ -29,4 +34,5 @@ export type {
   PublicFeedPost,
   PublicFeedPostAuthor,
   PublicBlogPostDetail,
+  PublicBlogComment,
 } from './blog';

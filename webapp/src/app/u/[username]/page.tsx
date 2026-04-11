@@ -23,6 +23,8 @@ import { AreaChart } from '@/components/retroui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
+import { PublicUserBlogGrid } from '@/components/blog/PublicUserBlogGrid';
+import { ProfileActivityBlogList } from '@/components/blog/ProfileActivityBlogList';
 
 function formatMonthYear(val: string): string {
   if (!val || val.length < 7) return '';
@@ -509,6 +511,8 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
             </div>
           </section>
 
+          <PublicUserBlogGrid username={username} />
+
           {/* ACTIVITY (public): Posts + Repost */}
           <section className="space-y-4 border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -533,10 +537,16 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
                 </button>
               ))}
             </div>
-            <div className="border-4 border-border border-dashed p-10 bg-muted/5 flex flex-col items-center justify-center text-center">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                {activityTab === 'posts' ? 'No posts found.' : 'No reposts found.'}
-              </p>
+            <div className="border-4 border-border border-dashed bg-muted/5 p-4 sm:p-6">
+              {activityTab === 'posts' ? (
+                <ProfileActivityBlogList username={username} />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    No reposts found.
+                  </p>
+                </div>
+              )}
             </div>
           </section>
 

@@ -192,6 +192,34 @@ html * {
   opacity: 0.92;
 }
 
+/* Public blog post: retro link chip (icon left, no bare underline) */
+.public-blog-body .ss-rich-paragraph-editor .ProseMirror a.ss-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem 0.15rem 0.4rem;
+  border: 2px solid var(--border);
+  background: var(--card);
+  color: var(--primary);
+  text-decoration: none !important;
+  text-underline-offset: unset;
+  box-shadow: 3px 3px 0 0 var(--border);
+  vertical-align: baseline;
+  max-width: 100%;
+}
+.public-blog-body .ss-rich-paragraph-editor .ProseMirror a.ss-link::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background-color: var(--primary);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+
 /* TipTap lists: outside markers stay inside the card thanks to block padding above */
 .ss-rich-paragraph-editor .ProseMirror {
   min-height: 0;

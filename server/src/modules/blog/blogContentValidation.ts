@@ -14,6 +14,7 @@ const MAX_URL_LEN = 2_000;
 const MAX_CAPTION = 4_000;
 const MAX_GITHUB_DESC = 12_000;
 const MAX_GENERIC_PAYLOAD_JSON = 120_000;
+const MAX_CODE_BODY_CHARS = 200_000;
 
 const ALLOWED_TYPES = new Set([
   'paragraph',
@@ -25,7 +26,14 @@ const ALLOWED_TYPES = new Set([
   'link',
   'githubRepo',
   'unsplashImage',
+  'table',
+  'mermaidDiagram',
 ]);
+
+const MAX_TABLE_ROWS = 40;
+const MAX_TABLE_COLS = 16;
+const MAX_TABLE_CELL_CHARS = 4_000;
+const MAX_MERMAID_SOURCE_CHARS = 120_000;
 
 export type BlogContentValidationResult =
   | { ok: true; normalizedJson: string }
@@ -113,6 +121,24 @@ function sanitizeVideoEmbedPayload(p: unknown): Record<string, unknown> {
   return out;
 }
 
+function sanitizeCodePayload(p: unknown): Record<string, unknown> {
+  if (p == null) return {};
+  if (!isPlainObject(p)) throw new Error('code payload must be an object');
+  const out: Record<string, unknown> = {};
+  if (typeof (p as { code?: string }).code === 'string') {
+    out.code = truncateString((p as { code: string }).code, MAX_CODE_BODY_CHARS);
+  } else if (typeof (p as { text?: string }).text === 'string') {
+    out.code = truncateString((p as { text: string }).text, MAX_CODE_BODY_CHARS);
+  }
+  const lang = (p as { language?: string }).language;
+  if (typeof lang === 'string' && /^[a-z0-9#+.\-]{1,72}$/i.test(lang.trim())) {
+    out.language = lang.trim().toLowerCase().slice(0, 72);
+  }
+  const src = (p as { languageSource?: string }).languageSource;
+  if (src === 'auto' || src === 'manual') out.languageSource = src;
+  return out;
+}
+
 function sanitizeGithubPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
   if (!isPlainObject(p)) throw new Error('githubRepo payload must be an object');
@@ -124,6 +150,43 @@ function sanitizeGithubPayload(p: unknown): Record<string, unknown> {
   return out;
 }
 
+function sanitizeTablePayload(p: unknown): Record<string, unknown> {
+  if (p == null) return { rows: [] };
+  if (!isPlainObject(p)) throw new Error('table payload must be an object');
+  const out: Record<string, unknown> = {};
+  if (typeof p.caption === 'string') out.caption = truncateString(p.caption, MAX_CAPTION);
+  const rowsIn = p.rows;
+  if (!Array.isArray(rowsIn)) {
+    out.rows = [];
+    return out;
+  }
+  const rows: string[][] = [];
+  for (let r = 0; r < rowsIn.length && r < MAX_TABLE_ROWS; r++) {
+    const row = rowsIn[r];
+    if (!Array.isArray(row)) continue;
+    const cells: string[] = [];
+    for (let c = 0; c < row.length && c < MAX_TABLE_COLS; c++) {
+      const cell = row[c];
+      cells.push(typeof cell === 'string' ? truncateString(cell, MAX_TABLE_CELL_CHARS) : String(cell ?? ''));
+    }
+    if (cells.length) rows.push(cells);
+  }
+  out.rows = rows;
+  return out;
+}
+
+function sanitizeMermaidPayload(p: unknown): Record<string, unknown> {
+  if (p == null) return { source: '' };
+  if (!isPlainObject(p)) throw new Error('mermaidDiagram payload must be an object');
+  const out: Record<string, unknown> = {};
+  if (typeof (p as { source?: string }).source === 'string') {
+    out.source = truncateString((p as { source: string }).source, MAX_MERMAID_SOURCE_CHARS);
+  } else {
+    out.source = '';
+  }
+  return out;
+}
+
 function sanitizeUnsplashPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
   if (!isPlainObject(p)) throw new Error('unsplashImage payload must be an object');
@@ -131,6 +194,9 @@ function sanitizeUnsplashPayload(p: unknown): Record<string, unknown> {
   if (typeof p.url === 'string') out.url = truncateString(p.url, MAX_URL_LEN);
   if (typeof p.photographer === 'string') out.photographer = truncateString(p.photographer, MAX_CAPTION);
   if (typeof p.caption === 'string') out.caption = truncateString(p.caption, MAX_CAPTION);
+  if (typeof p.unsplashPhotoId === 'string') {
+    out.unsplashPhotoId = truncateString(p.unsplashPhotoId, 128);
+  }
   const layout = p.layout;
   if (layout === 'landscape' || layout === 'square' || layout === 'fullWidth') out.layout = layout;
   return out;
@@ -153,8 +219,13 @@ function sanitizePayloadForType(type: string, payload: unknown): Record<string, 
     case 'partition':
       return payload == null ? {} : sanitizeGenericPayload(payload);
     case 'code':
+      return sanitizeCodePayload(payload);
     case 'link':
       return sanitizeGenericPayload(payload);
+    case 'table':
+      return sanitizeTablePayload(payload);
+    case 'mermaidDiagram':
+      return sanitizeMermaidPayload(payload);
   }
   throw new Error(`Unhandled block type: ${type}`);
 }

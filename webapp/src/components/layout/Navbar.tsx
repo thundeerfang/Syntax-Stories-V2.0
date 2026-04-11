@@ -8,10 +8,11 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useSearchDialogStore } from '@/store/searchDialog';
-import { Button, FireLottie, RocketLottie } from '@/components/ui';
+import { Button, FireLottie, RocketLottie, blockShadowButtonClassNames } from '@/components/ui';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { AccountDropdown } from './AccountDropdown';
 import { cn } from '@/lib/utils';
+import { setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
 import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
 
 const navLinks = [
@@ -98,7 +99,7 @@ export function Navbar() {
               <Menu className="h-5 w-5 group-hover:text-primary transition-colors" strokeWidth={2.5} />
             </button>
             <Link href="/" className="shrink-0">
-              <img src="/svg/logo_hori.png" alt="Syntax Stories" className="h-8 sm:h-9 w-auto object-contain" />
+              <img src="/svg/logo_hori.png" alt="Syntax Stories" className="h-6 w-auto object-contain sm:h-9" />
             </Link>
           </div>
 
@@ -166,7 +167,11 @@ export function Navbar() {
               {isAuthenticated && (
                 <Link
                   href="/blogs/write"
-                  className="flex items-center gap-2 px-2 sm:px-3 py-2 border-2 border-border bg-background text-foreground hover:border-primary hover:text-primary font-bold text-[11px] uppercase tracking-tight transition-all active:translate-y-0.5"
+                  onClick={() => setWriteEditorSessionPostId(null)}
+                  className={cn(
+                    blockShadowButtonClassNames({ variant: 'secondary', size: 'sm', shadow: 'sm' }),
+                    'px-2 py-1.5 sm:px-3 sm:py-2 no-underline',
+                  )}
                   title="Write a blog post"
                 >
                   <PenLine className="h-4 w-4 shrink-0" strokeWidth={2.5} />

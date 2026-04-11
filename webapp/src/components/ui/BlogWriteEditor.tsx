@@ -1,4 +1,5 @@
 import React, { useCallback, useId, useMemo, useRef, useState } from 'react';
+import type { JSONContent } from '@tiptap/core';
 import {
   Trash2,
   Image as ImageIcon,
@@ -18,13 +19,17 @@ import {
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { coerceImageLayout } from '@/lib/blogImageLayout';
 import { uploadMedia } from '@/api/upload';
 import { searchUnsplashPhotos, type UnsplashPhoto } from '@/api/unsplash';
 import { fetchRepoByUrl, fetchMyRepos, parseGithubRepoUrl, type GithubRepoListItem } from '@/api/github';
 import type {
+  CodePayload,
   ImageBlockLayout,
   ImagePayload,
+  MermaidDiagramPayload,
   ParagraphPayload,
+  TablePayload,
   VideoEmbedDisplaySize,
   VideoEmbedLayoutDirection,
   VideoEmbedPayload,
@@ -33,6 +38,9 @@ import { coerceParagraphDoc } from '@/types/blog';
 import { normalizeVideoEmbedUrl, youtubeThumbnailUrl } from '@/lib/videoEmbed';
 import { RichParagraphEditor } from '@/components/ui/RichParagraphEditor';
 import { ParagraphBlockHelpDialog } from '@/components/blog/dialog';
+import { CodeBlockEditor } from '@/components/blog/CodeBlockEditor';
+import { TableBlockEditor } from '@/components/blog/TableBlockEditor';
+import { MermaidBlockEditor } from '@/components/blog/MermaidBlockEditor';
 
 export type BlockType =
   | 'paragraph'
@@ -43,7 +51,9 @@ export type BlockType =
   | 'videoEmbed'
   | 'link'
   | 'githubRepo'
-  | 'unsplashImage';
+  | 'unsplashImage'
+  | 'table'
+  | 'mermaidDiagram';
 
 export type HeadingLevel = 2 | 3;
 
@@ -78,6 +88,32 @@ export function createBlockInSection(type: BlockType, sectionId: string): Block 
   if (type === 'heading') {
     return { id, type: 'heading', sectionId, payload: { text: '', level: 2 as HeadingLevel } };
   }
+  if (type === 'code') {
+    return {
+      id,
+      type: 'code',
+      sectionId,
+      payload: { code: '', language: 'plaintext', languageSource: 'auto' },
+    };
+  }
+  if (type === 'table') {
+    const tp: TablePayload = {
+      caption: undefined,
+      rows: [
+        ['Feature', 'Option A', 'Option B'],
+        ['', '', ''],
+      ],
+    };
+    return { id, type: 'table', sectionId, payload: tp };
+  }
+  if (type === 'mermaidDiagram') {
+    const mp: MermaidDiagramPayload = {
+      source: `graph TD
+    A[Client App] --> B[Supabase API]
+    B --> C[PostgreSQL Database]`,
+    };
+    return { id, type: 'mermaidDiagram', sectionId, payload: mp };
+  }
   return { id, type, sectionId, payload: {} };
 }
 
@@ -98,24 +134,6 @@ function getBrowserSelection(): Selection | null {
   return document.getSelection();
 }
 
-function consumeMarkdownListBlock(
-  lines: string[],
-  start: number,
-  pattern: RegExp,
-  wrap: (inner: string) => string,
-  inline: (s: string) => string,
-): { html: string; next: number } | null {
-  if (!pattern.exec(lines[start] ?? '')) return null;
-  let i = start;
-  let inner = '';
-  while (i < lines.length) {
-    const m = pattern.exec(lines[i] ?? '');
-    if (!m) break;
-    inner += '<li>' + inline(m[1] ?? '') + '</li>';
-    i++;
-  }
-  return { html: wrap(inner), next: i };
-}
 
 /** Stored in paragraph `payload.text` (persisted in `BlogPost.content` JSON). */
 const MENTION_WITH_ID_RE = /\[(@[^\]]+)\]\(mention:([a-fA-F0-9]{24})\)/g;
@@ -132,7 +150,7 @@ function ParagraphBlockEditor({
   onRemove: () => void;
 }>) {
   const [helpOpen, setHelpOpen] = useState(false);
-  const effectiveDoc: any = payload.doc ?? coerceParagraphDoc(payload);
+  const effectiveDoc: JSONContent | undefined = payload.doc ?? coerceParagraphDoc(payload);
 
   return (
     <div className="group border-2 border-border bg-card p-3 space-y-2 rounded-md">
@@ -257,12 +275,6 @@ function BlockCard({
       {children}
     </div>
   );
-}
-
-function coerceImageLayout(raw: ImagePayload['layout']): ImageBlockLayout {
-  if (raw === 'landscape' || raw === 'square' || raw === 'fullWidth') return raw;
-  if (raw === 'natural' || raw === 'center') return 'landscape';
-  return 'landscape';
 }
 
 type ImagePayloadWithLegacy = ImagePayload & { altText?: string };
@@ -1330,12 +1342,24 @@ function UnsplashBlockEditor({
   onRemove,
 }: Readonly<{
   blockId: string;
-  payload: { url?: string; photographer?: string; caption?: string; layout?: ImageBlockLayout };
-  onUpdate: (p: { url?: string; photographer?: string; caption?: string; layout?: ImageBlockLayout }) => void;
+  payload: {
+    url?: string;
+    photographer?: string;
+    caption?: string;
+    layout?: ImageBlockLayout;
+    unsplashPhotoId?: string;
+  };
+  onUpdate: (p: {
+    url?: string;
+    photographer?: string;
+    caption?: string;
+    layout?: ImageBlockLayout;
+    unsplashPhotoId?: string;
+  }) => void;
   onRemove: () => void;
 }>) {
   const { url = '', photographer = '', layout: layoutRaw } = payload;
-  const layout: ImageBlockLayout = layoutRaw === 'square' || layoutRaw === 'fullWidth' ? layoutRaw : 'landscape';
+  const layout = coerceImageLayout(layoutRaw);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UnsplashPhoto[]>([]);
@@ -1361,11 +1385,19 @@ function UnsplashBlockEditor({
     (photo: UnsplashPhoto) => {
       const imageUrl = photo.urls?.regular || photo.urls?.full || photo.urls?.small || '';
       const credit = photo.user?.name ? `Photo by ${photo.user.name} on Unsplash` : '';
-      if (imageUrl) onUpdate({ url: imageUrl, photographer: photographer || credit, layout: layout });
+      if (imageUrl) {
+        onUpdate({
+          ...payload,
+          url: imageUrl,
+          photographer: credit || photographer,
+          layout,
+          unsplashPhotoId: photo.id,
+        });
+      }
       setResults([]);
       setSearchQuery('');
     },
-    [onUpdate, photographer, layout],
+    [onUpdate, photographer, layout, payload],
   );
 
   const renderSelectedImage = () => {
@@ -1666,6 +1698,15 @@ export function BlogWriteEditor({
                 </button>
               </div>
             );
+          } else if (block.type === 'code') {
+            blockContent = (
+              <CodeBlockEditor
+                blockId={block.id}
+                payload={(block.payload ?? {}) as CodePayload}
+                onUpdate={(p) => updateBlock(block.id, p)}
+                onRemove={() => removeBlock(block.id)}
+              />
+            );
           } else if (block.type === 'image') {
             blockContent = (
               <ImageBlockEditor
@@ -1702,6 +1743,24 @@ export function BlogWriteEditor({
                 blockId={block.id}
                 payload={block.payload ?? {}}
                 onUpdate={(payload) => updateBlock(block.id, payload)}
+                onRemove={() => removeBlock(block.id)}
+              />
+            );
+          } else if (block.type === 'table') {
+            blockContent = (
+              <TableBlockEditor
+                blockId={block.id}
+                payload={(block.payload ?? { rows: [['', '']] }) as TablePayload}
+                onUpdate={(p) => updateBlock(block.id, p)}
+                onRemove={() => removeBlock(block.id)}
+              />
+            );
+          } else if (block.type === 'mermaidDiagram') {
+            blockContent = (
+              <MermaidBlockEditor
+                blockId={block.id}
+                payload={(block.payload ?? { source: '' }) as MermaidDiagramPayload}
+                onUpdate={(p) => updateBlock(block.id, p)}
                 onRemove={() => removeBlock(block.id)}
               />
             );

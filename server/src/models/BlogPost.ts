@@ -20,6 +20,12 @@ export interface IBlogPost extends Document {
   content: string;
   thumbnailUrl?: string;
   status: BlogPostStatus;
+  /** Set when a published (or draft) post is saved after create; used for “edited” UI. */
+  lastEditedAt?: Date;
+  lastEditedById?: mongoose.Types.ObjectId;
+  /** Soft-delete: set instead of removing the document. */
+  deletedAt?: Date;
+  deletedById?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,10 +35,14 @@ const BlogPostSchema = new Schema<IBlogPost>(
     authorId: { type: Schema.Types.ObjectId, ref: 'users', required: true, index: true },
     title: { type: String, required: true, trim: true, maxlength: 300 },
     slug: { type: String, required: true, trim: true, maxlength: 320 },
-    summary: { type: String, trim: true, maxlength: 500, default: '' },
+    summary: { type: String, trim: true, maxlength: 12000, default: '' },
     content: { type: String, required: true, default: '' },
     thumbnailUrl: { type: String, trim: true, maxlength: 2000 },
     status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
+    lastEditedAt: { type: Date, default: null },
+    lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    deletedAt: { type: Date, default: null, index: true },
+    deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
   },
   { timestamps: true }
 );

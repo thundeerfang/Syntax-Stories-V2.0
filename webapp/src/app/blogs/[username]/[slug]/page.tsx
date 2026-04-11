@@ -1,49 +1,75 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import {
-  TrendingUp,
-  Hash,
-  Users,
-  FolderOpen,
-  Flame,
- 
-  Calendar,
-  ArrowUpRight,
-  Maximize2,
-} from 'lucide-react';
+import { Hash, Calendar, ExternalLink, Terminal } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { RichParagraphEditor } from '@/components/ui/RichParagraphEditor';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/utils';
 import { summaryToPlainText } from '@/lib/summaryPlain';
+import { coerceImageLayout } from '@/lib/blogImageLayout';
 import type {
   Block,
   ImageBlockLayout,
+  MermaidDiagramPayload,
   ParagraphPayload,
   PublicBlogPostDetail,
+  TablePayload,
   VideoEmbedDisplaySize,
   VideoEmbedLayoutDirection,
   VideoEmbedPayload,
 } from '@/types/blog';
 import { coerceParagraphDoc } from '@/types/blog';
+import { BlogPostAuthor } from '@/components/blog/BlogPostAuthor';
+import { BlogCommentsSection } from '@/components/blog/BlogCommentsSection';
+import { BlogCodeBlockDisplay } from '@/components/blog/BlogCodeBlockDisplay';
+import { MermaidBlockDisplay } from '@/components/blog/MermaidBlockDisplay';
+import { blockShadowButtonClassNames } from '@/components/ui/BlockShadowButton';
+import { Dialog } from '@/components/ui/Dialog';
+import { useAuthStore } from '@/store/auth';
 
-// --- DUMMY DATA ---
-const DUMMY_TRENDING = [
-  { title: 'Rust async in production', reads: '12.4k' },
-  { title: 'CSS container queries', reads: '9.1k' },
-  { title: 'Postgres vs the world', reads: '8.2k' },
-];
-const DUMMY_CATEGORIES = ['Web', 'Systems', 'DevTools', 'Career', 'OSS'];
-const DUMMY_SUGGESTED = [
-  { name: 'Ada Lovelace', handle: 'ada', initials: 'A' },
-  { name: 'Grace Hopper', handle: 'grace', initials: 'G' },
-  { name: 'Margaret H.', handle: 'marg', initials: 'M' },
-];
-const DUMMY_TAGS = ['typescript', 'nextjs', 'mongodb', 'retro-ui', 'a11y', 'tip-tap'];
+type BlogImagePreviewOpen = (url: string, alt: string) => void;
+const BlogImagePreviewContext = createContext<BlogImagePreviewOpen | null>(null);
+
+function useBlogImagePreview(): BlogImagePreviewOpen | null {
+  return useContext(BlogImagePreviewContext);
+}
+
+function BlogImagePreviewProvider({ children }: Readonly<{ children: React.ReactNode }>) {
+  const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null);
+  const open = useCallback((url: string, alt: string) => {
+    setPreview({ url, alt: alt || 'Image' });
+  }, []);
+  const close = useCallback(() => setPreview(null), []);
+  const value = useMemo(() => open, [open]);
+
+  return (
+    <BlogImagePreviewContext.Provider value={value}>
+      {children}
+      <Dialog
+        open={preview != null}
+        onClose={close}
+        titleId="blog-image-preview-title"
+        panelClassName="pointer-events-auto w-full max-w-5xl max-h-[92vh] overflow-hidden border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]"
+        contentClassName="relative p-4 sm:p-6"
+      >
+        <h2 id="blog-image-preview-title" className="sr-only">
+          Image preview
+        </h2>
+        {preview ? (
+          <img
+            src={preview.url}
+            alt={preview.alt}
+            className="mx-auto max-h-[min(80vh,720px)] w-full max-w-full object-contain"
+          />
+        ) : null}
+      </Dialog>
+    </BlogImagePreviewContext.Provider>
+  );
+}
 
 // --- HELPERS ---
 function parseBlocks(content: string): Block[] {
@@ -78,20 +104,57 @@ function videoEmbedUrls(p: VideoEmbedPayload): string[] {
   return u ? [u] : [];
 }
 
-const imageLayoutFrame: Record<ImageBlockLayout, string> = {
-  landscape: 'aspect-[16/9] w-full',
-  square: 'aspect-square max-w-2xl mx-auto',
-  fullWidth: 'w-full min-h-[20rem] max-h-[35rem]',
-};
+/**
+ * Published image frame:
+ * - landscape: 16:9, **full width** of the post body (no inset “card” width)
+ * - square: 1:1, centered, `max-w-xl`
+ * - fullWidth: full width, tall strip
+ */
+function publicImageFrameClass(layout: ImageBlockLayout): string {
+  const base =
+    'relative overflow-hidden border-2 border-border bg-background shadow-[6px_6px_0_0_var(--border)]';
+  switch (layout) {
+    case 'square':
+      return cn(base, 'mx-auto aspect-square w-full max-w-xl');
+    case 'fullWidth':
+      return cn(
+        base,
+        'w-full min-h-[20rem] max-h-[min(42rem,88vh)] sm:min-h-[22rem] lg:min-h-[26rem]',
+      );
+    case 'landscape':
+      return cn(base, 'w-full aspect-video');
+  }
+}
 
 function paragraphPreviewCard(href: string) {
   return <LinkPreviewCardContent domain={href} />;
 }
 
-function getVideoItemWidthClass(size: VideoEmbedDisplaySize): string {
-  if (size === 'sm') return 'w-full max-w-[16rem]';
-  if (size === 'md') return 'w-full max-w-2xl';
-  return 'w-full max-w-5xl';
+/** Retro label overlay on images / Unsplash (matches editor chrome). */
+const RETRO_MEDIA_BADGE =
+  'inline-flex max-w-[min(92%,20rem)] items-center border-2 border-white/40 bg-black/80 px-2 py-1 font-mono text-[9px] font-bold uppercase leading-snug tracking-wide text-white shadow-[3px_3px_0_0_rgba(0,0,0,0.5)]';
+
+function isYoutubeEmbedUrl(src: string): boolean {
+  return /youtube\.com\/embed|youtube-nocookie\.com\/embed/i.test(src);
+}
+
+/** Mirrors editor: sm/md fixed columns; `lg` matches blog image rail (`max-w-4xl`). */
+function publicVideoItemClass(size: VideoEmbedDisplaySize, layout: VideoEmbedLayoutDirection): string {
+  if (layout === 'column') {
+    if (size === 'sm') return 'w-full max-w-[7.75rem] mx-auto shrink-0';
+    if (size === 'md') return 'w-full max-w-[11.5rem] mx-auto shrink-0';
+    return 'w-full max-w-4xl mx-auto shrink-0';
+  }
+  if (size === 'sm') return 'w-[min(100%,7.75rem)] sm:w-[7.75rem] shrink-0';
+  if (size === 'md') return 'w-[min(100%,11.5rem)] sm:w-[11.5rem] shrink-0';
+  return 'w-full max-w-4xl shrink-0';
+}
+
+/** YouTube: sm/md compact heights; `lg` uses full width + 16:9 aspect (tall like main images). */
+function youtubeIframeHeightClass(size: VideoEmbedDisplaySize): string {
+  if (size === 'sm') return 'h-[4.5rem] w-full min-h-0 border-0';
+  if (size === 'md') return 'h-[6.75rem] w-full min-h-0 border-0';
+  return 'aspect-video w-full min-h-[12rem] border-0 max-h-[min(80vh,36rem)]';
 }
 
 function getCodeText(payload?: Record<string, unknown>): string {
@@ -104,7 +167,7 @@ function ParagraphBlock({ payload }: Readonly<{ payload?: Record<string, unknown
   const p = (payload ?? {}) as ParagraphPayload;
   const doc = p.doc ?? coerceParagraphDoc(p);
   return (
-    <div className="relative border-l-4 border-primary/30 pl-6 py-2">
+    <div className="relative mx-auto w-full max-w-4xl border-l-4 border-primary/30 pl-5 py-1.5">
       <RichParagraphEditor
         initialDoc={doc}
         legacyText={p.text}
@@ -122,8 +185,10 @@ function HeadingBlock({ payload }: Readonly<{ payload?: Record<string, unknown> 
   const Tag = level === 3 ? 'h3' : 'h2';
   return (
     <Tag className={cn(
-      "font-mono font-black uppercase tracking-tight text-foreground",
-      level === 3 ? "text-xl sm:text-2xl mt-10 mb-4" : "text-3xl sm:text-4xl mt-14 mb-6 border-b-2 border-border pb-2"
+      "mx-auto w-full max-w-4xl font-mono font-black uppercase tracking-tight text-foreground",
+      level === 3
+        ? "text-xl sm:text-2xl mt-6 mb-3"
+        : "text-3xl sm:text-4xl mt-8 mb-4 border-b-[3px] border-muted-foreground/30 pb-2 dark:border-muted-foreground/25"
     )}>
       <span className="mr-2 text-primary">#</span>
       {text}
@@ -133,34 +198,95 @@ function HeadingBlock({ payload }: Readonly<{ payload?: Record<string, unknown> 
 
 function PartitionBlock() {
   return (
-    <div className="flex items-center gap-4 py-10" role="separator">
-      <div className="h-[2px] flex-1 bg-border" />
-      <div className="font-mono text-xs font-bold text-muted-foreground tracking-widest">SECTION_BREAK</div>
-      <div className="h-[2px] flex-1 bg-border" />
+    <div className="my-7 flex w-full items-center gap-3" role="separator" aria-hidden>
+      <div className="h-[3px] flex-1 rounded-[1px] bg-muted-foreground/25 dark:bg-muted-foreground/20" />
+      <div className="size-1.5 shrink-0 rotate-45 border-2 border-muted-foreground/35 bg-background shadow-[2px_2px_0_0_var(--border)]" />
+      <div className="h-[3px] flex-1 rounded-[1px] bg-muted-foreground/25 dark:bg-muted-foreground/20" />
     </div>
   );
 }
 
 function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const openPreview = useBlogImagePreview();
   const url = typeof payload?.url === 'string' ? payload.url : '';
   if (!url) return null;
-  const title = (payload?.title || payload?.caption) as string;
-  const layoutRaw = payload?.layout as string | undefined;
-  const layout: ImageBlockLayout =
-    layoutRaw === 'square' || layoutRaw === 'fullWidth' ? layoutRaw : 'landscape';
-  const frame = imageLayoutFrame[layout];
+  const title = ((payload?.title || payload?.caption) as string)?.trim() ?? '';
+  const layout = coerceImageLayout(payload?.layout);
+  const frameClass = publicImageFrameClass(layout);
+  const alt = title || 'Content image';
   return (
-    <figure className="my-10">
-      <div className="border-4 border-border p-1.5 shadow-[8px_8px_0px_0px_var(--border)] bg-background">
-         <div className={cn('overflow-hidden border-2 border-border', frame)}>
-           <img src={url} alt={title || 'Content image'} className="h-full w-full object-cover" />
-         </div>
+    <figure className="my-5">
+      <div className={frameClass}>
+        <img src={url} alt={alt} className="absolute inset-0 h-full w-full object-cover" />
+        {openPreview ? (
+          <button
+            type="button"
+            className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
+            aria-label="Preview image"
+            onClick={() => openPreview(url, alt)}
+          />
+        ) : null}
+        {title ? (
+          <div className="pointer-events-none absolute bottom-2 left-2 z-20">
+            <span className={RETRO_MEDIA_BADGE}>{title}</span>
+          </div>
+        ) : null}
       </div>
-      {title && (
-        <figcaption className="mt-4 text-center font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            {title}
-        </figcaption>
-      )}
+    </figure>
+  );
+}
+
+function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+  const openPreview = useBlogImagePreview();
+  const url = typeof payload?.url === 'string' ? payload.url : '';
+  if (!url) return null;
+  const caption = typeof payload?.caption === 'string' ? payload.caption.trim() : '';
+  const photographer = typeof payload?.photographer === 'string' ? payload.photographer.trim() : '';
+  const photoId = typeof payload?.unsplashPhotoId === 'string' ? payload.unsplashPhotoId.trim() : '';
+  const layout = coerceImageLayout(payload?.layout);
+  const frameClass = publicImageFrameClass(layout);
+  let creditLine = '';
+  if (photographer) {
+    creditLine = /^Photo by/i.test(photographer)
+      ? photographer
+      : `Photo by ${photographer} on Unsplash`;
+  }
+  const unsplashPhotoHref = photoId
+    ? `https://unsplash.com/photos/${encodeURIComponent(photoId)}`
+    : 'https://unsplash.com';
+  const alt = caption || creditLine || 'Photo';
+
+  return (
+    <figure className="my-5">
+      <div className={frameClass}>
+        <img src={url} alt={alt} className="absolute inset-0 h-full w-full object-cover" />
+        {openPreview ? (
+          <button
+            type="button"
+            className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
+            aria-label="Preview image"
+            onClick={() => openPreview(url, alt)}
+          />
+        ) : null}
+        {caption ? (
+          <div className="pointer-events-none absolute bottom-2 left-2 z-20">
+            <span className={RETRO_MEDIA_BADGE}>{caption}</span>
+          </div>
+        ) : null}
+        {creditLine ? (
+          <div className="absolute bottom-2 right-2 z-30 max-w-[min(88%,16rem)]">
+            <a
+              href={unsplashPhotoHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View on Unsplash"
+              className={cn(RETRO_MEDIA_BADGE, 'pointer-events-auto hover:brightness-110')}
+            >
+              {creditLine}
+            </a>
+          </div>
+        ) : null}
+      </div>
     </figure>
   );
 }
@@ -172,95 +298,149 @@ function VideoEmbedBlock({ payload }: Readonly<{ payload?: Record<string, unknow
   const layout: VideoEmbedLayoutDirection = p.layout === 'column' ? 'column' : 'row';
   const rawSize = p.size === 'sm' || p.size === 'md' || p.size === 'lg' ? p.size : 'md';
   const size = clampPublicVideoSize(urls.length, rawSize, layout);
-  const itemW = getVideoItemWidthClass(size);
 
   return (
     <div
       className={cn(
-        'flex gap-4 border-2 border-border bg-muted/30 p-4 shadow-[6px_6px_0_0_var(--border)] my-8',
-        layout === 'row' ? 'flex-row flex-wrap justify-center' : 'flex-col items-center',
+        'my-5 flex w-full flex-wrap justify-center gap-4',
+        layout === 'column' ? 'flex-col items-center' : 'flex-row',
       )}
     >
-      {urls.map((src) => (
-        <div key={src} className={cn('overflow-hidden border-2 border-border bg-black shadow-[4px_4px_0_0_var(--border)]', itemW)}>
-          <div className="aspect-video w-full">
-            <iframe
-              src={src}
-              title="Embedded video"
-              className="h-full w-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
+      {urls.map((src) => {
+        const yt = isYoutubeEmbedUrl(src);
+        const itemClass = publicVideoItemClass(size, layout);
+        const iframeClass = yt
+          ? youtubeIframeHeightClass(size)
+          : cn('aspect-video w-full min-h-[10rem] border-0');
+        const lgYoutube = yt && size === 'lg';
+        return (
+          <div key={src} className={cn('relative overflow-hidden', itemClass)}>
+            {lgYoutube ? (
+              <div className="relative aspect-video w-full min-h-[12rem] max-h-[min(80vh,36rem)]">
+                <iframe
+                  src={src}
+                  title="Embedded video"
+                  className="absolute inset-0 h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            ) : (
+              <iframe
+                src={src}
+                title="Embedded video"
+                className={iframeClass}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 function CodeBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
   const code = getCodeText(payload);
-  const lang = typeof payload?.language === 'string' ? payload.language : 'text';
+  const languageHint =
+    typeof payload?.language === 'string' && payload.language.trim()
+      ? payload.language
+      : null;
   if (!code) return null;
+  return <BlogCodeBlockDisplay code={code} languageHint={languageHint} />;
+}
+
+function TableBlock({ payload }: Readonly<{ payload?: TablePayload }>) {
+  const rows = payload?.rows ?? [];
+  if (!rows.length) return null;
+  const cap = (payload?.caption ?? '').trim();
   return (
-    <div className="my-8 overflow-hidden border-2 border-border shadow-[6px_6px_0px_0px_var(--border)]">
-      <div className="flex items-center justify-between border-b-2 border-border bg-zinc-900 px-4 py-2.5">
-        <span className="font-mono text-xs font-bold text-zinc-400 uppercase tracking-wider">{lang}</span>
-        <div className="flex gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-none border border-zinc-700 bg-zinc-800" />
-          <div className="h-2.5 w-2.5 rounded-none border border-zinc-700 bg-zinc-800" />
-        </div>
+    <figure className="my-6 w-full overflow-x-auto">
+      {cap ? (
+        <figcaption className="mb-2 max-w-4xl font-mono text-base font-black uppercase tracking-tight text-foreground">
+          {cap}
+        </figcaption>
+      ) : null}
+      <div className="mx-auto max-w-4xl overflow-x-auto border-2 border-border bg-card shadow-[6px_6px_0_0_var(--border)]">
+        <table className="w-full min-w-[280px] border-collapse text-left text-sm">
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={`tr-${ri}`} className={ri === 0 ? 'bg-muted/40' : ''}>
+                {row.map((cell, ci) => (
+                  <td
+                    key={`td-${ri}-${ci}`}
+                    className="border border-border px-3 py-2 align-top font-mono text-[13px] leading-snug text-foreground"
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <pre className="overflow-x-auto bg-zinc-950 p-6 text-sm leading-relaxed text-zinc-100 font-mono">
-        <code>{code}</code>
-      </pre>
-    </div>
+    </figure>
   );
+}
+
+function MermaidBlock({ payload }: Readonly<{ payload?: MermaidDiagramPayload }>) {
+  const src = typeof payload?.source === 'string' ? payload.source : '';
+  if (!src.trim()) return null;
+  return <MermaidBlockDisplay source={src} />;
 }
 
 function GithubRepoBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
   const owner = typeof payload?.owner === 'string' ? payload.owner : '';
   const repo = typeof payload?.repo === 'string' ? payload.repo : '';
   const name = typeof payload?.name === 'string' ? payload.name : repo;
+  const description = typeof payload?.description === 'string' ? payload.description : '';
   const href = (payload?.url as string) || `https://github.com/${owner}/${repo}`;
+  const avatarUrl = typeof payload?.avatarUrl === 'string' ? payload.avatarUrl.trim() : '';
+
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group my-6 flex items-center gap-5 border-2 border-border bg-card p-5 shadow-[6px_6px_0_0_var(--border)] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0_0_var(--border)]"
-    >
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-border bg-muted group-hover:bg-primary/10">
-         <GithubIcon className="h-7 w-7" />
+    <div className="mx-auto my-5 flex w-full max-w-4xl flex-col gap-4 border-2 border-border bg-card p-4 shadow-[6px_6px_0_0_var(--border)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-1 items-start gap-4">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-14 w-14 shrink-0 rounded-full border-2 border-border object-cover shadow-[4px_4px_0_0_var(--border)]"
+          />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-border bg-muted shadow-[4px_4px_0_0_var(--border)]">
+            <GithubIcon className="h-7 w-7" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <h4 className="font-mono text-base font-black uppercase text-foreground">
+            {owner}/{name}
+          </h4>
+          {description ? (
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{description}</p>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">Repository on GitHub</p>
+          )}
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <h4 className="font-mono text-base font-black uppercase text-foreground">{owner}/{name}</h4>
-        <p className="line-clamp-1 text-sm text-muted-foreground">Repository source on GitHub</p>
-      </div>
-      <ArrowUpRight className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-    </a>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={blockShadowButtonClassNames({
+          variant: 'primary',
+          size: 'sm',
+          className: 'shrink-0 font-mono normal-case tracking-normal',
+        })}
+      >
+        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        Open on GitHub
+      </a>
+    </div>
   );
 }
 
 // --- COMPONENTS ---
-
-function RetroPanel({ title, icon: Icon, children }: Readonly<{ title: string; icon: React.ElementType; children: React.ReactNode }>) {
-  return (
-    <section className="border-2 border-border shadow-[4px_4px_0px_0px_var(--border)]">
-      <div className="flex items-center justify-between border-b-2 border-border px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-primary" strokeWidth={2.5} />
-          <h2 className="font-mono text-xs font-black uppercase tracking-wider text-foreground">{title}</h2>
-        </div>
-        <div className="flex gap-1.5">
-          <div className="h-2 w-2 border border-border bg-background" />
-          <div className="h-2 w-2 border border-border bg-background" />
-        </div>
-      </div>
-      <div className="p-4">{children}</div>
-    </section>
-  );
-}
 
 function PublicBlogBlock({ block }: Readonly<{ block: Block }>) {
   const payload = block.payload as Record<string, unknown> | undefined;
@@ -273,14 +453,19 @@ function PublicBlogBlock({ block }: Readonly<{ block: Block }>) {
     case 'partition':
       return <PartitionBlock />;
     case 'image':
-    case 'unsplashImage':
       return <ImageBlock payload={payload} />;
+    case 'unsplashImage':
+      return <UnsplashPublicImageBlock payload={payload} />;
     case 'videoEmbed':
       return <VideoEmbedBlock payload={payload} />;
     case 'code':
       return <CodeBlock payload={payload} />;
     case 'githubRepo':
       return <GithubRepoBlock payload={payload} />;
+    case 'table':
+      return <TableBlock payload={payload as unknown as TablePayload} />;
+    case 'mermaidDiagram':
+      return <MermaidBlock payload={payload as unknown as MermaidDiagramPayload} />;
     default:
       return null;
   }
@@ -290,7 +475,7 @@ function BlogPublicBody({ content }: Readonly<{ content: string }>) {
   const blocks = parseBlocks(content);
   if (blocks.length === 0) return null;
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="public-blog-body w-full space-y-4">
       {blocks.map((block) => (
         <PublicBlogBlock key={block.id} block={block} />
       ))}
@@ -298,69 +483,15 @@ function BlogPublicBody({ content }: Readonly<{ content: string }>) {
   );
 }
 
-function DiscoverSidebar({ origin }: Readonly<{ origin: string }>) {
+function DiscoverSidebar() {
   return (
-    <aside className="space-y-6 lg:sticky lg:top-6" aria-label="Discover">
-      <RetroPanel title="Trending" icon={Flame}>
-        <div className="space-y-1">
-          {DUMMY_TRENDING.map((t) => (
-            <button
-              key={t.title}
-              className="group flex w-full items-center gap-3 border-b border-border/20 py-3 text-left hover:bg-muted last:border-0"
-            >
-              <TrendingUp className="h-4 w-4 text-primary shrink-0" />
-              <span className="flex-1 font-mono text-xs font-bold leading-tight group-hover:text-primary">{t.title}</span>
-              <span className="font-mono text-[10px] text-muted-foreground border border-border px-1">{t.reads}</span>
-            </button>
-          ))}
-        </div>
-      </RetroPanel>
-
-      <RetroPanel title="Categories" icon={FolderOpen}>
-        <div className="flex flex-wrap gap-2">
-          {DUMMY_CATEGORIES.map((c) => (
-            <span
-              key={c}
-              className="cursor-pointer border-2 border-border bg-background px-3 py-1 font-mono text-xs font-bold uppercase transition-colors hover:bg-primary hover:text-primary-foreground shadow-[2px_2px_0px_0px_var(--border)]"
-            >
-              {c}
-            </span>
-          ))}
-        </div>
-      </RetroPanel>
-
-      <RetroPanel title="Suggested" icon={Users}>
-        <div className="space-y-3">
-          {DUMMY_SUGGESTED.map((u) => (
-            <Link
-              key={u.handle}
-              href={`/u/${u.handle}`}
-              className="flex items-center gap-3 group border-b border-border/10 pb-3 last:border-0 last:pb-0"
-            >
-              <div className="h-10 w-10 border-2 border-border bg-primary/15 flex items-center justify-center font-black text-primary font-mono shadow-[2px_2px_0px_0px_var(--border)]">
-                {u.initials}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black uppercase leading-none">{u.name}</p>
-                <p className="font-mono text-[10px] text-muted-foreground">@{u.handle}</p>
-              </div>
-              <div className="border border-border px-2 py-1 font-mono text-[10px] font-bold group-hover:bg-foreground group-hover:text-background transition-colors">
-                FOLLOW
-              </div>
-            </Link>
-          ))}
-        </div>
-      </RetroPanel>
-
-      <RetroPanel title="System_Tags" icon={Hash}>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          {DUMMY_TAGS.map((tag) => (
-            <span key={tag} className="font-mono text-xs font-bold text-muted-foreground hover:text-primary cursor-pointer">
-              #{tag}
-            </span>
-          ))}
-        </div>
-      </RetroPanel>
+    <aside
+      className="rounded-none border-2 border-dashed border-border/60 bg-card p-4 text-center shadow-[4px_4px_0_0_var(--border)] lg:sticky lg:top-6 lg:max-h-[calc(100vh-2.5rem)] lg:self-start lg:overflow-y-auto"
+      aria-label="Aside"
+    >
+      <p className="font-mono text-[10px] font-bold uppercase leading-relaxed text-muted-foreground">
+        Related content will appear here.
+      </p>
     </aside>
   );
 }
@@ -371,13 +502,12 @@ export default function PublicBlogPostPage() {
   const params = useParams();
   const username = typeof params.username === 'string' ? params.username : '';
   const slug = typeof params.slug === 'string' ? params.slug : '';
-  const [origin, setOrigin] = useState('');
+  const viewerUsername = useAuthStore((s) => s.user?.username ?? null);
   const [post, setPost] = useState<PublicBlogPostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setOrigin(globalThis.window.location.origin);
     const load = async () => {
       if (!username || !slug) return;
       try {
@@ -413,85 +543,100 @@ export default function PublicBlogPostPage() {
   );
 
   const plainSummary = summaryToPlainText(post.summary);
-  const published = new Date(post.updatedAt).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const summaryLooksHtml = /<[a-z][\s\S]*>/i.test(post.summary ?? '');
+  const dateRaw = post.updatedAt?.trim() || post.createdAt?.trim() || '';
+  const publishedDate = dateRaw ? new Date(dateRaw) : null;
+  const published =
+    publishedDate && !Number.isNaN(publishedDate.getTime())
+      ? publishedDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : '—';
+
+  const showEditedForAuthorOnly = Boolean(
+    viewerUsername &&
+      post.author?.username &&
+      viewerUsername === post.author.username &&
+      post.lastEditedAt?.trim(),
+  );
 
   return (
-    <div className="min-h-screen py-6 px-4 md:px-8 font-sans text-foreground selection:bg-primary selection:text-primary-foreground">
-      {/* Maximum width set to 1440px to fill left/right spaces on wider screens */}
-      <div className="mx-auto max-w-[1440px] border-x-2 border-dashed border-border/30 px-4 md:px-6">
-        
-        {/* Decorative Grid Top Bar that spans full width container */}
-        <div className="hidden md:flex items-center justify-between border-2 border-border bg-muted/50 px-4 py-2 mb-6">
-          <div className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground">Status: Document_Verified</div>
-          <div className="flex items-center gap-4 font-mono text-xs text-muted-foreground">
-            <span>LOC: 40.7128° N, 74.0060° W</span>
-            <Maximize2 className="h-3 w-3" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          
-          {/* Main Content (Given 9/12 column span to spread wider) */}
-          <main className="lg:col-span-9 space-y-8">
+    <BlogImagePreviewProvider>
+    <div className="min-h-screen py-4 px-2 font-sans text-foreground selection:bg-primary selection:text-primary-foreground md:px-4 md:py-6">
+      <div className="mx-auto max-w-[1600px] border-x-2 border-dashed border-border/30 px-2 md:px-4">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-4">
+          <main className="min-w-0 space-y-6 lg:col-span-10 lg:pr-0">
             <article className="border-4 border-border bg-card shadow-[10px_10px_0px_0px_var(--border)]">
               
-              {/* Post Header */}
-              <header className="border-b-4 border-border p-6 md:p-10 bg-muted/20">
-                <div className="flex flex-wrap items-center gap-4 mb-6">
-                   <div className="flex items-center gap-1.5 border-2 border-border bg-muted px-3 py-1.5 font-mono text-xs font-bold uppercase">
-                     <Calendar className="h-3.5 w-3.5" /> {published}
-                   </div>
-                   <div className="h-[2px] flex-1 bg-border/40 min-w-[50px]" />
-                   <div className="font-mono text-xs font-bold uppercase text-muted-foreground">System_Verified</div>
+              {/* Post Header — same bg as article body, compact vertical rhythm */}
+              <header className="border-b-4 border-border bg-card px-4 py-4 md:px-6 md:py-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <time
+                    dateTime={dateRaw || undefined}
+                    className="flex items-center gap-1.5 border-2 border-border bg-background px-3 py-1.5 font-mono text-xs font-bold uppercase text-foreground"
+                  >
+                    <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                    {published}
+                  </time>
+                  {showEditedForAuthorOnly ? (
+                    <span className="inline-flex items-center gap-1.5 border-2 border-amber-500/40 bg-amber-500/10 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-amber-950 dark:text-amber-100">
+                      Edited{' '}
+                      {new Date(post.lastEditedAt!).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                      {post.lastEditedBy?.fullName || post.lastEditedBy?.username
+                        ? ` · ${post.lastEditedBy.fullName ?? post.lastEditedBy.username}`
+                        : ''}
+                    </span>
+                  ) : null}
                 </div>
 
-                <h1 className="font-mono text-3xl font-black uppercase leading-tight tracking-tighter text-foreground sm:text-5xl md:text-6xl mb-8">
+                <h1 className="mt-4 font-mono text-2xl font-black uppercase leading-tight tracking-tighter text-foreground sm:text-4xl md:text-5xl">
                   {post.title}
                 </h1>
 
-                <div className="flex flex-wrap items-center gap-6 border-t-2 border-dashed border-border/50 pt-6">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={post.author.profileImg}
-                      alt=""
-                      className="h-14 w-14 border-2 border-border shadow-[4px_4px_0px_0px_var(--border)]"
-                    />
-                    <div>
-                      <p className="font-mono text-xs font-black uppercase text-muted-foreground">Originator</p>
-                      <Link
-                        href={`/u/${post.author.username}`}
-                        className="font-mono text-base font-bold text-primary hover:underline"
-                      >
-                        @{post.author.username}
-                      </Link>
-                    </div>
-                  </div>
+                <div className="mt-4">
+                  <BlogPostAuthor author={post.author} />
                 </div>
               </header>
 
-              {/* Thumbnail */}
-              {post.thumbnailUrl && (
-                <div className="border-b-4 border-border bg-muted overflow-hidden max-h-[600px]">
-                  <img src={post.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+              {plainSummary.trim() ? (
+                <div className="relative border-t-4 border-border bg-muted/5 px-4 py-8 pt-10 md:px-6">
+                  <div className="absolute left-0 top-0 flex items-stretch">
+                    <div className="flex items-center gap-2 bg-primary px-3 py-1.5">
+                      <Terminal className="size-3 text-primary-foreground" strokeWidth={2.5} aria-hidden />
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
+                        Summary_Report
+                      </span>
+                    </div>
+                    <div className="w-4 bg-primary" style={{ clipPath: 'polygon(0 0, 0% 100%, 100% 100%)' }} />
+                  </div>
+                  <div
+                    className="max-w-none text-sm font-medium leading-relaxed text-foreground/80
+                      [&_a]:text-primary [&_a]:underline [&_br]:block [&_em]:italic [&_em]:text-foreground
+                      [&_strong]:font-black [&_strong]:text-primary [&_u]:decoration-primary/50"
+                  >
+                    {summaryLooksHtml ? (
+                      <div dangerouslySetInnerHTML={{ __html: post.summary }} />
+                    ) : (
+                      <div className="whitespace-pre-wrap">{plainSummary}</div>
+                    )}
+                  </div>
+                  <div className="absolute bottom-1 right-4 size-3 border-r-2 border-b-2 border-border/50" aria-hidden />
                 </div>
-              )}
+              ) : null}
 
               {/* Post Body */}
-              <div className="p-6 md:p-10 space-y-10">
-                {plainSummary && (
-                  <div className="relative border-2 border-border bg-muted/40 p-6 font-mono text-sm leading-relaxed shadow-[inset_4px_4px_0px_0px_rgba(0,0,0,0.05)] max-w-4xl mx-auto">
-                    <div className="absolute -top-3 left-4 bg-border text-background px-2 text-[10px] font-bold">SUMMARY_MANIFEST</div>
-                    {plainSummary}
-                  </div>
-                )}
-
+              <div className="space-y-6 px-4 py-5 md:px-6 md:py-6">
                 <div className="prose-retro">
                   <BlogPublicBody content={post.content} />
                 </div>
+
+                <BlogCommentsSection username={username} slug={slug} />
               </div>
 
               {/* Footer */}
@@ -509,19 +654,15 @@ export default function PublicBlogPostPage() {
             </article>
           </main>
 
-          {/* Sidebar (Takes up remaining 3/12 columns) */}
-          <div className="lg:col-span-3">
-             <DiscoverSidebar origin={origin} />
+          <div className="lg:col-span-2 lg:min-w-0">
+            <DiscoverSidebar />
           </div>
 
         </div>
 
-        {/* Bottom Decorative Edge Bar to fill large bottom gaps */}
-        <div className="hidden md:flex items-center justify-between border-2 border-border bg-muted/50 px-4 py-2 mt-8 mb-4 font-mono text-xs text-muted-foreground">
-          <span>Total Blocks: {parseBlocks(post.content).length}</span>
-          <span>© All rights reserved</span>
-        </div>
+      
       </div>
     </div>
+    </BlogImagePreviewProvider>
   );
 }

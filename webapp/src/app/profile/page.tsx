@@ -29,6 +29,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
+import { setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
 import { Switch, AreaChart } from '@/components/retroui';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -42,8 +43,10 @@ import {
 import type { CompleteItemDialogSection } from '@/components/profile/dialog';
 import { ProfileCardSkeleton } from '@/components/profile/ProfileCardSkeleton';
 import { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader';
-import { WalletLottie, SparkLottie, StreakFireLottie, BlockShadowButton } from '@/components/ui';
+import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
+import { ProfileBlogPanel } from '@/components/profile/ProfileBlogPanel';
+import { ProfileActivityBlogList } from '@/components/blog/ProfileActivityBlogList';
 import { FollowersFollowingDialog, MissingFieldsDialog, MediaFullViewDialog } from '@/components/profile/dialog';
 import { getSkillIconUrl } from '@/lib/skillIcons';
 import { TerminalLoaderPage } from '@/components/loader';
@@ -518,6 +521,15 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             </div>
           </section>
 
+          {!isPreviewMode && token && user?.username ? (
+            <ProfileBlogPanel
+              token={token}
+              username={user.username}
+              authorDisplayName={user.fullName || user.username}
+              authorProfileImg={user.profileImg}
+            />
+          ) : null}
+
           {/* ACTIVITY TABS */}
           <section className="space-y-4 border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -525,12 +537,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                 <Activity className="size-4 text-primary" /> Activity
               </h2>
               {!isPreviewMode && (
-                <button
-                  type="button"
+                <Link
+                  href="/blogs/write"
+                  onClick={() => setWriteEditorSessionPostId(null)}
                   className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest shadow-[3px_3px_0px_0px_var(--border)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
                 >
                   <PenSquare className="size-3.5" /> Add post
-                </button>
+                </Link>
               )}
             </div>
             <div className="flex gap-1 border-b-4 border-border pb-3">
@@ -549,10 +562,20 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                 </button>
               ))}
             </div>
-            <div className="border-4 border-border border-dashed p-10 bg-muted/5 flex flex-col items-center justify-center text-center">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                No posts found. Your activity will appear here.
-              </p>
+            <div className="border-4 border-border border-dashed bg-muted/5 p-4 sm:p-6">
+              {activityTab === 'posts' && user?.username ? (
+                <ProfileActivityBlogList username={user.username} />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {activityTab === 'replies'
+                      ? 'No replies yet.'
+                      : activityTab === 'repost'
+                        ? 'No reposts yet.'
+                        : 'Nothing here yet.'}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
 
