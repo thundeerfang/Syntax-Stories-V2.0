@@ -2305,7 +2305,9 @@ function WorkExperiencesContent() {
     openedEditFromUrlRef.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length, searchParams, router, openEdit]);
+    // Intentionally list.length only: open once when list hydrates; ref blocks repeats. openEdit/router/searchParams vary each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync-open from ?edit= once after list loads
+  }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
     setSaving(true);
