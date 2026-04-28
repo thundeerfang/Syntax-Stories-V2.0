@@ -126,18 +126,6 @@ const IMAGE_ACCEPT = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const IMAGE_MAX_MB = 5;
 const VIDEO_EMBED_MAX = 3;
 
-const UL_ITEM_LINE = /^\s*[-*]\s+(.*)$/;
-const OL_ITEM_LINE = /^\s*\d+\.\s+(.*)$/;
-
-function getBrowserSelection(): Selection | null {
-  if (typeof document === 'undefined') return null;
-  return document.getSelection();
-}
-
-
-/** Stored in paragraph `payload.text` (persisted in `BlogPost.content` JSON). */
-const MENTION_WITH_ID_RE = /\[(@[^\]]+)\]\(mention:([a-fA-F0-9]{24})\)/g;
-
 function ParagraphBlockEditor({
   blockId: _blockId,
   payload,
@@ -299,61 +287,6 @@ const IMAGE_LAYOUT_OPTIONS: ReadonlyArray<{
   { id: 'square', label: 'Square', icon: Square },
   { id: 'fullWidth', label: 'Full width', icon: StretchHorizontal },
 ];
-
-function ImageLayoutTitlePanel({
-  layout,
-  onLayout,
-  title,
-  onTitleChange,
-  fieldId,
-  titleInputSuffix = '',
-  className,
-}: Readonly<{
-  layout: ImageBlockLayout;
-  onLayout: (next: ImageBlockLayout) => void;
-  title: string;
-  onTitleChange: (value: string) => void;
-  fieldId: string;
-  titleInputSuffix?: string;
-  className?: string;
-}>) {
-  const titleInputId = `${fieldId}-img-title${titleInputSuffix}`;
-  return (
-    <div className={cn('rounded-md border border-border bg-card/95 p-2 shadow-sm backdrop-blur-sm space-y-2', className)}>
-      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">Layout</p>
-      <div className="flex gap-1">
-        {IMAGE_LAYOUT_OPTIONS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            title={label}
-            onClick={() => onLayout(id)}
-            className={cn(
-              'flex-1 rounded border px-1 py-1.5 transition-colors',
-              layout === id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted/80 text-muted-foreground',
-            )}
-          >
-            <Icon className="h-3.5 w-3.5 mx-auto" strokeWidth={2} />
-            <span className="text-[8px] font-bold block text-center mt-0.5 leading-tight">{label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="space-y-1">
-        <label htmlFor={titleInputId} className="text-[9px] font-bold text-muted-foreground uppercase">
-          Title
-        </label>
-        <input
-          id={titleInputId}
-          type="text"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="Optional — shown as caption; also used as image description for accessibility"
-          className="w-full bg-background border border-border p-2 text-xs rounded focus:outline-none focus:border-primary"
-        />
-      </div>
-    </div>
-  );
-}
 
 /** Unsplash selected image: credit bottom-right on image; layout + caption + remove on hover. */
 function UnsplashImageWithOverlays({

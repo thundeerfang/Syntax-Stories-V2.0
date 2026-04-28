@@ -12,7 +12,6 @@ const COOKIE_NAME = 'ss_ref';
 const COOKIE_MAX_MS = 30 * 24 * 60 * 60 * 1000;
 const POSITIVE_CACHE_TTL_SEC = 24 * 60 * 60;
 const NEGATIVE_CACHE_TTL_SEC = 600;
-const OAUTH_SIGNUP_NONCE_TTL_SEC = 600;
 function referralSigningSecret() {
     return env.REFERRAL_SIGNING_SECRET || '';
 }

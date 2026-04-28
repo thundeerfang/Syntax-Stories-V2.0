@@ -16,7 +16,6 @@ export async function captureScreenToFeedbackFile(): Promise<File> {
     audio: false,
   });
 
-  const track = stream.getVideoTracks()[0];
   const video = document.createElement('video');
   video.playsInline = true;
   video.muted = true;

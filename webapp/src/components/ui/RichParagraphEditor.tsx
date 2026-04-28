@@ -1587,12 +1587,14 @@ export function RichParagraphEditor({
       ? Math.min(440, Math.max(280, window.innerWidth - 2 * margin))
       : Math.min(300, Math.max(220, window.innerWidth - 2 * margin));
 
-    let estH = 260;
+    let estH: number;
     if (showGifPanel) estH = 340;
     else if (showMentionPanel) estH = 300;
     else if (showLinkPanel) {
       estH = linkUrl.trim() && linkPreview.valid ? 340 : 220;
-    } else estH = 260;
+    } else {
+      estH = 260;
+    }
 
     const measured = popoverContainerRef.current?.offsetHeight;
     const h = measured && measured > 48 ? measured : estH;
@@ -1807,28 +1809,6 @@ export function RichParagraphEditor({
     },
     [editor],
   );
-
-  const setAlign = (align: GifAlign) => {
-    const win = typeof globalThis !== 'undefined' ? globalThis : null;
-    const sel = win && 'getSelection' in win ? win.getSelection() : null;
-    const anchor = sel?.anchorNode as globalThis.Node | null;
-    const el =
-      anchor && anchor.nodeType === globalThis.Node.ELEMENT_NODE
-        ? (anchor as Element)
-        : anchor?.parentElement;
-    const span = el instanceof Element ? el.closest('span[data-inline-gif]') as HTMLElement | null : null;
-    if (span) {
-      span.dataset.align = align;
-      span.classList.remove('ss-inline-gif-left', 'ss-inline-gif-center', 'ss-inline-gif-right');
-      span.classList.add(
-        align === 'left'
-          ? 'ss-inline-gif-left'
-          : align === 'right'
-            ? 'ss-inline-gif-right'
-            : 'ss-inline-gif-center',
-      );
-    }
-  };
 
   const isGifSelected = editor?.isActive('inlineGif') ?? false;
 
