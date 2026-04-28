@@ -1,0 +1,1 @@
+{"version":3,"file":"oauthQuery.js","sourceRoot":"","sources":["../../src/passport/oauthQuery.ts"],"names":[],"mappings":"AAEA;;;GAGG;AACH,MAAM,UAAU,gBAAgB,CAAC,GAA2B;IAC1D,MAAM,GAAG,GAAG,GAAG,CAAC,KAAK,EAAE,KAAK,CAAC;IAC7B,OAAO,OAAO,GAAG,KAAK,QAAQ,IAAI,GAAG,CAAC,MAAM,GAAG,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CAAC,CAAC,OAAO,CAAC;AACnE,CAAC"}
