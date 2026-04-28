@@ -1001,8 +1001,14 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
 
   const activePostIdRef = useRef(activePostId);
   const loadedPostStatusRef = useRef(loadedPostStatus);
-  activePostIdRef.current = activePostId;
-  loadedPostStatusRef.current = loadedPostStatus;
+
+  useEffect(() => {
+    activePostIdRef.current = activePostId;
+  }, [activePostId]);
+
+  useEffect(() => {
+    loadedPostStatusRef.current = loadedPostStatus;
+  }, [loadedPostStatus]);
 
   const syncDraftToServer = useCallback((): Promise<void> => {
     if (!navigator.onLine) return Promise.resolve();

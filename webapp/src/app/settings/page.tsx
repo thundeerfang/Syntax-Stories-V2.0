@@ -2305,7 +2305,7 @@ function WorkExperiencesContent() {
     openedEditFromUrlRef.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, searchParams, router, openEdit]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
     setSaving(true);
@@ -2530,10 +2530,8 @@ function WorkExperiencesContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.companyLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={form.companyLogo} alt="Logo" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : form.companyDomain ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={`https://logo.clearbit.com/${form.companyDomain.replace(/^https?:\/\//i, '').replace(/\/$/, '')}`} alt="" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
                   <Building2 className="size-6 text-muted-foreground" />
@@ -3149,7 +3147,7 @@ function EducationContent() {
     openedEditFromUrlRefEd.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, searchParams, router, openEdit]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((e) => ({
       school: e.school,
@@ -3304,7 +3302,6 @@ function EducationContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.schoolLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={form.schoolLogo}
                     alt="Logo"
@@ -3477,7 +3474,7 @@ function CertificationsContent() {
     openedEditFromUrlRefCert.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, searchParams, router, openEdit]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((c) => ({
       name: c.name,
@@ -3639,7 +3636,6 @@ function CertificationsContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.issuerLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={form.issuerLogo} alt="Logo" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
                   <Award className="size-6 text-muted-foreground" />
@@ -3966,7 +3962,7 @@ function ProjectsContent() {
     openedEditFromUrlRefProj.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, searchParams, router, openEdit]);
   const remove = async (i: number) => {
     const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
     setSaving(true);
