@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { AlignLeft, Camera, Film, Gauge, Image as ImageIcon, Minus, Type } from 'lucide-react';
+import { AlignLeft, Braces, Camera, Film, Image as ImageIcon, Minus, Network, Table2, Type } from 'lucide-react';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/utils';
 
@@ -42,16 +42,16 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     description: 'Visual separator to break your story into clear sections.',
   },
   {
+    id: 'code',
+    label: 'Code',
+    icon: Braces,
+    description: 'Paste a code snippet; language is auto-detected (override optional).',
+  },
+  {
     id: 'image',
     label: 'Image block',
     icon: ImageIcon,
-    description: 'Upload an image and add alt/caption metadata.',
-  },
-  {
-    id: 'gif',
-    label: 'GIF block',
-    icon: Gauge,
-    description: 'Search and embed a GIF as its own block.',
+    description: 'Upload an image; add an optional title for the caption and accessibility.',
   },
   {
     id: 'videoEmbed',
@@ -70,6 +70,18 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     label: 'Unsplash',
     icon: Camera,
     description: 'Search beautiful photos from Unsplash and insert them as blocks.',
+  },
+  {
+    id: 'table',
+    label: 'Table',
+    icon: Table2,
+    description: 'Paste tab-separated or pipe markdown; great for feature comparisons.',
+  },
+  {
+    id: 'mermaidDiagram',
+    label: 'Mermaid',
+    icon: Network,
+    description: 'Architecture diagrams (graph TD, flowchart, sequence, …).',
   },
 ];
 

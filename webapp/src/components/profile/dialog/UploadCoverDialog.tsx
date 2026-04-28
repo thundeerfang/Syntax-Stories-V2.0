@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { Image as ImageIconLucide } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Image as ImageIconLucide, X } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
 import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
@@ -96,39 +96,57 @@ export function UploadCoverDialog({
       open={open}
       onClose={onClose}
       titleId="upload-cover-title"
+      showCloseButton={false}
+      contentClassName="relative p-6 sm:p-8"
       panelClassName={cn(
         'pointer-events-auto w-full max-w-sm max-h-[90vh] overflow-y-auto',
         'border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]'
       )}
-      contentClassName="relative p-6 pt-10"
       backdropClassName="fixed inset-0 z-50 bg-black/40"
     >
-      <h2 id="upload-cover-title" className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-4">
-        <ImageIconLucide className="size-4 text-primary" aria-hidden /> Upload cover image
-      </h2>
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
-        JPEG, PNG, GIF or WebP. Max {MAX_MB}MB. Recommended width 1200px+.
-      </p>
+      <div className="flex flex-col gap-4">
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+            <h2
+              id="upload-cover-title"
+              className="text-sm font-black uppercase tracking-widest flex flex-wrap items-center gap-2"
+            >
+              <ImageIconLucide className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>Upload cover image</span>
+            </h2>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              JPEG, PNG, GIF or WebP. Max {MAX_MB}MB. Recommended width 1200px+.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 flex size-9 items-center justify-center rounded-sm border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0px_0px_var(--border)] transition-colors hover:text-foreground hover:border-primary"
+            aria-label="Close"
+          >
+            <X className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+          </button>
+        </header>
       {!imageUrl && (
         <ImageDropzone
           disabled={uploading}
           maxSizeBytes={MAX_MB * 1024 * 1024}
           className={cn(
-            'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+            'flex min-h-[152px] w-full flex-col items-center justify-center border-2 border-dashed rounded-lg px-6 py-8 text-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
             'border-border bg-muted/20 hover:bg-muted/30',
             uploading && 'pointer-events-none opacity-70'
           )}
           dragActiveClassName="border-primary bg-primary/5"
           onFile={(f) => handleFile(f)}
         >
-          <p className="text-sm font-bold text-foreground">Drop an image here or click to browse</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Cover banner will be updated</p>
+          <p className="text-sm font-bold text-foreground text-balance max-w-[16rem]">Drop an image here or click to browse</p>
+          <p className="text-[10px] text-muted-foreground mt-2 text-balance max-w-[16rem]">Cover banner will be updated</p>
         </ImageDropzone>
       )}
 
       {imageUrl && (
-        <div className="space-y-4">
-          <CropperKeyboardWrapper imageReady={!!imageUrl} setCrop={setCrop} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
+        <div className="flex flex-col gap-4">
+          <CropperKeyboardWrapper imageReady={!!imageUrl} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
             <Cropper
               image={imageUrl}
               crop={crop}
@@ -154,7 +172,7 @@ export function UploadCoverDialog({
             </span>
           </div>
           <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-            Tip: click the crop area, then arrow keys to move (Shift for larger steps).
+            Tip: focus the crop frame (click it), then arrow keys to pan. Hold Shift for smaller steps.
           </p>
           {uploading && (
             <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
@@ -187,6 +205,7 @@ export function UploadCoverDialog({
           </div>
         </div>
       )}
+      </div>
     </Dialog>
   );
 }

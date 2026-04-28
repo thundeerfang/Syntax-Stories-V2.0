@@ -9,7 +9,7 @@ export function MainLayout({ children }: Readonly<{ children: React.ReactNode }>
   const { isOpen } = useSidebar();
 
   return (
-    <main className="flex flex-1 min-h-0 border-t border-border bg-background">
+    <main className="flex flex-1 min-h-0 bg-background">
       {/* Fixed left sidebar drawer */}
       <SidebarDrawer />
 

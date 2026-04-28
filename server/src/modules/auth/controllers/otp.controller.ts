@@ -125,6 +125,7 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
     await markOtpResendGate('login', normalizedEmail);
     bumpOtpMetric('otp_send_total');
     void writeAuditLog(req, AuditAction.OTP_SENT, { metadata: { channel: 'email', purpose: 'login', email: normalizedEmail } });
+    res.setHeader('X-OTP-Expires-In-Seconds', String(authConfig.OTP_LOGIN_TTL_SECONDS));
     res.status(200).json({
       message: 'Verification code sent to your email 📧',
       success: true,
@@ -137,7 +138,12 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
       err,
       'Service temporarily unavailable. Try again later.'
     );
-    res.status(500).json({ message, success: false });
+    const redisDown = err instanceof Error && err.message === 'Redis required for OTP';
+    res.status(500).json({
+      message,
+      success: false,
+      ...(redisDown ? { code: 'REDIS_UNAVAILABLE' as const } : {}),
+    });
   }
 }
 
@@ -192,6 +198,7 @@ export async function signupEmail(req: Request, res: Response): Promise<void> {
     await markOtpResendGate('signup', normalizedEmail);
     bumpOtpMetric('otp_send_total');
     void writeAuditLog(req, AuditAction.OTP_SENT, { metadata: { channel: 'email', purpose: 'signup', email: normalizedEmail } });
+    res.setHeader('X-OTP-Expires-In-Seconds', String(authConfig.OTP_SIGNUP_TTL_SECONDS));
     res.status(200).json({
       message: 'Verification code sent to your email 📧',
       success: true,
@@ -201,7 +208,12 @@ export async function signupEmail(req: Request, res: Response): Promise<void> {
   } catch (err) {
     console.error(err);
     const message = otpEmailSendFailureMessage(err, 'Service temporarily unavailable.');
-    res.status(500).json({ message, success: false });
+    const redisDown = err instanceof Error && err.message === 'Redis required for OTP';
+    res.status(500).json({
+      message,
+      success: false,
+      ...(redisDown ? { code: 'REDIS_UNAVAILABLE' as const } : {}),
+    });
   }
 }
 
@@ -221,8 +233,10 @@ async function failOtpVerification(
       ? 'That code is no longer valid. Use the code from your latest email or request a new one.'
       : 'Invalid or expired code. Use Resend code or go back to request a new one.';
 
+  const failCode = reason === 'stale_otp_version' ? 'OTP_STALE_VERSION' : 'OTP_INVALID';
+
   if (!redis) {
-    res.status(401).json({ message: msg, success: false });
+    res.status(401).json({ message: msg, success: false, code: failCode });
     return;
   }
 
@@ -241,6 +255,7 @@ async function failOtpVerification(
       success: false,
       retryAfter: retrySec,
       attemptsLeft: 0,
+      code: failCode,
     });
     return;
   }
@@ -248,6 +263,7 @@ async function failOtpVerification(
     message: msg,
     success: false,
     attemptsLeft,
+    code: failCode,
   });
 }
 
@@ -384,6 +400,11 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     await respondWithSessionAfterEmailAuth(req, res, resolved.user, resolved.isNewUser);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    const redisDown = err instanceof Error && err.message === 'Redis required for OTP';
+    res.status(500).json({
+      message: redisDown ? 'Service temporarily unavailable. Try again later.' : 'Internal Server Error 💀',
+      success: false,
+      ...(redisDown ? { code: 'REDIS_UNAVAILABLE' as const } : {}),
+    });
   }
 }

@@ -5,12 +5,13 @@ How profile data moves between the **webapp**, **Express API**, and **MongoDB** 
 ## Overview
 
 - **Source of truth**: `User` document in MongoDB (`server/src/models/User.ts`).
-- **Primary write (full)**: `PATCH /auth/profile` with a JSON body (partial updates, all allowed keys).
+- **Primary write (full)**: `PATCH /auth/profile` with a JSON body (partial updates, all allowed keys). Use when one request must touch multiple sections (e.g. **basic + social** on settings “Save”).
 - **Preferred write (section)**: `PATCH /auth/profile/:section` with a body that only contains keys for that section (smaller payloads, tighter Zod).
+- **Optimistic concurrency**: Optional body field **`expectedProfileVersion`** (integer ≥ 0). When present, the server applies the update only if the stored **`profileVersion`** matches; otherwise **409** with code **`PROFILE_VERSION_CONFLICT`**. The webapp sends the current user’s version on every profile PATCH via **`runProfilePatch`** (`refreshUser` on conflict). **Draft UI state vs store after 409:** see [`PROFILE_VERSION_CONFLICT.md`](./PROFILE_VERSION_CONFLICT.md).
 - **Auth**: `Authorization: Bearer <accessToken>` (JWT).
 - **Images**: uploaded via `POST /api/upload/*`; returned URLs are saved via profile PATCH (legacy or **basic** section).
 - **API envelope (success)**: `GET /auth/me` and profile PATCH responses return `{ success: true, data: { user } }`. The webapp unwraps via `unwrapAccountUserPayload()` in `webapp/src/api/auth.ts`.
-- **API envelope (errors, profile routes)**: `{ success: false, code, message, details? }` (e.g. `USERNAME_TAKEN`, `VALIDATION_ERROR`). Legacy `error` is still present on some older auth validators where noted in code.
+- **API envelope (errors, profile routes)**: `{ success: false, code, message, details? }` (e.g. `USERNAME_TAKEN`, `VALIDATION_ERROR`, **`PROFILE_VERSION_CONFLICT`** on stale `expectedProfileVersion`). Legacy `error` is still present on some older auth validators where noted in code.
 
 ## Architecture style
 
@@ -36,7 +37,7 @@ UI → Zustand (session) → authApi → Express (/auth, /api/upload, /api/githu
 | `profile-projects.service.ts` | `prjLog` on projects. |
 | `profile-social.service.ts` | Boundary for social fields (Zod validates shape in middleware). |
 | `profile-setup.service.ts` | Boundary for `mySetup` (Zod validates shape in middleware). |
-| `profile.repository.ts` | Persistence + **semantic** `updateBasic` / `updateWork` / … / `updateBySection` (all currently delegate to `updateById`). |
+| `profile.repository.ts` | Persistence + **`updateBySection`** (conditional `$expr` on `profileVersion` when `expectedProfileVersion` is sent, then `$inc`); semantic `updateBasic` / `updateWork` / … |
 | `profile.mapper.ts` | **Response firewall**: `toAccountUser` (alias of `mapUserDocumentToApiUser`), `toPublicProfile` (email stripped — use when wiring public reads through this layer). |
 | `profile.types.ts` | `ProfileSections`, `ProfileUpdateSection`, `PROFILE_SECTION_KEYS`, `ProfileErrorCode`. |
 | `profile.audit.listener.ts` | Subscribes to `profile.updated`; audit metadata includes `section`. |
@@ -50,6 +51,7 @@ UI → Zustand (session) → authApi → Express (/auth, /api/upload, /api/githu
 | Concern | Mount | Registration |
 |--------|--------|----------------|
 | Auth + profile JSON | `/auth/*` | `server/src/bootstrap/registerAuthModuleRoutes.ts` → `app.use('/auth', authRoutes)` |
+| GitHub (token) | `/api/github/*` | e.g. `GET /repos`, `GET /repo/:fullName`, **`POST /repos/import-batch`** (`server/src/routes/github.routes.ts`) |
 | Multipart uploads | `/api/upload/*` | `registerUploadRoutes` |
 | Static files | `/uploads/*` | local disk |
 
@@ -63,17 +65,18 @@ Defined in `server/src/modules/auth/auth.routes.ts` (mounted at `/auth`). Handle
 |--------|------|------------|---------|
 | `GET` | `/auth/me` | `verifyToken` | Current user (account projection). |
 | `PATCH` | `/auth/profile` | `verifyToken` → `rateLimitUpdateProfile` → `updateProfileValidation` → `updateProfile` | Legacy “all keys” update. |
-| `PATCH` | `/auth/profile/:section` | `verifyToken` → `rateLimitUpdateProfile` → `updateProfileSectionBodyValidation` → `updateProfileSection` | Section-scoped update (`section` = `basic` \| `social` \| `work` \| `education` \| `certifications` \| `projects` \| `setup`). |
+| `PATCH` | `/auth/profile/:section` | `verifyToken` → `rateLimitUpdateProfile` → `updateProfileSectionBodyValidation` → `updateProfileSection` | Section-scoped update (`section` = `basic` \| `social` \| `stack` \| `work` \| `education` \| `certifications` \| `projects` \| `setup`). |
 | `POST` | `/auth/parse-cv` | `verifyToken` + multer PDF | Parse CV; **does not** persist. |
 
 **Section → keys** (see `PROFILE_SECTION_KEYS` in `profile.types.ts`):
 
-- **basic** — `fullName`, `username`, `bio`, `profileImg`, `coverBanner`, `job`, `portfolioUrl`, `stackAndTools`, OAuth flags.
+- **basic** — `fullName`, `username`, `bio`, `profileImg`, `coverBanner`, `job`, `portfolioUrl`, OAuth flags. (**Not** `stackAndTools` — use **stack**.)
 - **social** — `linkedin`, `instagram`, `github`, `youtube`.
+- **stack** — `stackAndTools`.
 - **work** — `workExperiences`.
 - **education** — `education`.
 - **certifications** — `certifications`.
-- **projects** — `projects`, `openSourceContributions` (body must include at least one).
+- **projects** — `projects`, `openSourceContributions`, optional **`isGitAccount`** (body must include at least one of these keys).
 - **setup** — `mySetup`.
 
 **Validation**: OTP + signup + verify + full profile — Zod in `server/src/middlewares/auth/authValidation.ts` (re-exports `profileZodSchemas`). Per-section profile — `profileSection.validation.ts` + `profileZodSchemas.ts` (via `updateProfileSectionBodyValidation`). Helpers: `zodFormat.ts` (`formatZodError`).
@@ -84,7 +87,7 @@ Defined in `server/src/modules/auth/auth.routes.ts` (mounted at `/auth`). Handle
 
 ## Repository semantics
 
-`profileRepository.updateBySection(userId, section, updates)` routes to `updateBasic`, `updateSocial`, `updateWork`, etc. Today each calls `updateById`; the split is for **intent** and future multi-collection transactions (not required yet).
+`profileRepository.updateBySection(userId, section, updates, expectedVersion?)` applies updates with optional **compare-and-set** on `profileVersion`. Named helpers (`updateBasic`, `updateSocial`, …) express **intent** for audits and future multi-collection transactions.
 
 ## Upload flow (images)
 
@@ -92,7 +95,7 @@ Defined in `server/src/modules/auth/auth.routes.ts` (mounted at `/auth`). Handle
 2. **Magic-byte** check: `imageBufferMatchesClaimedMime()` in `server/src/config/uploadValidation.ts`.
 3. **Sharp** metadata: **megapixel** cap (`MAX_IMAGE_PIXELS`) and **max edge** (`MAX_IMAGE_EDGE_PX` = 8192) via `imageDimensionsAllowed()` before processing.
 4. Sharp resize / encode; URL returned under `/uploads/...`.
-5. Client saves URL via `PATCH /auth/profile` or `PATCH /auth/profile/basic`.
+5. Client saves URL via `PATCH /auth/profile` (legacy) or `PATCH /auth/profile/basic` (section).
 
 **Not implemented yet**: explicit upload queue / concurrency cap (optional hardening).
 
@@ -102,11 +105,12 @@ Defined in `server/src/modules/auth/auth.routes.ts` (mounted at `/auth`). Handle
 |-------|-----------|------|
 | HTTP | `webapp/src/api/auth.ts` | `updateProfile`, **`updateProfileSection`**, unwrap, `ProfileUpdateSection` re-export, optional Zod re-exports from `@syntax-stories/shared`. |
 | Path alias | `webapp/package.json` | `@syntax-stories/shared` → `file:./packages/shared` (under app) |
-| State | `webapp/src/store/auth.ts` | `updateProfile(data, { section? })` — section uses section URL. |
-| Mutations | `webapp/src/hooks/useUpdateProfileMutation.ts` | `mutate({ data, section? })`. |
+| State | `webapp/src/store/auth.ts` | `updateProfile(data, { section? })` — merges **`expectedProfileVersion`**; on **409** `PROFILE_VERSION_CONFLICT`, `refreshUser()` then throws a user-facing error. |
+| Settings UI slice | `webapp/src/hooks/useSettingsAuthSlice.ts` | Shallow `user`, `token`, `updateProfile`, `refreshUser` for `/settings` profile sections. |
+| Mutations | `webapp/src/hooks/useUpdateProfileMutation.ts` | `mutate({ data, section? })` — optional migration path from direct store calls. |
 | Providers | `QueryProvider` + `app/providers.tsx` | React Query. |
 
-**Note**: Settings UI may still call `updateProfile` without `section` (legacy one-shot). Flows that combine **`projects` + `isGitAccount`** should keep using **legacy** `PATCH /auth/profile` until split into two calls or a dedicated contract.
+**Note**: Settings **Save** on edit profile uses **legacy** `updateProfile` **without** `section` so one request updates **basic + social**. Section **`projects`** accepts **`isGitAccount`** alongside **`projects`** (no need for legacy for GitHub open-source add).
 
 ## Rate limiting & observability
 
@@ -122,14 +126,14 @@ Defined in `server/src/modules/auth/auth.routes.ts` (mounted at `/auth`). Handle
 | 3 | Shared Zod DTOs | **Done** — `webapp/packages/shared/profile.schema.ts` + server `profileZodSchemas.ts` (deep rules). |
 | 4 | Semantic repository methods | **Done** — `updateWork`, `updateProjects`, `updateBySection`, etc. |
 | 5 | Typed events | **Done** — `ProfileUpdatedPayload` + `section`; `ProfileUpdatedEvent` alias. |
-| 6 | Mapper as response firewall | **Partial** — `toAccountUser`, `toPublicProfile`; ensure new routes use mappers only. |
+| 6 | Mapper as response firewall | **Partial** — profile writes return **`toAccountUser`** (`profile.service`); public/username reads may still use other shapes until fully routed through mappers. |
 | 7 | Mongo transactions | **Future** — when projects/live data split across collections. |
 | 8 | Upload hardening | **Partial** — magic bytes + megapixels + max edge; queue TBD. |
 | 9 | Global error envelope | **Partial** — profile PATCH + section validation use `{ success, code, message }`; other modules unchanged. |
-| 10 | TanStack Query for profile writes | **Partial** — `useUpdateProfileMutation` supports `section`; settings can migrate call-by-call. |
+| 10 | TanStack Query for profile writes | **Partial** — settings use store **`updateProfile(..., { section })`** + **`useSettingsAuthSlice`**; **`useUpdateProfileMutation`** remains available for incremental migration. |
 | 11 | Rate limit profile writes | **Done** — see above. |
 | 12 | Observability | **Partial** — handler-level timing log; fine-grained validation/db timers optional later. |
 
 ---
 
-*Last updated: section profile services & routes, `PROFILE_SECTION_KEYS`, shared Zod package, semantic repository + `updateBySection`, `profile.updated.section`, audit metadata, rate limit on profile PATCH, profile error codes, upload max edge + megapixels, webapp `updateProfile(..., { section })` + mutation hook.*
+*Last updated: **`stack`** section (basic vs stack keys), **`profileVersion` / `expectedProfileVersion`** + **409** `PROFILE_VERSION_CONFLICT`, **`POST /api/github/repos/import-batch`**, webapp **`useSettingsAuthSlice`**, shared **`profileStackPatchSchema`** + projects **`isGitAccount`**, repository conditional updates, section profile services & routes, audit metadata, rate limit on profile PATCH.*

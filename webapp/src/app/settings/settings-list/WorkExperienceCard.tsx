@@ -20,7 +20,7 @@ import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import type { WorkExperience } from '@/api/auth';
 
-type MediaItem = { url: string; title?: string; altText?: string };
+type MediaItem = { url: string; title?: string };
 
 /** Work card uses backend fields beyond the base `WorkExperience` type. */
 export type WorkExperienceForCard = WorkExperience & {
@@ -342,7 +342,7 @@ export function WorkExperienceCard({
                             onClick={() => onPreviewMedia(m)}
                             className="ss-media-thumb group/media relative aspect-square w-full border-2 border-border bg-background overflow-hidden"
                           >
-                            <img src={m.url} alt={m.altText ?? ''} className="size-full object-cover" />
+                            <img src={m.url} alt={m.title?.trim() || ''} className="size-full object-cover" />
                           </button>
                         ) : (
                           (() => {

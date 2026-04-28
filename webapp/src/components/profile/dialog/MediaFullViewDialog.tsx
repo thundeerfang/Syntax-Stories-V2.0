@@ -8,10 +8,9 @@ export interface MediaFullViewDialogProps {
   onClose: () => void;
   src: string;
   title?: string;
-  altText?: string;
 }
 
-export function MediaFullViewDialog({ open, onClose, src, title, altText }: Readonly<MediaFullViewDialogProps>) {
+export function MediaFullViewDialog({ open, onClose, src, title }: Readonly<MediaFullViewDialogProps>) {
   const isImage = /\.(jpe?g|png|gif|webp)(\?|$)/i.test(src) || src.startsWith('data:image');
   return (
     <Dialog
@@ -29,7 +28,7 @@ export function MediaFullViewDialog({ open, onClose, src, title, altText }: Read
       <div className="flex flex-col gap-2">
         {title && <p className="text-sm font-bold uppercase">{title}</p>}
         {isImage ? (
-          <img src={src} alt={altText ?? title ?? 'Media'} className="max-w-full max-h-[80vh] w-auto h-auto object-contain" />
+          <img src={src} alt={title?.trim() || 'Media'} className="max-w-full max-h-[80vh] w-auto h-auto object-contain" />
         ) : (
           <a href={src} target="_blank" rel="noopener noreferrer" className="text-primary font-bold underline break-all">
             {src}

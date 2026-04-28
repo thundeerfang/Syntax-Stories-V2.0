@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getAltchaChallengeUrl } from '@/api/auth';
+import { acquireGlobalAltchaBusy, releaseGlobalAltchaBusy } from '@/components/ui/UiProcessingShield';
+
+function isAltchaBusyState(state: string): boolean {
+  return state === 'verifying' || state === 'code';
+}
 
 type Props = {
   /** When false, render nothing (local dev without API base). */
@@ -33,6 +38,8 @@ export function AltchaField({
   floatingOffset,
 }: Readonly<Props>) {
   const ref = useRef<HTMLElement & { reset?: () => void }>(null);
+  const altchaHoldRef = useRef(false);
+  const prevAltchaStateRef = useRef<string | null>(null);
   const url = getAltchaChallengeUrl();
   const [sdkReady, setSdkReady] = useState(false);
 
@@ -52,6 +59,38 @@ export function AltchaField({
     if (!sdkReady || !el || typeof el.reset !== 'function') return;
     el.reset();
   }, [url, enabled, sdkReady]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!enabled || !url || !sdkReady || !el) return;
+
+    const onStateChange = (ev: Event) => {
+      const ce = ev as CustomEvent<{ state?: string }>;
+      const state = ce.detail?.state;
+      if (!state) return;
+      const prev = prevAltchaStateRef.current;
+      prevAltchaStateRef.current = state;
+      const prevBusy = prev != null && isAltchaBusyState(prev);
+      const nextBusy = isAltchaBusyState(state);
+      if (!prevBusy && nextBusy) {
+        acquireGlobalAltchaBusy();
+        altchaHoldRef.current = true;
+      } else if (prevBusy && !nextBusy) {
+        releaseGlobalAltchaBusy();
+        altchaHoldRef.current = false;
+      }
+    };
+
+    el.addEventListener('statechange', onStateChange);
+    return () => {
+      el.removeEventListener('statechange', onStateChange);
+      if (altchaHoldRef.current) {
+        releaseGlobalAltchaBusy();
+        altchaHoldRef.current = false;
+      }
+      prevAltchaStateRef.current = null;
+    };
+  }, [enabled, url, sdkReady]);
 
   if (!enabled || !url || !sdkReady) return null;
 

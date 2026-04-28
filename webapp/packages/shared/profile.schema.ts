@@ -16,13 +16,19 @@ export const profileBasicPatchSchema = z
     coverBanner: z.string().max(2000).optional(),
     job: z.string().max(100).optional(),
     portfolioUrl: optionalUriOrEmpty,
-    stackAndTools: z.array(z.string().max(80)).max(10).optional(),
     isGoogleAccount: z.boolean().optional(),
     isGitAccount: z.boolean().optional(),
     isFacebookAccount: z.boolean().optional(),
     isXAccount: z.boolean().optional(),
     isAppleAccount: z.boolean().optional(),
     isDiscordAccount: z.boolean().optional(),
+  })
+  .strict();
+
+/** `PATCH /auth/profile/stack` — `stackAndTools` is not part of `basic` on the server. */
+export const profileStackPatchSchema = z
+  .object({
+    stackAndTools: z.array(z.string().max(80)).max(10),
   })
   .strict();
 
@@ -58,13 +64,14 @@ export const profileProjectsPatchSchema = z
   .object({
     projects: z.array(z.record(z.unknown())).max(30).optional(),
     openSourceContributions: z.array(z.record(z.unknown())).max(30).optional(),
+    isGitAccount: z.boolean().optional(),
   })
   .strict()
   .refine(
-    (o: { projects?: unknown; openSourceContributions?: unknown }) =>
-      o.projects !== undefined || o.openSourceContributions !== undefined,
+    (o: { projects?: unknown; openSourceContributions?: unknown; isGitAccount?: unknown }) =>
+      o.projects !== undefined || o.openSourceContributions !== undefined || o.isGitAccount !== undefined,
     {
-      message: 'Provide projects and/or openSourceContributions',
+      message: 'Provide projects, openSourceContributions, and/or isGitAccount',
     }
   );
 
@@ -77,6 +84,7 @@ export const profileSetupPatchSchema = z
 export const profileUpdateSectionSchema = z.enum([
   'basic',
   'social',
+  'stack',
   'work',
   'education',
   'certifications',
@@ -87,6 +95,7 @@ export const profileUpdateSectionSchema = z.enum([
 export type ProfileUpdateSection = z.infer<typeof profileUpdateSectionSchema>;
 
 export type ProfileBasicPatch = z.infer<typeof profileBasicPatchSchema>;
+export type ProfileStackPatch = z.infer<typeof profileStackPatchSchema>;
 export type ProfileSocialPatch = z.infer<typeof profileSocialPatchSchema>;
 export type ProfileWorkPatch = z.infer<typeof profileWorkPatchSchema>;
 export type ProfileEducationPatch = z.infer<typeof profileEducationPatchSchema>;

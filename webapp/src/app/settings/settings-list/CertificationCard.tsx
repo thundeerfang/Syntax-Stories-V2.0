@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 
-type MediaItem = { url: string; title?: string; altText?: string };
+type MediaItem = { url: string; title?: string };
 
 const CERT_CARD_FOOTER_MARKS = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5'] as const;
 
@@ -101,7 +101,7 @@ export function CertificationCard({
             {e.issuerLogo ? (
               <img
                 src={e.issuerLogo}
-                alt=""
+                alt={e.issuingOrganization ? `${e.issuingOrganization} logo` : 'Issuer logo'}
                 className="ss-card-logo-img size-full object-contain p-1 grayscale brightness-90 relative z-10"
                 onError={(ev) => {
                   (ev.target as HTMLImageElement).style.display = 'none';
@@ -257,7 +257,7 @@ export function CertificationCard({
                     >
                       <div className="ss-overlay absolute inset-0 bg-primary/5 opacity-0 z-10" />
                       {isImageUrl(m.url) ? (
-                        <img src={m.url} alt="" className="size-full object-cover grayscale" />
+                        <img src={m.url} alt={m.title?.trim() || ''} className="size-full object-cover grayscale" />
                       ) : (
                         <Award className="size-3.5 text-muted-foreground" />
                       )}

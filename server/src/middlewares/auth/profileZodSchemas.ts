@@ -26,10 +26,18 @@ const uriMax = (max: number) =>
 
 const optUriMax = (max: number) => uriMax(max).optional();
 
+/** Optimistic concurrency: client sends last seen `user.profileVersion` (from GET /me). */
+export const expectedProfileVersionField = z.coerce.number().int().min(0).optional();
+
 const mediaItemSchema = z.object({
   url: z.string().url().max(500).trim(),
-  title: z.string().max(120).trim().optional(),
-  altText: z.string().max(200).trim().optional(),
+  // When present, title must be non-empty after trimming.
+  title: z
+    .string()
+    .max(120)
+    .trim()
+    .min(1, { message: 'Media title, if provided, cannot be empty.' })
+    .optional(),
 });
 
 const promotionItemSchema = z.object({
@@ -331,11 +339,18 @@ const profilePatchFields = {
 };
 
 export const updateProfileSchema = z
-  .object(profilePatchFields)
-  .refine((data: Record<string, unknown>) => Object.keys(data).length > 0, {
-    message: 'At least one field is required',
-    path: [],
-  });
+  .object({
+    ...profilePatchFields,
+    expectedProfileVersion: expectedProfileVersionField,
+  })
+  .refine(
+    (data: Record<string, unknown>) =>
+      Object.keys(data).filter((k) => k !== 'expectedProfileVersion').length > 0,
+    {
+      message: 'At least one field is required',
+      path: [],
+    }
+  );
 
 export const updateProfileBasicSchema = z
   .object({
@@ -346,18 +361,22 @@ export const updateProfileBasicSchema = z
     coverBanner: profilePatchFields.coverBanner,
     job: profilePatchFields.job,
     portfolioUrl: profilePatchFields.portfolioUrl,
-    stackAndTools: profilePatchFields.stackAndTools,
     isGoogleAccount: profilePatchFields.isGoogleAccount,
     isGitAccount: profilePatchFields.isGitAccount,
     isFacebookAccount: profilePatchFields.isFacebookAccount,
     isXAccount: profilePatchFields.isXAccount,
     isAppleAccount: profilePatchFields.isAppleAccount,
     isDiscordAccount: profilePatchFields.isDiscordAccount,
+    expectedProfileVersion: expectedProfileVersionField,
   })
-  .refine((data: Record<string, unknown>) => Object.keys(data).length > 0, {
-    message: 'At least one field is required',
-    path: [],
-  });
+  .refine(
+    (data: Record<string, unknown>) =>
+      Object.keys(data).filter((k) => k !== 'expectedProfileVersion').length > 0,
+    {
+      message: 'At least one field is required',
+      path: [],
+    }
+  );
 
 export const updateProfileSocialSchema = z
   .object({
@@ -365,40 +384,56 @@ export const updateProfileSocialSchema = z
     instagram: profilePatchFields.instagram,
     github: profilePatchFields.github,
     youtube: profilePatchFields.youtube,
+    expectedProfileVersion: expectedProfileVersionField,
   })
-  .refine((data: Record<string, unknown>) => Object.keys(data).length > 0, {
-    message: 'At least one field is required',
-    path: [],
-  });
+  .refine(
+    (data: Record<string, unknown>) =>
+      Object.keys(data).filter((k) => k !== 'expectedProfileVersion').length > 0,
+    {
+      message: 'At least one field is required',
+      path: [],
+    }
+  );
+
+export const updateProfileStackSchema = z.object({
+  stackAndTools: z.array(z.string().max(80)).max(10),
+  expectedProfileVersion: expectedProfileVersionField,
+});
 
 export const updateProfileWorkSchema = z.object({
   workExperiences: z.array(workExperienceItemSchema).max(5),
+  expectedProfileVersion: expectedProfileVersionField,
 });
 
 export const updateProfileEducationSchema = z.object({
   education: z.array(educationItemSchema).max(15),
+  expectedProfileVersion: expectedProfileVersionField,
 });
 
 export const updateProfileCertificationsSchema = z.object({
   certifications: z.array(certificationItemSchema).max(30),
+  expectedProfileVersion: expectedProfileVersionField,
 });
 
 export const updateProfileProjectsSchema = z
   .object({
     projects: projectsArraySchema.optional(),
     openSourceContributions: z.array(openSourceItemSchema).max(30).optional(),
+    isGitAccount: z.boolean().optional(),
+    expectedProfileVersion: expectedProfileVersionField,
   })
   .refine(
-    (d: { projects?: unknown; openSourceContributions?: unknown }) =>
-      d.projects !== undefined || d.openSourceContributions !== undefined,
+    (d: { projects?: unknown; openSourceContributions?: unknown; isGitAccount?: unknown }) =>
+      d.projects !== undefined || d.openSourceContributions !== undefined || d.isGitAccount !== undefined,
     {
-      message: 'Provide projects and/or openSourceContributions',
+      message: 'Provide projects, openSourceContributions, and/or isGitAccount',
       path: [],
     }
   );
 
 export const updateProfileSetupSchema = z.object({
   mySetup: z.array(setupItemSchema).max(5),
+  expectedProfileVersion: expectedProfileVersionField,
 });
 
 /** Legacy names (previously Joi schemas). */

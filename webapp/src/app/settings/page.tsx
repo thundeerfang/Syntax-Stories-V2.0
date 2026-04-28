@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -35,7 +36,7 @@ import {
   List,
   ListOrdered,
   Sigma,
-  Linkedin,
+  LinkedinIcon,
   Github,
   Instagram,
   Youtube,
@@ -64,27 +65,33 @@ import {
   STACK_TOOL_NAME_MIN,
 } from '@/lib/profileLinkLimits';
 import {
-  settingsBtnPrimary,
-  settingsBtnShadowLg,
-  settingsBtnShadowSm,
-  settingsBtnSecondary,
-  settingsBtnSecondaryCompact,
-  settingsBtnSecondaryWide,
+  settingsBtnBlockPrimaryMd,
+  settingsBtnBlockPrimarySm,
   settingsBtnIconFab,
 } from './buttonStyles';
-import { useSidebar } from '@/hooks/useSidebar';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
+import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { authApi } from '@/api/auth';
+import { projectMatchesGithubRepo } from '@/lib/githubProjectIdentity';
 import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
-import { UploadProfilePicDialog, UploadCoverDialog, UploadMediaDialog, MediaFullViewDialog } from '@/components/profile/dialog';
+import {
+  UploadProfilePicDialog,
+  UploadCoverDialog,
+  UploadMediaDialog,
+  UploadLogoDialog,
+  MediaFullViewDialog,
+} from '@/components/profile/dialog';
 import { FormDialog } from '@/components/ui/FormDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { GhostOutlineButton } from '@/components/ui';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
+import { Dialog } from '@/components/ui/Dialog';
+import { uploadMedia } from '@/api/upload';
 import { getSkillIconUrl, getSkillIconUrlBySlug } from '@/lib/skillIcons';
 import { searchTechStack, type TechStackItem } from '@/data/techStack';
-import { Toggle, ToggleGroup, ToggleGroupItem, FormInput, FormTextarea, FormCheckbox, Input, Label, SearchableSelect, EntitySearchInput } from '@/components/retroui';
+import { Toggle, ToggleGroup, ToggleGroupItem, FormInput, FormTextarea, FormCheckbox, Input, Label, SearchableSelect, EntitySearchInput, Textarea } from '@/components/retroui';
 import { getCountryOptions, getStateOptions, getCityOptions, buildLocationString, parseLocationString } from '@/data/location';
 import { searchCompaniesWithApi, searchSchools, searchOrganizations } from '@/data/entities';
 import { WorkExperienceCard } from './settings-list/WorkExperienceCard';
@@ -95,10 +102,8 @@ import { OpenSourceCard } from './settings-list/OpenSourceCard';
 import { type SetupItem as MySetupItem } from './settings-list/MySetupCard';
 import { SettingsSectionHeader } from './settings-list/Header';
 
-type SectionId = string;
-
 interface NavItem {
-  id: SectionId;
+  id: string;
   label: string;
   icon: React.ElementType;
 }
@@ -164,12 +169,14 @@ const accordionVariants = {
   expanded: { height: 'auto', opacity: 1 },
 };
 
-const FormSection = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <div className="space-y-4 pt-6 border-t-2 border-border/50 first:border-t-0 first:pt-0 min-w-0">
-    {title ? <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{title}</h3> : null}
-    <div className="grid gap-4 min-w-0">{children}</div>
-  </div>
-);
+function FormSection({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-4 pt-6 border-t-2 border-border/50 first:border-t-0 first:pt-0 min-w-0">
+      {title ? <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{title}</h3> : null}
+      <div className="grid gap-4 min-w-0">{children}</div>
+    </div>
+  );
+}
 
 function SyntaxCardContent() {
   return (
@@ -228,7 +235,7 @@ function SyntaxCardContent() {
 }
 
 function EditProfileContent() {
-  const { user, updateProfile, refreshUser, token } = useAuthStore();
+  const { user, updateProfile, refreshUser, token } = useSettingsAuthSlice();
   const bioEditorRef = useRef<HTMLDivElement>(null);
   const bioUpdateFromEditorRef = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -250,6 +257,36 @@ function EditProfileContent() {
   const symbolsRef = useRef<HTMLDivElement>(null);
   const [formatActive, setFormatActive] = useState({ bold: false, italic: false, underline: false });
 
+  const selectionHasStyle = useCallback(
+    (
+      root: HTMLElement,
+      predicate: (element: HTMLElement, computed: CSSStyleDeclaration) => boolean,
+    ) => {
+      if (typeof window === 'undefined') return false;
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return false;
+      const range = selection.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+      if (!root.contains(container)) return false;
+
+      let node: Node | null =
+        selection.anchorNode?.nodeType === Node.ELEMENT_NODE
+          ? selection.anchorNode
+          : selection.anchorNode?.parentElement ?? null;
+
+      while (node && root.contains(node)) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement;
+          const computed = window.getComputedStyle(element);
+          if (predicate(element, computed)) return true;
+        }
+        node = node.parentNode;
+      }
+      return false;
+    },
+    [],
+  );
+
   const updateFormatState = useCallback(() => {
     const el = bioEditorRef.current;
     if (!el || typeof document === 'undefined') return;
@@ -258,11 +295,26 @@ function EditProfileContent() {
       return;
     }
     setFormatActive({
-      bold: document.queryCommandState('bold'),
-      italic: document.queryCommandState('italic'),
-      underline: document.queryCommandState('underline'),
+      bold: selectionHasStyle(el, (element, computed) => {
+        const fontWeight = computed.fontWeight;
+        const numericWeight = Number.parseInt(fontWeight, 10);
+        return (
+          element.tagName === 'B' ||
+          element.tagName === 'STRONG' ||
+          fontWeight === 'bold' ||
+          (!Number.isNaN(numericWeight) && numericWeight >= 600)
+        );
+      }),
+      italic: selectionHasStyle(
+        el,
+        (element, computed) => element.tagName === 'I' || element.tagName === 'EM' || computed.fontStyle === 'italic',
+      ),
+      underline: selectionHasStyle(el, (element, computed) => {
+        const textDecoration = computed.textDecorationLine || computed.textDecoration;
+        return element.tagName === 'U' || textDecoration.includes('underline');
+      }),
     });
-  }, []);
+  }, [selectionHasStyle]);
 
   useEffect(() => {
     setFullName(user?.fullName ?? '');
@@ -300,7 +352,7 @@ function EditProfileContent() {
     setCoverBanner(result.url);
     setCoverBannerBlurDataUrl(result.blurDataUrl ?? null);
     try {
-      await updateProfile({ coverBanner: result.url });
+      await updateProfile({ coverBanner: result.url }, { section: 'basic' });
     } catch {
       // already set in state; user can Save again if needed
     }
@@ -310,7 +362,7 @@ function EditProfileContent() {
     setProfileImg(result.url);
     setProfileImgBlurDataUrl(result.blurDataUrl ?? null);
     try {
-      await updateProfile({ profileImg: result.url });
+      await updateProfile({ profileImg: result.url }, { section: 'basic' });
     } catch {
       // already set in state; user can Save again if needed
     }
@@ -448,6 +500,22 @@ function EditProfileContent() {
 
   const handleSave = async () => {
     if (!user) return;
+    const t = (s: string | undefined | null) => (s ?? '').trim();
+    const same =
+      t(fullName) === t(user.fullName) &&
+      t(username) === t(user.username) &&
+      t(bio) === t(user.bio) &&
+      t(profileImg) === t(user.profileImg) &&
+      t(coverBanner) === t(user.coverBanner) &&
+      t(portfolioUrl) === t((user as { portfolioUrl?: string }).portfolioUrl) &&
+      t(linkedin) === t(user.linkedin) &&
+      t(github) === t(user.github) &&
+      t(instagram) === t(user.instagram) &&
+      t(youtube) === t(user.youtube);
+    if (same) {
+      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      return;
+    }
     setSaving(true);
     try {
       await updateProfile({
@@ -462,9 +530,9 @@ function EditProfileContent() {
         instagram: instagram.trim() || undefined,
         youtube: youtube.trim() || undefined,
       });
-      toast.success('Profile updated.');
+      toast.success('Profile updated.', { id: 'syntax-profile-success' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update profile.');
+      toast.error(e instanceof Error ? e.message : 'Failed to update profile.', { id: 'syntax-profile-error' });
     } finally {
       setSaving(false);
     }
@@ -565,7 +633,6 @@ function EditProfileContent() {
               className="w-full p-3 border-2 border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-medium text-sm transition-shadow"
               aria-describedby="fullname-hint"
             />
-            <p id="fullname-hint" className="text-[9px] text-muted-foreground">1–100 characters</p>
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold uppercase text-muted-foreground">Username</label>
@@ -579,12 +646,10 @@ function EditProfileContent() {
               className="w-full p-3 border-2 border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-medium text-sm transition-shadow"
               aria-describedby="username-hint"
             />
-            <p id="username-hint" className="text-[9px] text-muted-foreground">2–30 characters. Unique, letters and numbers only. No spaces.</p>
           </div>
         </div>
         <div className="mt-4 space-y-1.5">
           <label className="text-[10px] font-bold uppercase text-muted-foreground">Short bio</label>
-          <p className="text-[9px] text-muted-foreground">Use the toolbar for <strong>bold</strong>, <em>italic</em>, underline. Text in the box shows formatting as you type.</p>
           <div className="border-2 border-border bg-background focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-shadow">
             <ToggleGroup
               type="multiple"
@@ -713,12 +778,10 @@ function EditProfileContent() {
             <p className="text-[9px] font-medium text-muted-foreground/80">Add your profiles so others can find you.</p>
           </div>
         </div>
-        <p className="text-[9px] text-muted-foreground mb-3">
-          URL fields: up to {PROFILE_SOCIAL_URL_MAX} characters (at least {PROFILE_SOCIAL_URL_MIN} when not empty). Instagram: up to {PROFILE_INSTAGRAM_MAX} characters.
-        </p>
+       
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { key: 'linkedin' as const, label: 'LinkedIn', value: linkedin, set: setLinkedin, placeholder: 'https://linkedin.com/in/username', Icon: Linkedin, iconBg: 'bg-[#0A66C2]/10', iconColor: 'text-[#0A66C2]', maxLen: PROFILE_SOCIAL_URL_MAX },
+            { key: 'linkedin' as const, label: 'LinkedIn', value: linkedin, set: setLinkedin, placeholder: 'https://linkedin.com/in/username', Icon: LinkedinIcon, iconBg: 'bg-[#0A66C2]/10', iconColor: 'text-[#0A66C2]', maxLen: PROFILE_SOCIAL_URL_MAX },
             { key: 'github' as const, label: 'GitHub', value: github, set: setGithub, placeholder: 'https://github.com/username', Icon: Github, iconBg: 'bg-foreground/10', iconColor: 'text-foreground', maxLen: PROFILE_SOCIAL_URL_MAX },
             { key: 'instagram' as const, label: 'Instagram', value: instagram, set: setInstagram, placeholder: 'https://instagram.com/username', Icon: Instagram, iconBg: 'bg-[#E4405F]/10', iconColor: 'text-[#E4405F]', maxLen: PROFILE_INSTAGRAM_MAX },
             { key: 'youtube' as const, label: 'YouTube', value: youtube, set: setYoutube, placeholder: 'https://youtube.com/@channel', Icon: Youtube, iconColor: 'text-[#FF0000]', iconBg: 'bg-[#FF0000]/10', maxLen: PROFILE_SOCIAL_URL_MAX },
@@ -758,13 +821,22 @@ function EditProfileContent() {
             </div>
           ))}
         </div>
+        <p className="mt-3 text-[9px] text-muted-foreground">
+          LinkedIn, GitHub, YouTube: {PROFILE_SOCIAL_URL_MIN}–{PROFILE_SOCIAL_URL_MAX} characters per URL when non-empty.
+          Instagram: up to {PROFILE_INSTAGRAM_MAX} characters.
+        </p>
       </section>
 
       <div className="flex items-center justify-end gap-3 pt-2">
-        <button type="button" onClick={() => refreshUser()} className="px-5 py-2.5 font-bold text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-2 border-transparent hover:border-border">
+        <GhostOutlineButton
+          type="button"
+          onClick={() => refreshUser()}
+          size="md"
+          className="text-muted-foreground hover:text-foreground"
+        >
           Reset
-        </button>
-        <button type="button" onClick={handleSave} disabled={saving} className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-6 py-2.5 text-[11px] tracking-widest disabled:opacity-60')}>
+        </GhostOutlineButton>
+        <button type="button" onClick={handleSave} disabled={saving} className={cn(settingsBtnBlockPrimaryMd, 'px-6 py-2.5 text-[11px] tracking-widest disabled:opacity-60')}>
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
@@ -785,6 +857,10 @@ function SecurityEmailContent() {
     const email = newEmail.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast.error('Enter a valid new email address.');
+      return;
+    }
+    if (email === (user?.email ?? '').trim().toLowerCase()) {
+      toast.error('That is already your email.', { id: 'syntax-email-unchanged' });
       return;
     }
     if (!token) {
@@ -881,7 +957,7 @@ function SecurityEmailContent() {
               type="button"
               onClick={handleSendCode}
               disabled={sending || !newEmail}
-              className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-6 py-3 text-xs tracking-widest')}
+              className={cn(settingsBtnBlockPrimaryMd, 'px-6 py-3 text-xs tracking-widest')}
             >
               {sending ? 'Processing...' : 'Request Verification Codes'}
               <ChevronDown className="-rotate-90 size-4" />
@@ -930,17 +1006,13 @@ function SecurityEmailContent() {
                 type="button"
                 onClick={handleVerify}
                 disabled={verifying}
-                className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'flex-1 py-4 text-sm tracking-widest')}
+                className={cn(settingsBtnBlockPrimaryMd, 'flex-1 py-4 text-sm tracking-widest')}
               >
                 {verifying ? 'Verifying Identity...' : 'Confirm Email Change'}
               </button>
-              <button
-                type="button"
-                onClick={handleCancelEmailChange}
-                className={settingsBtnSecondaryWide}
-              >
+              <GhostOutlineButton type="button" onClick={handleCancelEmailChange} size="lg">
                 Cancel
-              </button>
+              </GhostOutlineButton>
             </div>
           </div>
         )}
@@ -1112,7 +1184,7 @@ function StackToolIcon({ name }: { name: string }) {
 }
 
 function StackAndToolsContent() {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateProfile } = useSettingsAuthSlice();
   const [items, setItems] = useState<string[]>(
     () => (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX)
   );
@@ -1159,12 +1231,18 @@ function StackAndToolsContent() {
   };
 
   const handleSave = async () => {
+    const baseline = (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX);
+    const next = items.slice(0, STACK_AND_TOOLS_MAX);
+    if (JSON.stringify(next) === JSON.stringify(baseline)) {
+      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      return;
+    }
     setSaving(true);
     try {
-      await updateProfile({ stackAndTools: items.slice(0, STACK_AND_TOOLS_MAX) });
-      toast.success('Stack & Tools Synchronized.');
+      await updateProfile({ stackAndTools: next }, { section: 'stack' });
+      toast.success('Stack & Tools Synchronized.', { id: 'syntax-stack-success' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Sync failed.');
+      toast.error(e instanceof Error ? e.message : 'Sync failed.', { id: 'syntax-stack-error' });
     } finally {
       setSaving(false);
     }
@@ -1337,7 +1415,7 @@ function StackAndToolsContent() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-8 py-3 text-xs tracking-[0.15em]')}
+          className={cn(settingsBtnBlockPrimaryMd, 'px-8 py-3 text-xs tracking-[0.15em]')}
         >
           {saving ? 'SYNCING...' : 'COMMIT ARSENAL'}
           <Check className="size-4" />
@@ -1363,7 +1441,7 @@ function StackAndToolsContent() {
 }
 
 function MySetupContent() {
-  const { user, updateProfile, token } = useAuthStore();
+  const { user, updateProfile, token } = useSettingsAuthSlice();
   const [items, setItems] = useState<MySetupItem[]>((user as any)?.mySetup ?? []);
   const [saving, setSaving] = useState(false);
   const [draftLabel, setDraftLabel] = useState('');
@@ -1388,18 +1466,29 @@ function MySetupContent() {
       imageUrl: draftImageUrl.trim().slice(0, 500),
       productUrl: normalizeUrl(draftProductUrl).slice(0, 500),
     };
+    if (editIndex !== null && items[editIndex]) {
+      const e = items[editIndex];
+      const same =
+        nextItem.label === (e.label ?? '').trim() &&
+        nextItem.imageUrl === (e.imageUrl ?? '').trim() &&
+        nextItem.productUrl === normalizeUrl(e.productUrl ?? '').slice(0, 500);
+      if (same) {
+        toast.error('No changes to save.', { id: 'syntax-no-changes' });
+        return;
+      }
+    }
     const next = [...items];
     if (editIndex !== null) next[editIndex] = nextItem;
     else next.push(nextItem);
 
     setSaving(true);
     try {
-      await updateProfile({ mySetup: next.slice(0, 5) } as any);
+      await updateProfile({ mySetup: next.slice(0, 5) } as any, { section: 'setup' });
       setItems(next.slice(0, 5));
       setDraftLabel(''); setDraftImageUrl(''); setDraftProductUrl(''); setEditIndex(null);
-      toast.success('My Setup updated.');
+      toast.success('My Setup updated.', { id: 'syntax-setup-success' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update setup.');
+      toast.error(e instanceof Error ? e.message : 'Failed to update setup.', { id: 'syntax-setup-error' });
     } finally {
       setSaving(false);
     }
@@ -1486,7 +1575,7 @@ function MySetupContent() {
               type="button"
               disabled={!canSaveDraft || (items.length >= 5 && editIndex === null)}
               onClick={onAddOrUpdate}
-              className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'w-full md:w-auto px-10 py-3 text-xs tracking-widest')}
+              className={cn(settingsBtnBlockPrimaryMd, 'w-full md:w-auto px-10 py-3 text-xs tracking-widest')}
             >
               {saving ? 'PROCESSING...' : editIndex !== null ? 'UPDATE COMPONENT' : 'MOUNT COMPONENT'}
             </button>
@@ -1526,7 +1615,7 @@ function MySetupContent() {
                     onClick={() => {
                       const next = items.filter((_, i) => i !== idx);
                       setSaving(true);
-                      updateProfile({ mySetup: next } as any)
+                      updateProfile({ mySetup: next } as any, { section: 'setup' })
                         .then(() => {
                           setItems(next);
                           toast.success('Component removed.');
@@ -1572,7 +1661,187 @@ function MySetupContent() {
   );
 }
 
-type MediaItem = { url: string; title?: string; altText?: string };
+type MediaItem = {
+  url: string;
+  title?: string;
+  /** When true, this media item only exists locally and must be uploaded on Save. */
+  isPending?: boolean;
+  pendingFile?: File;
+  pendingCrop?: import('@/api/upload').CropArea;
+};
+
+/** Normalize link input: full http(s) URLs, or bare domains / www… → https://… */
+function normalizeMediaLinkInput(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const candidates = /^https?:\/\//i.test(t) ? [t] : [t, `https://${t.replace(/^\/+/, '')}`];
+  for (const c of candidates) {
+    try {
+      const u = new URL(c);
+      if (u.protocol === 'http:' || u.protocol === 'https:') {
+        if (u.hostname) return u.href;
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+/** Non-empty lines from a textarea; each normalized to a URL. */
+function parseMediaLinkLineInput(block: string): { urls: string[]; skippedNonEmpty: number } {
+  const lines = block.split(/\r?\n/);
+  const urls: string[] = [];
+  let skippedNonEmpty = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const u = normalizeMediaLinkInput(trimmed);
+    if (u) urls.push(u);
+    else skippedNonEmpty += 1;
+  }
+  return { urls, skippedNonEmpty };
+}
+
+interface AddMediaLinksDialogProps {
+  open: boolean;
+  onClose: () => void;
+  /** Called with already-normalized URL items; caller is responsible for enforcing overall max 5 constraint. */
+  onAdd: (items: MediaItem[]) => void;
+  /** How many more media items can be added before hitting the 5-item cap. */
+  maxCount: number;
+}
+
+function AddMediaLinksDialog({
+  open,
+  onClose,
+  onAdd,
+  maxCount,
+}: Readonly<AddMediaLinksDialogProps>) {
+  const [linkUrl, setLinkUrl] = useState('');
+  const [title, setTitle] = useState('');
+
+  const handleClose = () => {
+    setLinkUrl('');
+    setTitle('');
+    onClose();
+  };
+
+  const handleAdd = () => {
+    const room = Math.max(0, maxCount);
+    if (room <= 0) {
+      toast.error('You already have 5 media items for this entry.', { id: 'syntax-max-media' });
+      return;
+    }
+    const normalized = normalizeMediaLinkInput(linkUrl);
+    if (!normalized) {
+      toast.error('Enter a valid URL (https://… or domain.com).', { id: 'syntax-invalid-url' });
+      return;
+    }
+    const explicit = title.trim();
+    const inferred =
+      !explicit && normalized
+        ? domainFromUrl(normalized) || 'Link'
+        : undefined;
+    const effectiveTitle = explicit || inferred || 'Link';
+    const items: MediaItem[] = [{ url: normalized, title: effectiveTitle }];
+
+    onAdd(items);
+
+    setLinkUrl('');
+    setTitle('');
+    handleClose();
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      titleId="add-media-links-title"
+      showCloseButton={false}
+      panelClassName={cn(
+        'pointer-events-auto w-full max-w-lg max-h-[90vh] overflow-y-auto',
+        'border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]'
+      )}
+      contentClassName="relative p-6 sm:p-8"
+      backdropClassName="fixed inset-0 z-[101] bg-black/40"
+    >
+      <div className="flex flex-col gap-4">
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+            <h2
+              id="add-media-links-title"
+              className="text-sm font-black uppercase tracking-widest flex flex-wrap items-center gap-2"
+            >
+              <Link2 className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>Add media link(s)</span>
+            </h2>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              One URL per line. Links share the 5-item limit with uploaded images.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="shrink-0 flex size-9 items-center justify-center rounded-sm border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0px_0px_var(--border)] transition-colors hover:text-foreground hover:border-primary"
+            aria-label="Close"
+          >
+            <X className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+          </button>
+        </header>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-[10px] font-bold uppercase">Link URL</Label>
+            <Input
+              placeholder="https://example.com"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              className="text-sm"
+              autoComplete="off"
+              type="url"
+            />
+            <p className="text-[9px] text-muted-foreground">
+              Remaining media slots for this entry: {Math.max(0, maxCount)} (links + images).
+            </p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
+            <Input
+              placeholder="Used as the link’s title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-sm"
+              maxLength={120}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-3 py-1.5 text-[10px] font-bold uppercase rounded border border-border text-muted-foreground hover:bg-muted/40"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleAdd}
+            className={cn(
+              settingsBtnBlockPrimarySm,
+              'px-3 py-1.5 text-[10px] font-bold',
+              'disabled:opacity-60 disabled:cursor-not-allowed'
+            )}
+            disabled={maxCount <= 0 || !linkUrl.trim()}
+          >
+            Add link
+          </button>
+        </div>
+      </div>
+    </Dialog>
+  );
+}
 
 function isImageUrl(url: string): boolean {
   return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url);
@@ -1601,7 +1870,7 @@ function MediaThumbnailRow({
 }) {
   const [imgError, setImgError] = useState(false);
   if (!item || !item.url) return null;
-  const fallbackText = item.altText || item.title || 'Image';
+  const fallbackText = item.title || 'Image';
   const isImage = isImageUrl(item.url);
   const linkDomain = !isImage ? domainFromUrl(item.url) : '';
 
@@ -1613,7 +1882,7 @@ function MediaThumbnailRow({
           onClick={onPreview}
           className="size-12 border-2 border-border shrink-0 overflow-hidden focus:ring-2 focus:ring-primary"
         >
-          <img src={item.url} alt={item.altText ?? item.title ?? ''} className="size-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; setImgError(true); }} />
+          <img src={item.url} alt={item.title ?? ''} className="size-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; setImgError(true); }} />
         </button>
       ) : isImage && imgError ? (
         <div className="size-12 border-2 border-border bg-muted/30 shrink-0 flex items-center justify-center p-1">
@@ -1853,7 +2122,6 @@ function mapWorkExpPromotionsForSubmit(form: WorkExpForm) {
           .map((m) => ({
             url: m.url.trim(),
             title: m.title?.trim() || undefined,
-            altText: m.altText?.trim() || undefined,
           })),
       };
     })
@@ -1887,60 +2155,8 @@ function buildWorkExperienceProfileEntry(
       .map((m) => ({
         url: m.url.trim(),
         title: m.title?.trim() || undefined,
-        altText: m.altText?.trim() || undefined,
       })),
   };
-}
-
-const SETTINGS_LOGO_ALLOWED_MIME = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/svg+xml',
-]);
-const SETTINGS_LOGO_MAX_BYTES = 2 * 1024 * 1024;
-
-type SettingsLogoUploadKind = 'company-logo' | 'school-logo' | 'org-logo';
-
-/** School / company / issuer logo uploads share validation, field name, and JSON shape. */
-async function postSettingsLogoUpload(
-  file: File,
-  token: string,
-  kind: SettingsLogoUploadKind,
-  applyUrl: (url: string) => void,
-  setUploading: (busy: boolean) => void
-): Promise<void> {
-  if (!SETTINGS_LOGO_ALLOWED_MIME.has(file.type)) {
-    toast.error('Logo must be JPEG, PNG, WebP, or SVG.');
-    return;
-  }
-  if (file.size > SETTINGS_LOGO_MAX_BYTES) {
-    toast.error('Logo must be under 2 MB.');
-    return;
-  }
-  setUploading(true);
-  try {
-    const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-    const fd = new FormData();
-    fd.append('logo', file);
-    const res = await fetch(`${apiBase}/api/upload/${kind}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: fd,
-    });
-    const data = await res.json();
-    if (data.success && data.url) {
-      applyUrl(data.url);
-      toast.success('Logo uploaded.');
-    } else {
-      toast.error(data.message || 'Upload failed.');
-    }
-  } catch {
-    toast.error('Logo upload failed.');
-  } finally {
-    setUploading(false);
-  }
 }
 
 const LOCATION_TYPE_OPTIONS = [
@@ -1951,14 +2167,14 @@ const LOCATION_TYPE_OPTIONS = [
 ];
 
 function WorkExperiencesContent() {
-  const { user, updateProfile, token } = useAuthStore();
+  const { user, updateProfile, token } = useSettingsAuthSlice();
   const router = useRouter();
   const searchParams = useSearchParams();
   const list = (user?.workExperiences ?? []).map((w) => {
     const mediaItems: MediaItem[] = (w.media && w.media.length > 0)
-      ? w.media.map((m) => ({ url: m.url, title: m.title, altText: m.altText }))
+      ? w.media.map((m) => ({ url: m.url, title: m.title }))
       : (w.mediaUrls ?? []).map((url) => ({ url }));
-    const raw = w as { promotions?: Array<{ jobTitle?: string; startDate?: string; endDate?: string; currentPosition?: boolean; media?: { url: string; title?: string; altText?: string }[] }>; promotion?: { jobTitle?: string; startDate?: string; endDate?: string; currentPosition?: boolean } };
+    const raw = w as { promotions?: Array<{ jobTitle?: string; startDate?: string; endDate?: string; currentPosition?: boolean; media?: { url: string; title?: string }[] }>; promotion?: { jobTitle?: string; startDate?: string; endDate?: string; currentPosition?: boolean } };
     const promotionsList = Array.isArray(raw.promotions) && raw.promotions.length > 0
       ? raw.promotions
       : raw.promotion && raw.promotion.jobTitle ? [raw.promotion] : [];
@@ -1969,7 +2185,7 @@ function WorkExperiencesContent() {
         startDate: p.startDate,
         endDate: p.endDate,
         currentPosition: !!p.currentPosition,
-        mediaItems: ((p as { media?: { url: string; title?: string; altText?: string }[] }).media ?? []).map((m) => ({ url: m.url, title: m.title, altText: m.altText })),
+        mediaItems: ((p as { media?: { url: string; title?: string }[] }).media ?? []).map((m) => ({ url: m.url, title: m.title })),
       }));
     return {
       jobTitle: w.jobTitle ?? w.role ?? '',
@@ -1995,10 +2211,8 @@ function WorkExperiencesContent() {
   const [initialForm, setInitialForm] = useState<WorkExpForm>(WORK_EXP_DEFAULT);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [addMediaDropdownOpen, setAddMediaDropdownOpen] = useState(false);
-  const [showLinkForm, setShowLinkForm] = useState(false);
   const [uploadMediaDialogOpen, setUploadMediaDialogOpen] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkTitle, setLinkTitle] = useState('');
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [fullViewMedia, setFullViewMedia] = useState<MediaItem | null>(null);
   const [listPreviewMedia, setListPreviewMedia] = useState<MediaItem | null>(null);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
@@ -2008,8 +2222,7 @@ function WorkExperiencesContent() {
   const [promoLinkUrl, setPromoLinkUrl] = useState('');
   const [promoLinkTitle, setPromoLinkTitle] = useState('');
   const [promoFullViewMedia, setPromoFullViewMedia] = useState<{ pIdx: number; item: MediaItem } | null>(null);
-  const [logoUploading, setLogoUploading] = useState(false);
-  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [companyLogoDialogOpen, setCompanyLogoDialogOpen] = useState(false);
   const addMediaDropdownRef = useRef<HTMLDivElement>(null);
   const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
   useEffect(() => {
@@ -2027,9 +2240,6 @@ function WorkExperiencesContent() {
     setInitialForm(WORK_EXP_DEFAULT);
     setEditingIndex(null);
     setFieldErrors({});
-    setShowLinkForm(false);
-    setLinkUrl('');
-    setLinkTitle('');
     setPromoMediaDropdownIndex(null);
     setPromoMediaLinkIndex(null);
     setPromoMediaUploadIndex(null);
@@ -2072,7 +2282,7 @@ function WorkExperiencesContent() {
         endMonth: valueToMonthYear(p.endDate ?? '').month,
         endYear: valueToMonthYear(p.endDate ?? '').year,
         currentPosition: !!p.currentPosition,
-        mediaItems: (p.mediaItems ?? []).map((m) => ({ url: m.url, title: m.title, altText: m.altText })),
+        mediaItems: (p.mediaItems ?? []).map((m) => ({ url: m.url, title: m.title })),
       })),
       mediaItems: e.mediaItems ?? [],
     };
@@ -2080,9 +2290,6 @@ function WorkExperiencesContent() {
     setInitialForm(nextForm);
     setEditingIndex(i);
     setFieldErrors({});
-    setShowLinkForm(false);
-    setLinkUrl('');
-    setLinkTitle('');
     setPromoMediaDropdownIndex(null);
     setPromoMediaLinkIndex(null);
     setPromoMediaUploadIndex(null);
@@ -2100,13 +2307,13 @@ function WorkExperiencesContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRef.current = true;
     openEdit(idx);
-    router.replace('/settings?section=work-experiences', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
     setSaving(true);
     try {
-      await updateProfile({ workExperiences: next });
+      await updateProfile({ workExperiences: next }, { section: 'work' });
       toast.success('Removed.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
@@ -2115,6 +2322,10 @@ function WorkExperiencesContent() {
     }
   };
   const submitDialog = async () => {
+    if (!hasFormChanged) {
+      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      return;
+    }
     const startDateVal = monthYearToValue(form.startMonth, form.startYear);
     const err: Record<string, string> = {
       ...collectWorkExpRequiredFieldErrors(form, startDateVal),
@@ -2123,7 +2334,7 @@ function WorkExperiencesContent() {
     const filledPromos = getFilledWorkExpPromotions(form);
     const promoToast = workExpPromotionValidationError(filledPromos);
     if (promoToast) {
-      toast.error(promoToast);
+      toast.error(promoToast, { id: 'syntax-work-promo' });
       return;
     }
     const jobVsPromoEnd = workExpJobEndAfterLatestPromotionMessage(form, filledPromos);
@@ -2131,35 +2342,64 @@ function WorkExperiencesContent() {
 
     if (Object.keys(err).length) {
       setFieldErrors(err);
-      toast.error('Please fix the errors below.');
+      toast.error('Please fix the errors below.', { id: 'syntax-form-errors' });
       return;
     }
     setFieldErrors({});
     const endDateVal = form.currentPosition ? undefined : monthYearToValue(form.endMonth, form.endYear) || undefined;
-    const promotionsVal = mapWorkExpPromotionsForSubmit(form);
-    const entry = buildWorkExperienceProfileEntry(form, startDateVal, endDateVal, promotionsVal);
+
+    // Resolve pending media items (work experience + promotions) before building the entry.
+    const resolveItems = async (items: MediaItem[]): Promise<MediaItem[]> => {
+      if (!items.length || !token) {
+        return items
+          .filter((m) => m.url.trim())
+          .slice(0, 5)
+          .map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined }));
+      }
+      const out: MediaItem[] = [];
+      for (const m of items.slice(0, 5)) {
+        if (!m.isPending || !m.pendingFile || !m.pendingCrop) {
+          if (m.url.trim()) out.push({ url: m.url.trim(), title: m.title?.trim() || undefined });
+        } else {
+          try {
+            const data = await uploadMedia(token, m.pendingFile, m.pendingCrop, () => {});
+            if (data.url) out.push({ url: data.url.trim(), title: m.title?.trim() || undefined });
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Failed to upload media.', {
+              id: 'syntax-media-upload',
+            });
+          }
+        }
+      }
+      return out.slice(0, 5);
+    };
+
+    const resolvedMainMedia = await resolveItems(form.mediaItems);
+    const resolvedPromotions: PromotionForm[] = [];
+    for (const p of form.promotions) {
+      const resolvedPromoMedia = await resolveItems(p.mediaItems ?? []);
+      resolvedPromotions.push({ ...p, mediaItems: resolvedPromoMedia });
+    }
+
+    const formForSubmit: WorkExpForm = {
+      ...form,
+      mediaItems: resolvedMainMedia,
+      promotions: resolvedPromotions,
+    };
+
+    const promotionsVal = mapWorkExpPromotionsForSubmit(formForSubmit);
+    const entry = buildWorkExperienceProfileEntry(formForSubmit, startDateVal, endDateVal, promotionsVal);
     const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
     setSaving(true);
     try {
-      await updateProfile({ workExperiences: next });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.');
+      await updateProfile({ workExperiences: next }, { section: 'work' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-work-entry-success' });
       setDialogOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleLogoUpload = (file: File) => {
-    if (!token) return;
-    void postSettingsLogoUpload(
-      file,
-      token,
-      'company-logo',
-      (url) => setForm((f) => ({ ...f, companyLogo: url })),
-      setLogoUploading
-    );
   };
 
   const addSkill = (skill: string) => {
@@ -2216,8 +2456,20 @@ function WorkExperiencesContent() {
         onClose={() => setListPreviewMedia(null)}
         src={listPreviewMedia?.url ?? ''}
         title={listPreviewMedia?.title}
-        altText={listPreviewMedia?.altText}
       />
+
+      {token ? (
+        <UploadLogoDialog
+          open={companyLogoDialogOpen}
+          onClose={() => setCompanyLogoDialogOpen(false)}
+          token={token}
+          kind="company-logo"
+          onSuccess={(url) => {
+            setForm((f) => ({ ...f, companyLogo: url }));
+            setCompanyLogoDialogOpen(false);
+          }}
+        />
+      ) : null}
 
       <FormDialog
         open={dialogOpen}
@@ -2237,18 +2489,14 @@ function WorkExperiencesContent() {
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setDialogOpen(false)}
-                className={settingsBtnSecondary}
-              >
+              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>
                 Cancel
-              </button>
+              </GhostOutlineButton>
               <button
                 type="button"
                 onClick={submitDialog}
                 disabled={saving || !hasFormChanged}
-                className={cn(settingsBtnPrimary, settingsBtnShadowLg, 'px-6 py-2.5 text-xs tracking-wide')}
+                className={cn(settingsBtnBlockPrimaryMd, 'px-6 py-2.5 text-xs tracking-wide')}
               >
                 {saving ? 'Processing…' : hasFormChanged ? 'Confirm changes' : 'Save Milestone'}
               </button>
@@ -2295,9 +2543,13 @@ function WorkExperiencesContent() {
                 )}
               </span>
               <div className="flex gap-2">
-                <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) handleLogoUpload(f); ev.target.value = ''; }} />
-                <button type="button" onClick={() => logoInputRef.current?.click()} disabled={logoUploading} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50">
-                  {logoUploading ? 'Uploading…' : 'Upload logo'}
+                <button
+                  type="button"
+                  onClick={() => setCompanyLogoDialogOpen(true)}
+                  disabled={!token}
+                  className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50"
+                >
+                  Upload logo
                 </button>
                 {form.companyLogo && (
                   <button type="button" onClick={() => setForm((f) => ({ ...f, companyLogo: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">
@@ -2398,6 +2650,9 @@ function WorkExperiencesContent() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase">Media (optional, max 5)</Label>
+                      <p className="text-[9px] text-muted-foreground">
+                        Mix links and uploads. One URL per line in the link box; optional title when adding a single URL.
+                      </p>
                       {promo.mediaItems.length > 0 && (
                         <ul className="space-y-2">
                           {promo.mediaItems.map((m, mi) => (
@@ -2411,54 +2666,124 @@ function WorkExperiencesContent() {
                         </ul>
                       )}
                       {promo.mediaItems.length < 5 && (
-                        <div className="relative">
+                        <div className="flex flex-col gap-2">
                           {promoMediaDropdownIndex === pIdx && (
                             <div className="fixed inset-0 z-[99]" aria-hidden onClick={() => setPromoMediaDropdownIndex(null)} />
                           )}
-                          <button
-                            type="button"
-                            onClick={() => setPromoMediaDropdownIndex((prev) => (prev === pIdx ? null : pIdx))}
-                            className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
-                          >
-                            <Plus className="size-3" /> Add media
-                            <ChevronDown className={cn('size-3 transition-transform', promoMediaDropdownIndex === pIdx && 'rotate-180')} />
-                          </button>
-                          {promoMediaDropdownIndex === pIdx && (
-                            <div className="absolute left-0 top-full mt-1 z-[100] min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
-                              <button type="button" onClick={() => { setPromoMediaDropdownIndex(null); setPromoMediaLinkIndex(pIdx); setPromoLinkUrl(''); setPromoLinkTitle(''); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50">
-                                <Link2 className="size-4" /> Add link
-                              </button>
-                              <button type="button" onClick={() => { setPromoMediaDropdownIndex(null); setPromoMediaUploadIndex(pIdx); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50">
-                                <ImagePlus className="size-4" /> Upload media
-                              </button>
-                            </div>
-                          )}
+                          <div className="relative z-[120] w-fit max-w-full">
+                            <button
+                              type="button"
+                              onClick={() => setPromoMediaDropdownIndex((prev) => (prev === pIdx ? null : pIdx))}
+                              className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
+                            >
+                              <Plus className="size-3" /> Add media
+                              <ChevronDown className={cn('size-3 transition-transform', promoMediaDropdownIndex === pIdx && 'rotate-180')} />
+                            </button>
+                            {promoMediaDropdownIndex === pIdx && (
+                              <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPromoMediaDropdownIndex(null);
+                                    if (promoMediaLinkIndex !== pIdx) {
+                                      setPromoLinkUrl('');
+                                      setPromoLinkTitle('');
+                                    }
+                                    setPromoMediaLinkIndex(pIdx);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
+                                >
+                                  <Link2 className="size-4" /> Add link
+                                </button>
+                                <button type="button" onClick={() => { setPromoMediaDropdownIndex(null); setPromoMediaUploadIndex(pIdx); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50">
+                                  <ImagePlus className="size-4" /> Upload media
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                       {promoMediaLinkIndex === pIdx && (
-                        <div className="mt-2 p-3 border-2 border-border bg-muted/10 space-y-2 relative">
-                          <button type="button" onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }} className="absolute right-2 top-2 p-1 border-2 border-border text-muted-foreground hover:bg-muted" aria-label="Close">
-                            <X className="size-4" />
-                          </button>
-                          <Label className="text-[10px] font-bold uppercase">Link URL</Label>
-                          <Input type="url" placeholder="https://..." value={promoLinkUrl} onChange={(e) => setPromoLinkUrl(e.target.value)} className="text-sm" />
-                          <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
-                          <Input placeholder="e.g. Certificate" value={promoLinkTitle} onChange={(e) => setPromoLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
-                          <div className="flex gap-2">
-                            <button type="button" onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }} className={settingsBtnSecondaryCompact}>Cancel</button>
+                        <div className="relative z-0 overflow-hidden border-2 border-border bg-muted/10">
+                          <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-muted/20 px-3 py-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wide">Add link</span>
                             <button
                               type="button"
-                              onClick={() => {
-                                const u = promoLinkUrl.trim();
-                                if (u && (u.startsWith('http://') || u.startsWith('https://'))) {
-                                  setForm((f) => ({ ...f, promotions: f.promotions.map((p, i) => i === pIdx ? { ...p, mediaItems: [...p.mediaItems, { url: u, title: promoLinkTitle.trim() || undefined }].slice(0, 5) } : p) }));
-                                  setPromoLinkUrl(''); setPromoLinkTitle(''); setPromoMediaLinkIndex(null);
-                                } else toast.error('Enter a valid URL.');
-                              }}
-                              className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}
+                              onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }}
+                              className="flex size-8 shrink-0 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0_0_var(--border)] hover:bg-muted hover:text-foreground"
+                              aria-label="Close"
                             >
-                              Add link
+                              <X className="size-4" />
                             </button>
+                          </div>
+                          <div className="space-y-2 p-3">
+                            <Label className="text-[10px] font-bold uppercase">Link URL(s)</Label>
+                            <Textarea
+                              placeholder={'https://example.com\nhttps://another.org'}
+                              value={promoLinkUrl}
+                              onChange={(e) => setPromoLinkUrl(e.target.value)}
+                              className="min-h-[5rem] resize-y text-sm font-mono"
+                              rows={4}
+                              autoComplete="off"
+                            />
+                            <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
+                            <Input placeholder="Single-URL adds only" value={promoLinkTitle} onChange={(e) => setPromoLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
+                            <div className="flex gap-2">
+                              <GhostOutlineButton type="button" size="sm" onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }}>Cancel</GhostOutlineButton>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const { urls, skippedNonEmpty } = parseMediaLinkLineInput(promoLinkUrl);
+                                  if (urls.length === 0) {
+                                    toast.error(
+                                      skippedNonEmpty > 0
+                                        ? 'No valid URLs. Use https://… or domain.com, one per line.'
+                                        : 'Enter at least one URL (one per line).',
+                                      { id: 'syntax-invalid-url' }
+                                    );
+                                    return;
+                                  }
+                                  const title = promoLinkTitle.trim() || undefined;
+                                  let nextLen = 0;
+                                  let added = 0;
+                                  flushSync(() => {
+                                    setForm((f) => {
+                                      const promos = f.promotions;
+                                      const p = promos[pIdx];
+                                      if (!p) return f;
+                                      const prev = Array.isArray(p.mediaItems) ? p.mediaItems : [];
+                                      const room = Math.max(0, 5 - prev.length);
+                                      const slice = urls.slice(0, room);
+                                      added = slice.length;
+                                      const titled = slice.map((url, i) => ({
+                                        url,
+                                        title: slice.length === 1 ? title : i === 0 ? title : undefined,
+                                      }));
+                                      const nextItems = [...prev, ...titled];
+                                      nextLen = nextItems.length;
+                                      return {
+                                        ...f,
+                                        promotions: promos.map((promo, i) =>
+                                          i === pIdx ? { ...promo, mediaItems: nextItems } : promo
+                                        ),
+                                      };
+                                    });
+                                  });
+                                  setPromoLinkUrl('');
+                                  setPromoLinkTitle('');
+                                  if (nextLen >= 5) setPromoMediaLinkIndex(null);
+                                  if (skippedNonEmpty > 0) {
+                                    toast.message(`Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`, { id: 'syntax-skip-url-lines' });
+                                  }
+                                  if (urls.length > added) {
+                                    toast.message(`Added ${added} link(s); max is 5 media items for this role.`, { id: 'syntax-max-media' });
+                                  }
+                                }}
+                                className={cn(settingsBtnBlockPrimarySm, 'px-3 py-1.5 text-[10px] font-bold')}
+                              >
+                                Add link(s)
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2584,7 +2909,9 @@ function WorkExperiencesContent() {
           </div>
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase">Media (optional)</Label>
-            <p className="text-[9px] text-muted-foreground">Add links or upload images (thumbnails). Max 5.</p>
+            <p className="text-[9px] text-muted-foreground">
+              Up to 5 items total — any mix of links and uploaded images. Paste one URL per line to add several links at once; optional title applies when you add a single URL.
+            </p>
             {form.mediaItems.length > 0 && (
               <ul className="space-y-2">
                 {form.mediaItems.map((m, i) => (
@@ -2597,9 +2924,9 @@ function WorkExperiencesContent() {
                 ))}
               </ul>
             )}
-            <MediaFullViewDialog open={!!fullViewMedia} onClose={() => setFullViewMedia(null)} src={fullViewMedia?.url ?? ''} title={fullViewMedia?.title} altText={fullViewMedia?.altText} />
+            <MediaFullViewDialog open={!!fullViewMedia} onClose={() => setFullViewMedia(null)} src={fullViewMedia?.url ?? ''} title={fullViewMedia?.title} />
             {form.mediaItems.length < 5 && (
-              <div className="relative" ref={addMediaDropdownRef}>
+              <div className="flex flex-col gap-2" ref={addMediaDropdownRef}>
                 {addMediaDropdownOpen && (
                   <div
                     className="fixed inset-0 z-[99]"
@@ -2607,86 +2934,40 @@ function WorkExperiencesContent() {
                     onClick={() => setAddMediaDropdownOpen(false)}
                   />
                 )}
-                <button
-                  type="button"
-                  onClick={() => setAddMediaDropdownOpen((o) => !o)}
-                  className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
-                >
-                  <Plus className="size-3" /> Add media
-                  <ChevronDown className={cn('size-3 transition-transform', addMediaDropdownOpen && 'rotate-180')} />
-                </button>
-                {addMediaDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-1 z-[100] min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAddMediaDropdownOpen(false);
-                        setShowLinkForm(true);
-                        setLinkUrl('');
-                        setLinkTitle('');
-                      }}
-                      className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
-                    >
-                      <Link2 className="size-4" /> Add link
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAddMediaDropdownOpen(false);
-                        setUploadMediaDialogOpen(true);
-                      }}
-                      className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
-                    >
-                      <ImagePlus className="size-4" /> Upload media
-                    </button>
-                  </div>
-                )}
-                {showLinkForm && (
-                  <div className="mt-2 p-3 border-2 border-border bg-muted/10 space-y-2 relative">
-                    <button
-                      type="button"
-                      onClick={() => { setShowLinkForm(false); setLinkUrl(''); setLinkTitle(''); }}
-                      className="absolute right-2 top-2 p-1 border-2 border-border text-muted-foreground hover:bg-muted"
-                      aria-label="Close"
-                    >
-                      <X className="size-4" />
-                    </button>
-                    <Label className="text-[10px] font-bold uppercase">Link URL</Label>
-                    <Input type="url" placeholder="https://..." value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="text-sm" />
-                    <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
-                    <Input placeholder="e.g. Certificate" value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
-                    <div className="flex gap-2">
+                <div className="relative z-[120] w-fit max-w-full">
+                  <button
+                    type="button"
+                    onClick={() => setAddMediaDropdownOpen((o) => !o)}
+                    className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
+                  >
+                    <Plus className="size-3" /> Add media
+                    <ChevronDown className={cn('size-3 transition-transform', addMediaDropdownOpen && 'rotate-180')} />
+                  </button>
+                  {addMediaDropdownOpen && (
+                    <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
                       <button
                         type="button"
                         onClick={() => {
-                          setShowLinkForm(false);
-                          setLinkUrl('');
-                          setLinkTitle('');
+                          setAddMediaDropdownOpen(false);
+                          setLinkDialogOpen(true);
                         }}
-                        className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase"
+                        className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
                       >
-                        Cancel
+                        <Link2 className="size-4" /> Add link
                       </button>
                       <button
                         type="button"
                         onClick={() => {
-                          const u = linkUrl.trim();
-                          if (u && (u.startsWith('http://') || u.startsWith('https://'))) {
-                            setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url: u, title: linkTitle.trim() || undefined }].slice(0, 5) }));
-                            setLinkUrl('');
-                            setLinkTitle('');
-                            setShowLinkForm(false);
-                          } else {
-                            toast.error('Enter a valid URL.');
-                          }
+                          setAddMediaDropdownOpen(false);
+                          setUploadMediaDialogOpen(true);
                         }}
-                        className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}
+                        className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
                       >
-                        Add link
+                        <ImagePlus className="size-4" /> Upload media
                       </button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -2696,15 +2977,32 @@ function WorkExperiencesContent() {
                 open={uploadMediaDialogOpen}
                 onClose={() => setUploadMediaDialogOpen(false)}
                 token={token}
+                mode="staged"
                 onSuccess={(item) => {
                   setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
                   setUploadMediaDialogOpen(false);
+                }}
+              />
+              <AddMediaLinksDialog
+                open={linkDialogOpen}
+                onClose={() => setLinkDialogOpen(false)}
+                maxCount={Math.max(0, 5 - form.mediaItems.length)}
+                onAdd={(items) => {
+                  if (!items.length) return;
+                  setForm((f) => {
+                    const prev = Array.isArray(f.mediaItems) ? f.mediaItems : [];
+                    const room = Math.max(0, 5 - prev.length);
+                    if (room <= 0) return f;
+                    const slice = items.slice(0, room);
+                    return { ...f, mediaItems: [...prev, ...slice] };
+                  });
                 }}
               />
               <UploadMediaDialog
                 open={promoMediaUploadIndex !== null}
                 onClose={() => setPromoMediaUploadIndex(null)}
                 token={token}
+                mode="staged"
                 onSuccess={(item) => {
                   if (promoMediaUploadIndex !== null) {
                     setForm((f) => ({
@@ -2724,7 +3022,6 @@ function WorkExperiencesContent() {
             onClose={() => setPromoFullViewMedia(null)}
             src={promoFullViewMedia?.item.url ?? ''}
             title={promoFullViewMedia?.item.title}
-            altText={promoFullViewMedia?.item.altText}
           />
           <FormTextarea id="we-desc" label="Description — Key technologies, projects, achievements" placeholder="Key technologies, projects, and achievements" maxLength={5000} rows={5} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 5000) }))} />
           <div className="grid w-full items-center gap-1.5">
@@ -2809,7 +3106,7 @@ const EDUCATION_DEFAULT: EducationForm = {
 };
 
 function EducationContent() {
-  const { user, updateProfile, token } = useAuthStore();
+  const { user, updateProfile, token } = useSettingsAuthSlice();
   const router = useRouter();
   const searchParams = useSearchParams();
   const list = (user?.education ?? []).map((e) => {
@@ -2841,8 +3138,7 @@ function EducationContent() {
   const [initialForm, setInitialForm] = useState<EducationForm>(EDUCATION_DEFAULT);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [schoolLogoUploading, setSchoolLogoUploading] = useState(false);
-  const schoolLogoInputRef = useRef<HTMLInputElement>(null);
+  const [schoolLogoDialogOpen, setSchoolLogoDialogOpen] = useState(false);
   const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
   const openAdd = () => { setForm(EDUCATION_DEFAULT); setInitialForm(EDUCATION_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
   const openEdit = (i: number) => { const next = { ...EDUCATION_DEFAULT, ...list[i] }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
@@ -2855,7 +3151,7 @@ function EducationContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRefEd.current = true;
     openEdit(idx);
-    router.replace('/settings?section=education', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((e) => ({
@@ -2873,12 +3169,16 @@ function EducationContent() {
     }));
     setSaving(true);
     try {
-      await updateProfile({ education: next });
+      await updateProfile({ education: next }, { section: 'education' });
       toast.success('Removed.');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
     finally { setSaving(false); }
   };
   const submitDialog = async () => {
+    if (!hasFormChanged) {
+      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      return;
+    }
     const err: Record<string, string> = {};
     if (!form.school.trim()) err.school = 'School name is required.';
     if (!form.degree.trim()) err.degree = 'Degree is required.';
@@ -2889,7 +3189,7 @@ function EducationContent() {
       if (!endDateVal) err.endDate = 'End date is required when not currently enrolled.';
       else if (startDateVal && endDateVal < startDateVal) err.endDate = 'End date cannot be earlier than start date.';
     }
-    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.'); return; }
+    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
     setFieldErrors({});
     const endDateVal = form.currentEducation ? undefined : (monthYearToValue(form.endMonth, form.endYear) || undefined);
     const entry = {
@@ -2908,22 +3208,11 @@ function EducationContent() {
     const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
     setSaving(true);
     try {
-      await updateProfile({ education: next });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.');
+      await updateProfile({ education: next }, { section: 'education' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-education-entry-success' });
       setDialogOpen(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
     finally { setSaving(false); }
-  };
-
-  const handleSchoolLogoUpload = (file: File) => {
-    if (!token) return;
-    void postSettingsLogoUpload(
-      file,
-      token,
-      'school-logo',
-      (url) => setForm((f) => ({ ...f, schoolLogo: url })),
-      setSchoolLogoUploading
-    );
   };
 
   return (
@@ -2964,6 +3253,18 @@ function EducationContent() {
         loading={saving}
         onConfirm={() => { if (removeConfirmIndex !== null) { remove(removeConfirmIndex); setRemoveConfirmIndex(null); } }}
       />
+      {token ? (
+        <UploadLogoDialog
+          open={schoolLogoDialogOpen}
+          onClose={() => setSchoolLogoDialogOpen(false)}
+          token={token}
+          kind="school-logo"
+          onSuccess={(url) => {
+            setForm((f) => ({ ...f, schoolLogo: url }));
+            setSchoolLogoDialogOpen(false);
+          }}
+        />
+      ) : null}
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -2982,8 +3283,8 @@ function EducationContent() {
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Cancel</button>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>Cancel</GhostOutlineButton>
+              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
             </div>
           </div>
         }
@@ -3020,24 +3321,13 @@ function EducationContent() {
                 )}
               </span>
               <div className="flex gap-2">
-                <input
-                  ref={schoolLogoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/svg+xml"
-                  className="hidden"
-                  onChange={(ev) => {
-                    const f = ev.target.files?.[0];
-                    if (f) handleSchoolLogoUpload(f);
-                    ev.target.value = '';
-                  }}
-                />
                 <button
                   type="button"
-                  onClick={() => schoolLogoInputRef.current?.click()}
-                  disabled={schoolLogoUploading}
+                  onClick={() => setSchoolLogoDialogOpen(true)}
+                  disabled={!token}
                   className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50"
                 >
-                  {schoolLogoUploading ? 'Uploading…' : 'Upload logo'}
+                  Upload logo
                 </button>
                 {form.schoolLogo && (
                   <button
@@ -3131,7 +3421,7 @@ type CertForm = {
 const CERT_DEFAULT: CertForm = { name: '', issuingOrganization: '', issuerLogo: '', issueDate: '', expirationDate: '', issueMonth: '', issueYear: '', expMonth: '', expYear: '', credentialId: '', credentialUrl: '', description: '', skills: [], mediaItems: [] };
 
 function CertificationsContent() {
-  const { user, updateProfile, token } = useAuthStore();
+  const { user, updateProfile, token } = useSettingsAuthSlice();
   const router = useRouter();
   const searchParams = useSearchParams();
   const list = (user?.certifications ?? []).map((c) => {
@@ -3151,7 +3441,7 @@ function CertificationsContent() {
       credentialUrl: c.credentialUrl ?? '',
       description: c.description ?? '',
       skills: (c as { skills?: string[] }).skills ?? [],
-      mediaItems: ((c as { media?: MediaItem[] }).media ?? []).map((m) => ({ url: m.url, title: m.title, altText: m.altText })),
+      mediaItems: ((c as { media?: MediaItem[] }).media ?? []).map((m) => ({ url: m.url, title: m.title })),
     };
   });
   const [saving, setSaving] = useState(false);
@@ -3167,8 +3457,7 @@ function CertificationsContent() {
   const [certLinkTitle, setCertLinkTitle] = useState('');
   const [certFullViewMedia, setCertFullViewMedia] = useState<MediaItem | null>(null);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
-  const [certLogoUploading, setCertLogoUploading] = useState(false);
-  const certLogoInputRef = useRef<HTMLInputElement>(null);
+  const [certLogoDialogOpen, setCertLogoDialogOpen] = useState(false);
   const certMediaDropdownRef = useRef<HTMLDivElement>(null);
   const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
   useEffect(() => {
@@ -3190,7 +3479,7 @@ function CertificationsContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRefCert.current = true;
     openEdit(idx);
-    router.replace('/settings?section=certifications', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((c) => ({
@@ -3203,11 +3492,11 @@ function CertificationsContent() {
       credentialUrl: c.credentialUrl,
       description: c.description,
       skills: c.skills,
-      media: c.mediaItems.map((m) => ({ url: m.url, title: m.title, altText: m.altText })),
+      media: c.mediaItems.map((m) => ({ url: m.url, title: m.title })),
     }));
     setSaving(true);
     try {
-      await updateProfile({ certifications: next });
+      await updateProfile({ certifications: next }, { section: 'certifications' });
       toast.success('Removed.');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
     finally { setSaving(false); }
@@ -3216,18 +3505,11 @@ function CertificationsContent() {
     const s = skill.trim();
     if (s && !form.skills.includes(s) && form.skills.length < 30) setForm((f) => ({ ...f, skills: [...f.skills, s] }));
   };
-  const handleCertLogoUpload = (file: File) => {
-    if (!token) return;
-    void postSettingsLogoUpload(
-      file,
-      token,
-      'org-logo',
-      (url) => setForm((f) => ({ ...f, issuerLogo: url })),
-      setCertLogoUploading
-    );
-  };
-
   const submitDialog = async () => {
+    if (!hasFormChanged) {
+      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      return;
+    }
     const err: Record<string, string> = {};
     if (!form.name.trim()) err.name = 'Certification name is required.';
     if (!form.issuingOrganization.trim()) err.issuingOrganization = 'Issuing organization is required.';
@@ -3236,7 +3518,7 @@ function CertificationsContent() {
     const expDateVal = monthYearToValue(form.expMonth, form.expYear);
     if (expDateVal && issueDateVal && expDateVal < issueDateVal) err.expirationDate = 'Expiration date cannot be earlier than issue date.';
     if (form.skills.filter(Boolean).length < 1) err.skills = 'At least 1 skill is required.';
-    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.'); return; }
+    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
     setFieldErrors({});
     const entry = {
       name: form.name.trim().slice(0, 120),
@@ -3248,13 +3530,13 @@ function CertificationsContent() {
       credentialUrl: form.credentialUrl.trim().slice(0, 500) || undefined,
       description: form.description.trim().slice(0, 2000) || undefined,
       skills: form.skills.filter(Boolean).slice(0, 30),
-      media: form.mediaItems.filter((m) => m.url.trim()).slice(0, 5).map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined, altText: m.altText?.trim() || undefined })),
+      media: form.mediaItems.filter((m) => m.url.trim()).slice(0, 5).map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined })),
     };
     const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
     setSaving(true);
     try {
-      await updateProfile({ certifications: next });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.');
+      await updateProfile({ certifications: next }, { section: 'certifications' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-cert-entry-success' });
       setDialogOpen(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
     finally { setSaving(false); }
@@ -3306,8 +3588,19 @@ function CertificationsContent() {
         onClose={() => setCertFullViewMedia(null)}
         src={certFullViewMedia?.url ?? ''}
         title={certFullViewMedia?.title}
-        altText={certFullViewMedia?.altText}
       />
+      {token ? (
+        <UploadLogoDialog
+          open={certLogoDialogOpen}
+          onClose={() => setCertLogoDialogOpen(false)}
+          token={token}
+          kind="org-logo"
+          onSuccess={(url) => {
+            setForm((f) => ({ ...f, issuerLogo: url }));
+            setCertLogoDialogOpen(false);
+          }}
+        />
+      ) : null}
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -3326,8 +3619,8 @@ function CertificationsContent() {
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Cancel</button>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>Cancel</GhostOutlineButton>
+              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
             </div>
           </div>
         }
@@ -3356,8 +3649,7 @@ function CertificationsContent() {
                 )}
               </span>
               <div className="flex gap-2">
-                <input ref={certLogoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" className="hidden" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) handleCertLogoUpload(f); ev.target.value = ''; }} />
-                <button type="button" onClick={() => certLogoInputRef.current?.click()} disabled={certLogoUploading} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50">{certLogoUploading ? 'Uploading…' : 'Upload logo'}</button>
+                <button type="button" onClick={() => setCertLogoDialogOpen(true)} disabled={!token} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50">Upload logo</button>
                 {form.issuerLogo && (
                   <button type="button" onClick={() => setForm((f) => ({ ...f, issuerLogo: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">Remove</button>
                 )}
@@ -3446,6 +3738,9 @@ function CertificationsContent() {
           </div>
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase">Media (optional)</Label>
+            <p className="text-[9px] text-muted-foreground">
+              Up to 5 items total (links + images). One URL per line; optional title when adding a single URL.
+            </p>
             {form.mediaItems.length > 0 && (
               <ul className="space-y-2">
                 {form.mediaItems.map((m, i) => (
@@ -3459,34 +3754,127 @@ function CertificationsContent() {
               </ul>
             )}
             {form.mediaItems.length < 5 && (
-              <div className="relative" ref={certMediaDropdownRef}>
+              <div className="flex flex-col gap-2" ref={certMediaDropdownRef}>
                 {certAddMediaDropdownOpen && <div className="fixed inset-0 z-[99]" aria-hidden onClick={() => setCertAddMediaDropdownOpen(false)} />}
-                <button type="button" onClick={() => setCertAddMediaDropdownOpen((o) => !o)} className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30">
-                  <Plus className="size-3" /> Add media <ChevronDown className={cn('size-3', certAddMediaDropdownOpen && 'rotate-180')} />
-                </button>
-                {certAddMediaDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-1 z-[100] min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
-                    <button type="button" onClick={() => { setCertAddMediaDropdownOpen(false); setCertShowLinkForm(true); setCertLinkUrl(''); setCertLinkTitle(''); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><Link2 className="size-4" /> Add link</button>
-                    <button type="button" onClick={() => { setCertAddMediaDropdownOpen(false); setCertUploadMediaDialogOpen(true); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><ImagePlus className="size-4" /> Upload media</button>
-                  </div>
-                )}
+                <div className="relative z-[120] w-fit max-w-full">
+                  <button
+                    type="button"
+                    onClick={() => setCertAddMediaDropdownOpen((o) => !o)}
+                    className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
+                  >
+                    <Plus className="size-3" /> Add media <ChevronDown className={cn('size-3', certAddMediaDropdownOpen && 'rotate-180')} />
+                  </button>
+                  {certAddMediaDropdownOpen && (
+                    <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCertAddMediaDropdownOpen(false);
+                          setCertShowLinkForm(true);
+                          if (!certShowLinkForm) {
+                            setCertLinkUrl('');
+                            setCertLinkTitle('');
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
+                      >
+                        <Link2 className="size-4" /> Add link
+                      </button>
+                      <button type="button" onClick={() => { setCertAddMediaDropdownOpen(false); setCertUploadMediaDialogOpen(true); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><ImagePlus className="size-4" /> Upload media</button>
+                    </div>
+                  )}
+                </div>
                 {certShowLinkForm && (
-                  <div className="mt-2 p-3 border-2 border-border bg-muted/10 space-y-2 relative">
-                    <button type="button" onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }} className="absolute right-2 top-2 p-1 border-2 border-border" aria-label="Close"><X className="size-4" /></button>
-                    <Label className="text-[10px] font-bold uppercase">Link URL</Label>
-                    <Input type="url" placeholder="https://..." value={certLinkUrl} onChange={(e) => setCertLinkUrl(e.target.value)} className="text-sm" />
-                    <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
-                    <Input placeholder="e.g. Certificate" value={certLinkTitle} onChange={(e) => setCertLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }} className={settingsBtnSecondaryCompact}>Cancel</button>
-                      <button type="button" onClick={() => { const u = certLinkUrl.trim(); if (u && (u.startsWith('http://') || u.startsWith('https://'))) { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url: u, title: certLinkTitle.trim() || undefined }].slice(0, 5) })); setCertLinkUrl(''); setCertLinkTitle(''); setCertShowLinkForm(false); } else toast.error('Enter a valid URL.'); }} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}>Add link</button>
+                  <div className="relative z-0 overflow-hidden border-2 border-border bg-muted/10">
+                    <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-muted/20 px-3 py-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wide">Add link</span>
+                      <button
+                        type="button"
+                        onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }}
+                        className="flex size-8 shrink-0 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0_0_var(--border)] hover:bg-muted hover:text-foreground"
+                        aria-label="Close"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-2 p-3">
+                      <Label className="text-[10px] font-bold uppercase">Link URL(s)</Label>
+                      <Textarea
+                        placeholder={'https://example.com\nhttps://another.org'}
+                        value={certLinkUrl}
+                        onChange={(e) => setCertLinkUrl(e.target.value)}
+                        className="min-h-[5rem] resize-y text-sm font-mono"
+                        rows={4}
+                        autoComplete="off"
+                      />
+                      <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
+                      <Input placeholder="Single-URL adds only" value={certLinkTitle} onChange={(e) => setCertLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
+                      <div className="flex gap-2">
+                        <GhostOutlineButton type="button" size="sm" onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }}>Cancel</GhostOutlineButton>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const { urls, skippedNonEmpty } = parseMediaLinkLineInput(certLinkUrl);
+                            if (urls.length === 0) {
+                              toast.error(
+                                skippedNonEmpty > 0
+                                  ? 'No valid URLs. Use https://… or domain.com, one per line.'
+                                  : 'Enter at least one URL (one per line).',
+                                { id: 'syntax-invalid-url' }
+                              );
+                              return;
+                            }
+                            const title = certLinkTitle.trim() || undefined;
+                            let nextLen = 0;
+                            let added = 0;
+                            flushSync(() => {
+                              setForm((f) => {
+                                const prev = Array.isArray(f.mediaItems) ? f.mediaItems : [];
+                                const room = Math.max(0, 5 - prev.length);
+                                const slice = urls.slice(0, room);
+                                added = slice.length;
+                                const titled = slice.map((url, i) => ({
+                                  url,
+                                  title: slice.length === 1 ? title : i === 0 ? title : undefined,
+                                }));
+                                const nextItems = [...prev, ...titled];
+                                nextLen = nextItems.length;
+                                return { ...f, mediaItems: nextItems };
+                              });
+                            });
+                            setCertLinkUrl('');
+                            setCertLinkTitle('');
+                            setCertShowLinkForm(nextLen < 5);
+                            if (skippedNonEmpty > 0) {
+                              toast.message(`Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`, { id: 'syntax-skip-url-lines' });
+                            }
+                            if (urls.length > added) {
+                              toast.message(`Added ${added} link(s); max is 5 media items total.`, { id: 'syntax-max-media' });
+                            }
+                          }}
+                          className={cn(settingsBtnBlockPrimarySm, 'px-3 py-1.5 text-[10px] font-bold')}
+                        >
+                          Add link(s)
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             )}
           </div>
-          {token && <UploadMediaDialog open={certUploadMediaDialogOpen} onClose={() => setCertUploadMediaDialogOpen(false)} token={token} onSuccess={(item) => { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) })); setCertUploadMediaDialogOpen(false); }} />}
+          {token && (
+            <UploadMediaDialog
+              open={certUploadMediaDialogOpen}
+              onClose={() => setCertUploadMediaDialogOpen(false)}
+              token={token}
+              mode="staged"
+              onSuccess={(item) => {
+                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
+                setCertUploadMediaDialogOpen(false);
+              }}
+            />
+          )}
           <FormTextarea id="cert-desc" label="Description (optional)" placeholder="Topics, skills validated" maxLength={2000} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))} />
         </div>
       </FormDialog>
@@ -3518,7 +3906,7 @@ const PROJECT_DEFAULT: ProjectForm = {
 };
 
 function ProjectsContent() {
-  const { user, updateProfile, token } = useAuthStore();
+  const { user, updateProfile, token } = useSettingsAuthSlice();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fullProjects = user?.projects ?? [];
@@ -3543,7 +3931,7 @@ function ProjectsContent() {
       endYear: end.year,
       publicationUrl: p.publicationUrl ?? (p as { url?: string }).url ?? '',
       description: p.description ?? '',
-      mediaItems: ((p as { media?: MediaItem[] }).media ?? []).map((m) => ({ url: m.url, title: m.title, altText: m.altText })),
+      mediaItems: ((p as { media?: MediaItem[] }).media ?? []).map((m) => ({ url: m.url, title: m.title })),
     };
   });
   const [saving, setSaving] = useState(false);
@@ -3580,23 +3968,27 @@ function ProjectsContent() {
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRefProj.current = true;
     openEdit(idx);
-    router.replace('/settings?section=projects', { scroll: false });
+    router.replace('/settings', { scroll: false });
   }, [list.length]);
   const remove = async (i: number) => {
     const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
     setSaving(true);
     try {
-      await updateProfile({ projects: next });
+      await updateProfile({ projects: next }, { section: 'projects' });
       toast.success('Removed.');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
     finally { setSaving(false); }
   };
   const submitDialog = async () => {
+    if (!hasFormChanged) {
+      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      return;
+    }
     const err: Record<string, string> = {};
     if (!form.title.trim()) err.title = 'Title is required.';
     const pubDateVal = monthYearToValue(form.publicationMonth, form.publicationYear);
     if (!pubDateVal) err.publicationDate = 'Publication date is required.';
-    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.'); return; }
+    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
     setFieldErrors({});
     const endDateVal = form.ongoing ? undefined : (monthYearToValue(form.endMonth, form.endYear) || undefined);
     const entry = {
@@ -3608,15 +4000,15 @@ function ProjectsContent() {
       endDate: endDateVal,
       publicationUrl: form.publicationUrl.trim().slice(0, 500) || undefined,
       description: form.description.trim().slice(0, 2000) || undefined,
-      media: form.mediaItems.filter((m) => m.url.trim()).slice(0, 5).map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined, altText: m.altText?.trim() || undefined })),
+      media: form.mediaItems.filter((m) => m.url.trim()).slice(0, 5).map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined })),
     };
     const next = editingIndex !== null
       ? [...githubProjects, ...nonGithubProjects.map((p, j) => (j === editingIndex ? entry : p))]
       : [...fullProjects, entry];
     setSaving(true);
     try {
-      await updateProfile({ projects: next });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.');
+      await updateProfile({ projects: next }, { section: 'projects' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-project-entry-success' });
       setDialogOpen(false);
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
     finally { setSaving(false); }
@@ -3666,7 +4058,6 @@ function ProjectsContent() {
         onClose={() => setProjFullViewMedia(null)}
         src={projFullViewMedia?.url ?? ''}
         title={projFullViewMedia?.title}
-        altText={projFullViewMedia?.altText}
       />
       <FormDialog
         open={dialogOpen}
@@ -3704,8 +4095,8 @@ function ProjectsContent() {
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDialogOpen(false)} className={settingsBtnSecondary}>Cancel</button>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>Cancel</GhostOutlineButton>
+              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
             </div>
           </div>
         }
@@ -3739,7 +4130,10 @@ function ProjectsContent() {
           </div>
           <FormInput id="proj-url" label="Publication URL / Media link" type="url" placeholder="https://example.com/page" maxLength={500} value={form.publicationUrl} onChange={(e) => setForm((f) => ({ ...f, publicationUrl: e.target.value }))} />
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase">Media (max 5 images)</Label>
+            <Label className="text-[10px] font-bold uppercase">Media (optional, max 5)</Label>
+            <p className="text-[9px] text-muted-foreground">
+              Links and images share the limit. One URL per line; optional title when adding a single URL.
+            </p>
             {form.mediaItems.length > 0 && (
               <ul className="space-y-2">
                 {form.mediaItems.map((m, i) => (
@@ -3753,34 +4147,127 @@ function ProjectsContent() {
               </ul>
             )}
             {form.mediaItems.length < 5 && (
-              <div className="relative" ref={projMediaDropdownRef}>
+              <div className="flex flex-col gap-2" ref={projMediaDropdownRef}>
                 {projAddMediaDropdownOpen && <div className="fixed inset-0 z-[99]" aria-hidden onClick={() => setProjAddMediaDropdownOpen(false)} />}
-                <button type="button" onClick={() => setProjAddMediaDropdownOpen((o) => !o)} className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30">
-                  <Plus className="size-3" /> Add media <ChevronDown className={cn('size-3', projAddMediaDropdownOpen && 'rotate-180')} />
-                </button>
-                {projAddMediaDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-1 z-[100] min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
-                    <button type="button" onClick={() => { setProjAddMediaDropdownOpen(false); setProjShowLinkForm(true); setProjLinkUrl(''); setProjLinkTitle(''); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><Link2 className="size-4" /> Add link</button>
-                    <button type="button" onClick={() => { setProjAddMediaDropdownOpen(false); setProjUploadMediaDialogOpen(true); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><ImagePlus className="size-4" /> Upload media</button>
-                  </div>
-                )}
+                <div className="relative z-[120] w-fit max-w-full">
+                  <button
+                    type="button"
+                    onClick={() => setProjAddMediaDropdownOpen((o) => !o)}
+                    className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
+                  >
+                    <Plus className="size-3" /> Add media <ChevronDown className={cn('size-3', projAddMediaDropdownOpen && 'rotate-180')} />
+                  </button>
+                  {projAddMediaDropdownOpen && (
+                    <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProjAddMediaDropdownOpen(false);
+                          setProjShowLinkForm(true);
+                          if (!projShowLinkForm) {
+                            setProjLinkUrl('');
+                            setProjLinkTitle('');
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
+                      >
+                        <Link2 className="size-4" /> Add link
+                      </button>
+                      <button type="button" onClick={() => { setProjAddMediaDropdownOpen(false); setProjUploadMediaDialogOpen(true); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><ImagePlus className="size-4" /> Upload media</button>
+                    </div>
+                  )}
+                </div>
                 {projShowLinkForm && (
-                  <div className="mt-2 p-3 border-2 border-border bg-muted/10 space-y-2 relative">
-                    <button type="button" onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }} className="absolute right-2 top-2 p-1 border-2 border-border" aria-label="Close"><X className="size-4" /></button>
-                    <Label className="text-[10px] font-bold uppercase">Link URL</Label>
-                    <Input type="url" placeholder="https://..." value={projLinkUrl} onChange={(e) => setProjLinkUrl(e.target.value)} className="text-sm" />
-                    <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
-                    <Input placeholder="e.g. Screenshot" value={projLinkTitle} onChange={(e) => setProjLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }} className={settingsBtnSecondaryCompact}>Cancel</button>
-                      <button type="button" onClick={() => { const u = projLinkUrl.trim(); if (u && (u.startsWith('http://') || u.startsWith('https://'))) { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url: u, title: projLinkTitle.trim() || undefined }].slice(0, 5) })); setProjLinkUrl(''); setProjLinkTitle(''); setProjShowLinkForm(false); } else toast.error('Enter a valid URL.'); }} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-1.5 text-[10px] font-bold')}>Add link</button>
+                  <div className="relative z-0 overflow-hidden border-2 border-border bg-muted/10">
+                    <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-muted/20 px-3 py-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wide">Add link</span>
+                      <button
+                        type="button"
+                        onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }}
+                        className="flex size-8 shrink-0 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0_0_var(--border)] hover:bg-muted hover:text-foreground"
+                        aria-label="Close"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-2 p-3">
+                      <Label className="text-[10px] font-bold uppercase">Link URL(s)</Label>
+                      <Textarea
+                        placeholder={'https://example.com\nhttps://another.org'}
+                        value={projLinkUrl}
+                        onChange={(e) => setProjLinkUrl(e.target.value)}
+                        className="min-h-[5rem] resize-y text-sm font-mono"
+                        rows={4}
+                        autoComplete="off"
+                      />
+                      <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
+                      <Input placeholder="Single-URL adds only" value={projLinkTitle} onChange={(e) => setProjLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
+                      <div className="flex gap-2">
+                        <GhostOutlineButton type="button" size="sm" onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }}>Cancel</GhostOutlineButton>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const { urls, skippedNonEmpty } = parseMediaLinkLineInput(projLinkUrl);
+                            if (urls.length === 0) {
+                              toast.error(
+                                skippedNonEmpty > 0
+                                  ? 'No valid URLs. Use https://… or domain.com, one per line.'
+                                  : 'Enter at least one URL (one per line).',
+                                { id: 'syntax-invalid-url' }
+                              );
+                              return;
+                            }
+                            const title = projLinkTitle.trim() || undefined;
+                            let nextLen = 0;
+                            let added = 0;
+                            flushSync(() => {
+                              setForm((f) => {
+                                const prev = Array.isArray(f.mediaItems) ? f.mediaItems : [];
+                                const room = Math.max(0, 5 - prev.length);
+                                const slice = urls.slice(0, room);
+                                added = slice.length;
+                                const titled = slice.map((url, i) => ({
+                                  url,
+                                  title: slice.length === 1 ? title : i === 0 ? title : undefined,
+                                }));
+                                const nextItems = [...prev, ...titled];
+                                nextLen = nextItems.length;
+                                return { ...f, mediaItems: nextItems };
+                              });
+                            });
+                            setProjLinkUrl('');
+                            setProjLinkTitle('');
+                            setProjShowLinkForm(nextLen < 5);
+                            if (skippedNonEmpty > 0) {
+                              toast.message(`Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`, { id: 'syntax-skip-url-lines' });
+                            }
+                            if (urls.length > added) {
+                              toast.message(`Added ${added} link(s); max is 5 media items total.`, { id: 'syntax-max-media' });
+                            }
+                          }}
+                          className={cn(settingsBtnBlockPrimarySm, 'px-3 py-1.5 text-[10px] font-bold')}
+                        >
+                          Add link(s)
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             )}
           </div>
-          {token && <UploadMediaDialog open={projUploadMediaDialogOpen} onClose={() => setProjUploadMediaDialogOpen(false)} token={token} onSuccess={(item) => { setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) })); setProjUploadMediaDialogOpen(false); }} />}
+          {token && (
+            <UploadMediaDialog
+              open={projUploadMediaDialogOpen}
+              onClose={() => setProjUploadMediaDialogOpen(false)}
+              token={token}
+              mode="staged"
+              onSuccess={(item) => {
+                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
+                setProjUploadMediaDialogOpen(false);
+              }}
+            />
+          )}
           <FormTextarea id="proj-desc" label="Description — Summary of the work" placeholder="Summary of the work" maxLength={2000} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))} />
         </div>
       </FormDialog>
@@ -3788,25 +4275,25 @@ function ProjectsContent() {
   );
 }
 
+type OpenSourceGitHubRepo = {
+  id: number;
+  name: string;
+  full_name: string;
+  html_url: string;
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  updated_at: string;
+  created_at: string;
+  owner: { login: string };
+  archived?: boolean;
+};
+
 function OpenSourceContent() {
-  const { user, updateProfile, token } = useAuthStore();
+  const { user, updateProfile, token } = useSettingsAuthSlice();
   const apiBase = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '') : '';
   const MAX_OPEN_SOURCE_REPOS = 7;
-
-  type GitHubRepo = {
-    id: number;
-    name: string;
-    full_name: string;
-    html_url: string;
-    description: string | null;
-    language: string | null;
-    stargazers_count: number;
-    forks_count: number;
-    updated_at: string;
-    created_at: string;
-    owner: { login: string };
-    archived?: boolean;
-  };
 
   const imported = (user?.projects ?? []).filter((p) => (p as { source?: string }).source === 'github');
 
@@ -3814,7 +4301,7 @@ function OpenSourceContent() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [repos, setRepos] = useState<OpenSourceGitHubRepo[]>([]);
   const [query, setQuery] = useState('');
 
   const fetchRepos = async () => {
@@ -3826,7 +4313,7 @@ function OpenSourceContent() {
       const res = await fetch(`${apiBase}/api/github/repos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = (await res.json().catch(() => null)) as { success?: boolean; message?: string; repos?: GitHubRepo[] } | null;
+      const data = (await res.json().catch(() => null)) as { success?: boolean; message?: string; repos?: OpenSourceGitHubRepo[] } | null;
       if (!res.ok || !data?.success) throw new Error(data?.message || 'Failed to fetch repos.');
       setRepos((data.repos ?? []).filter((r) => !r.archived));
     } catch (e) {
@@ -3849,23 +4336,24 @@ function OpenSourceContent() {
       toast.error(`You can link up to ${MAX_OPEN_SOURCE_REPOS} repositories. Remove one to add another.`);
       return;
     }
-    const existing = (user?.projects ?? []).some((p) => (p.publicationUrl || '').trim() === `https://github.com/${fullName}`.trim());
-    if (existing) {
-      toast.message('Already in projects.');
+    if ((user?.projects ?? []).some((p) => projectMatchesGithubRepo(p, fullName))) {
+      toast.error('Already in projects.', { id: 'syntax-repo-duplicate' });
       return;
     }
     setSaving(true);
     try {
-      const res = await fetch(`${apiBase}/api/github/repo/${encodeURIComponent(fullName)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = (await res.json().catch(() => null)) as { success?: boolean; message?: string; project?: unknown } | null;
-      if (!res.ok || !data?.success || !data.project) throw new Error(data?.message || 'Failed to load repo.');
-      const next = [...(user?.projects ?? []), data.project as any];
+      const data = await authApi.importGithubReposBatch(token, [fullName]);
+      if (!data.success) throw new Error(data.message || 'Failed to import repo.');
+      const proj = data.projects?.[0];
+      if (!proj) {
+        const f = data.failed?.find((x) => x.fullName === fullName);
+        throw new Error(f?.message || 'Failed to load repo.');
+      }
+      const next = [...(user?.projects ?? []), proj as any];
       // Preserve GitHub-linked state so Connected accounts and sync dialog stay in sync.
       // Cast to any because auth flags live on the outer user object, while updateProfile
       // helper is typed for profile fields only.
-      await updateProfile({ projects: next, isGitAccount: true });
+      await updateProfile({ projects: next, isGitAccount: true }, { section: 'projects' });
       toast.success('Added to projects.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
@@ -3875,10 +4363,10 @@ function OpenSourceContent() {
   };
 
   const removeImported = async (repoFullName: string) => {
-    const next = (user?.projects ?? []).filter((p) => (p as any).repoFullName !== repoFullName);
+    const next = (user?.projects ?? []).filter((p) => !projectMatchesGithubRepo(p, repoFullName));
     setSaving(true);
     try {
-      await updateProfile({ projects: next as any });
+      await updateProfile({ projects: next as any }, { section: 'projects' });
       toast.success('Removed.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
@@ -3995,7 +4483,7 @@ function OpenSourceContent() {
                 type="button"
                 onClick={() => void fetchRepos()}
                 disabled={loading || saving}
-                className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-5 py-2.5 text-xs tracking-wide')}
+                className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}
               >
                 Refresh
               </button>
@@ -4044,7 +4532,7 @@ function OpenSourceContent() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <a href={r.html_url} target="_blank" rel="noopener noreferrer" className="px-3 py-2 border-2 border-border bg-card text-[10px] font-black uppercase tracking-widest hover:bg-muted/30">View</a>
-                          <button type="button" onClick={() => void addRepo(r.full_name)} disabled={saving || already} className={cn(settingsBtnPrimary, settingsBtnShadowSm, 'px-3 py-2 text-[10px] tracking-widest')}>{already ? 'Added' : 'Add'}</button>
+                          <button type="button" onClick={() => void addRepo(r.full_name)} disabled={saving || already} className={cn(settingsBtnBlockPrimarySm, 'px-3 py-2 text-[10px] tracking-widest')}>{already ? 'Added' : 'Add'}</button>
                         </div>
                       </div>
                     );
@@ -4081,8 +4569,8 @@ function SidebarSkeleton({ itemCount }: { itemCount: number }) {
       </div>
       {/* Nav skeleton */}
       <div className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-3 space-y-2">
-        {Array.from({ length: itemCount }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-1 py-1.5">
+        {Array.from({ length: itemCount }, (_, idx) => `nav-skeleton-${idx + 1}`).map((itemId, i) => (
+          <div key={itemId} className="flex items-center gap-3 px-1 py-1.5">
             <div className="size-4 bg-muted animate-pulse shrink-0" />
             <SkeletonBar width={`${45 + ((i * 11) % 41)}%`} />
           </div>
@@ -4137,17 +4625,25 @@ function ContentSkeleton() {
   );
 }
 
-type TransitionPhase = 'idle' | 'fade-out' | 'skeleton' | 'fade-in';
+function SettingsComingSoonPlaceholder({ title }: Readonly<{ title: string | undefined }>) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-20 text-center">
+      <div className="size-16 bg-muted flex items-center justify-center border-2 border-border mb-4">
+        <Settings className="size-8 text-muted-foreground" />
+      </div>
+      <h2 className="text-xl font-black uppercase">{title}</h2>
+      <p className="text-sm text-muted-foreground mt-2 font-medium">Coming soon.</p>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isOpen: isSidebarOpen } = useSidebar();
   const { user, token, isHydrated, shouldBlock } = useRequireAuth();
   const refreshUser = useAuthStore((s) => s.refreshUser);
   const logout = useAuthStore((s) => s.logout);
-  const collapsed = isSidebarOpen;
-  const [activeSection, setActiveSection] = useState<SectionId>('edit-profile');
+  const [activeSection, setActiveSection] = useState<string>('edit-profile');
   const [contentLoading, setContentLoading] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     Account: true,
@@ -4178,38 +4674,37 @@ export default function SettingsPage() {
       refreshUser();
       toast.success(`${decodeURIComponent(linked)} connected successfully.`);
       router.replace('/settings', { scroll: false });
-    } else if (section && validSectionIds.includes(section as SectionId)) {
-      setActiveSection(section as SectionId);
+    } else if (section && validSectionIds.includes(section)) {
+      setActiveSection(section);
+      // Clean up the URL so only `/settings` is visible, even when opened with ?section=...
+      router.replace('/settings', { scroll: false });
     }
   }, [searchParams, router, refreshUser, validSectionIds]);
 
-  const handleSectionChange = (id: SectionId) => {
+  // Support section targeting from profile without exposing ?section= in the URL:
+  // profile page stores `settingsTargetSection` (and optional `settingsTargetEditIndex`) in sessionStorage,
+  // then navigates to `/settings`. On first load we read and clear that hint.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const target = window.sessionStorage.getItem('settingsTargetSection');
+      if (target && validSectionIds.includes(target)) {
+        setActiveSection(target);
+        window.sessionStorage.removeItem('settingsTargetSection');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [validSectionIds]);
+
+  const handleSectionChange = (id: string) => {
     if (id === activeSection) return;
     setContentLoading(true);
     setActiveSection(id);
     setTimeout(() => setContentLoading(false), 400);
   };
 
-  const prevCollapsed = useRef(collapsed);
-  const [phase, setPhase] = useState<TransitionPhase>('idle');
-  const [renderCollapsed, setRenderCollapsed] = useState(collapsed);
-
   const totalItems = NAV_GROUPS.reduce((sum, g) => sum + g.items.length, 0);
-
-  useEffect(() => {
-    if (prevCollapsed.current === collapsed) return;
-    prevCollapsed.current = collapsed;
-
-    setPhase('fade-out');
-    const t1 = setTimeout(() => {
-      setPhase('skeleton');
-      setRenderCollapsed(collapsed);
-    }, 150);
-    const t2 = setTimeout(() => setPhase('fade-in'), 450);
-    const t3 = setTimeout(() => setPhase('idle'), 600);
-
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [collapsed]);
 
   const toggleGroup = (heading: string) => {
     setOpenGroups((prev) => ({ ...prev, [heading]: !prev[heading] }));
@@ -4356,22 +4851,10 @@ export default function SettingsPage() {
                     {activeSection === 'connected-accounts' && <ConnectedAccountsContent />}
                     {activeSection === 'syntax-card' && <SyntaxCardContent />}
                     {activeSection === 'notifications' && (
-                      <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-                        <div className="size-16 bg-muted flex items-center justify-center border-2 border-border mb-4">
-                          <Settings className="size-8 text-muted-foreground" />
-                        </div>
-                        <h2 className="text-xl font-black uppercase">{activeItemLabel}</h2>
-                        <p className="text-sm text-muted-foreground mt-2 font-medium">Coming soon.</p>
-                      </div>
+                      <SettingsComingSoonPlaceholder title={activeItemLabel} />
                     )}
                     {!['edit-profile', 'stack-tools', 'my-setup', 'work-experiences', 'education', 'certifications', 'projects', 'open-source', 'security-email', 'connected-accounts', 'syntax-card', 'notifications'].includes(activeSection) && (
-                      <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-                        <div className="size-16 bg-muted flex items-center justify-center border-2 border-border mb-4">
-                          <Settings className="size-8 text-muted-foreground" />
-                        </div>
-                        <h2 className="text-xl font-black uppercase">{activeItemLabel}</h2>
-                        <p className="text-sm text-muted-foreground mt-2 font-medium">Coming soon.</p>
-                      </div>
+                      <SettingsComingSoonPlaceholder title={activeItemLabel} />
                     )}
                   </motion.div>
                 )}

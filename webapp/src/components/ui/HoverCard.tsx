@@ -5,14 +5,126 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-const HOVER_Z = 90;
+export const HOVER_CARD_Z_INDEX = 90;
+const HOVER_Z = HOVER_CARD_Z_INDEX;
 const EXIT_DURATION_MS = 180;
 const GAP_BOTTOM = 8;
-const GAP_TOP = 15;
+/** Match bottom gap so popovers sit equally tight above or below the trigger. */
+const GAP_TOP = 8;
 const CARD_WIDTH = 280;
 
-type Side = 'top' | 'bottom' | 'left' | 'right';
+/** Matches GifPopoverCard + read-only GIF shell: object-contain inside max height/width box. */
+export function estimateGifPopoverDimensions(
+  naturalWidth: number,
+  naturalHeight: number,
+): { width: number; height: number } {
+  if (
+    !naturalWidth ||
+    !naturalHeight ||
+    !Number.isFinite(naturalWidth) ||
+    !Number.isFinite(naturalHeight)
+  ) {
+    return { width: CARD_WIDTH, height: 220 };
+  }
+  const vw = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1024;
+  const vh = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 768;
+  const maxH = Math.min(13 * 16, 0.38 * vh);
+  const maxW = Math.min(340, 0.92 * vw);
+  const scale = Math.min(maxW / naturalWidth, maxH / naturalHeight, 1);
+  return {
+    width: naturalWidth * scale,
+    height: naturalHeight * scale,
+  };
+}
+
+export type HoverCardSide = 'top' | 'bottom' | 'left' | 'right';
+type Side = HoverCardSide;
 type Align = 'start' | 'center' | 'end';
+
+const VIEWPORT_PAD = 8;
+
+function clampViewport(
+  top: number,
+  left: number,
+  cardW: number,
+  cardH: number,
+  vw: number,
+  vh: number,
+): { top: number; left: number } {
+  const maxL = Math.max(VIEWPORT_PAD, vw - cardW - VIEWPORT_PAD);
+  const maxT = Math.max(VIEWPORT_PAD, vh - cardH - VIEWPORT_PAD);
+  return {
+    top: Math.max(VIEWPORT_PAD, Math.min(top, maxT)),
+    left: Math.max(VIEWPORT_PAD, Math.min(left, maxL)),
+  };
+}
+
+function rectFullyInViewport(
+  top: number,
+  left: number,
+  cardW: number,
+  cardH: number,
+  vw: number,
+  vh: number,
+): boolean {
+  return (
+    top >= VIEWPORT_PAD &&
+    left >= VIEWPORT_PAD &&
+    top + cardH <= vh - VIEWPORT_PAD &&
+    left + cardW <= vw - VIEWPORT_PAD
+  );
+}
+
+/**
+ * Picks top / bottom / left / right so the card stays in the viewport when possible,
+ * otherwise clamps position with minimal shift from the preferred side.
+ */
+export function computeHoverCardPositionAuto(
+  rect: DOMRect,
+  preferredSide: Side,
+  align: Align,
+  cardHeight: number,
+  cardWidth: number = CARD_WIDTH,
+  /** Distance between anchor and card (default 8px). Use a smaller value to sit closer to the trigger. */
+  gap: number = GAP_BOTTOM,
+): { top: number; left: number; side: Side } {
+  const vw = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1024;
+  const vh = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 768;
+  const w = cardWidth;
+  const h = cardHeight;
+
+  const order: Side[] = [preferredSide, 'bottom', 'top', 'right', 'left'];
+  const seen = new Set<Side>();
+  const sides: Side[] = [];
+  for (const s of order) {
+    if (!seen.has(s)) {
+      seen.add(s);
+      sides.push(s);
+    }
+  }
+
+  for (const side of sides) {
+    const raw = computeHoverCardPosition(rect, side, align, h, w, gap);
+    if (rectFullyInViewport(raw.top, raw.left, w, h, vw, vh)) {
+      return { top: raw.top, left: raw.left, side };
+    }
+  }
+
+  let best: { top: number; left: number; side: Side } | null = null;
+  let bestScore = Infinity;
+  for (const side of sides) {
+    const raw = computeHoverCardPosition(rect, side, align, h, w, gap);
+    const clamped = clampViewport(raw.top, raw.left, w, h, vw, vh);
+    const dist = Math.abs(clamped.top - raw.top) + Math.abs(clamped.left - raw.left);
+    const bias = side === preferredSide ? 0 : 4;
+    const score = dist + bias;
+    if (score < bestScore) {
+      bestScore = score;
+      best = { ...clamped, side };
+    }
+  }
+  return best ?? { top: VIEWPORT_PAD, left: VIEWPORT_PAD, side: preferredSide };
+}
 
 function horizontalAlign(rect: DOMRect, align: Align, cardWidth: number): number {
   if (align === 'start') return rect.left;
@@ -26,37 +138,39 @@ function verticalAlign(rect: DOMRect, align: Align, cardHeight: number): number 
   return rect.top + rect.height / 2 - cardHeight / 2;
 }
 
-function computeHoverCardPosition(
+export function computeHoverCardPosition(
   rect: DOMRect,
   side: Side,
   align: Align,
   cardHeight: number,
+  cardWidth: number = CARD_WIDTH,
+  gap: number = GAP_BOTTOM,
 ): { top: number; left: number } {
   if (side === 'bottom') {
     return {
-      top: rect.bottom + GAP_BOTTOM,
-      left: horizontalAlign(rect, align, CARD_WIDTH),
+      top: rect.bottom + gap,
+      left: horizontalAlign(rect, align, cardWidth),
     };
   }
   if (side === 'top') {
     return {
-      top: rect.top - cardHeight - GAP_TOP,
-      left: horizontalAlign(rect, align, CARD_WIDTH),
+      top: rect.top - cardHeight - gap,
+      left: horizontalAlign(rect, align, cardWidth),
     };
   }
   if (side === 'right') {
     return {
       top: verticalAlign(rect, align, cardHeight),
-      left: rect.right + GAP_BOTTOM,
+      left: rect.right + gap,
     };
   }
   return {
     top: verticalAlign(rect, align, cardHeight),
-    left: rect.left - CARD_WIDTH - GAP_BOTTOM,
+    left: rect.left - cardWidth - gap,
   };
 }
 
-function motionAxisOffset(side: Side): { y: number; x: number } {
+export function motionAxisOffset(side: Side): { y: number; x: number } {
   switch (side) {
     case 'top':
       return { y: 6, x: 0 };
@@ -76,7 +190,7 @@ export interface HoverCardProps {
   children: React.ReactNode;
   /** Content rendered inside the card. */
   content: React.ReactNode;
-  /** Placement of the card relative to the trigger. */
+  /** Preferred placement; flips to another edge if there is not enough viewport space. */
   side?: Side;
   /** Delay in ms before opening. */
   openDelay?: number;
@@ -106,6 +220,7 @@ export function HoverCard({
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [resolvedSide, setResolvedSide] = useState<Side>(side);
   const triggerRef = useRef<HTMLDivElement>(null);
   const closeDelayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,8 +240,14 @@ export function HoverCard({
     if (!triggerRef.current || typeof document === 'undefined') return;
     const rect = triggerRef.current.getBoundingClientRect();
     const cardHeight = positioningHeight;
-    setPosition(computeHoverCardPosition(rect, side, align, cardHeight));
+    const { top, left, side: nextSide } = computeHoverCardPositionAuto(rect, side, align, cardHeight);
+    setPosition({ top, left });
+    setResolvedSide(nextSide);
   }, [side, align, positioningHeight]);
+
+  useEffect(() => {
+    setResolvedSide(side);
+  }, [side]);
 
   const handleMouseEnter = useCallback(() => {
     setIsClosing(false);
@@ -176,11 +297,18 @@ export function HoverCard({
   }, [open, clearAllTimeouts]);
 
   useEffect(() => {
+    if (!open || isClosing) return;
+    const onResize = () => updatePosition();
+    globalThis.addEventListener('resize', onResize);
+    return () => globalThis.removeEventListener('resize', onResize);
+  }, [open, isClosing, updatePosition]);
+
+  useEffect(() => {
     return () => clearAllTimeouts();
   }, [clearAllTimeouts]);
 
   const showPortal = open || isClosing;
-  const axis = motionAxisOffset(side);
+  const axis = motionAxisOffset(resolvedSide);
   const cardEl =
     showPortal &&
     typeof document !== 'undefined' &&

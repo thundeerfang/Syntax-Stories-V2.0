@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSidebar } from '@/hooks/useSidebar';
-import { blogApi } from '@/api/blog';
+import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
 import { TerminalLoaderPage } from '@/components/loader';
 import { 
   Save, Send, ChevronRight, FileCode, 
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { BlogWriteEditor, Block, createBlockInSection } from '@/components/ui/BlogWriteEditor';
+import { BlogWriteEditor, Block, createBlockInSection, stripLegacyGifBlocks } from '@/components/ui/BlogWriteEditor';
 
 const TITLE_MAX = 300;
 /** Single section for /write (no section UI); must match how editor filters blocks. */
@@ -40,8 +40,16 @@ export default function WriteBlogPage() {
     setSubmitting(true);
     setSubmitAction(status);
     try {
-      const content = JSON.stringify(blocks);
-      await blogApi.createPost({ title, content, thumbnailUrl: thumbnailUrl.trim() || undefined, status }, token);
+      const content = JSON.stringify(stripLegacyGifBlocks(blocks));
+      await blogApi.createPost(
+        {
+          title,
+          content,
+          thumbnailUrl: pickRemoteThumbnailForApi(thumbnailUrl.trim() || undefined),
+          status,
+        },
+        token,
+      );
       toast.success(status === 'published' ? 'POST_LIVE' : 'DRAFT_SYNCED');
       if (status === 'published') { setTitle(''); setBlocks([createBlockInSection('paragraph', WRITE_DEFAULT_SECTION_ID)]); }
     } catch (err) {

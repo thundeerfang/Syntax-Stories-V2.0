@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
+import { isRedisAvailable } from '../../config/redis.js';
 import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller.js';
 import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller.js';
 import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller.js';
@@ -79,6 +80,7 @@ router.get('/status', (_req, res) => {
     success: true,
     message: 'Auth API is running',
     timestamp: new Date().toISOString(),
+    redis: isRedisAvailable(),
   });
 });
 

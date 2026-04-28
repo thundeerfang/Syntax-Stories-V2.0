@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Award,
 } from 'lucide-react';
+import { BlockShadowButton } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';
@@ -19,31 +20,28 @@ type SettingsSectionHeaderProps = Readonly<{
   disabled?: boolean;
 }>;
 
-// Reusable Button Component based on the "Education" style you liked
-const HeaderActionButton = ({ 
-  onClick, 
-  disabled, 
-  icon: Icon, 
-  label 
-}: { 
-  onClick: () => void; 
-  disabled?: boolean; 
-  icon: any; 
-  label: string 
+const HeaderActionButton = ({
+  onClick,
+  disabled,
+  icon: Icon,
+  label,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  icon: React.ElementType;
+  label: string;
 }) => (
-  <button
+  <BlockShadowButton
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={cn(
-      'ss-settings-header-btn inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground border-2 border-border font-black text-[10px] uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] h-fit self-start sm:self-center',
-      disabled && 'opacity-50'
-    )}
+    variant="primary"
+    size="sm"
+    className="h-fit self-start px-4 py-2 sm:self-center"
   >
-    <span className="relative z-[1] inline-flex items-center gap-2">
-      <Icon className="size-3.5" /> {label}
-    </span>
-  </button>
+    <Icon className="size-3.5 shrink-0" />
+    {label}
+  </BlockShadowButton>
 );
 
 function HeaderWrapper({

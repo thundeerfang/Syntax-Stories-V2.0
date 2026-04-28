@@ -36,14 +36,13 @@ export interface IWorkExperience {
   }>;
   /** @deprecated use media */
   mediaUrls?: string[];
-  /** Media items: links or uploaded images (url, title, altText) */
+  /** Media items: links or uploaded images (url, title) */
   media?: IWorkExperienceMediaItem[];
 }
 
 export interface IWorkExperienceMediaItem {
   url: string;
   title?: string;
-  altText?: string;
 }
 
 export interface IEducation {
@@ -67,7 +66,6 @@ export interface IEducation {
 export interface ICertificationMediaItem {
   url: string;
   title?: string;
-  altText?: string;
 }
 
 export interface ICertification {
@@ -102,7 +100,7 @@ export interface IProject {
   endDate?: string;
   publicationUrl?: string;
   description?: string;
-  media?: { url: string; title?: string; altText?: string }[];
+  media?: { url: string; title?: string }[];
   /** Last updated year log, e.g. "2025_prd_log", set by backend on profile update. */
   prjLog?: string;
 }
@@ -171,6 +169,9 @@ export interface IUser extends Document {
   /** Denormalized: updated on follow/unfollow */
   followersCount?: number;
   followingCount?: number;
+  /** Incremented on each successful profile PATCH; used for optimistic concurrency (optional client `expectedProfileVersion`). */
+  profileVersion?: number;
+  profileUpdatedAt?: Date;
 }
 
 const WorkExperienceSchema = new Schema({
@@ -204,7 +205,7 @@ const WorkExperienceSchema = new Schema({
       endDate: { type: String, trim: true, maxlength: 20 },
       currentPosition: { type: Boolean, default: false },
       media: {
-        type: [new Schema({ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 }, altText: { type: String, trim: true, maxlength: 200 } }, { _id: false })],
+        type: [new Schema({ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 } }, { _id: false })],
         default: undefined,
         maxlength: 5,
       },
@@ -217,7 +218,6 @@ const WorkExperienceSchema = new Schema({
     type: [{
       url: { type: String, required: true, trim: true, maxlength: 500 },
       title: { type: String, trim: true, maxlength: 120 },
-      altText: { type: String, trim: true, maxlength: 200 },
     }],
     default: [],
     maxlength: 5,
@@ -255,7 +255,7 @@ const CertificationSchema = new Schema({
   description: { type: String, trim: true, maxlength: 2000 },
   skills: { type: [String], default: [], maxlength: 30 },
   media: {
-    type: [{ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 }, altText: { type: String, trim: true, maxlength: 200 } }],
+    type: [{ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 } }],
     default: [],
     maxlength: 5,
     _id: false,
@@ -276,7 +276,7 @@ const ProjectSchema = new Schema({
   description: { type: String, trim: true, maxlength: 2000 },
   prjLog: { type: String, trim: true, maxlength: 20 },
   media: {
-    type: [{ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 }, altText: { type: String, trim: true, maxlength: 200 } }],
+    type: [{ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 } }],
     default: [],
     maxlength: 5,
     _id: false,
@@ -362,6 +362,8 @@ const UserSchema = new Schema<IUser>(
     twoFactorSecret: { type: String, select: false },
     followersCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
+    profileVersion: { type: Number, default: 0, min: 0 },
+    profileUpdatedAt: { type: Date },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

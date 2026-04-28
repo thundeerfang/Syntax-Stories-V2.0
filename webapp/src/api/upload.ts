@@ -152,3 +152,50 @@ export async function uploadMedia(
     xhr.send(formData);
   });
 }
+
+/** Raster logos: send `crop` from the cropper. SVG uploads omit `crop` (server stores file as-is). */
+export async function uploadSettingsLogo(
+  token: string,
+  file: File,
+  kind: 'company-logo' | 'school-logo' | 'org-logo',
+  crop: CropArea | undefined,
+  onProgress?: (progress: number) => void
+): Promise<UploadResponse> {
+  const base = getApiBase();
+  const apiUrl = base ? `${base}/api/upload/${kind}` : `/api/upload/${kind}`;
+  const formData = new FormData();
+  formData.append('logo', file);
+  if (crop) {
+    formData.append('cropX', String(crop.x));
+    formData.append('cropY', String(crop.y));
+    formData.append('cropWidth', String(crop.width));
+    formData.append('cropHeight', String(crop.height));
+  }
+
+  return new Promise<UploadResponse>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', apiUrl);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(event.loaded / event.total);
+      }
+    };
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== 4) return;
+      let data: UploadResponse = { success: false };
+      try {
+        data = JSON.parse(xhr.responseText || '{}') as UploadResponse;
+      } catch {
+        // ignore
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && data.success && data.url) {
+        resolve(data);
+      } else {
+        reject(new Error(data.message ?? xhr.statusText ?? 'Upload failed'));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.send(formData);
+  });
+}

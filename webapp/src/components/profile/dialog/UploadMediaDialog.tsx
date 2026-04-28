@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { ImagePlus } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { ImagePlus, X } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Dialog } from '@/components/ui/Dialog';
 import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
@@ -15,25 +15,37 @@ export interface UploadMediaDialogProps {
   open: boolean;
   onClose: () => void;
   token: string;
-  onSuccess: (item: { url: string; title?: string; altText?: string; blurDataUrl?: string }) => void;
+  onSuccess: (item: {
+    url: string;
+    title?: string;
+    blurDataUrl?: string;
+    /** When true, this item is only staged locally and must be uploaded by the caller later. */
+    isPending?: boolean;
+    /** Original file and crop, for callers that want to defer upload until final Save. */
+    pendingFile?: File;
+    pendingCrop?: CropArea;
+  }) => void;
+  /**
+   * Upload mode:
+   * - 'immediate' (default): upload to media API here and return a final URL
+   * - 'staged': do not call the API; return a blob URL + pendingFile/crop so caller can upload later
+   */
+  mode?: 'immediate' | 'staged';
 }
 
 const MAX_MB = 5;
-
-type UploadMode = 'full' | 'crop';
 
 export function UploadMediaDialog({
   open,
   onClose,
   token,
   onSuccess,
+  mode = 'immediate',
 }: Readonly<UploadMediaDialogProps>) {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [uploadMode, setUploadMode] = useState<UploadMode>('crop');
   const [title, setTitle] = useState('');
-  const [altText, setAltText] = useState('');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -42,9 +54,7 @@ export function UploadMediaDialog({
   const resetState = () => {
     setSelectedFile(null);
     setImageUrl(null);
-    setUploadMode('crop');
     setTitle('');
-    setAltText('');
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setCroppedAreaPixels(null);
@@ -67,6 +77,7 @@ export function UploadMediaDialog({
     setImageUrl(url);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    setCroppedAreaPixels(null);
   };
 
   const onCropComplete = useCallback((_area: Area, croppedPixels: Area) => {
@@ -74,36 +85,51 @@ export function UploadMediaDialog({
   }, []);
 
   const handleUpload = async () => {
-    if (!selectedFile) {
-      toast.error('Select an image first.');
+    if (!selectedFile || !croppedAreaPixels) {
+      toast.error('Adjust the crop area, then save.');
       return;
     }
-    if (uploadMode === 'crop' && !croppedAreaPixels) {
-      toast.error('Select a crop area or choose "Use full image".');
+
+    const cropArea: CropArea = {
+      x: croppedAreaPixels.x,
+      y: croppedAreaPixels.y,
+      width: croppedAreaPixels.width,
+      height: croppedAreaPixels.height,
+    };
+
+    // Staged mode: do not hit the upload API yet; hand back a blob URL + pending data.
+    if (mode === 'staged') {
+      const fallbackTitle = 'Media image';
+      const stagedTitle = title.trim() || fallbackTitle;
+      const blobUrl = imageUrl ?? URL.createObjectURL(selectedFile);
+      onSuccess({
+        url: blobUrl,
+        title: stagedTitle,
+        isPending: true,
+        pendingFile: selectedFile,
+        pendingCrop: cropArea,
+      });
+      toast.success('Media staged. It will upload when you save.');
+      if (imageUrl && blobUrl !== imageUrl) URL.revokeObjectURL(imageUrl);
+      resetState();
+      onClose();
       return;
     }
+
     setUploading(true);
     setProgress(0);
-    const cropArea: CropArea | undefined =
-      uploadMode === 'crop' && croppedAreaPixels
-        ? {
-            x: croppedAreaPixels.x,
-            y: croppedAreaPixels.y,
-            width: croppedAreaPixels.width,
-            height: croppedAreaPixels.height,
-          }
-        : undefined;
 
     try {
       const data = await uploadMedia(token, selectedFile, cropArea, (p) => setProgress(p));
       if (data.url) {
+        const fallbackTitle = 'Media image';
         onSuccess({
           url: data.url,
-          title: title.trim() || undefined,
-          altText: altText.trim() || undefined,
+          title: title.trim() || fallbackTitle,
           blurDataUrl: data.blurDataUrl,
         });
         toast.success('Media added.');
+        if (imageUrl) URL.revokeObjectURL(imageUrl);
         resetState();
         onClose();
       }
@@ -126,26 +152,43 @@ export function UploadMediaDialog({
       open={open}
       onClose={handleClose}
       titleId="upload-media-title"
+      showCloseButton={false}
       panelClassName={cn(
         'pointer-events-auto w-full max-w-lg max-h-[90vh] overflow-y-auto',
         'border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]'
       )}
-      contentClassName="relative p-6 pt-10"
+      contentClassName="relative p-6 sm:p-8"
       backdropClassName="fixed inset-0 z-[101] bg-black/40"
     >
-      <h2 id="upload-media-title" className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-4">
-        <ImagePlus className="size-4 text-primary" /> Upload media
-      </h2>
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
-        Add an image (thumbnail). JPEG, PNG, GIF or WebP. Max {MAX_MB}MB.
-      </p>
+      <div className="flex flex-col gap-4">
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+            <h2
+              id="upload-media-title"
+              className="text-sm font-black uppercase tracking-widest flex flex-wrap items-center gap-2"
+            >
+              <ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />
+              <span>Upload media</span>
+            </h2>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Crop to thumbnail. JPEG, PNG, GIF or WebP. Max {MAX_MB}MB. Title is used as the image description.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="shrink-0 flex size-9 items-center justify-center rounded-sm border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0px_0px_var(--border)] transition-colors hover:text-foreground hover:border-primary"
+            aria-label="Close"
+          >
+            <X className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+          </button>
+        </header>
 
-      <div className="space-y-4">
         <div className="grid gap-1.5">
           <Label htmlFor="media-title">Title (optional)</Label>
           <Input
             id="media-title"
-            placeholder="e.g. Certificate, Project screenshot"
+            placeholder="e.g. Certificate, project screenshot"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={120}
@@ -157,111 +200,54 @@ export function UploadMediaDialog({
             disabled={uploading}
             maxSizeBytes={MAX_MB * 1024 * 1024}
             className={cn(
-              'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'flex min-h-[152px] w-full flex-col items-center justify-center border-2 border-dashed rounded-lg px-6 py-8 text-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               'border-border bg-muted/20 hover:bg-muted/30',
               uploading && 'pointer-events-none opacity-70'
             )}
             dragActiveClassName="border-primary bg-primary/5"
             onFile={(f) => handleFile(f)}
           >
-            <p className="text-sm font-bold text-foreground">Drop an image here or click to browse</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Image will be compressed to a thumbnail</p>
+            <p className="text-sm font-bold text-foreground text-balance max-w-[16rem]">Drop an image here or click to browse</p>
+            <p className="text-[10px] text-muted-foreground mt-2 text-balance max-w-[16rem]">You will crop before upload</p>
           </ImageDropzone>
         )}
 
         {imageUrl && (
-          <>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setUploadMode('full')}
-                className={cn(
-                  'flex-1 px-3 py-2 border-2 text-[10px] font-bold uppercase rounded',
-                  uploadMode === 'full' ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-muted/20 hover:bg-muted/30'
-                )}
-              >
-                Use full image
-              </button>
-              <button
-                type="button"
-                onClick={() => setUploadMode('crop')}
-                className={cn(
-                  'flex-1 px-3 py-2 border-2 text-[10px] font-bold uppercase rounded',
-                  uploadMode === 'crop' ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-muted/20 hover:bg-muted/30'
-                )}
-              >
-                Crop image
-              </button>
-            </div>
-
-            {uploadMode === 'crop' && (
-              <div className="space-y-4">
-                <CropperKeyboardWrapper
-                  imageReady
-                  setCrop={setCrop}
-                  className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border"
-                >
-                  <Cropper
-                    image={imageUrl}
-                    crop={crop}
-                    zoom={zoom}
-                    aspect={1}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
-                    onCropComplete={onCropComplete}
-                  />
-                </CropperKeyboardWrapper>
-                <div className={cn('flex', 'items-center', 'justify-between', 'gap-4')}>
-                  <input
-                    type="range"
-                    min={1}
-                    max={3}
-                    step="0.1"
-                    value={zoom}
-                    onChange={(e) => setZoom(Number(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span
-                    className={cn(
-                      'text-[10px] font-bold text-muted-foreground w-16 text-right'
-                    )}
-                  >
-                    {zoom.toFixed(1)}x
-                  </span>
-                </div>
-                <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-                  Tip: click the crop area, then arrow keys to move (Shift for larger steps).
-                </p>
-              </div>
-            )}
-
-            {uploadMode === 'full' && (
-              <div className="rounded-lg overflow-hidden border-2 border-border bg-muted/20 max-h-48">
-                <img src={imageUrl} alt="Preview" className="w-full h-auto object-contain max-h-48" />
-              </div>
-            )}
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="media-alt">Alt text (optional)</Label>
-              <Input
-                id="media-alt"
-                placeholder="Describe the image for accessibility"
-                value={altText}
-                onChange={(e) => setAltText(e.target.value)}
-                maxLength={200}
+          <div className="flex flex-col gap-4">
+            <CropperKeyboardWrapper imageReady={!!imageUrl} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
+              <Cropper
+                image={imageUrl}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
               />
+            </CropperKeyboardWrapper>
+            <div className="flex items-center justify-between gap-4">
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="flex-1"
+              />
+              <span className="text-[10px] font-bold text-muted-foreground w-16 text-right">{zoom.toFixed(1)}x</span>
             </div>
+            <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+              Tip: focus the crop frame (click it), then arrow keys to pan. Hold Shift for smaller steps.
+            </p>
 
             {uploading && (
-              <div className={cn('w-full h-2 rounded-full bg-muted overflow-hidden')}>
-                <div
-                  className={cn('h-full bg-primary transition-all')}
-                  style={{ width: uploadProgressWidth }}
-                />
+              <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-primary transition-all" style={{ width: uploadProgressWidth }} />
               </div>
             )}
 
-            <div className={cn('flex justify-end gap-2 pt-2')}>
+            <div className="flex justify-end gap-2">
               <button
                 type="button"
                 disabled={uploading}
@@ -269,25 +255,20 @@ export function UploadMediaDialog({
                   if (imageUrl) URL.revokeObjectURL(imageUrl);
                   resetState();
                 }}
-                className={cn(
-                  'px-3 py-1.5 text-[10px] font-bold uppercase rounded border border-border text-muted-foreground hover:bg-muted/40'
-                )}
+                className="px-3 py-1.5 text-[10px] font-bold uppercase rounded border border-border text-muted-foreground hover:bg-muted/40"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 disabled={uploading}
-                onClick={handleUpload}
-                className={cn(
-                  'px-4 py-1.5 text-[10px] font-bold uppercase rounded border-2 border-border bg-primary text-primary-foreground',
-                  'shadow-[2px_2px_0px_0px_var(--border)] hover:brightness-110 disabled:opacity-60'
-                )}
+                onClick={() => void handleUpload()}
+                className="px-4 py-1.5 text-[10px] font-bold uppercase rounded border-2 border-border bg-primary text-primary-foreground shadow-[2px_2px_0px_0px_var(--border)] hover:brightness-110 disabled:opacity-60"
               >
                 {uploading ? 'Uploading…' : 'Save & add'}
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </Dialog>

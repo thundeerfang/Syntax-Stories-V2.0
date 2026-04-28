@@ -59,30 +59,30 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 export async function logout(req: Request, res: Response): Promise<void> {
   try {
     const user = (req as Request & { user?: AuthUser }).user;
-    const sessionId = (req.body as { sessionId?: string }).sessionId ?? user?.sessionId;
-    if (sessionId && user?._id) {
-      const session = await SessionModel.findOne({ _id: sessionId, userId: user._id });
-      if (session) {
-        session.revoked = true;
-        await session.save();
-        await logSecurityEvent(user._id, 'session_revoked', req, { sessionId });
-        void writeAuditLog(req, AuditAction.USER_SIGNOUT, { actorId: String(user._id), metadata: { sessionId } });
-        void writeAuditLog(req, AuditAction.SESSION_REVOKED, { actorId: String(user._id), metadata: { sessionId } });
-      }
-    } else {
-      const refreshToken = (req.body as { refreshToken?: string }).refreshToken;
-      const refreshTokenHash = refreshToken ? hashToken(refreshToken) : null;
-      if (refreshTokenHash && user?._id) {
-        const session = await SessionModel.findOne({ refreshTokenHash, userId: user._id });
-        if (session) {
-          session.revoked = true;
-          await session.save();
-          await logSecurityEvent(user._id, 'session_revoked', req, { sessionId: session._id });
-          void writeAuditLog(req, AuditAction.USER_SIGNOUT, { actorId: String(user._id), metadata: { sessionId: session._id } });
-          void writeAuditLog(req, AuditAction.SESSION_REVOKED, { actorId: String(user._id), metadata: { sessionId: session._id } });
-        }
-      }
+    const body = req.body as { sessionId?: string; refreshToken?: string };
+    const sessionId = body.sessionId ?? user?.sessionId;
+    const refreshToken = body.refreshToken;
+
+    async function revokeOne(session: InstanceType<typeof SessionModel> | null): Promise<void> {
+      if (!session || session.revoked || !user?._id) return;
+      session.revoked = true;
+      await session.save();
+      const sid = String(session._id);
+      await logSecurityEvent(user._id, 'session_revoked', req, { sessionId: sid });
+      void writeAuditLog(req, AuditAction.USER_SIGNOUT, { actorId: String(user._id), metadata: { sessionId: sid } });
+      void writeAuditLog(req, AuditAction.SESSION_REVOKED, { actorId: String(user._id), metadata: { sessionId: sid } });
     }
+
+    if (user?._id && sessionId) {
+      const byId = await SessionModel.findOne({ _id: sessionId, userId: user._id });
+      await revokeOne(byId);
+    }
+    if (user?._id && refreshToken) {
+      const refreshTokenHash = hashToken(refreshToken);
+      const byRt = await SessionModel.findOne({ refreshTokenHash, userId: user._id });
+      await revokeOne(byRt);
+    }
+
     res.status(200).json({ message: 'Logged out successfully 👋', success: true });
   } catch (err) {
     console.error(err);

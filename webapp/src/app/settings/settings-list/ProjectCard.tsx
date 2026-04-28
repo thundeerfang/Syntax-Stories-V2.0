@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 
-type MediaItem = { url: string; title?: string; altText?: string };
+type MediaItem = { url: string; title?: string };
 
 type ProjectCardProps = Readonly<{
   project: any;
@@ -206,7 +206,7 @@ export function ProjectCard({
                       className="ss-cert-media-wrap size-8 border-2 border-border bg-background overflow-hidden flex items-center justify-center relative"
                     >
                       {isImageUrl(m.url) ? (
-                        <img src={m.url} alt="" className="size-full object-cover" />
+                        <img src={m.url} alt={m.title?.trim() || ''} className="size-full object-cover" />
                       ) : (
                         <Link2 className="size-3.5 text-muted-foreground/40" />
                       )}

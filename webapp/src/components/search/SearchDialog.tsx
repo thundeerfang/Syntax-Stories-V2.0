@@ -7,6 +7,7 @@ import { Dialog } from '@/components/ui';
 import { followApi, type FollowUser } from '@/api/follow';
 import { Search, X, User, Loader2, Command, ArrowDown, ArrowUp, CornerDownLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const DEBOUNCE_MS = 280;
 
@@ -141,16 +142,18 @@ export function SearchDialog() {
       open={isOpen}
       onClose={close}
       titleId="search-dialog-title"
-      // Neobrutalist Panel Styling with semantic vars
-      panelClassName="pointer-events-auto w-full max-w-xl max-h-[80vh] overflow-hidden border-4 border-border bg-background shadow-[12px_12px_0px_0px_hsl(var(--border))]"
+      panelClassName={cn(
+        'pointer-events-auto w-full max-w-xl max-h-[90vh] sm:max-h-[80vh] overflow-hidden border-2 sm:border-4 border-border bg-background',
+        'max-sm:shadow-none sm:shadow-[12px_12px_0px_0px_hsl(var(--border))]',
+      )}
       contentClassName="relative p-0"
       showCloseButton={false}
     >
       {/* Terminal chrome — title bar uses primary (purple); input row uses muted/card tokens */}
-      <div className="border-b-4 border-border bg-card text-card-foreground">
+      <div className="border-b-2 sm:border-b-4 border-border bg-card text-card-foreground">
         <div
           id="search-dialog-title"
-          className="flex items-center justify-between border-b-2 border-border bg-primary px-4 py-2 text-primary-foreground"
+          className="flex items-center justify-between border-b border-border sm:border-b-2 bg-primary px-3 py-2 text-primary-foreground sm:px-4"
         >
           <div className="flex items-center gap-2">
             <Command className="size-3 shrink-0 text-primary-foreground" aria-hidden />
@@ -226,7 +229,7 @@ export function SearchDialog() {
                       >
                         {/* Avatar with Neobrutalist Shadow */}
                         <div className="relative shrink-0">
-                           <div className="absolute inset-0 bg-border translate-x-1 translate-y-1" />
+                           <div className="absolute inset-0 hidden bg-border translate-x-1 translate-y-1 sm:block" />
                            <div className="relative size-12 border-2 border-border bg-muted overflow-hidden">
                               <img 
                                 src={getAvatarSrc(u.profileImg, u.username)} 
@@ -265,8 +268,8 @@ export function SearchDialog() {
             </div>
           ) : (
             /* Idle / Initial Hint State */
-            <div className="p-8">
-              <div className="border-4 border-dashed border-border/40 p-8 text-center bg-background/50">
+            <div className="p-4 sm:p-8">
+              <div className="border-0 p-6 text-center sm:border-4 sm:border-dashed sm:border-border/40 sm:bg-background/50 sm:p-8">
                 <Search className="size-8 mx-auto mb-3 text-muted-foreground/20" strokeWidth={3} />
                 <p className="text-[11px] font-black uppercase text-muted-foreground/50 tracking-widest">
                   Ready for input...
@@ -293,7 +296,7 @@ export function SearchDialog() {
       </div>
 
       {/* 4. Footer Status Bar */}
-      <div className="border-t-4 border-border bg-background px-4 py-2 flex justify-between items-center">
+      <div className="border-t-2 sm:border-t-4 border-border bg-background px-3 py-2 sm:px-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
            <div className={`size-1.5 rounded-full ${loading ? 'animate-pulse bg-primary' : 'bg-primary/70'}`} />
            <span className="text-[9px] font-black uppercase text-muted-foreground">{footerStatusLabel}</span>

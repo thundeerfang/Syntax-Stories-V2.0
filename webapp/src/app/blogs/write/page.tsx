@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSidebar } from '@/hooks/useSidebar';
-import { blogApi } from '@/api/blog';
+import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
 import { uploadCover, type CropArea } from '@/api/upload';
 import { TerminalLoaderPage } from '@/components/loader';
 import { Dialog } from '@/components/ui/Dialog';
@@ -21,63 +22,50 @@ import { RetroAccordion } from '@/components/ui/RetroAccordion';
 import Cropper, { Area } from 'react-easy-crop';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { BlogWriteEditor, Block, createBlockInSection, type BlockType } from '@/components/ui/BlogWriteEditor';
+import { getWriteEditorSessionPostId, setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
+import {
+  BlogWriteEditor,
+  Block,
+  createBlockInSection,
+  stripLegacyGifBlocks,
+  type BlockType,
+} from '@/components/ui/BlogWriteEditor';
 import { DEFAULT_ITEMS } from '@/components/ui/BottomToolbar';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { StoredDraftPayload } from '@/types/blog';
 
 const TITLE_MAX = 150;
-const SUMMARY_MAX = 200;
+const SUMMARY_MAX_WORDS = 300;
 
-const BLOG_DRAFT_STORAGE_KEY = 'syntax-stories-blog-draft';
-
-function loadDraftFromStorage(): StoredDraftPayload | null {
-  if (globalThis.window === undefined) return null;
-  try {
-    const raw = localStorage.getItem(BLOG_DRAFT_STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as StoredDraftPayload;
-    if (!data || typeof data.title !== 'string' || typeof data.content !== 'string') return null;
-    return {
-      title: data.title,
-      summary: typeof data.summary === 'string' ? data.summary : '',
-      content: data.content,
-      thumbnailPreviewUrl: typeof data.thumbnailPreviewUrl === 'string' ? data.thumbnailPreviewUrl : undefined,
-      savedAt: typeof data.savedAt === 'number' ? data.savedAt : Date.now(),
-    };
-  } catch {
-    return null;
-  }
-}
-
-function saveDraftToStorage(payload: {
+function serializeWriteWorkspace(args: {
   title: string;
   summary: string;
-  content: string;
-  thumbnailPreviewUrl?: string | null;
-}): void {
-  if (globalThis.window === undefined) return;
-  try {
-    const data: StoredDraftPayload = {
-      title: payload.title,
-      summary: payload.summary,
-      content: payload.content,
-      thumbnailPreviewUrl: payload.thumbnailPreviewUrl ?? undefined,
-      savedAt: Date.now(),
-    };
-    localStorage.setItem(BLOG_DRAFT_STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // ignore
-  }
+  blocks: Block[];
+  thumbnailPreviewUrl: string | null;
+}): string {
+  return JSON.stringify({
+    title: args.title.trim(),
+    summary: args.summary,
+    blocks: args.blocks,
+    thumbnailPreviewUrl: args.thumbnailPreviewUrl,
+  });
 }
 
-function summaryTextLength(html: string): number {
+function summaryWordCount(html: string): number {
   if (!html || html === '<br>') return 0;
-  if (typeof document === 'undefined')
-    return html.replaceAll(/<[^>]*>/g, '').replaceAll('&nbsp;', ' ').length;
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  return (div.textContent ?? '').length;
+  let text: string;
+  if (typeof document === 'undefined') {
+    text = html.replaceAll(/<[^>]*>/g, ' ').replaceAll('&nbsp;', ' ');
+  } else {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    text = div.textContent ?? '';
+  }
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  return words.length;
+}
+
+function escapeHtmlPlain(s: string): string {
+  return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 /** Rich `contentEditable` formatting; deprecated DOM APIs remain the practical cross-browser path. */
@@ -220,14 +208,14 @@ type DraftSyncUi = 'idle' | 'offline' | 'local' | 'syncing' | 'synced';
 function draftSyncBadgeTitle(status: DraftSyncUi): string {
   switch (status) {
     case 'offline':
-      return 'Offline – saved locally; will sync when connection is back';
+      return 'Offline – changes will sync when you are back online';
     case 'syncing':
       return 'Syncing…';
     case 'local':
-      return 'Saved locally only';
+      return 'Unsaved changes (not synced yet)';
     case 'synced':
     case 'idle':
-      return 'Draft synced to server';
+      return 'Synced to server';
     default:
       return '';
   }
@@ -254,7 +242,7 @@ function blockCountSubtitle(count: number): string {
   return `${count} block${suffix}`;
 }
 
-const MAX_BLOCKS_PER_SECTION = 10;
+const MAX_BLOCKS_PER_SECTION = 20;
 const PRIMARY_SECTION_ID = 's-1';
 const THUMB_ACCEPT = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const THUMB_MAX_MB = 10;
@@ -262,11 +250,11 @@ const THUMB_MAX_MB = 10;
 function SummaryEditor({
   value,
   onChange,
-  maxLength,
+  maxWords,
 }: Readonly<{
   value: string;
   onChange: (v: string) => void;
-  maxLength: number;
+  maxWords: number;
 }>) {
   const ref = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -284,15 +272,14 @@ function SummaryEditor({
     const el = ref.current;
     if (!el) return;
     const html = el.innerHTML;
-    const textLen = el.textContent?.length ?? 0;
-    if (textLen > maxLength) {
+    if (summaryWordCount(html) > maxWords) {
       el.innerHTML = lastValidHtml.current;
       skipSync.current = true;
       return;
     }
     lastValidHtml.current = html;
     onChange(html);
-  }, [onChange, maxLength]);
+  }, [onChange, maxWords]);
 
   const updateSelectionCard = useCallback(() => {
     if (closeCardAfterLinkRef.current) {
@@ -400,15 +387,14 @@ function SummaryEditor({
     if (savedOffset >= 0) setSelectionToOffset(el, Math.min(savedOffset, (el.textContent ?? '').length));
     let html = el.innerHTML;
     if (html === '\n' || (el.childNodes.length === 1 && el.querySelector('br'))) html = '';
-    const textLen = el.textContent?.length ?? 0;
-    if (textLen > maxLength) {
+    if (summaryWordCount(html) > maxWords) {
       el.innerHTML = lastValidHtml.current;
       skipSync.current = true;
       return;
     }
     lastValidHtml.current = html;
     onChange(html);
-  }, [onChange, maxLength]);
+  }, [onChange, maxWords]);
 
   const applyFormat = useCallback(
     (cmd: 'bold' | 'italic' | 'underline') => {
@@ -471,7 +457,9 @@ function SummaryEditor({
       <div className="relative">
         <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">P1</span>
         <div className="flex items-center justify-end text-[10px] font-bold text-muted-foreground mb-0.5">
-          <span>{summaryTextLength(value)}/{maxLength}</span>
+          <span>
+            {summaryWordCount(value)}/{maxWords} words
+          </span>
         </div>
         {/* Rich summary: contentEditable; native textarea cannot express inline formatting. */}
         <div // NOSONAR S6848 — contentEditable summary; not replaceable by textarea
@@ -509,8 +497,9 @@ function SummaryEditor({
           onPaste={(e) => {
             e.preventDefault();
             const raw = e.clipboardData.getData('text/plain') ?? '';
-            const plain = raw.replaceAll(/\s+/g, ' ').replaceAll(/<[^>]*>/g, '');
-            richExecCommand('insertText', false, plain);
+            const lines = raw.replace(/\r\n/g, '\n').split('\n');
+            const htmlPaste = lines.map((line) => (line.length ? escapeHtmlPlain(line) : '')).join('<br>');
+            richExecCommand('insertHTML', false, htmlPaste || '<br>');
             handleInput();
           }}
           className={cn(
@@ -523,7 +512,7 @@ function SummaryEditor({
       </div>
 
       <AnimatePresence>
-        {selectionCard && typeof document !== 'undefined' && summaryTextLength(value) > 0 && (
+        {selectionCard && typeof document !== 'undefined' && summaryWordCount(value) > 0 && (
           <motion.div
             ref={cardRef}
             data-ss-summary-toolbar
@@ -693,7 +682,7 @@ function ThumbnailCropDialog({
       )}
       {imageUrl && (
         <div className="space-y-4">
-          <CropperKeyboardWrapper imageReady={!!imageUrl} setCrop={setCrop} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
+          <CropperKeyboardWrapper imageReady={!!imageUrl} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
             <Cropper
               image={imageUrl}
               crop={crop}
@@ -717,7 +706,7 @@ function ThumbnailCropDialog({
             <span className="text-[10px] font-bold text-muted-foreground w-16 text-right">{zoom.toFixed(1)}x</span>
           </div>
           <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-            Tip: click the crop area, then arrow keys to move (Shift for larger steps).
+            Tip: focus the crop frame (click it), then arrow keys to pan. Hold Shift for smaller steps.
           </p>
           <div className="flex justify-end gap-2">
             <button
@@ -756,7 +745,6 @@ type BlogWriteSyncRefs = {
   } };
   tokenRef: { current: string | null | undefined };
   skipNextPopStateRef: { current: boolean };
-  hasRestoredRef: { current: boolean };
 };
 
 type BlogWritePageSyncEffectsInput = Readonly<{
@@ -766,11 +754,11 @@ type BlogWritePageSyncEffectsInput = Readonly<{
   thumbnailPreviewUrl: string | null;
   isOnline: boolean;
   draftSyncStatus: DraftSyncUi;
+  isDirty: boolean;
   setIsOnline: (v: boolean) => void;
   setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
   setLeaveConfirmOpen: (v: boolean) => void;
-  restoreFromLocalDraft: () => void;
-  syncDraftToServer: () => void;
+  syncDraftToServer: () => Promise<void>;
   refs: BlogWriteSyncRefs;
 }>;
 
@@ -782,24 +770,15 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
     thumbnailPreviewUrl,
     isOnline,
     draftSyncStatus,
+    isDirty,
     setIsOnline,
     setDraftSyncStatus,
     setLeaveConfirmOpen,
-    restoreFromLocalDraft,
     syncDraftToServer,
-    refs: { latestForSyncRef, tokenRef, skipNextPopStateRef, hasRestoredRef },
+    refs: { latestForSyncRef, tokenRef, skipNextPopStateRef },
   } = input;
 
-  useEffect(() => {
-    if (hasRestoredRef.current) return;
-    hasRestoredRef.current = true;
-    const draft = loadDraftFromStorage();
-    const isEmpty = !title.trim() && blocks.length === 0;
-    if (draft && isEmpty) {
-      restoreFromLocalDraft();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only restore from localStorage when editor starts empty
-  }, []);
+  const hadDirtyHistoryGuard = useRef(false);
 
   useEffect(() => {
     const hasContent = title.trim() || blocks.length > 0;
@@ -816,17 +795,8 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => {
       setIsOnline(false);
-      const { title: t, summary: s, blocks: b, thumbnailPreviewUrl: thumb } = latestForSyncRef.current;
-      const hasContent = t.trim() || b.length > 0;
-      if (hasContent) {
-        setDraftSyncStatus('offline');
-        saveDraftToStorage({
-          title: t,
-          summary: s && s !== '<br>' ? s : '',
-          content: JSON.stringify(b),
-          thumbnailPreviewUrl: thumb ?? undefined,
-        });
-      }
+      const { title: t, blocks: b } = latestForSyncRef.current;
+      if (t.trim() || b.length > 0) setDraftSyncStatus('offline');
     };
     globalThis.addEventListener('online', handleOnline);
     globalThis.addEventListener('offline', handleOffline);
@@ -837,40 +807,41 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
   }, [latestForSyncRef, setDraftSyncStatus, setIsOnline]);
 
   useEffect(() => {
-    history.pushState({ blogWriteGuard: true }, '', location.href);
+    if (isDirty && !hadDirtyHistoryGuard.current) {
+      hadDirtyHistoryGuard.current = true;
+      history.pushState({ blogWriteGuard: true }, '', location.href);
+    }
+    if (!isDirty) hadDirtyHistoryGuard.current = false;
+  }, [isDirty]);
+
+  useEffect(() => {
     const onPopState = () => {
       if (skipNextPopStateRef.current) {
         skipNextPopStateRef.current = false;
         return;
       }
+      if (!isDirty) return;
       setLeaveConfirmOpen(true);
     };
     globalThis.addEventListener('popstate', onPopState);
     return () => globalThis.removeEventListener('popstate', onPopState);
-  }, [skipNextPopStateRef, setLeaveConfirmOpen]);
+  }, [skipNextPopStateRef, setLeaveConfirmOpen, isDirty]);
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      const hasContent = title.trim() || blocks.length > 0;
-      if (hasContent) {
-        saveDraftToStorage({
-          title,
-          summary: summary && summary !== '<br>' ? summary : '',
-          content: JSON.stringify(blocks),
-          thumbnailPreviewUrl,
-        });
+      if (isDirty) {
         e.preventDefault();
         e.returnValue = ''; // NOSONAR typescript:S1874 — legacy beforeunload confirmation in Chromium
       }
     };
     globalThis.addEventListener('beforeunload', onBeforeUnload);
     return () => globalThis.removeEventListener('beforeunload', onBeforeUnload);
-  }, [title, summary, blocks, thumbnailPreviewUrl]);
+  }, [isDirty]);
 
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !navigator.onLine) return;
-      syncDraftToServer();
+      void syncDraftToServer();
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
@@ -879,7 +850,7 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
   useEffect(() => {
     const handleOnline = () => {
       const { title: t, blocks: b } = latestForSyncRef.current;
-      if ((t.trim() || b.length > 0) && tokenRef.current) syncDraftToServer();
+      if ((t.trim() || b.length > 0) && tokenRef.current) void syncDraftToServer();
     };
     globalThis.addEventListener('online', handleOnline);
     return () => globalThis.removeEventListener('online', handleOnline);
@@ -894,7 +865,11 @@ async function runBlogWriteSubmit(args: Readonly<{
   blocks: Block[];
   thumbnailFile: File | null;
   thumbnailCropArea: CropArea | null;
+  thumbnailPreviewUrl: string | null;
   clearThumbnail: () => void;
+  activePostId: string | null;
+  setActivePostId: React.Dispatch<React.SetStateAction<string | null>>;
+  setLoadedPostStatus: React.Dispatch<React.SetStateAction<'draft' | 'published' | null>>;
   setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
   setTitle: React.Dispatch<React.SetStateAction<string>>;
   setSummary: React.Dispatch<React.SetStateAction<string>>;
@@ -908,19 +883,57 @@ async function runBlogWriteSubmit(args: Readonly<{
     blocks,
     thumbnailFile,
     thumbnailCropArea,
+    thumbnailPreviewUrl,
     clearThumbnail,
+    activePostId,
+    setActivePostId,
+    setLoadedPostStatus,
     setDraftSyncStatus,
     setTitle,
     setSummary,
     setBlocks,
   } = args;
-  const content = JSON.stringify(blocks);
+  const content = JSON.stringify(stripLegacyGifBlocks(blocks));
   const summaryToSend =
-    summary && summary !== '<br>' && summaryTextLength(summary) > 0 ? summary.trim() : undefined;
+    summary && summary !== '<br>' && summaryWordCount(summary) > 0 ? summary.trim() : undefined;
 
   if (status === 'draft') {
-    await blogApi.saveDraft({ title: title.trim(), summary: summaryToSend, content }, token);
-    toast.success('DRAFT_SYNCED');
+    const thumbRemote = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
+    if (activePostId) {
+      const { post, forkedFromPublished } = await blogApi.updatePost(
+        activePostId,
+        {
+          title: title.trim() || 'Untitled draft',
+          summary: summaryToSend,
+          content,
+          thumbnailUrl: thumbRemote,
+          status: 'draft',
+        },
+        token,
+      );
+      setActivePostId(post._id);
+      setLoadedPostStatus('draft');
+      setWriteEditorSessionPostId(post._id);
+      if (forkedFromPublished) {
+        toast.success('New draft saved — published post unchanged on the site.');
+      } else {
+        toast.success('DRAFT_SYNCED');
+      }
+    } else {
+      const { post } = await blogApi.saveDraft(
+        {
+          title: title.trim() || 'Untitled draft',
+          summary: summaryToSend,
+          content,
+          thumbnailUrl: thumbRemote,
+        },
+        token,
+      );
+      setActivePostId(post._id);
+      setLoadedPostStatus('draft');
+      setWriteEditorSessionPostId(post._id);
+      toast.success('DRAFT_SYNCED');
+    }
     setDraftSyncStatus('synced');
     return;
   }
@@ -930,20 +943,33 @@ async function runBlogWriteSubmit(args: Readonly<{
     const data = await uploadCover(token, thumbnailFile, thumbnailCropArea, () => {});
     thumbnailUrl = data.url;
     clearThumbnail();
+  } else {
+    thumbnailUrl = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
   }
-  await blogApi.createPost({ title, summary: summaryToSend, content, thumbnailUrl, status: 'published' }, token);
+
+  if (activePostId) {
+    await blogApi.updatePost(
+      activePostId,
+      {
+        title: title.trim(),
+        summary: summaryToSend,
+        content,
+        thumbnailUrl,
+        status: 'published',
+      },
+      token,
+    );
+  } else {
+    await blogApi.createPost({ title, summary: summaryToSend, content, thumbnailUrl, status: 'published' }, token);
+  }
   toast.success('POST_LIVE');
+  setWriteEditorSessionPostId(null);
   setTitle('');
   setSummary('');
   setBlocks([]);
+  setActivePostId(null);
+  setLoadedPostStatus(null);
   setDraftSyncStatus('idle');
-  if (globalThis.window !== undefined) {
-    try {
-      globalThis.localStorage.removeItem(BLOG_DRAFT_STORAGE_KEY);
-    } catch (err) {
-      console.debug('clear blog draft failed', err);
-    }
-  }
 }
 
 type BlogWriteDraftRefs = Readonly<{
@@ -957,99 +983,98 @@ type BlogWriteDraftRefs = Readonly<{
 }>;
 
 type BlogWriteDraftHandlersInput = Readonly<{
-  title: string;
-  summary: string;
-  blocks: Block[];
-  thumbnailPreviewUrl: string | null;
-  setTitle: React.Dispatch<React.SetStateAction<string>>;
-  setSummary: React.Dispatch<React.SetStateAction<string>>;
-  setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
-  setThumbnailPreviewUrl: React.Dispatch<React.SetStateAction<string | null>>;
   setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
+  setActivePostId: React.Dispatch<React.SetStateAction<string | null>>;
+  setLoadedPostStatus: React.Dispatch<React.SetStateAction<'draft' | 'published' | null>>;
+  activePostId: string | null;
+  loadedPostStatus: 'draft' | 'published' | null;
   refs: BlogWriteDraftRefs;
 }>;
 
-function useBlogWriteDraftHandlers(input: BlogWriteDraftHandlersInput): {
-  saveDraftToLocal: () => void;
-  restoreFromLocalDraft: () => void;
-  syncDraftToServer: () => void;
-} {
+function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { syncDraftToServer: () => Promise<void> } {
   const {
-    title,
-    summary,
-    blocks,
-    thumbnailPreviewUrl,
-    setTitle,
-    setSummary,
-    setBlocks,
-    setThumbnailPreviewUrl,
     setDraftSyncStatus,
+    setActivePostId,
+    setLoadedPostStatus,
+    activePostId,
+    loadedPostStatus,
     refs: { latestForSyncRef, tokenRef },
   } = input;
 
-  const saveDraftToLocal = useCallback(() => {
-    const content = JSON.stringify(blocks);
-    const summaryVal = summary && summary !== '<br>' && summaryTextLength(summary) > 0 ? summary : '';
-    saveDraftToStorage({
-      title,
-      summary: summaryVal,
-      content,
-      thumbnailPreviewUrl,
-    });
-  }, [title, summary, blocks, thumbnailPreviewUrl]);
+  const activePostIdRef = useRef(activePostId);
+  const loadedPostStatusRef = useRef(loadedPostStatus);
+  activePostIdRef.current = activePostId;
+  loadedPostStatusRef.current = loadedPostStatus;
 
-  const restoreFromLocalDraft = useCallback(() => {
-    const draft = loadDraftFromStorage();
-    if (!draft) return;
-    setTitle(draft.title);
-    setSummary(draft.summary || '');
-    try {
-      const parsed = JSON.parse(draft.content) as unknown;
-      if (Array.isArray(parsed) && parsed.length <= MAX_BLOCKS_PER_SECTION) {
-        setBlocks(parsed as Block[]);
-      }
-    } catch {
-      // ignore invalid content
-    }
-    if (draft.thumbnailPreviewUrl) {
-      setThumbnailPreviewUrl(draft.thumbnailPreviewUrl);
-    }
-    setDraftSyncStatus('local');
-  }, [setTitle, setSummary, setBlocks, setThumbnailPreviewUrl, setDraftSyncStatus]);
-
-  const syncDraftToServer = useCallback(() => {
-    if (!navigator.onLine) return;
+  const syncDraftToServer = useCallback((): Promise<void> => {
+    if (!navigator.onLine) return Promise.resolve();
     const currentToken = tokenRef.current;
-    if (!currentToken) return;
-    const { title: t, summary: s, blocks: b } = latestForSyncRef.current;
-    if (!t.trim() && b.length === 0) return;
+    if (!currentToken) return Promise.resolve();
+    const { title: t, summary: s, blocks: b, thumbnailPreviewUrl: thumb } = latestForSyncRef.current;
+    if (!t.trim() && b.length === 0) return Promise.resolve();
     setDraftSyncStatus('syncing');
-    const content = JSON.stringify(b);
-    const summaryToSend = s && s !== '<br>' && summaryTextLength(s) > 0 ? s : undefined;
-    blogApi
+    const content = JSON.stringify(stripLegacyGifBlocks(b));
+    const summaryToSend = s && s !== '<br>' && summaryWordCount(s) > 0 ? s : undefined;
+    const titleSend = t.trim() || 'Untitled draft';
+    const thumbUrl = pickRemoteThumbnailForApi(thumb ?? null);
+    const pid = activePostIdRef.current;
+    const st = loadedPostStatusRef.current;
+
+    const onErr = () => {
+      setDraftSyncStatus('local');
+    };
+
+    if (pid) {
+      const statusForApi: 'draft' | 'published' = st === 'published' ? 'published' : 'draft';
+      return blogApi
+        .updatePost(
+          pid,
+          {
+            title: titleSend,
+            summary: summaryToSend,
+            content,
+            thumbnailUrl: thumbUrl,
+            status: statusForApi,
+            silent: true,
+          },
+          currentToken,
+        )
+        .then(() => {
+          setDraftSyncStatus('synced');
+        })
+        .catch(() => {
+          onErr();
+        });
+    }
+
+    return blogApi
       .saveDraft(
         {
-          title: t.trim() || 'Untitled draft',
+          title: titleSend,
           summary: summaryToSend,
           content,
+          thumbnailUrl: thumbUrl,
         },
         currentToken,
       )
-      .then(() => {
+      .then((res) => {
+        setActivePostId(res.post._id);
+        setLoadedPostStatus('draft');
         setDraftSyncStatus('synced');
       })
       .catch(() => {
-        setDraftSyncStatus('local');
+        onErr();
       });
-  }, [latestForSyncRef, tokenRef, setDraftSyncStatus]);
+  }, [latestForSyncRef, tokenRef, setDraftSyncStatus, setActivePostId, setLoadedPostStatus]);
 
-  return { saveDraftToLocal, restoreFromLocalDraft, syncDraftToServer };
+  return { syncDraftToServer };
 }
 
 type BlogWriteTopNavProps = Readonly<{
   username: string;
   title: string;
   hasDraftContent: boolean;
+  loadedPostStatus: 'draft' | 'published' | null;
   leftSidebarOpen: boolean;
   onToggleLeft: () => void;
   rightSidebarOpen: boolean;
@@ -1062,6 +1087,7 @@ function BlogWriteTopNav({
   username,
   title,
   hasDraftContent,
+  loadedPostStatus,
   leftSidebarOpen,
   onToggleLeft,
   rightSidebarOpen,
@@ -1108,18 +1134,27 @@ function BlogWriteTopNav({
             <span>Uptime: 99.9%</span>
           </div>
           {hasDraftContent ? (
-            <span
-              className={cn(
-                'text-[8px] font-medium px-1.5 py-0.5 rounded border',
-                draftSyncStatus === 'offline' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
-                draftSyncStatus === 'syncing' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
-                draftSyncStatus === 'local' && 'text-muted-foreground border-border',
-                draftSyncStatus === 'synced' && 'text-green-600 border-green-500/50 bg-green-500/10',
-              )}
-              title={draftSyncBadgeTitle(draftSyncStatus)}
-            >
-              {draftSyncBadgeLabel(draftSyncStatus)}
-            </span>
+            loadedPostStatus === 'published' ? (
+              <span
+                className="rounded border border-green-500/50 bg-green-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-green-800 dark:text-green-200"
+                title="This post is live. Autosave updates the published version on the server."
+              >
+                Live
+              </span>
+            ) : (
+              <span
+                className={cn(
+                  'text-[8px] font-medium px-1.5 py-0.5 rounded border',
+                  draftSyncStatus === 'offline' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
+                  draftSyncStatus === 'syncing' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
+                  draftSyncStatus === 'local' && 'text-muted-foreground border-border',
+                  draftSyncStatus === 'synced' && 'text-green-600 border-green-500/50 bg-green-500/10',
+                )}
+                title={draftSyncBadgeTitle(draftSyncStatus)}
+              >
+                {draftSyncBadgeLabel(draftSyncStatus)}
+              </span>
+            )
           ) : null}
         </div>
         <div className="hidden md:block text-[8px] font-medium text-muted-foreground">{currentTime}</div>
@@ -1130,6 +1165,8 @@ function BlogWriteTopNav({
 
 export default function WriteBlogPage() {
   const { user, token, shouldBlock } = useRequireAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { isOpen } = useSidebar();
   const [title, setTitle] = useState('');
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -1148,26 +1185,175 @@ export default function WriteBlogPage() {
     globalThis.navigator === undefined ? true : globalThis.navigator.onLine,
   );
   const [draftSyncStatus, setDraftSyncStatus] = useState<'idle' | 'offline' | 'local' | 'syncing' | 'synced'>('idle');
+  const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [loadedPostStatus, setLoadedPostStatus] = useState<'draft' | 'published' | null>(null);
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+  const [contentBaseline, setContentBaseline] = useState<string | null>(null);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
-  const hasRestoredRef = useRef(false);
   const latestForSyncRef = useRef({ title: '', summary: '', blocks: [] as Block[], thumbnailPreviewUrl: null as string | null });
   const tokenRef = useRef<string | undefined>(token);
   const skipNextPopStateRef = useRef(false);
+  const autosyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   latestForSyncRef.current = { title, summary, blocks, thumbnailPreviewUrl };
   tokenRef.current = token;
 
-  const { saveDraftToLocal, restoreFromLocalDraft, syncDraftToServer } = useBlogWriteDraftHandlers({
-    title,
-    summary,
-    blocks,
-    thumbnailPreviewUrl,
-    setTitle,
-    setSummary,
-    setBlocks,
-    setThumbnailPreviewUrl,
+  const captureBaseline = useCallback(() => {
+    setContentBaseline(serializeWriteWorkspace({ title, summary, blocks, thumbnailPreviewUrl }));
+  }, [title, summary, blocks, thumbnailPreviewUrl]);
+
+  const isDirty = useMemo(() => {
+    if (!workspaceReady || contentBaseline === null) return false;
+    return (
+      contentBaseline !== serializeWriteWorkspace({ title, summary, blocks, thumbnailPreviewUrl })
+    );
+  }, [workspaceReady, contentBaseline, title, summary, blocks, thumbnailPreviewUrl]);
+
+  const saveDisabledNoEdits = activePostId !== null && !isDirty;
+
+  const { syncDraftToServer } = useBlogWriteServerDraftSync({
     setDraftSyncStatus,
+    setActivePostId,
+    setLoadedPostStatus,
+    activePostId,
+    loadedPostStatus,
     refs: { latestForSyncRef, tokenRef },
   });
+
+  useEffect(() => {
+    try {
+      globalThis.localStorage?.removeItem('syntax-stories-blog-draft');
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  /** Legacy `?postId=` → sessionStorage only (id never stays in the address bar). */
+  useEffect(() => {
+    const legacy = searchParams.get('postId');
+    if (!legacy) return;
+    setWriteEditorSessionPostId(legacy);
+    router.replace('/blogs/write', { scroll: false });
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    if (!token) {
+      setContentBaseline(null);
+      setWorkspaceReady(true);
+      return;
+    }
+    let cancelled = false;
+    setWorkspaceReady(false);
+    setContentBaseline(null);
+    (async () => {
+      try {
+        const targetId = getWriteEditorSessionPostId();
+        if (targetId) {
+          const { post } = await blogApi.getMyPost(targetId, token);
+          if (cancelled) return;
+          let nextBlocks: Block[] = [];
+          try {
+            const parsed = JSON.parse(post.content) as unknown;
+            if (Array.isArray(parsed)) nextBlocks = stripLegacyGifBlocks(parsed as Block[]);
+          } catch {
+            nextBlocks = [];
+          }
+          const nextTitle = post.title || '';
+          const nextSummary = post.summary || '';
+          const nextThumb = post.thumbnailUrl?.startsWith('http') ? post.thumbnailUrl : null;
+          setTitle(nextTitle);
+          setSummary(nextSummary);
+          setBlocks(nextBlocks);
+          setThumbnailPreviewUrl(nextThumb);
+          setThumbnailFile(null);
+          setThumbnailCropArea(null);
+          setActivePostId(post._id);
+          setLoadedPostStatus(post.status);
+          setDraftSyncStatus('synced');
+          setWriteEditorSessionPostId(post._id);
+          setContentBaseline(
+            serializeWriteWorkspace({
+              title: nextTitle,
+              summary: nextSummary,
+              blocks: nextBlocks,
+              thumbnailPreviewUrl: nextThumb,
+            }),
+          );
+        } else {
+          setActivePostId(null);
+          setLoadedPostStatus(null);
+          const { draft } = await blogApi.getDraft(token);
+          if (cancelled) return;
+          if (draft) {
+            let nextBlocks: Block[] = [];
+            try {
+              const parsed = JSON.parse(draft.content) as unknown;
+              if (Array.isArray(parsed)) nextBlocks = stripLegacyGifBlocks(parsed as Block[]);
+            } catch {
+              nextBlocks = [];
+            }
+            const nextTitle = draft.title || '';
+            const nextSummary = draft.summary || '';
+            const nextThumb = draft.thumbnailUrl?.startsWith('http') ? draft.thumbnailUrl : null;
+            setTitle(nextTitle);
+            setSummary(nextSummary);
+            setBlocks(nextBlocks);
+            setThumbnailPreviewUrl(nextThumb);
+            setThumbnailFile(null);
+            setThumbnailCropArea(null);
+            setActivePostId(draft._id);
+            setLoadedPostStatus('draft');
+            setDraftSyncStatus('synced');
+            setWriteEditorSessionPostId(draft._id);
+            setContentBaseline(
+              serializeWriteWorkspace({
+                title: nextTitle,
+                summary: nextSummary,
+                blocks: nextBlocks,
+                thumbnailPreviewUrl: nextThumb,
+              }),
+            );
+          } else {
+            setTitle('');
+            setSummary('');
+            setBlocks([]);
+            setThumbnailPreviewUrl(null);
+            setThumbnailFile(null);
+            setThumbnailCropArea(null);
+            setDraftSyncStatus('idle');
+            setWriteEditorSessionPostId(null);
+            setContentBaseline(
+              serializeWriteWorkspace({
+                title: '',
+                summary: '',
+                blocks: [],
+                thumbnailPreviewUrl: null,
+              }),
+            );
+          }
+        }
+      } catch (e) {
+        if (!cancelled) toast.error(e instanceof Error ? e.message : 'Could not load editor');
+      } finally {
+        if (!cancelled) setWorkspaceReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || !workspaceReady) return;
+    const hasContent = title.trim() || blocks.length > 0;
+    if (!hasContent || !navigator.onLine) return;
+    if (autosyncTimerRef.current) clearTimeout(autosyncTimerRef.current);
+    autosyncTimerRef.current = setTimeout(() => {
+      void syncDraftToServer();
+    }, 2800);
+    return () => {
+      if (autosyncTimerRef.current) clearTimeout(autosyncTimerRef.current);
+    };
+  }, [token, workspaceReady, title, summary, blocks, thumbnailPreviewUrl, syncDraftToServer]);
 
   const resizeTitleInput = useCallback(() => {
     const el = titleInputRef.current;
@@ -1220,25 +1406,30 @@ export default function WriteBlogPage() {
     thumbnailPreviewUrl,
     isOnline,
     draftSyncStatus,
+    isDirty,
     setIsOnline,
     setDraftSyncStatus,
     setLeaveConfirmOpen,
-    restoreFromLocalDraft,
     syncDraftToServer,
     refs: {
       latestForSyncRef,
       tokenRef,
       skipNextPopStateRef,
-      hasRestoredRef,
     },
   });
 
   const handleLeaveConfirmYes = useCallback(() => {
-    saveDraftToLocal();
     setLeaveConfirmOpen(false);
     skipNextPopStateRef.current = true;
-    history.back();
-  }, [saveDraftToLocal]);
+    void (async () => {
+      try {
+        await syncDraftToServer();
+      } catch {
+        // sync errors already reflected in badge
+      }
+      history.back();
+    })();
+  }, [syncDraftToServer]);
 
   const handleLeaveConfirmNo = useCallback(() => {
     setLeaveConfirmOpen(false);
@@ -1263,12 +1454,21 @@ export default function WriteBlogPage() {
           blocks,
           thumbnailFile,
           thumbnailCropArea,
+          thumbnailPreviewUrl,
           clearThumbnail,
+          activePostId,
+          setActivePostId,
+          setLoadedPostStatus,
           setDraftSyncStatus,
           setTitle,
           setSummary,
           setBlocks,
         });
+        if (status === 'published') {
+          setContentBaseline(null);
+        } else {
+          captureBaseline();
+        }
       } catch (e) {
         console.error(e);
         toast.error('FATAL: UPLOAD_FAILED');
@@ -1284,12 +1484,16 @@ export default function WriteBlogPage() {
       blocks,
       thumbnailFile,
       thumbnailCropArea,
+      thumbnailPreviewUrl,
       clearThumbnail,
       setDraftSyncStatus,
+      activePostId,
+      captureBaseline,
     ],
   );
 
   if (shouldBlock) return <TerminalLoaderPage />;
+  if (token && !workspaceReady) return <TerminalLoaderPage />;
 
   const centreMaxWidthClass = resolveCentreMaxWidthClass(leftSidebarOpen, rightSidebarOpen);
 
@@ -1301,6 +1505,7 @@ export default function WriteBlogPage() {
         username={user?.username || 'user'}
         title={title}
         hasDraftContent={Boolean(title.trim() || blocks.length > 0)}
+        loadedPostStatus={loadedPostStatus}
         leftSidebarOpen={leftSidebarOpen}
         onToggleLeft={() => setLeftSidebarOpen((o) => !o)}
         rightSidebarOpen={rightSidebarOpen}
@@ -1479,7 +1684,7 @@ export default function WriteBlogPage() {
                   rows={1}
                  />
                </div>
-               <SummaryEditor value={summary} onChange={setSummary} maxLength={SUMMARY_MAX} />
+               <SummaryEditor value={summary} onChange={setSummary} maxWords={SUMMARY_MAX_WORDS} />
              </div>
 
              <BlogWriteEditor
@@ -1523,8 +1728,8 @@ export default function WriteBlogPage() {
                   <div className="grid grid-cols-1 gap-3">
                     <button
                       onClick={() => handleSubmit('published')}
-                      disabled={submitting}
-                      className="group relative bg-primary text-primary-foreground border-2 border-black p-3 font-black uppercase text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                      disabled={submitting || saveDisabledNoEdits}
+                      className="group relative bg-primary text-primary-foreground border-2 border-black p-3 font-black uppercase text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <div className="flex items-center justify-center gap-2">
                         <Send className="h-4 w-4" /> {submitAction === 'published' ? 'Deploying...' : 'Deploy_Post'}
@@ -1532,11 +1737,11 @@ export default function WriteBlogPage() {
                     </button>
                     <button
                       onClick={() => handleSubmit('draft')}
-                      disabled={submitting}
-                      className="bg-muted border-2 border-border p-3 font-black uppercase text-xs shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all hover:bg-card"
+                      disabled={submitting || saveDisabledNoEdits}
+                      className="bg-muted border-2 border-border p-3 font-black uppercase text-xs shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all hover:bg-card disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <div className="flex items-center justify-center gap-2">
-                        <Save className="h-4 w-4" /> {submitAction === 'draft' ? 'Saving...' : 'Save_Local'}
+                        <Save className="h-4 w-4" /> {submitAction === 'draft' ? 'Saving...' : 'Save_Draft'}
                       </div>
                     </button>
                   </div>
@@ -1615,7 +1820,7 @@ export default function WriteBlogPage() {
                 <button
                   type="button"
                   onClick={() => handleSubmit('published')}
-                  disabled={submitting}
+                  disabled={submitting || saveDisabledNoEdits}
                   title="Deploy post"
                   className="p-2 rounded border border-transparent hover:border-border hover:bg-muted text-muted-foreground hover:text-primary transition-all disabled:opacity-50"
                 >
@@ -1624,7 +1829,7 @@ export default function WriteBlogPage() {
                 <button
                   type="button"
                   onClick={() => handleSubmit('draft')}
-                  disabled={submitting}
+                  disabled={submitting || saveDisabledNoEdits}
                   title="Save draft"
                   className="p-2 rounded border border-transparent hover:border-border hover:bg-muted text-muted-foreground hover:text-primary transition-all disabled:opacity-50"
                 >
@@ -1653,7 +1858,7 @@ export default function WriteBlogPage() {
         open={leaveConfirmOpen}
         onClose={handleLeaveConfirmNo}
         title="Leave this page?"
-        message="Do you want to save your blog as draft before leaving? Your work will be saved locally and synced to the server when you return."
+        message="Save your draft to the server before leaving? Unsaved changes may be lost if you skip saving."
         confirmLabel="Yes, save draft"
         cancelLabel="No"
         variant="default"

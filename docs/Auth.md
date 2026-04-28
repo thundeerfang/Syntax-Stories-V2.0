@@ -4,6 +4,8 @@ This document describes how the **Syntax Stories V2.0** codebase is organized, h
 
 - [Analytics](./Analytics.md)
 - [Audit Log](./Audit%20Log.md)
+- [Email OTP flow](./EMAIL_OTP_FLOW.md) — code generation, HMAC storage, Redis, mail delivery, verify
+- [Auth stack resilience](./AUTH_STACK_RESILIENCE.md) — failure ordering, mitigations, Redis keys
 - [Followers](./Followers.md)
 
 ---
@@ -149,7 +151,7 @@ Unless noted, paths are relative to **`{API_ORIGIN}/auth`**. The webapp’s `web
 | POST | `/auth/qr-login/approve` | `verifyToken` | Approve QR login from logged-in device. |
 | POST | `/auth/qr-login/poll` | — | Poll for completion / tokens. |
 
-**Email sending** goes through **`infrastructure/mail/sendAuthEmail.ts`** (SMTP first, then Resend if configured). **OTP storage, hashing, versioning, resend gates** live in **`services/emailOtp.service.ts`**. **Post-email-login session response** is centralized in **`services/authLogin.service.ts`** (`respondWithSessionAfterEmailAuth`). **Audit** events use **`shared/audit/auditLog.ts`** (`writeAuditLog`). **OTP counters** use **`shared/metrics/otpMetrics.ts`** (`bumpOtpMetric` / `getOtpMetricsSnapshot`).
+**Email sending** goes through **`infrastructure/mail/sendAuthEmail.ts`** (SMTP first, then Resend if configured). **OTP storage, hashing, versioning, resend gates** live in **`services/emailOtp.service.ts`**. **Post-email-login session response** is centralized in **`services/authLogin.service.ts`** (`respondWithSessionAfterEmailAuth`). **Audit** events use **`shared/audit/auditLog.ts`** (`writeAuditLog`). **OTP counters** use **`shared/metrics/otpMetrics.ts`** (`bumpOtpMetric` / `getOtpMetricsSnapshot`). **Deep dive (RNG, HMAC formula, Redis keys, mail HTML):** [EMAIL_OTP_FLOW.md](./EMAIL_OTP_FLOW.md).
 
 ---
 

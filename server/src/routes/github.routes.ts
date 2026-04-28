@@ -130,21 +130,111 @@ router.get('/repo/:fullName', verifyToken, async (req: Request, res: Response) =
     const repo = (await ghRes.json()) as GitHubRepo;
     res.json({
       success: true,
-      project: {
-        type: 'project',
-        source: 'github',
-        repoFullName: repo.full_name,
-        repoId: repo.id,
-        title: repo.name,
-        publisher: repo.owner?.login,
-        ongoing: false,
-        publicationDate: monthYearFromIso(repo.created_at) || monthYearFromIso(repo.updated_at),
-        endDate: undefined,
-        publicationUrl: repo.html_url,
-        description: repo.description ?? '',
-        media: [],
-      },
+      project: projectFromGithubRepo(repo),
       repo,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+  }
+});
+
+function projectFromGithubRepo(repo: GitHubRepo) {
+  return {
+    type: 'project' as const,
+    source: 'github' as const,
+    repoFullName: repo.full_name,
+    repoId: repo.id,
+    title: repo.name,
+    publisher: repo.owner?.login,
+    ongoing: false,
+    publicationDate: monthYearFromIso(repo.created_at) || monthYearFromIso(repo.updated_at),
+    endDate: undefined,
+    publicationUrl: repo.html_url,
+    description: repo.description ?? '',
+    media: [] as { url: string; title?: string }[],
+  };
+}
+
+/** Batch-fetch GitHub repos and return project payloads (one round-trip from the browser vs N GETs). */
+router.post('/repos/import-batch', verifyToken, async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as Request & { user: AuthUser }).user;
+    const token = await getGithubToken(authUser._id);
+    if (!token) {
+      res.status(400).json({ success: false, message: 'GitHub is not connected.' });
+      return;
+    }
+    const raw = (req.body as { fullNames?: unknown })?.fullNames;
+    if (!Array.isArray(raw) || raw.length === 0) {
+      res.status(400).json({ success: false, message: 'Provide fullNames: non-empty string[].' });
+      return;
+    }
+    if (raw.length > 15) {
+      res.status(400).json({ success: false, message: 'At most 15 repositories per request.' });
+      return;
+    }
+    const fullNames = raw.map((s) => String(s ?? '').trim()).filter((s) => s.length > 0);
+    if (fullNames.length === 0) {
+      res.status(400).json({ success: false, message: 'No valid repo names.' });
+      return;
+    }
+
+    const seenLower = new Set<string>();
+    const deduped: string[] = [];
+    const failed: { fullName: string; message: string }[] = [];
+    for (const fullName of fullNames) {
+      const key = fullName.toLowerCase();
+      if (seenLower.has(key)) {
+        failed.push({
+          fullName,
+          message: 'Duplicate in request: same repository listed more than once.',
+        });
+        continue;
+      }
+      seenLower.add(key);
+      deduped.push(fullName);
+    }
+
+    const projects: ReturnType<typeof projectFromGithubRepo>[] = [];
+
+    for (const fullName of deduped) {
+      if (!fullName.includes('/')) {
+        failed.push({ fullName, message: 'Invalid repo name.' });
+        continue;
+      }
+      const [ownerRaw, repoRaw] = fullName.split('/');
+      const owner = encodeURIComponent(ownerRaw);
+      const repoName = encodeURIComponent(repoRaw);
+      try {
+        const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github+json',
+          },
+        });
+        if (!ghRes.ok) {
+          const text = await ghRes.text().catch(() => '');
+          failed.push({ fullName, message: text || `HTTP ${ghRes.status}` });
+          continue;
+        }
+        const repo = (await ghRes.json()) as GitHubRepo;
+        if (repo.archived) {
+          failed.push({ fullName, message: 'Archived repository skipped.' });
+          continue;
+        }
+        projects.push(projectFromGithubRepo(repo));
+      } catch (e) {
+        failed.push({
+          fullName,
+          message: e instanceof Error ? e.message : 'Request failed',
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      projects,
+      failed,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Server error' });

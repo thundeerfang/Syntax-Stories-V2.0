@@ -16,6 +16,7 @@ export function useAuth() {
       verifyCode: s.verifyCode,
       verifyTwoFactor: s.verifyTwoFactor,
       logout: s.logout,
+      resetEphemeralOtpState: s.resetEphemeralOtpState,
     }))
   );
 }

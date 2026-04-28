@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
-import { Button, Dialog } from '@/components/ui';
+import { Button, Dialog, useGlobalAltchaBusy } from '@/components/ui';
 import { AltchaField } from './AltchaField';
 import { readAltchaPayload, useOtpFlow } from '../hooks/useOtpFlow';
 import type { AuthDialogView } from '@/store/authDialog';
@@ -59,12 +59,19 @@ const authStepTransition = {
 
 export function AuthDialog() {
   const { isOpen, initialView, close } = useAuthDialogStore();
-  const { sendLoginOtp, signUp, verifyCode, verifyTwoFactor, isLoading, twoFactor } = useAuth();
+  const { sendLoginOtp, signUp, verifyCode, verifyTwoFactor, isLoading, twoFactor, resetEphemeralOtpState } =
+    useAuth();
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const storeTwoFactor = useAuthStore((s) => s.twoFactor);
   const loginFormRef = useRef<HTMLFormElement>(null);
   const signupFormRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetEphemeralOtpState();
+    }
+  }, [isOpen, resetEphemeralOtpState]);
 
   useEffect(() => {
     if (isHydrated && isOpen && token) {
@@ -205,9 +212,15 @@ export function AuthDialog() {
     : authStepTransition;
 
   const twoFactorActive = twoFactor != null;
+  const altchaBusy = useGlobalAltchaBusy();
 
-  /** Lock backdrop/X/Escape only while entering the email OTP (not 2FA), so accidental dismiss does not invalidate the code. */
-  const lockDismissForEmailOtp = step === 'verify-email' && !twoFactorActive;
+  /** Block dismiss and chrome interaction while OTP step, auth requests, or ALTCHA is running. */
+  const blockAuthDialogDismiss =
+    altchaBusy ||
+    isLoading ||
+    (step === 'verify-email' && !twoFactorActive);
+
+  const blockResendDialogDismiss = altchaBusy || isLoading;
 
   return (
     <>
@@ -215,11 +228,11 @@ export function AuthDialog() {
         open={isOpen}
         onClose={close}
         titleId="auth-dialog-title"
-        panelClassName="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto ss-scrollbar-hide"
+        panelClassName="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto overscroll-y-contain ss-scrollbar-hide"
         contentClassName="relative overflow-x-hidden p-5 sm:p-6"
-        closeOnBackdropClick={!lockDismissForEmailOtp}
-        closeOnEscape={!lockDismissForEmailOtp}
-        showCloseButton={!lockDismissForEmailOtp}
+        closeOnBackdropClick={!blockAuthDialogDismiss}
+        closeOnEscape={!blockAuthDialogDismiss}
+        showCloseButton={!blockAuthDialogDismiss}
       >
         <div className="relative">
           <AnimatePresence mode="wait" initial={false}>
@@ -271,6 +284,9 @@ export function AuthDialog() {
         titleId="resend-otp-title"
         panelClassName="max-w-sm border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]"
         contentClassName="p-5 sm:p-6"
+        closeOnBackdropClick={!blockResendDialogDismiss}
+        closeOnEscape={!blockResendDialogDismiss}
+        showCloseButton={!blockResendDialogDismiss}
       >
         <h3 id="resend-otp-title" className="pr-8 text-sm font-black uppercase tracking-tight text-card-foreground">
           Resend code

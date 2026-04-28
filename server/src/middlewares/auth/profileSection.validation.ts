@@ -8,6 +8,7 @@ import {
   updateProfileProjectsSchema,
   updateProfileSetupSchema,
   updateProfileSocialSchema,
+  updateProfileStackSchema,
   updateProfileWorkSchema,
 } from './profileZodSchemas.js';
 import { formatZodError } from './zodFormat.js';
@@ -55,6 +56,10 @@ export function updateProfileSetupValidation(req: Request, res: Response, next: 
   sectionValidation(updateProfileSetupSchema, req, res, next);
 }
 
+export function updateProfileStackValidation(req: Request, res: Response, next: NextFunction): void {
+  sectionValidation(updateProfileStackSchema, req, res, next);
+}
+
 function paramSection(req: Request): string | undefined {
   const raw = req.params.section;
   const s = Array.isArray(raw) ? raw[0] : raw;
@@ -77,6 +82,8 @@ export function updateProfileSectionBodyValidation(req: Request, res: Response, 
       return updateProfileBasicValidation(req, res, next);
     case 'social':
       return updateProfileSocialValidation(req, res, next);
+    case 'stack':
+      return updateProfileStackValidation(req, res, next);
     case 'work':
       return updateProfileWorkValidation(req, res, next);
     case 'education':
