@@ -8,6 +8,8 @@ const UI_STORAGE_KEY = 'syntax-stories-ui';
 type UIState = {
   feedbackButtonVisible: boolean;
   setFeedbackButtonVisible: (visible: boolean) => void;
+  feedbackDialogOpen: boolean;
+  setFeedbackDialogOpen: (open: boolean) => void;
 };
 
 export const useUIStore = create<UIState>()(
@@ -15,7 +17,12 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       feedbackButtonVisible: true,
       setFeedbackButtonVisible: (visible) => set({ feedbackButtonVisible: visible }),
+      feedbackDialogOpen: false,
+      setFeedbackDialogOpen: (open) => set({ feedbackDialogOpen: open }),
     }),
-    { name: UI_STORAGE_KEY }
+    {
+      name: UI_STORAGE_KEY,
+      partialize: (s) => ({ feedbackButtonVisible: s.feedbackButtonVisible }),
+    }
   )
 );
