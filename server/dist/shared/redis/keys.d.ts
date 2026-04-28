@@ -12,6 +12,11 @@ export declare const redisKeys: {
         /** One-time OAuth browser callback; value is JSON payload (tokens, userId). TTL ~90s. */
         readonly exchange: (code: string) => string;
     };
+    /** Invite / referral: OAuth signup nonce → referral code; code → referrer userId cache. */
+    readonly invite: {
+        readonly oauthSignupNonce: (nonce: string) => string;
+        readonly codeCache: (normalizedCode: string) => string;
+    };
     readonly auth: {
         readonly intent: (tokenHash: string) => string;
         readonly twoFactorSetup: (userId: string) => string;
@@ -38,12 +43,6 @@ export declare const redisKeys: {
     readonly follow: {
         readonly dailyCap: (userId: string, dayKey: string) => string;
     };
-    readonly invite: {
-        /** Referrer ObjectId string, or sentinel `__NONE__` for negative cache. */
-        readonly codeCache: (normalizedCode: string) => string;
-        /** OAuth signup: nonce → normalized referral code (TTL ~10m). */
-        readonly oauthSignupNonce: (nonce: string) => string;
-    };
     /**
      * Auth HTTP rate limits via RedisRateLimitStore.
      * Full key = `authRateLimitKey(prefix, suffix)` where `suffix` comes from express-rate-limit’s keyGenerator.
@@ -55,7 +54,7 @@ export declare const redisKeys: {
         readonly refresh: "rl:refresh:";
         readonly updateProfile: "rl:updateprofile:";
         readonly feedback: "rl:feedback:";
-        readonly inviteResolve: "rl:invite:resolve:";
+        readonly inviteResolve: "rl:invite-resolve:";
         readonly authHttpKey: (prefix: string, keySuffix: string) => string;
     };
 };

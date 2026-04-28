@@ -10,16 +10,22 @@ export interface FormDialogProps {
   onClose: () => void;
   /** Dialog title (e.g. "Add work experience"). */
   title: React.ReactNode;
+  /** Optional icon beside the title (decorative; keep small). */
+  titleIcon?: React.ReactNode;
   /** Unique id for the title element (for aria-labelledby). */
   titleId: string;
   /** Optional short subtitle under the title. */
   subtitle?: React.ReactNode;
+  /** Extra classes for the subtitle paragraph. */
+  subtitleClassName?: string;
   /** Optional content on the right side of the header (e.g. Project/Publication toggle). */
   headerRight?: React.ReactNode;
   /** Form/content body. */
   children: React.ReactNode;
   /** Optional footer (e.g. Cancel + Save buttons). If not provided but showDefaultFooter, default Cancel/Save are used. */
   footer?: React.ReactNode;
+  /** Extra classes for the footer wrapper. */
+  footerClassName?: string;
   /** Extra class for the panel. Merged with default. */
   panelClassName?: string;
   /** Extra class for the content wrapper. */
@@ -41,11 +47,14 @@ export function FormDialog({
   open,
   onClose,
   title,
+  titleIcon,
   titleId,
   subtitle,
+  subtitleClassName,
   headerRight,
   children,
   footer,
+  footerClassName,
   panelClassName,
   contentClassName,
   interactionLock = false,
@@ -65,21 +74,34 @@ export function FormDialog({
         <header className="flex-shrink-0 border-b-2 border-border bg-muted/30 px-6 py-4 pr-[4.75rem] sm:pr-[5.75rem]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id={titleId} className="min-w-0 flex-1 text-base font-black uppercase tracking-wide text-foreground">
-                {title}
+              <h2
+                id={titleId}
+                className="min-w-0 flex-1 text-base font-black uppercase tracking-wide text-foreground flex items-center gap-2"
+              >
+                {titleIcon != null && <span className="shrink-0 text-primary">{titleIcon}</span>}
+                <span className="min-w-0">{title}</span>
               </h2>
               {headerRight != null && (
                 <div className="flex shrink-0 items-center gap-2 pr-1 sm:pr-2">{headerRight}</div>
               )}
             </div>
             {subtitle != null && (
-              <p className="mt-1 text-xs font-medium text-muted-foreground max-w-md">{subtitle}</p>
+              <p
+                className={cn(
+                  'mt-1 text-xs font-medium text-muted-foreground max-w-md',
+                  subtitleClassName,
+                )}
+              >
+                {subtitle}
+              </p>
             )}
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer != null && (
-          <footer className="flex-shrink-0 border-t-2 border-border bg-muted/20 px-6 py-4">
+          <footer
+            className={cn('flex-shrink-0 border-t-2 border-border bg-muted/20 px-6 py-4', footerClassName)}
+          >
             {footer}
           </footer>
         )}

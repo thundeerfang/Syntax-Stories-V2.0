@@ -6,18 +6,6 @@ const BlogPostSchema = new Schema({
     summary: { type: String, trim: true, maxlength: 12000, default: '' },
     content: { type: String, required: true, default: '' },
     thumbnailUrl: { type: String, trim: true, maxlength: 2000 },
-    category: { type: String, trim: true, lowercase: true, maxlength: 48, default: undefined, index: true },
-    tags: {
-        type: [{ type: String, trim: true, lowercase: true, maxlength: 40 }],
-        default: undefined,
-        validate: {
-            validator(v) {
-                return v == null || v.length <= 20;
-            },
-            message: 'At most 20 tags',
-        },
-    },
-    language: { type: String, trim: true, lowercase: true, maxlength: 12, default: 'en' },
     status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
     lastEditedAt: { type: Date, default: null },
     lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },

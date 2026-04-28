@@ -47,19 +47,15 @@ export declare const env: {
     /** Resend HTTP API (fallback after SMTP failure, or primary if only this is set). */
     readonly RESEND_API_KEY: string | undefined;
     readonly RESEND_FROM: string | undefined;
-    /** Inbox for feedback notifications; falls back to EMAIL_FROM / EMAIL_USER / RESEND_FROM when unset. */
+    /** Feedback form: internal notify address (falls back to EMAIL_FROM / EMAIL_USER / RESEND_FROM in controller). */
     readonly FEEDBACK_NOTIFY_EMAIL: string | undefined;
-    /** Optional ClamAV daemon (TCP, usually port 3310). When unset, virus scan step is skipped (Sharp still re-encodes). */
+    /** Referral / invite links: HMAC cookie signing (optional in dev). */
+    readonly REFERRAL_SIGNING_SECRET: string | undefined;
+    /** When false, `applyReferralOnNewUser` is a no-op. */
+    readonly REFERRALS_ENABLED: boolean;
+    /** ClamAV TCP (INSTREAM). When host unset, scans are skipped unless CLAMAV_REQUIRED. */
     readonly CLAMAV_HOST: string | undefined;
     readonly CLAMAV_PORT: number;
-    /**
-     * When true, image uploads that go through `imageMasterHandler` require a successful ClamAV scan
-     * (host must be configured or uploads fail with 503).
-     */
     readonly CLAMAV_REQUIRED: boolean;
-    /** When `'false'`, skip referral attribution (signup still works). Default: enabled. */
-    readonly REFERRALS_ENABLED: boolean;
-    /** HMAC for signed `ss_ref` cookie; falls back to SESSION_SECRET / JWT_SECRET. */
-    readonly REFERRAL_SIGNING_SECRET: string;
 };
 //# sourceMappingURL=env.d.ts.map

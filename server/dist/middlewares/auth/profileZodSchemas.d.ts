@@ -8,7 +8,6 @@ export declare const workExperienceItemSchema: z.ZodEffects<z.ZodObject<{
     company: z.ZodString;
     companyDomain: z.ZodOptional<z.ZodString>;
     companyLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    companyLogoAlt: z.ZodOptional<z.ZodString>;
     currentPosition: z.ZodOptional<z.ZodBoolean>;
     startDate: z.ZodString;
     endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -87,7 +86,6 @@ export declare const workExperienceItemSchema: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -117,7 +115,6 @@ export declare const workExperienceItemSchema: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -147,7 +144,6 @@ export declare const workExperienceItemSchema: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -177,7 +173,6 @@ export declare const workExperienceItemSchema: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -187,7 +182,6 @@ export declare const educationItemSchema: z.ZodEffects<z.ZodObject<{
     school: z.ZodString;
     schoolDomain: z.ZodOptional<z.ZodString>;
     schoolLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    schoolLogoAlt: z.ZodOptional<z.ZodString>;
     degree: z.ZodString;
     fieldOfStudy: z.ZodOptional<z.ZodString>;
     currentEducation: z.ZodOptional<z.ZodBoolean>;
@@ -206,7 +200,6 @@ export declare const educationItemSchema: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -221,7 +214,6 @@ export declare const educationItemSchema: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -236,7 +228,6 @@ export declare const educationItemSchema: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -251,7 +242,6 @@ export declare const educationItemSchema: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -263,7 +253,6 @@ export declare const certificationItemSchema: z.ZodObject<{
     name: z.ZodString;
     issuingOrganization: z.ZodString;
     issuerLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    issuerLogoAlt: z.ZodOptional<z.ZodString>;
     currentlyValid: z.ZodOptional<z.ZodBoolean>;
     issueDate: z.ZodString;
     expirationDate: z.ZodOptional<z.ZodString>;
@@ -294,7 +283,6 @@ export declare const certificationItemSchema: z.ZodObject<{
     description?: string | undefined;
     certId?: string | undefined;
     issuerLogo?: string | undefined;
-    issuerLogoAlt?: string | undefined;
     currentlyValid?: boolean | undefined;
     expirationDate?: string | undefined;
     certValType?: string | undefined;
@@ -312,7 +300,6 @@ export declare const certificationItemSchema: z.ZodObject<{
     description?: string | undefined;
     certId?: string | undefined;
     issuerLogo?: string | undefined;
-    issuerLogoAlt?: string | undefined;
     currentlyValid?: boolean | undefined;
     expirationDate?: string | undefined;
     certValType?: string | undefined;
@@ -440,17 +427,14 @@ export declare const setupItemSchema: z.ZodObject<{
     label: z.ZodString;
     imageUrl: z.ZodString;
     productUrl: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    imageAlt: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     label: string;
     imageUrl: string;
     productUrl?: string | undefined;
-    imageAlt?: string | undefined;
 }, {
     label: string;
     imageUrl: string;
     productUrl?: string | undefined;
-    imageAlt?: string | undefined;
 }>;
 export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     expectedProfileVersion: z.ZodOptional<z.ZodNumber>;
@@ -458,9 +442,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     username: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
     bio: z.ZodOptional<z.ZodString>;
     profileImg: z.ZodOptional<z.ZodString>;
-    profileImgAlt: z.ZodOptional<z.ZodString>;
     coverBanner: z.ZodOptional<z.ZodString>;
-    coverBannerAlt: z.ZodOptional<z.ZodString>;
     job: z.ZodOptional<z.ZodString>;
     portfolioUrl: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
     linkedin: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
@@ -475,7 +457,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         company: z.ZodString;
         companyDomain: z.ZodOptional<z.ZodString>;
         companyLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        companyLogoAlt: z.ZodOptional<z.ZodString>;
         currentPosition: z.ZodOptional<z.ZodBoolean>;
         startDate: z.ZodString;
         endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -554,7 +535,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -584,7 +564,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -614,7 +593,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -644,7 +622,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -654,7 +631,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         school: z.ZodString;
         schoolDomain: z.ZodOptional<z.ZodString>;
         schoolLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        schoolLogoAlt: z.ZodOptional<z.ZodString>;
         degree: z.ZodString;
         fieldOfStudy: z.ZodOptional<z.ZodString>;
         currentEducation: z.ZodOptional<z.ZodBoolean>;
@@ -673,7 +649,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -688,7 +663,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -703,7 +677,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -718,7 +691,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -730,7 +702,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         name: z.ZodString;
         issuingOrganization: z.ZodString;
         issuerLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        issuerLogoAlt: z.ZodOptional<z.ZodString>;
         currentlyValid: z.ZodOptional<z.ZodBoolean>;
         issueDate: z.ZodString;
         expirationDate: z.ZodOptional<z.ZodString>;
@@ -761,7 +732,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -779,7 +749,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -941,17 +910,14 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         label: z.ZodString;
         imageUrl: z.ZodString;
         productUrl: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        imageAlt: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }, {
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }>, "many">>;
     isGoogleAccount: z.ZodOptional<z.ZodBoolean>;
     isGitAccount: z.ZodOptional<z.ZodBoolean>;
@@ -966,9 +932,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     linkedin?: string | undefined;
@@ -1001,7 +965,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1015,7 +978,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1034,7 +996,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -1072,7 +1033,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }[] | undefined;
     isGoogleAccount?: boolean | undefined;
     isGitAccount?: boolean | undefined;
@@ -1087,9 +1047,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     linkedin?: string | undefined;
@@ -1122,7 +1080,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1136,7 +1093,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1155,7 +1111,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -1193,7 +1148,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }[] | undefined;
     isGoogleAccount?: boolean | undefined;
     isGitAccount?: boolean | undefined;
@@ -1208,9 +1162,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     linkedin?: string | undefined;
@@ -1243,7 +1195,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1257,7 +1208,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1276,7 +1226,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -1314,7 +1263,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }[] | undefined;
     isGoogleAccount?: boolean | undefined;
     isGitAccount?: boolean | undefined;
@@ -1329,9 +1277,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     linkedin?: string | undefined;
@@ -1364,7 +1310,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1378,7 +1323,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1397,7 +1341,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -1435,7 +1378,6 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }[] | undefined;
     isGoogleAccount?: boolean | undefined;
     isGitAccount?: boolean | undefined;
@@ -1449,9 +1391,7 @@ export declare const updateProfileBasicSchema: z.ZodEffects<z.ZodObject<{
     username: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
     bio: z.ZodOptional<z.ZodString>;
     profileImg: z.ZodOptional<z.ZodString>;
-    profileImgAlt: z.ZodOptional<z.ZodString>;
     coverBanner: z.ZodOptional<z.ZodString>;
-    coverBannerAlt: z.ZodOptional<z.ZodString>;
     job: z.ZodOptional<z.ZodString>;
     portfolioUrl: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
     isGoogleAccount: z.ZodOptional<z.ZodBoolean>;
@@ -1467,9 +1407,7 @@ export declare const updateProfileBasicSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     isGoogleAccount?: boolean | undefined;
@@ -1484,9 +1422,7 @@ export declare const updateProfileBasicSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     isGoogleAccount?: boolean | undefined;
@@ -1501,9 +1437,7 @@ export declare const updateProfileBasicSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     isGoogleAccount?: boolean | undefined;
@@ -1518,9 +1452,7 @@ export declare const updateProfileBasicSchema: z.ZodEffects<z.ZodObject<{
     username?: string | undefined;
     bio?: string | undefined;
     profileImg?: string | undefined;
-    profileImgAlt?: string | undefined;
     coverBanner?: string | undefined;
-    coverBannerAlt?: string | undefined;
     job?: string | undefined;
     portfolioUrl?: string | undefined;
     isGoogleAccount?: boolean | undefined;
@@ -1579,7 +1511,6 @@ export declare const updateProfileWorkSchema: z.ZodObject<{
         company: z.ZodString;
         companyDomain: z.ZodOptional<z.ZodString>;
         companyLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        companyLogoAlt: z.ZodOptional<z.ZodString>;
         currentPosition: z.ZodOptional<z.ZodBoolean>;
         startDate: z.ZodString;
         endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -1658,7 +1589,6 @@ export declare const updateProfileWorkSchema: z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1688,7 +1618,6 @@ export declare const updateProfileWorkSchema: z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1718,7 +1647,6 @@ export declare const updateProfileWorkSchema: z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1748,7 +1676,6 @@ export declare const updateProfileWorkSchema: z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1781,7 +1708,6 @@ export declare const updateProfileWorkSchema: z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1814,7 +1740,6 @@ export declare const updateProfileWorkSchema: z.ZodObject<{
         workId?: string | undefined;
         companyDomain?: string | undefined;
         companyLogo?: string | undefined;
-        companyLogoAlt?: string | undefined;
         location?: string | undefined;
         description?: string | undefined;
         mediaUrls?: string[] | undefined;
@@ -1827,7 +1752,6 @@ export declare const updateProfileEducationSchema: z.ZodObject<{
         school: z.ZodString;
         schoolDomain: z.ZodOptional<z.ZodString>;
         schoolLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        schoolLogoAlt: z.ZodOptional<z.ZodString>;
         degree: z.ZodString;
         fieldOfStudy: z.ZodOptional<z.ZodString>;
         currentEducation: z.ZodOptional<z.ZodBoolean>;
@@ -1846,7 +1770,6 @@ export declare const updateProfileEducationSchema: z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1861,7 +1784,6 @@ export declare const updateProfileEducationSchema: z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1876,7 +1798,6 @@ export declare const updateProfileEducationSchema: z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1891,7 +1812,6 @@ export declare const updateProfileEducationSchema: z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1909,7 +1829,6 @@ export declare const updateProfileEducationSchema: z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1927,7 +1846,6 @@ export declare const updateProfileEducationSchema: z.ZodObject<{
         eduId?: string | undefined;
         schoolDomain?: string | undefined;
         schoolLogo?: string | undefined;
-        schoolLogoAlt?: string | undefined;
         fieldOfStudy?: string | undefined;
         currentEducation?: boolean | undefined;
         grade?: string | undefined;
@@ -1942,7 +1860,6 @@ export declare const updateProfileCertificationsSchema: z.ZodObject<{
         name: z.ZodString;
         issuingOrganization: z.ZodString;
         issuerLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        issuerLogoAlt: z.ZodOptional<z.ZodString>;
         currentlyValid: z.ZodOptional<z.ZodBoolean>;
         issueDate: z.ZodString;
         expirationDate: z.ZodOptional<z.ZodString>;
@@ -1973,7 +1890,6 @@ export declare const updateProfileCertificationsSchema: z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -1991,7 +1907,6 @@ export declare const updateProfileCertificationsSchema: z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -2012,7 +1927,6 @@ export declare const updateProfileCertificationsSchema: z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -2033,7 +1947,6 @@ export declare const updateProfileCertificationsSchema: z.ZodObject<{
         description?: string | undefined;
         certId?: string | undefined;
         issuerLogo?: string | undefined;
-        issuerLogoAlt?: string | undefined;
         currentlyValid?: boolean | undefined;
         expirationDate?: string | undefined;
         certValType?: string | undefined;
@@ -2322,17 +2235,14 @@ export declare const updateProfileSetupSchema: z.ZodObject<{
         label: z.ZodString;
         imageUrl: z.ZodString;
         productUrl: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-        imageAlt: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }, {
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }>, "many">;
     expectedProfileVersion: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
@@ -2340,7 +2250,6 @@ export declare const updateProfileSetupSchema: z.ZodObject<{
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }[];
     expectedProfileVersion?: number | undefined;
 }, {
@@ -2348,7 +2257,6 @@ export declare const updateProfileSetupSchema: z.ZodObject<{
         label: string;
         imageUrl: string;
         productUrl?: string | undefined;
-        imageAlt?: string | undefined;
     }[];
     expectedProfileVersion?: number | undefined;
 }>;
@@ -2360,7 +2268,6 @@ export declare const workExperienceItem: z.ZodEffects<z.ZodObject<{
     company: z.ZodString;
     companyDomain: z.ZodOptional<z.ZodString>;
     companyLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    companyLogoAlt: z.ZodOptional<z.ZodString>;
     currentPosition: z.ZodOptional<z.ZodBoolean>;
     startDate: z.ZodString;
     endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -2439,7 +2346,6 @@ export declare const workExperienceItem: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -2469,7 +2375,6 @@ export declare const workExperienceItem: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -2499,7 +2404,6 @@ export declare const workExperienceItem: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -2529,7 +2433,6 @@ export declare const workExperienceItem: z.ZodEffects<z.ZodObject<{
     workId?: string | undefined;
     companyDomain?: string | undefined;
     companyLogo?: string | undefined;
-    companyLogoAlt?: string | undefined;
     location?: string | undefined;
     description?: string | undefined;
     mediaUrls?: string[] | undefined;
@@ -2539,7 +2442,6 @@ export declare const educationItem: z.ZodEffects<z.ZodObject<{
     school: z.ZodString;
     schoolDomain: z.ZodOptional<z.ZodString>;
     schoolLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    schoolLogoAlt: z.ZodOptional<z.ZodString>;
     degree: z.ZodString;
     fieldOfStudy: z.ZodOptional<z.ZodString>;
     currentEducation: z.ZodOptional<z.ZodBoolean>;
@@ -2558,7 +2460,6 @@ export declare const educationItem: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -2573,7 +2474,6 @@ export declare const educationItem: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -2588,7 +2488,6 @@ export declare const educationItem: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -2603,7 +2502,6 @@ export declare const educationItem: z.ZodEffects<z.ZodObject<{
     eduId?: string | undefined;
     schoolDomain?: string | undefined;
     schoolLogo?: string | undefined;
-    schoolLogoAlt?: string | undefined;
     fieldOfStudy?: string | undefined;
     currentEducation?: boolean | undefined;
     grade?: string | undefined;
@@ -2615,7 +2513,6 @@ export declare const certificationItem: z.ZodObject<{
     name: z.ZodString;
     issuingOrganization: z.ZodString;
     issuerLogo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    issuerLogoAlt: z.ZodOptional<z.ZodString>;
     currentlyValid: z.ZodOptional<z.ZodBoolean>;
     issueDate: z.ZodString;
     expirationDate: z.ZodOptional<z.ZodString>;
@@ -2646,7 +2543,6 @@ export declare const certificationItem: z.ZodObject<{
     description?: string | undefined;
     certId?: string | undefined;
     issuerLogo?: string | undefined;
-    issuerLogoAlt?: string | undefined;
     currentlyValid?: boolean | undefined;
     expirationDate?: string | undefined;
     certValType?: string | undefined;
@@ -2664,7 +2560,6 @@ export declare const certificationItem: z.ZodObject<{
     description?: string | undefined;
     certId?: string | undefined;
     issuerLogo?: string | undefined;
-    issuerLogoAlt?: string | undefined;
     currentlyValid?: boolean | undefined;
     expirationDate?: string | undefined;
     certValType?: string | undefined;
@@ -2792,16 +2687,13 @@ export declare const setupItem: z.ZodObject<{
     label: z.ZodString;
     imageUrl: z.ZodString;
     productUrl: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>;
-    imageAlt: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     label: string;
     imageUrl: string;
     productUrl?: string | undefined;
-    imageAlt?: string | undefined;
 }, {
     label: string;
     imageUrl: string;
     productUrl?: string | undefined;
-    imageAlt?: string | undefined;
 }>;
 //# sourceMappingURL=profileZodSchemas.d.ts.map

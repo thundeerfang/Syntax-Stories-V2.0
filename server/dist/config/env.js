@@ -1,8 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
-const parsedPort = Number.parseInt(process.env.PORT ?? '5000', 10);
 export const env = {
-    PORT: Number.isNaN(parsedPort) ? 5000 : parsedPort,
+    PORT: Number.parseInt(process.env.PORT ?? '', 10),
     NODE_ENV: process.env.NODE_ENV,
     MONGODB_URI: process.env.MONGO_CONN,
     REDIS_URL: process.env.REDIS_URL,
@@ -57,22 +56,15 @@ export const env = {
     /** Resend HTTP API (fallback after SMTP failure, or primary if only this is set). */
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     RESEND_FROM: process.env.RESEND_FROM,
-    /** Inbox for feedback notifications; falls back to EMAIL_FROM / EMAIL_USER / RESEND_FROM when unset. */
+    /** Feedback form: internal notify address (falls back to EMAIL_FROM / EMAIL_USER / RESEND_FROM in controller). */
     FEEDBACK_NOTIFY_EMAIL: process.env.FEEDBACK_NOTIFY_EMAIL,
-    /** Optional ClamAV daemon (TCP, usually port 3310). When unset, virus scan step is skipped (Sharp still re-encodes). */
+    /** Referral / invite links: HMAC cookie signing (optional in dev). */
+    REFERRAL_SIGNING_SECRET: process.env.REFERRAL_SIGNING_SECRET,
+    /** When false, `applyReferralOnNewUser` is a no-op. */
+    REFERRALS_ENABLED: (process.env.REFERRALS_ENABLED ?? '').toLowerCase() === 'true',
+    /** ClamAV TCP (INSTREAM). When host unset, scans are skipped unless CLAMAV_REQUIRED. */
     CLAMAV_HOST: process.env.CLAMAV_HOST,
     CLAMAV_PORT: Number.parseInt(process.env.CLAMAV_PORT ?? '3310', 10),
-    /**
-     * When true, image uploads that go through `imageMasterHandler` require a successful ClamAV scan
-     * (host must be configured or uploads fail with 503).
-     */
     CLAMAV_REQUIRED: (process.env.CLAMAV_REQUIRED ?? '').toLowerCase() === 'true',
-    /** When `'false'`, skip referral attribution (signup still works). Default: enabled. */
-    REFERRALS_ENABLED: (process.env.REFERRALS_ENABLED ?? '').toLowerCase() !== 'false',
-    /** HMAC for signed `ss_ref` cookie; falls back to SESSION_SECRET / JWT_SECRET. */
-    REFERRAL_SIGNING_SECRET: process.env.REFERRAL_SIGNING_SECRET?.trim() ||
-        process.env.SESSION_SECRET?.trim() ||
-        process.env.JWT_SECRET?.trim() ||
-        '',
 };
 //# sourceMappingURL=env.js.map

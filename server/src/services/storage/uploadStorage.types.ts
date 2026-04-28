@@ -10,6 +10,7 @@ export interface UploadDirectoryLayout {
   readonly logos: string;
   readonly schoolLogos: string;
   readonly orgLogos: string;
+  readonly feedback: string;
 }
 
 export interface UploadStorage {

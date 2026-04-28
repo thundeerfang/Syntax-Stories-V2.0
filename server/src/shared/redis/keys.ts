@@ -14,6 +14,12 @@ export const redisKeys = {
     exchange: (code: string) => `oauth:exchange:${code}`,
   },
 
+  /** Invite / referral: OAuth signup nonce → referral code; code → referrer userId cache. */
+  invite: {
+    oauthSignupNonce: (nonce: string) => `invite:oauth-signup:${nonce}`,
+    codeCache: (normalizedCode: string) => `invite:code:${normalizedCode}`,
+  },
+
   auth: {
     intent: (tokenHash: string) => `intent:user:${tokenHash}`,
     twoFactorSetup: (userId: string) => `2fa:setup:${userId}`,
@@ -60,6 +66,8 @@ export const redisKeys = {
     signupEmail: 'rl:signupemail:',
     refresh: 'rl:refresh:',
     updateProfile: 'rl:updateprofile:',
+    feedback: 'rl:feedback:',
+    inviteResolve: 'rl:invite-resolve:',
     authHttpKey: (prefix: string, keySuffix: string) => `${prefix}${keySuffix}`,
   },
 } as const;

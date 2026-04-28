@@ -9,7 +9,6 @@ import { sendAuthEmail, isAuthEmailConfigured, getEmailSendErrorMessage, isMailS
 import { bumpOtpMetric } from '../../../shared/metrics/otpMetrics.js';
 import { createChallenge } from 'altcha-lib';
 import { respondWithSessionAfterEmailAuth } from '../../../services/authLogin.service.js';
-import { resolveReferralInput, applyReferralOnNewUser } from '../../../services/referral.service.js';
 import { generateEmailOtpDigits, getStoredLoginOtp, getStoredSignupOtp, deleteEmailOtp, invalidateOppositeEmailOtp, registerEmailOtpSendOrReject, storeEmailOtpLogin, storeEmailOtpSignup, verifyEmailOtpHash, assertOtpMinResendOrReject, markOtpResendGate, isOtpVersionMismatch, } from '../../../services/emailOtp.service.js';
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { logSecurityEvent } from '../securityEventLog.js';
@@ -250,13 +249,6 @@ async function createUserFromEmailSignup(req, normalizedEmail, signupFullName) {
     await user.save();
     await logSecurityEvent(String(user._id), 'login_success', req, { source: 'signup_email' });
     void writeAuditLog(req, AuditAction.USER_SIGNUP, { actorId: String(user._id), metadata: { source: 'email' } });
-    try {
-        const refCode = await resolveReferralInput(req);
-        await applyReferralOnNewUser({ req, newUser: user, refCode, source: 'email' });
-    }
-    catch (e) {
-        console.error(e);
-    }
     return { user, isNewUser: true };
 }
 async function rejectVerifyIfOtpRateLimited(redis, normalizedEmail, res) {

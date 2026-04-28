@@ -16,7 +16,6 @@ const WorkExperienceSchema = new Schema({
     company: { type: String, required: true, trim: true, maxlength: 200 },
     companyDomain: { type: String, trim: true, maxlength: 120 },
     companyLogo: { type: String, trim: true, maxlength: 500 },
-    companyLogoAlt: { type: String, trim: true, maxlength: 120 },
     currentPosition: { type: Boolean, default: false },
     startDate: { type: String, trim: true, maxlength: 20 },
     endDate: { type: String, trim: true, maxlength: 20 },
@@ -65,7 +64,6 @@ const EducationSchema = new Schema({
     school: { type: String, required: true, trim: true, maxlength: 200 },
     schoolDomain: { type: String, trim: true, maxlength: 120 },
     schoolLogo: { type: String, trim: true, maxlength: 2000 },
-    schoolLogoAlt: { type: String, trim: true, maxlength: 120 },
     degree: { type: String, required: true, trim: true, maxlength: 80 },
     fieldOfStudy: { type: String, trim: true, maxlength: 120 },
     currentEducation: { type: Boolean, default: false },
@@ -81,7 +79,6 @@ const CertificationSchema = new Schema({
     name: { type: String, required: true, trim: true, maxlength: 120 },
     issuingOrganization: { type: String, required: true, trim: true, maxlength: 120 },
     issuerLogo: { type: String, trim: true, maxlength: 2000 },
-    issuerLogoAlt: { type: String, trim: true, maxlength: 120 },
     currentlyValid: { type: Boolean, default: false },
     issueDate: { type: String, trim: true, maxlength: 20 },
     expirationDate: { type: String, trim: true, maxlength: 20 },
@@ -130,7 +127,6 @@ const SetupItemSchema = new Schema({
     label: { type: String, required: true, trim: true, maxlength: 80 },
     imageUrl: { type: String, required: true, trim: true, maxlength: 500 },
     productUrl: { type: String, trim: true, maxlength: 500 },
-    imageAlt: { type: String, trim: true, maxlength: 120 },
 }, { _id: false });
 const UserSchema = new Schema({
     fullName: { type: String, required: true, trim: true },
@@ -140,9 +136,7 @@ const UserSchema = new Schema({
         type: String,
         default: DEFAULT_AVATAR_URL,
     },
-    profileImgAlt: { type: String, trim: true, maxlength: 120 },
     coverBanner: { type: String },
-    coverBannerAlt: { type: String, trim: true, maxlength: 120 },
     gender: { type: String },
     job: { type: String },
     bio: {
@@ -198,12 +192,11 @@ const UserSchema = new Schema({
     followingCount: { type: Number, default: 0 },
     profileVersion: { type: Number, default: 0, min: 0 },
     profileUpdatedAt: { type: Date },
-    referralCode: { type: String, trim: true, uppercase: true, sparse: true, unique: true, maxlength: 24 },
-    referredByUserId: { type: Schema.Types.ObjectId, ref: 'users', default: null },
-    referredAt: { type: Date, default: null },
-    referralSource: { type: String, trim: true, maxlength: 32, default: undefined },
-    referralCapturedAt: { type: Date, default: null },
+    referralCode: { type: String, sparse: true, unique: true, trim: true, uppercase: true },
+    referredByUserId: { type: Schema.Types.ObjectId, ref: 'users', default: null, index: true },
+    referredAt: { type: Date },
+    referralCapturedAt: { type: Date },
+    referralSource: { type: String, trim: true, maxlength: 32 },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
-UserSchema.index({ referredByUserId: 1, createdAt: -1 });
 export const UserModel = mongoose.models?.users ?? mongoose.model('users', UserSchema);
 //# sourceMappingURL=User.js.map

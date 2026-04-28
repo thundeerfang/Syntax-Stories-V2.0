@@ -10,11 +10,17 @@ function mailFrom(): string {
   );
 }
 
-export async function sendViaResend(to: string, subject: string, html: string): Promise<void> {
+export async function sendViaResend(
+  to: string,
+  subject: string,
+  html: string,
+  replyTo?: string
+): Promise<void> {
   const key = env.RESEND_API_KEY?.trim();
   if (!key) {
     throw new MailSendError('Resend not configured (RESEND_API_KEY)', 'configuration');
   }
+  const rt = replyTo?.trim();
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -26,6 +32,7 @@ export async function sendViaResend(to: string, subject: string, html: string): 
       to: [to],
       subject,
       html,
+      ...(rt ? { reply_to: rt } : {}),
     }),
   });
   if (!res.ok) {

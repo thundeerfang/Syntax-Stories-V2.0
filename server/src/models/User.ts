@@ -172,6 +172,12 @@ export interface IUser extends Document {
   /** Incremented on each successful profile PATCH; used for optimistic concurrency (optional client `expectedProfileVersion`). */
   profileVersion?: number;
   profileUpdatedAt?: Date;
+  /** Crockford-base32 style code for `/invite/:code`; unique when set. */
+  referralCode?: string | null;
+  referredByUserId?: mongoose.Types.ObjectId | null;
+  referredAt?: Date;
+  referralCapturedAt?: Date;
+  referralSource?: string;
 }
 
 const WorkExperienceSchema = new Schema({
@@ -364,6 +370,11 @@ const UserSchema = new Schema<IUser>(
     followingCount: { type: Number, default: 0 },
     profileVersion: { type: Number, default: 0, min: 0 },
     profileUpdatedAt: { type: Date },
+    referralCode: { type: String, sparse: true, unique: true, trim: true, uppercase: true },
+    referredByUserId: { type: Schema.Types.ObjectId, ref: 'users', default: null, index: true },
+    referredAt: { type: Date },
+    referralCapturedAt: { type: Date },
+    referralSource: { type: String, trim: true, maxlength: 32 },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

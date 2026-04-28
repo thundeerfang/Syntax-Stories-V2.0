@@ -17,7 +17,12 @@ export function getSmtpTransporter(): nodemailer.Transporter | null {
   return transporter;
 }
 
-export async function sendViaSmtp(opts: { to: string; subject: string; html: string }): Promise<void> {
+export async function sendViaSmtp(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<void> {
   const smtp = getSmtpTransporter();
   if (!smtp) {
     throw new MailSendError('SMTP not configured (EMAIL_USER / EMAIL_APP_PASSWORD)', 'configuration');
@@ -32,6 +37,7 @@ export async function sendViaSmtp(opts: { to: string; subject: string; html: str
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
+      ...(opts.replyTo?.trim() ? { replyTo: opts.replyTo.trim() } : {}),
     });
   } catch (e) {
     const code = (e as { code?: string })?.code;

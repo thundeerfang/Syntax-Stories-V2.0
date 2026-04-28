@@ -1,11 +1,7 @@
 import mongoose from 'mongoose';
 import { sanitizeThumbnailUrl, validateBlogPostContent } from '../modules/blog/blogContentValidation.js';
 import { BlogPostModel } from '../models/BlogPost.js';
-import { BlogCategoryModel } from '../models/BlogCategory.js';
-import { BlogTagModel } from '../models/BlogTag.js';
 import { UserModel, normalizeProfileImg } from '../models/User.js';
-import { ensureBlogTaxonomySeeds } from '../modules/blog/ensureBlogTaxonomySeeds.js';
-import { normalizeTaxonomyInput } from '../modules/blog/postTaxonomy.js';
 function escapeRegex(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -43,12 +39,7 @@ function slugify(text) {
         .replaceAll(/-+$/g, '')
         .slice(0, 200) || 'post');
 }
-function mapTaxonomyFromDoc(p) {
-    const category = typeof p.category === 'string' && p.category.trim() ? p.category.trim() : undefined;
-    const tags = Array.isArray(p.tags) && p.tags.length ? p.tags : undefined;
-    const language = typeof p.language === 'string' && p.language.trim() ? p.language.trim().toLowerCase() : 'en';
-    return { category, tags, language };
-}
+/** Same author cannot reuse a slug; append a short suffix until unique (schema max 320). */
 function slugWithCollisionSuffix(base, attempt) {
     if (attempt <= 0)
         return base.slice(0, SLUG_MAX_LEN);
@@ -65,7 +56,6 @@ export async function createPost(req, res) {
             return;
         }
         const { title, summary, content, thumbnailUrl, status } = req.body;
-        const tax = normalizeTaxonomyInput(req.body);
         const titleStr = typeof title === 'string' ? title.trim() : '';
         const contentStr = typeof content === 'string' ? content : '';
         if (!titleStr || titleStr.length > 300) {
@@ -94,9 +84,6 @@ export async function createPost(req, res) {
                     content: contentCheck.normalizedJson,
                     thumbnailUrl: thumb,
                     status: finalStatus,
-                    ...(tax.category ? { category: tax.category } : {}),
-                    ...(tax.tags?.length ? { tags: tax.tags } : {}),
-                    ...(tax.language ? { language: tax.language } : { language: 'en' }),
                 });
                 break;
             }
@@ -131,7 +118,6 @@ export async function createPost(req, res) {
                 status: post.status,
                 createdAt: post.createdAt,
                 updatedAt: post.updatedAt,
-                ...mapTaxonomyFromDoc(post),
             },
         });
     }
@@ -149,9 +135,6 @@ export async function upsertDraft(req, res) {
             return;
         }
         const { title, summary, content, thumbnailUrl } = req.body;
-        const rawBody = req.body;
-        const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
-        const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
         const titleStr = typeof title === 'string' ? title.trim() : '';
         const contentStr = typeof content === 'string' ? content : '';
         const summaryStr = typeof summary === 'string' ? summary.trim().slice(0, SUMMARY_MAX_LEN) : '';
@@ -174,13 +157,6 @@ export async function upsertDraft(req, res) {
                 summary: summaryStr || undefined,
                 content: contentCheck.normalizedJson,
                 thumbnailUrl: thumb,
-                ...(tax
-                    ? {
-                        category: tax.category,
-                        tags: tax.tags?.length ? tax.tags : undefined,
-                        language: tax.language ?? 'en',
-                    }
-                    : {}),
             }, { new: true });
             if (!updated) {
                 res.status(404).json({ success: false, message: 'Draft not found' });
@@ -198,7 +174,6 @@ export async function upsertDraft(req, res) {
                     status: updated.status,
                     createdAt: updated.createdAt,
                     updatedAt: updated.updatedAt,
-                    ...mapTaxonomyFromDoc(updated),
                 },
             });
             return;
@@ -212,13 +187,6 @@ export async function upsertDraft(req, res) {
             content: contentCheck.normalizedJson,
             thumbnailUrl: thumb,
             status: 'draft',
-            ...(tax
-                ? {
-                    category: tax.category,
-                    tags: tax.tags?.length ? tax.tags : undefined,
-                    language: tax.language ?? 'en',
-                }
-                : { language: 'en' }),
         });
         res.status(201).json({
             success: true,
@@ -232,7 +200,6 @@ export async function upsertDraft(req, res) {
                 status: created.status,
                 createdAt: created.createdAt,
                 updatedAt: created.updatedAt,
-                ...mapTaxonomyFromDoc(created),
             },
         });
     }
@@ -274,7 +241,6 @@ export async function getDraft(req, res) {
                 status: draft.status,
                 createdAt: draft.createdAt,
                 updatedAt: draft.updatedAt,
-                ...mapTaxonomyFromDoc(draft),
             },
         });
     }
@@ -321,7 +287,6 @@ export async function listPublishedFeed(req, res) {
                     fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
                     profileImg: normalizeProfileImg(a.profileImg),
                 },
-                ...mapTaxonomyFromDoc(p),
             };
         })
             .filter((x) => x !== null);
@@ -388,7 +353,6 @@ export async function listUserPublishedPosts(req, res) {
                     fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
                     profileImg: normalizeProfileImg(a.profileImg),
                 },
-                ...mapTaxonomyFromDoc(p),
             };
         })
             .filter((x) => x !== null);
@@ -456,7 +420,6 @@ export async function getPublishedPostBySlug(req, res) {
                     fullName: a.fullName?.trim() ? a.fullName : a.username,
                     profileImg: normalizeProfileImg(a.profileImg),
                 },
-                ...mapTaxonomyFromDoc(post),
             },
         });
     }
@@ -481,7 +444,7 @@ export async function listMyPosts(req, res) {
                 authorId: user._id,
                 deletedAt: { $exists: true, $ne: null, $gte: cutoff },
             })
-                .select('title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt category tags language')
+                .select('title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt')
                 .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
                 .sort({ deletedAt: -1 })
                 .limit(50)
@@ -505,7 +468,6 @@ export async function listMyPosts(req, res) {
                         deletedAt: delAt ? delAt.toISOString() : undefined,
                         lastEditedAt: leAt ? leAt.toISOString() : undefined,
                         lastEditedBy: leBy,
-                        ...mapTaxonomyFromDoc(p),
                     };
                 }),
             });
@@ -515,7 +477,7 @@ export async function listMyPosts(req, res) {
         if (status === 'draft' || status === 'published')
             filter.status = status;
         const posts = await BlogPostModel.find(filter)
-            .select('title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt category tags language')
+            .select('title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt')
             .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
             .sort({ updatedAt: -1 })
             .limit(50)
@@ -537,7 +499,6 @@ export async function listMyPosts(req, res) {
                     updatedAt: p.updatedAt,
                     lastEditedAt: leAt ? leAt.toISOString() : undefined,
                     lastEditedBy: leBy,
-                    ...mapTaxonomyFromDoc(p),
                 };
             }),
         });
@@ -577,7 +538,6 @@ export async function getMyPostById(req, res) {
                 status: post.status,
                 createdAt: post.createdAt,
                 updatedAt: post.updatedAt,
-                ...mapTaxonomyFromDoc(post),
             },
         });
     }
@@ -605,9 +565,6 @@ export async function updateMyPost(req, res) {
             return;
         }
         const wasPublishedBefore = existing.status === 'published';
-        const rawBody = req.body;
-        const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
-        const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
         const { title, summary, content, thumbnailUrl, status, silent } = req.body;
         const titleStr = typeof title === 'string' && title.trim() ? title.trim().slice(0, 300) : existing.title;
         const contentStr = typeof content === 'string' ? content : existing.content;
@@ -623,16 +580,6 @@ export async function updateMyPost(req, res) {
          */
         if (status === 'draft' && existing.status === 'published' && silent !== true) {
             const thumb = thumbnailUrl !== undefined ? sanitizeThumbnailUrl(thumbnailUrl) : existing.thumbnailUrl;
-            const exDoc = existing;
-            const forkCategory = hasTaxonomyKeys ? tax?.category : exDoc.category;
-            const forkTags = hasTaxonomyKeys
-                ? tax?.tags?.length
-                    ? tax.tags
-                    : undefined
-                : exDoc.tags;
-            const forkLang = hasTaxonomyKeys
-                ? tax?.language ?? exDoc.language ?? 'en'
-                : exDoc.language ?? 'en';
             const baseSlug = slugify(titleStr);
             let newPost = null;
             let lastErr;
@@ -647,9 +594,6 @@ export async function updateMyPost(req, res) {
                         content: contentCheck.normalizedJson,
                         thumbnailUrl: thumb ?? undefined,
                         status: 'draft',
-                        ...(forkCategory ? { category: forkCategory } : {}),
-                        ...(forkTags?.length ? { tags: forkTags } : {}),
-                        language: forkLang,
                     }));
                     break;
                 }
@@ -685,7 +629,6 @@ export async function updateMyPost(req, res) {
                     status: newPost.status,
                     createdAt: newPost.createdAt,
                     updatedAt: newPost.updatedAt,
-                    ...mapTaxonomyFromDoc(newPost),
                 },
             });
             return;
@@ -718,11 +661,6 @@ export async function updateMyPost(req, res) {
         if (status === 'draft' || status === 'published') {
             existing.status = status;
         }
-        if (tax) {
-            existing.category = tax.category;
-            existing.tags = tax.tags?.length ? tax.tags : undefined;
-            existing.language = tax.language ?? 'en';
-        }
         // Only record "edited" when the post was already published before this save (not first publish).
         if (silent !== true && wasPublishedBefore) {
             existing.lastEditedById = user._id;
@@ -741,7 +679,6 @@ export async function updateMyPost(req, res) {
                 status: existing.status,
                 createdAt: existing.createdAt,
                 updatedAt: existing.updatedAt,
-                ...mapTaxonomyFromDoc(existing),
             },
         });
     }
@@ -884,75 +821,6 @@ export async function deleteMyPost(req, res) {
     catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: 'Failed to delete post' });
-    }
-}
-/** GET /api/blog/taxonomy — public: curated categories/tags plus published post counts. */
-export async function getBlogTaxonomy(_req, res) {
-    try {
-        await ensureBlogTaxonomySeeds();
-        const publishedMatch = { status: 'published', ...NOT_DELETED };
-        const [curatedCats, curatedTags, catAgg, tagAgg] = await Promise.all([
-            BlogCategoryModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
-            BlogTagModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
-            BlogPostModel.aggregate([
-                {
-                    $match: {
-                        ...publishedMatch,
-                        category: { $type: 'string', $nin: ['', null] },
-                    },
-                },
-                { $group: { _id: { $toLower: '$category' }, postCount: { $sum: 1 } } },
-            ]),
-            BlogPostModel.aggregate([
-                {
-                    $match: {
-                        ...publishedMatch,
-                        tags: { $exists: true, $type: 'array', $ne: [] },
-                    },
-                },
-                { $unwind: '$tags' },
-                { $match: { tags: { $type: 'string', $nin: ['', null] } } },
-                { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
-            ]),
-        ]);
-        const countMap = (rows) => new Map(rows.map((r) => [String(r._id).toLowerCase(), r.postCount]));
-        const catCounts = countMap(catAgg);
-        const tagCounts = countMap(tagAgg);
-        const curatedSlugLower = new Set(curatedCats.map((c) => c.slug.toLowerCase()));
-        const categoriesFromCurated = curatedCats.map((c) => ({
-            slug: c.slug,
-            name: c.name,
-            postCount: catCounts.get(c.slug.toLowerCase()) ?? 0,
-        }));
-        const extraCats = catAgg
-            .filter((a) => !curatedSlugLower.has(String(a._id).toLowerCase()))
-            .map((a) => ({
-            slug: String(a._id),
-            name: String(a._id),
-            postCount: a.postCount,
-        }));
-        const categories = [...categoriesFromCurated, ...extraCats].sort((a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name));
-        const curatedTagLower = new Set(curatedTags.map((t) => t.slug.toLowerCase()));
-        const tagsFromCurated = curatedTags.map((t) => ({
-            slug: t.slug,
-            name: t.name,
-            postCount: tagCounts.get(t.slug.toLowerCase()) ?? 0,
-        }));
-        const extraTags = tagAgg
-            .filter((a) => !curatedTagLower.has(String(a._id).toLowerCase()))
-            .map((a) => ({
-            slug: String(a._id),
-            name: String(a._id),
-            postCount: a.postCount,
-        }));
-        const tags = [...tagsFromCurated, ...extraTags]
-            .sort((a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name))
-            .slice(0, 80);
-        res.status(200).json({ success: true, categories, tags });
-    }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Failed to load taxonomy' });
     }
 }
 //# sourceMappingURL=blog.controller.js.map

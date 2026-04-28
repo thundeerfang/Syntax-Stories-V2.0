@@ -11,6 +11,7 @@ export async function sendViaResend(to, subject, html, replyTo) {
     if (!key) {
         throw new MailSendError('Resend not configured (RESEND_API_KEY)', 'configuration');
     }
+    const rt = replyTo?.trim();
     const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -22,7 +23,7 @@ export async function sendViaResend(to, subject, html, replyTo) {
             to: [to],
             subject,
             html,
-            ...(replyTo?.trim() ? { reply_to: replyTo.trim() } : {}),
+            ...(rt ? { reply_to: rt } : {}),
         }),
     });
     if (!res.ok) {

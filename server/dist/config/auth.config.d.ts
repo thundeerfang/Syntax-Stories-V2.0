@@ -31,7 +31,10 @@ export declare const authConfig: {
         windowMs: number;
         max: number;
     };
-    /** GET /api/invites/resolve — per IP. */
+    RATE_LIMIT_FEEDBACK: {
+        windowMs: number;
+        max: number;
+    };
     RATE_LIMIT_INVITE_RESOLVE: {
         windowMs: number;
         max: number;

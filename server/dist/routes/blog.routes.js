@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import { verifyToken } from '../middlewares/auth/index.js';
-import { createPost, deleteMyPost, getBlogTaxonomy, getDraft, getMyPostById, getPublishedPostBySlug, listMyPosts, listPublishedFeed, listUserPublishedPosts, purgeMyPostPermanently, restoreMyPost, updateMyPost, upsertDraft, } from '../controllers/blog.controller.js';
+import { createPost, deleteMyPost, getDraft, getMyPostById, getPublishedPostBySlug, listMyPosts, listPublishedFeed, listUserPublishedPosts, purgeMyPostPermanently, restoreMyPost, updateMyPost, upsertDraft, } from '../controllers/blog.controller.js';
 import { addBlogComment, listBlogComments } from '../controllers/blogComment.controller.js';
 const router = Router();
-router.get('/taxonomy', getBlogTaxonomy);
 router.get('/feed', listPublishedFeed);
 router.get('/u/:username/posts', listUserPublishedPosts);
 router.get('/p/:username/:slug/comments', listBlogComments);

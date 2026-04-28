@@ -11,8 +11,6 @@ export interface IWorkExperience {
     company: string;
     companyDomain?: string;
     companyLogo?: string;
-    /** Optional HTML title + img alt for company logo. */
-    companyLogoAlt?: string;
     currentPosition?: boolean;
     startDate?: string;
     endDate?: string;
@@ -43,8 +41,6 @@ export interface IEducation {
     school: string;
     schoolDomain?: string;
     schoolLogo?: string;
-    /** Optional HTML title + img alt for school logo. */
-    schoolLogoAlt?: string;
     degree: string;
     fieldOfStudy?: string;
     currentEducation?: boolean;
@@ -66,8 +62,6 @@ export interface ICertification {
     name: string;
     issuingOrganization: string;
     issuerLogo?: string;
-    /** Optional HTML title + img alt for issuer logo. */
-    issuerLogoAlt?: string;
     currentlyValid?: boolean;
     issueDate?: string;
     expirationDate?: string;
@@ -113,19 +107,13 @@ export interface ISetupItem {
     label: string;
     imageUrl: string;
     productUrl?: string;
-    /** Optional accessibility text for the image (HTML title + alt). */
-    imageAlt?: string;
 }
 export interface IUser extends Document {
     fullName: string;
     username: string;
     email: string;
     profileImg?: string;
-    /** Optional; used as HTML title + img alt for profile photo. */
-    profileImgAlt?: string;
     coverBanner?: string;
-    /** Optional; used as HTML title + img alt for cover banner. */
-    coverBannerAlt?: string;
     gender?: string;
     job?: string;
     bio?: string;
@@ -171,14 +159,12 @@ export interface IUser extends Document {
     /** Incremented on each successful profile PATCH; used for optimistic concurrency (optional client `expectedProfileVersion`). */
     profileVersion?: number;
     profileUpdatedAt?: Date;
-    /** Public invite code (opaque); unique when set. */
-    referralCode?: string;
-    /** User who referred this account (immutable once set). */
-    referredByUserId?: mongoose.Types.ObjectId;
+    /** Crockford-base32 style code for `/invite/:code`; unique when set. */
+    referralCode?: string | null;
+    referredByUserId?: mongoose.Types.ObjectId | null;
     referredAt?: Date;
-    /** e.g. `link`, `blog`, `oauth` */
-    referralSource?: string;
     referralCapturedAt?: Date;
+    referralSource?: string;
 }
 export declare const UserModel: Model<IUser>;
 //# sourceMappingURL=User.d.ts.map
