@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { env } from './env.js';
+import { ensureFeedbackCategorySeeds } from '../modules/feedback/ensureFeedbackCategorySeeds.js';
 
 export async function connectDatabase(): Promise<void> {
   const uri = env.MONGODB_URI;
@@ -7,6 +8,7 @@ export async function connectDatabase(): Promise<void> {
   try {
     await mongoose.connect(uri);
     console.log('[MongoDB] Connected');
+    await ensureFeedbackCategorySeeds();
   } catch (err) {
     console.error('[MongoDB] Connection error:', err);
     throw err;

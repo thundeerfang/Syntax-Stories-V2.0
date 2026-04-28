@@ -18,6 +18,8 @@ export interface VerifyOtpPayload {
   email: string;
   code: string;
   otpVersion?: number;
+  /** Optional; also read from signed `ss_ref` cookie when present. */
+  referralCode?: string;
 }
 
 export interface SendOtpResponse {

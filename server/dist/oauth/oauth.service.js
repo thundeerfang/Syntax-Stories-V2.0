@@ -5,6 +5,7 @@ import { writeAuditLog } from '../shared/audit/auditLog.js';
 import { AuditAction } from '../shared/audit/events.js';
 import { redisKeys } from '../shared/redis/keys.js';
 import { sealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
+import { resolveReferralInput, applyReferralOnNewUser } from '../services/referral.service.js';
 const PROVIDER_LABEL = {
     google: 'Google',
     github: 'GitHub',
@@ -293,7 +294,7 @@ async function handleLogin(provider, accessToken, n) {
             throw new Error('Unknown provider');
     }
 }
-async function handleSignup(provider, accessToken, n) {
+async function handleSignup(provider, accessToken, n, req) {
     const label = PROVIDER_LABEL[provider];
     /** Same lookup as legacy Passport flows (X uses placeholder email string before synthetic storage). */
     const existingByEmail = await UserModel.findOne({ email: n.email });
@@ -304,6 +305,13 @@ async function handleSignup(provider, accessToken, n) {
     const newUser = new UserModel(doc);
     await newUser.save();
     await attachFreeSubscription(newUser._id);
+    try {
+        const refCode = await resolveReferralInput(req);
+        await applyReferralOnNewUser({ req, newUser, refCode, source: 'oauth' });
+    }
+    catch (e) {
+        console.error(e);
+    }
     return passportShape(provider, newUser);
 }
 /**
@@ -318,6 +326,6 @@ export async function handleOAuthProviderAuth(input) {
         return handleLogin(provider, accessToken, normalized);
     }
     // signup (or any non-login state treated as signup, matching prior Passport behavior)
-    return handleSignup(provider, accessToken, normalized);
+    return handleSignup(provider, accessToken, normalized, req);
 }
 //# sourceMappingURL=oauth.service.js.map

@@ -2,7 +2,7 @@
 
 import type { ComponentType, ReactNode } from 'react';
 import { Type, Keyboard, List, Link2, AtSign, Save } from 'lucide-react';
-import { Dialog } from '@/components/ui/Dialog';
+import { Dialog, DIALOG_FOOTER_ACTIONS_CLASS } from '@/components/ui/Dialog';
 import { cn } from '@/lib/utils';
 
 export interface ParagraphBlockHelpDialogProps {
@@ -20,7 +20,7 @@ function Section({
   children: ReactNode;
 }>) {
   return (
-    <section className="border-t-2 border-border first:border-t-0 first:pt-0 pt-4 mt-4 first:mt-0">
+    <section className="mt-4 border-t border-border/40 pt-4 first:mt-0 first:border-t-0 first:pt-0">
       <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-foreground mb-2">
         <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
         {title}
@@ -36,21 +36,13 @@ export function ParagraphBlockHelpDialog({ open, onClose }: Readonly<ParagraphBl
       open={open}
       onClose={onClose}
       titleId="paragraph-help-dialog-title"
-      panelClassName={cn(
-        'pointer-events-auto w-full max-w-lg max-h-[85vh] overflow-y-auto',
-        'border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]',
-      )}
-      contentClassName="relative p-6 sm:p-8 pt-10"
+      titleIcon={<Type aria-hidden />}
+      title="Paragraph block"
+      description="How to use this editor."
+      panelClassName={cn('max-w-2xl max-h-[85vh] flex flex-col overflow-hidden')}
+      contentClassName="flex min-h-0 flex-1 flex-col p-0"
     >
-      <h2
-        id="paragraph-help-dialog-title"
-        className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-1"
-      >
-        <Type className="h-4 w-4 text-primary" />
-        Paragraph block
-      </h2>
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">How to use this editor</p>
-
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-6">
       <Section icon={Keyboard} title="Line breaks & paragraphs">
         <p>
           Press <kbd className="px-1 py-0.5 rounded border border-border bg-muted font-mono text-[10px]">Enter</kbd> to start a
@@ -96,6 +88,16 @@ export function ParagraphBlockHelpDialog({ open, onClose }: Readonly<ParagraphBl
       <Section icon={Save} title="Saving">
         <p>Your draft saves as you edit. You do not need a separate “save paragraph” action for the rich text itself.</p>
       </Section>
+      </div>
+      <footer className={cn(DIALOG_FOOTER_ACTIONS_CLASS, 'px-6')}>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-none border-2 border-black bg-primary py-2.5 text-sm font-black uppercase text-primary-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:brightness-110 active:translate-x-px active:translate-y-px active:shadow-none"
+        >
+          Got it
+        </button>
+      </footer>
     </Dialog>
   );
 }

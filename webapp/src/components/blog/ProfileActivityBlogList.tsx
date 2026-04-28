@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { blogApi } from '@/api/blog';
-import { BlogCard } from '@/components/blog/BlogCard';
+import { ActivityBlogCard } from '@/components/blog/ActivityBlogCard';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
 import { useAuthStore } from '@/store/auth';
 import type { Post } from '@/types';
@@ -63,10 +63,10 @@ export function ProfileActivityBlogList({ username }: Readonly<{ username: strin
   }
 
   return (
-    <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
+    <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
       {posts.map((post) => (
         <li key={post.id} className="min-h-0">
-          <BlogCard post={post} showSocialActions={false} viewerUsername={viewerUsername} density="compact" />
+          <ActivityBlogCard post={post} viewerUsername={viewerUsername} />
         </li>
       ))}
     </ul>

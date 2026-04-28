@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 type Props = Readonly<{
   src: string;
   alt: string;
+  /** Optional native tooltip (same text as alt when used from upload dialog). */
+  title?: string;
   blurDataUrl?: string | null;
   className?: string;
   fill?: boolean;
@@ -22,6 +24,7 @@ type Props = Readonly<{
 export function OptimizedRemoteImage({
   src,
   alt,
+  title,
   blurDataUrl,
   className,
   fill,
@@ -38,6 +41,7 @@ export function OptimizedRemoteImage({
       <img
         src={src}
         alt={alt}
+        title={title}
         className={cn(fill && 'absolute inset-0 h-full w-full', className)}
         width={width}
         height={height}
@@ -51,6 +55,7 @@ export function OptimizedRemoteImage({
       <Image
         src={src}
         alt={alt}
+        title={title}
         fill
         className={cn('object-cover', className)}
         sizes={sizes}
@@ -66,6 +71,7 @@ export function OptimizedRemoteImage({
       <img
         src={src}
         alt={alt}
+        title={title}
         className={cn(className)}
         decoding="async"
         sizes={sizes}
@@ -77,6 +83,7 @@ export function OptimizedRemoteImage({
     <Image
       src={src}
       alt={alt}
+      title={title}
       width={width}
       height={height}
       className={className}

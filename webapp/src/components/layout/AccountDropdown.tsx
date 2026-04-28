@@ -12,7 +12,6 @@ import {
   Sparkles,
   CreditCard,
   Settings,
-  Users,
   UserPlus,
   BookOpen,
   HelpCircle,
@@ -76,7 +75,6 @@ export function AccountDropdown() {
       items: [
         { href: '/settings', label: 'Settings', icon: Settings },
         { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
-        { href: '/organizations', label: 'Organizations', icon: Users },
         { href: '/invite', label: 'Invite friends', icon: UserPlus },
       ],
     },
@@ -156,15 +154,34 @@ export function AccountDropdown() {
                 { label: 'Wallet', val: 0, icon: WalletLottie },
                 { label: 'Streak', val: 0, icon: StreakFireLottie },
                 { label: 'Respect', val: 0, icon: SparkLottie },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-card py-1.5 flex flex-col items-center justify-center hover:bg-muted transition-colors group/stat">
-                  <div className="h-5 w-5 mb-0.5 flex items-center justify-center">
-                    <stat.icon play={open} size={20} />
+              ].map((stat) => {
+                const inner = (
+                  <>
+                    <div className="h-5 w-5 mb-0.5 flex items-center justify-center">
+                      <stat.icon play={open} size={20} />
+                    </div>
+                    <span className="text-[10px] font-black tabular-nums text-foreground">{stat.val}</span>
+                    <span className="text-[7px] font-black uppercase text-muted-foreground group-hover/stat:text-primary transition-colors">{stat.label}</span>
+                  </>
+                );
+                if (stat.label === 'Wallet') {
+                  return (
+                    <Link
+                      key={stat.label}
+                      href="/wallet"
+                      onClick={() => setOpen(false)}
+                      className="bg-card py-1.5 flex flex-col items-center justify-center hover:bg-muted transition-colors group/stat"
+                    >
+                      {inner}
+                    </Link>
+                  );
+                }
+                return (
+                  <div key={stat.label} className="bg-card py-1.5 flex flex-col items-center justify-center hover:bg-muted transition-colors group/stat">
+                    {inner}
                   </div>
-                  <span className="text-[10px] font-black tabular-nums text-foreground">{stat.val}</span>
-                  <span className="text-[7px] font-black uppercase text-muted-foreground group-hover/stat:text-primary transition-colors">{stat.label}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Menu Sections */}

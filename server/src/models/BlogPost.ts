@@ -19,6 +19,12 @@ export interface IBlogPost extends Document {
   /** JSON string of Block[] (full editor state per block, no server-side stripping) */
   content: string;
   thumbnailUrl?: string;
+  /** Lowercase slug; optional. */
+  category?: string;
+  /** Lowercase slug tokens, max 20 on write. */
+  tags?: string[];
+  /** BCP-47-ish language code (e.g. en, en-us). */
+  language?: string;
   status: BlogPostStatus;
   /** Set when a published (or draft) post is saved after create; used for “edited” UI. */
   lastEditedAt?: Date;
@@ -38,6 +44,18 @@ const BlogPostSchema = new Schema<IBlogPost>(
     summary: { type: String, trim: true, maxlength: 12000, default: '' },
     content: { type: String, required: true, default: '' },
     thumbnailUrl: { type: String, trim: true, maxlength: 2000 },
+    category: { type: String, trim: true, lowercase: true, maxlength: 48, default: undefined, index: true },
+    tags: {
+      type: [{ type: String, trim: true, lowercase: true, maxlength: 40 }],
+      default: undefined,
+      validate: {
+        validator(v: string[] | undefined) {
+          return v == null || v.length <= 20;
+        },
+        message: 'At most 20 tags',
+      },
+    },
+    language: { type: String, trim: true, lowercase: true, maxlength: 12, default: 'en' },
     status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
     lastEditedAt: { type: Date, default: null },
     lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },

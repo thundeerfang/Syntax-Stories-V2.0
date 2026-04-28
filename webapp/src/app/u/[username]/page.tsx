@@ -23,8 +23,9 @@ import { AreaChart } from '@/components/retroui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
-import { PublicUserBlogGrid } from '@/components/blog/PublicUserBlogGrid';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
 import { ProfileActivityBlogList } from '@/components/blog/ProfileActivityBlogList';
+import { ProfilePageSkeletonInner } from '@/components/skeletons';
 
 function formatMonthYear(val: string): string {
   if (!val || val.length < 7) return '';
@@ -389,11 +390,7 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
   }, [profile?.github, profile?.instagram, profile?.linkedin, profile?.youtube]);
 
   if (loading || !profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <p className="text-sm font-bold text-muted-foreground uppercase">Loading...</p>
-      </div>
-    );
+    return <ProfilePageSkeletonInner variant="public" />;
   }
 
   const isSelf = currentUser?.username?.toLowerCase() === username;
@@ -406,23 +403,30 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
   ] as const;
 
   return (
-    <div className="min-h-screen p-4 md:p-8 font-sans text-foreground">
-      <div className="mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl">
+    <div className="min-h-screen w-full py-6 font-sans text-foreground md:py-8">
+      <div className={SHELL_CONTENT_RAIL_CLASS}>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <div className="lg:col-span-8 space-y-8">
           <section className="border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)] overflow-hidden">
             <div className="h-48 relative border-b-4 border-border overflow-hidden">
               {profile.coverBanner ? (
-                <img src={profile.coverBanner} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={profile.coverBanner}
+                  alt={(profile as { coverBannerAlt?: string }).coverBannerAlt?.trim() || 'Cover banner'}
+                  title={(profile as { coverBannerAlt?: string }).coverBannerAlt?.trim() || undefined}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full gradient-auto" />
               )}
             </div>
 
             <div className="px-6 pb-8 pt-24 md:pt-32 relative bg-card">
-              <div className="absolute -top-14 left-6 size-28 md:size-36 border-4 border-border bg-muted shadow-[6px_6px_0px_0px_var(--primary)] overflow-hidden">
+              <div className="absolute -top-14 left-6 size-28 md:size-36 border-4 border-border bg-muted shadow-[6px_6px_0px_0px_var(--border)] overflow-hidden">
                 <img
                   src={profile.profileImg || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
-                  alt="Avatar"
+                  alt={(profile as { profileImgAlt?: string }).profileImgAlt?.trim() || 'Profile photo'}
+                  title={(profile as { profileImgAlt?: string }).profileImgAlt?.trim() || undefined}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -465,15 +469,14 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
               </div>
 
               {profile.bio?.trim() ? (
-                <div className="mt-6 relative border-2 border-border bg-muted/5 p-6 pt-10 group">
-                  <div className="absolute top-0 left-0 flex items-stretch">
-                    <div className="bg-primary px-3 py-1.5 flex items-center gap-2">
+                <div className="mt-6 relative border-2 border-border bg-muted/5 p-6 pt-8 group">
+                  <div className="absolute -top-3 left-6 inline-flex items-center bg-background px-2">
+                    <div className="flex items-center gap-2 bg-primary px-2 py-1 rounded-sm">
                       <Terminal className="size-3 text-primary-foreground" />
                       <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
                         Summary_Report
                       </span>
                     </div>
-                    <div className="w-4 bg-primary" style={{ clipPath: 'polygon(0 0, 0% 100%, 100% 100%)' }} />
                   </div>
 
                   <div className="absolute top-2 right-4 text-[8px] font-mono text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
@@ -510,8 +513,6 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
               </div>
             </div>
           </section>
-
-          <PublicUserBlogGrid username={username} />
 
           {/* ACTIVITY (public): Posts + Repost */}
           <section className="space-y-4 border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-4">
@@ -596,15 +597,17 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
               </div>
               {(profile as any)?.mySetup?.length ? (
                 <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
-                  {((profile as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string }>).slice(0, 5).map((it) => (
+                  {((profile as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string; imageAlt?: string }>).slice(0, 5).map((it) => {
+                    const setupImgLabel = it.imageAlt?.trim() || it.label;
+                    return (
                     <div key={`setup-${it.imageUrl}-${it.label}`} className="snap-start shrink-0 w-[240px] border-2 border-border bg-muted/10 shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden">
                       <button
                         type="button"
-                        onClick={() => setMySetupPreview({ src: it.imageUrl, title: it.label })}
+                        onClick={() => setMySetupPreview({ src: it.imageUrl, title: setupImgLabel })}
                         className="relative block h-28 w-full cursor-zoom-in border-b-2 border-border bg-muted/20 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         aria-label={`View ${it.label} image larger`}
                       >
-                        <img src={it.imageUrl} alt={it.label} className="h-full w-full object-cover transition-opacity hover:opacity-90" loading="lazy" />
+                        <img src={it.imageUrl} alt={setupImgLabel} title={it.imageAlt?.trim() || undefined} className="h-full w-full object-cover transition-opacity hover:opacity-90" loading="lazy" />
                       </button>
                       <div className="p-3">
                         <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate">{it.label}</div>
@@ -629,7 +632,8 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
@@ -1061,6 +1065,7 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
           src={mySetupPreview?.src ?? ''}
           title={mySetupPreview?.title}
         />
+        </div>
       </div>
     </div>
   );

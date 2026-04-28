@@ -6,6 +6,7 @@ import { writeAuditLog } from '../shared/audit/auditLog.js';
 import { AuditAction } from '../shared/audit/events.js';
 import { createSession, generateRefreshToken } from './session.service.js';
 import { emitAppEvent } from '../shared/events/appEvents.js';
+import { REFERRAL_COOKIE } from './referral.service.js';
 /**
  * After email OTP is verified: 2FA branch, or issue JWT + session JSON (same shape as verifyOtp).
  */
@@ -13,6 +14,9 @@ export async function respondWithSessionAfterEmailAuth(req, res, user, isNewUser
     if (user.twoFactorEnabled) {
         try {
             const { challengeToken, expiresIn } = await createAuthChallenge(String(user._id));
+            if (isNewUser) {
+                res.clearCookie(REFERRAL_COOKIE.name, { path: '/' });
+            }
             res.status(200).json({
                 success: true,
                 twoFactorRequired: true,
@@ -54,6 +58,9 @@ export async function respondWithSessionAfterEmailAuth(req, res, user, isNewUser
         source: auditSource,
         isNewUser,
     });
+    if (isNewUser) {
+        res.clearCookie(REFERRAL_COOKIE.name, { path: '/' });
+    }
     res.status(200).json({
         message: 'Signed in successfully 🚀',
         success: true,

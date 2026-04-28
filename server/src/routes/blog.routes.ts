@@ -3,6 +3,7 @@ import { verifyToken } from '../middlewares/auth/index.js';
 import {
   createPost,
   deleteMyPost,
+  getBlogTaxonomy,
   getDraft,
   getMyPostById,
   getPublishedPostBySlug,
@@ -18,6 +19,7 @@ import { addBlogComment, listBlogComments } from '../controllers/blogComment.con
 
 const router = Router();
 
+router.get('/taxonomy', getBlogTaxonomy);
 router.get('/feed', listPublishedFeed);
 router.get('/u/:username/posts', listUserPublishedPosts);
 router.get('/p/:username/:slug/comments', listBlogComments);

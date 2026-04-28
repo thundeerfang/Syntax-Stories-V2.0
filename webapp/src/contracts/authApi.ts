@@ -18,6 +18,7 @@ export interface VerifyOtpPayload {
   email: string;
   code: string;
   otpVersion?: number;
+  referralCode?: string;
 }
 
 export interface SendOtpResponse {

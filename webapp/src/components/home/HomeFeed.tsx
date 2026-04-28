@@ -92,7 +92,7 @@ export function HomeFeed() {
         <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Newest first</p>
       </div>
 
-      <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5">
+      <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 sm:gap-4 lg:grid-cols-2 lg:gap-5 2xl:grid-cols-3">
         {posts.map((post) => (
           <li key={post.id} className="flex min-h-0">
             <BlogCard post={post} viewerUsername={viewerUsername} density="compact" />

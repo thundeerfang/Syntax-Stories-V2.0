@@ -141,7 +141,8 @@ export function EducationCard({
             {e.schoolLogo ? (
               <img
                 src={e.schoolLogo}
-                alt=""
+                alt={e.schoolLogoAlt?.trim() || e.school || 'School logo'}
+                title={e.schoolLogoAlt?.trim() || undefined}
                 className="ss-card-logo-img-bright size-full object-contain p-1 grayscale brightness-90 relative z-10"
               />
             ) : (

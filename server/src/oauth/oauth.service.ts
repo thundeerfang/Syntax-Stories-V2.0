@@ -7,6 +7,7 @@ import { AuditAction } from '../shared/audit/events.js';
 import { redisKeys } from '../shared/redis/keys.js';
 import type { HandleOAuthInput, NormalizedOAuthProfile, OAuthPassportUser, OAuthProviderKey } from './oauth.types.js';
 import { sealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
+import { resolveReferralInput, applyReferralOnNewUser } from '../services/referral.service.js';
 
 const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
   google: 'Google',
@@ -337,7 +338,12 @@ async function handleLogin(
   }
 }
 
-async function handleSignup(provider: OAuthProviderKey, accessToken: string, n: NormalizedOAuthProfile): Promise<OAuthPassportUser> {
+async function handleSignup(
+  provider: OAuthProviderKey,
+  accessToken: string,
+  n: NormalizedOAuthProfile,
+  req: Request
+): Promise<OAuthPassportUser> {
   const label = PROVIDER_LABEL[provider];
   /** Same lookup as legacy Passport flows (X uses placeholder email string before synthetic storage). */
   const existingByEmail = await UserModel.findOne({ email: n.email });
@@ -351,6 +357,12 @@ async function handleSignup(provider: OAuthProviderKey, accessToken: string, n: 
   const newUser = new UserModel(doc);
   await newUser.save();
   await attachFreeSubscription(newUser._id);
+  try {
+    const refCode = await resolveReferralInput(req);
+    await applyReferralOnNewUser({ req, newUser, refCode, source: 'oauth' });
+  } catch (e) {
+    console.error(e);
+  }
   return passportShape(provider, newUser);
 }
 
@@ -367,5 +379,5 @@ export async function handleOAuthProviderAuth(input: HandleOAuthInput): Promise<
     return handleLogin(provider, accessToken, normalized);
   }
   // signup (or any non-login state treated as signup, matching prior Passport behavior)
-  return handleSignup(provider, accessToken, normalized);
+  return handleSignup(provider, accessToken, normalized, req);
 }

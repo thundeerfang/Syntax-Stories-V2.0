@@ -92,14 +92,14 @@ export function MentionPopoverCard({
         <div className="absolute left-3 top-full z-10 -translate-y-1/2">
           {loading && !user ? (
             <div className="flex h-[52px] w-[52px] items-center justify-center border-2 border-border bg-card shadow-[3px_3px_0_0_var(--border)]">
-              <div className="h-11 w-11 animate-pulse rounded-full bg-muted" />
+              <div className="h-11 w-11 animate-pulse border border-border/80 bg-muted" />
             </div>
           ) : (
             <div className="flex h-[52px] w-[52px] items-center justify-center border-2 border-border bg-card shadow-[3px_3px_0_0_var(--border)]">
               <img
                 src={avatarSrc}
                 alt=""
-                className="h-11 w-11 rounded-full border border-border/80 bg-muted object-cover"
+                className="object-cover"
               />
             </div>
           )}

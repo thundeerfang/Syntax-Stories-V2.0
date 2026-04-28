@@ -23,4 +23,6 @@ export declare function restoreMyPost(req: Request, res: Response): Promise<void
 export declare function purgeMyPostPermanently(req: Request, res: Response): Promise<void>;
 /** DELETE /api/blog/post/:postId — owner-only. */
 export declare function deleteMyPost(req: Request, res: Response): Promise<void>;
+/** GET /api/blog/taxonomy — public: curated categories/tags plus published post counts. */
+export declare function getBlogTaxonomy(_req: Request, res: Response): Promise<void>;
 //# sourceMappingURL=blog.controller.d.ts.map

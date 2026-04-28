@@ -266,6 +266,17 @@ html * {
   margin-bottom: 0;
 }
 
+/* TipTap Placeholder: empty paragraph with decoration shows hint (write mode) */
+.ss-rich-paragraph-editor .ProseMirror p.is-empty[data-placeholder]::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
 /* Smooth theme transition for write page: only theme-related properties to avoid lag */
 .ss-write-theme-transition,
 .ss-write-theme-transition * {
@@ -356,6 +367,35 @@ html * {
   cursor: pointer;
 }
 
+/* Public blog post: loading bar shimmer + prose link hover */
+@keyframes blog-public-loading-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.blog-public-loading-shimmer {
+  animation: blog-public-loading-shimmer 2s ease-in-out infinite;
+}
+
+.public-blog-post-page .prose-retro a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.public-blog-post-page .prose-retro a:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
 /* Sidebar: scroll works; no scrollbar track/thumb (WebKit + Firefox) */
 .sidebar-drawer {
   scrollbar-width: none;
@@ -388,50 +428,6 @@ html * {
     linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
 }
 /* Animations */
-
-@keyframes loader-scale-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes progress-loading {
-  0% { width: 0%; transform: translateX(-100%); }
-  50% { width: 70%; transform: translateX(0%); }
-  100% { width: 100%; transform: translateX(100%); }
-}
-
-.loader-scale-in {
-  animation: loader-scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-progress-loading {
-  animation: progress-loading 2s infinite ease-in-out;
-}
-
-/* Pacman Refinement */
-.terminal-loader-pacman-refined {
-  transform: scale(0.4);
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Customizing the react-loader pacman colors */
-.terminal-loader-pacman-refined .pacman > div:first-of-type,
-.terminal-loader-pacman-refined .pacman > div:nth-child(2) {
-  border-top-color: #b967ff !important;
-  border-left-color: #b967ff !important;
-  border-bottom-color: #b967ff !important;
-}
-
-.terminal-loader-pacman-refined .pacman > div:nth-child(3),
-.terminal-loader-pacman-refined .pacman > div:nth-child(4),
-.terminal-loader-pacman-refined .pacman > div:nth-child(5) {
-  background-color: #b967ff !important;
-  opacity: 0.6;
-}
 
 /* Work experience timeline (react-vertical-timeline-component) overrides */
 .ss-we-timeline.vertical-timeline {

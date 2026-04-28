@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSidebar } from '@/hooks/useSidebar';
 import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
-import { TerminalLoaderPage } from '@/components/loader';
+import { BlogWritePageSkeletonInner } from '@/components/skeletons';
 import { 
   Save, Send, ChevronRight, FileCode, 
   Activity, Cpu, History, Terminal as TerminalIcon,
@@ -26,11 +26,12 @@ export default function WriteBlogPage() {
   const [blocks, setBlocks] = useState<Block[]>(() => [createBlockInSection('paragraph', WRITE_DEFAULT_SECTION_ID)]);
   const [submitting, setSubmitting] = useState(false);
   const [submitAction, setSubmitAction] = useState<'draft' | 'published' | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  const [currentTime, setCurrentTime] = useState('');
 
-  // Clock for the "System" feel
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString()), 1000);
+    const tick = () => setCurrentTime(new Date().toLocaleTimeString());
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -61,15 +62,18 @@ export default function WriteBlogPage() {
     }
   };
 
-  if (shouldBlock) return <TerminalLoaderPage />;
+  if (shouldBlock) return <BlogWritePageSkeletonInner />;
 
   return (
-    <div className={cn(
-      'min-h-screen bg-background font-mono text-foreground transition-all duration-300 pb-10',
-      isOpen ? 'lg:ml-64' : 'ml-0'
-    )}>
+    <div
+      className={cn(
+        'min-h-screen bg-background pb-10 font-mono text-foreground transition-all duration-300',
+        isOpen ? 'lg:ml-64' : 'ml-0',
+      )}
+    >
+      <div className="w-full">
       {/* 1. TOP SYSTEM NAV */}
-      <div className="border-b-2 border-border bg-card px-4 py-2 flex items-center justify-between shadow-[0_2px_0_0_rgba(0,0,0,1)] sticky top-0 z-50">
+      <div className="border-b-2 border-border bg-card py-2 flex items-center justify-between shadow-[0_2px_0_0_rgba(0,0,0,1)] sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-1 border-2 border-black">
             <TerminalIcon className="h-4 w-4 text-primary-foreground" />
@@ -87,7 +91,7 @@ export default function WriteBlogPage() {
              <Activity className="h-3 w-3 text-green-500 animate-pulse" />
              <span>Uptime: 99.9%</span>
           </div>
-          <div className="hidden md:block">{currentTime}</div>
+          <div className="hidden min-w-[5.5rem] tabular-nums md:block">{currentTime || '\u00a0'}</div>
         </div>
       </div>
 
@@ -95,7 +99,7 @@ export default function WriteBlogPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 min-h-[calc(100vh-45px)]">
         
         {/* LEFT PANEL: File Stats & Navigator (fills left space) */}
-        <div className="hidden lg:flex lg:col-span-2 border-r-2 border-border bg-muted/20 flex-col p-4 space-y-6">
+        <div className="hidden lg:flex lg:col-span-2 border-r-2 border-border bg-muted/20 flex-col p-0 space-y-0">
           <section>
             <h3 className="text-[10px] font-black text-muted-foreground uppercase mb-3 flex items-center gap-2">
               <FileCode className="h-3.5 w-3.5" /> Project_Files
@@ -122,8 +126,8 @@ export default function WriteBlogPage() {
         </div>
 
         {/* MIDDLE PANEL: The Editor Core (Focus Area) */}
-        <div className="lg:col-span-7 bg-background p-4 md:p-8 overflow-y-auto">
-          <div className="max-w-3xl mx-auto">
+        <div className="lg:col-span-7 bg-background px-0 py-4 md:px-0 md:py-8 overflow-y-auto">
+          <div className="w-full">
              <div className="mb-8 relative">
                <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">H1</span>
                <textarea
@@ -148,7 +152,7 @@ export default function WriteBlogPage() {
         </div>
 
         {/* RIGHT PANEL: Meta & Actions (fills right space) */}
-        <div className="lg:col-span-3 border-l-2 border-border bg-card flex flex-col p-6 space-y-6">
+        <div className="lg:col-span-3 border-l-2 border-border bg-card flex flex-col p-0 space-y-0">
           
           <div className="space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border-b border-border pb-2">
@@ -182,9 +186,6 @@ export default function WriteBlogPage() {
               <Globe className="h-4 w-4 text-primary" /> Asset_Configuration
             </h3>
             <div>
-              <label htmlFor="write-thumbnail-url" className="text-[9px] font-bold text-muted-foreground uppercase">
-                Thumbnail_URL
-              </label>
               <input
                 id="write-thumbnail-url"
                 type="url"
@@ -212,6 +213,7 @@ export default function WriteBlogPage() {
           </div>
 
         </div>
+      </div>
       </div>
 
       {/* 3. CONSOLE FOOTER */}

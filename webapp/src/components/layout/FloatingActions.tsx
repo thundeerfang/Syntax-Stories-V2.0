@@ -6,9 +6,10 @@ import { useUIStore } from '@/store/ui';
 
 export function FloatingActions() {
   const feedbackVisible = useUIStore((s) => s.feedbackButtonVisible);
+  const setFeedbackDialogOpen = useUIStore((s) => s.setFeedbackDialogOpen);
 
   const openFeedback = () => {
-    window.open('/feedback', '_blank');
+    setFeedbackDialogOpen(true);
   };
 
   return (

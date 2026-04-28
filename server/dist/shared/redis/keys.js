@@ -12,11 +12,6 @@ export const redisKeys = {
         /** One-time OAuth browser callback; value is JSON payload (tokens, userId). TTL ~90s. */
         exchange: (code) => `oauth:exchange:${code}`,
     },
-    /** Invite / referral: OAuth signup nonce → referral code; code → referrer userId cache. */
-    invite: {
-        oauthSignupNonce: (nonce) => `invite:oauth-signup:${nonce}`,
-        codeCache: (normalizedCode) => `invite:code:${normalizedCode}`,
-    },
     auth: {
         intent: (tokenHash) => `intent:user:${tokenHash}`,
         twoFactorSetup: (userId) => `2fa:setup:${userId}`,
@@ -43,6 +38,12 @@ export const redisKeys = {
     follow: {
         dailyCap: (userId, dayKey) => `cap:follow:${userId}:${dayKey}`,
     },
+    invite: {
+        /** Referrer ObjectId string, or sentinel `__NONE__` for negative cache. */
+        codeCache: (normalizedCode) => `invite:code:${normalizedCode}`,
+        /** OAuth signup: nonce → normalized referral code (TTL ~10m). */
+        oauthSignupNonce: (nonce) => `invite:oauth:signup:${nonce}`,
+    },
     /**
      * Auth HTTP rate limits via RedisRateLimitStore.
      * Full key = `authRateLimitKey(prefix, suffix)` where `suffix` comes from express-rate-limit’s keyGenerator.
@@ -54,7 +55,7 @@ export const redisKeys = {
         refresh: 'rl:refresh:',
         updateProfile: 'rl:updateprofile:',
         feedback: 'rl:feedback:',
-        inviteResolve: 'rl:invite-resolve:',
+        inviteResolve: 'rl:invite:resolve:',
         authHttpKey: (prefix, keySuffix) => `${prefix}${keySuffix}`,
     },
 };

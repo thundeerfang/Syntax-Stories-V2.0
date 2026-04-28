@@ -37,19 +37,12 @@ export function TableBlockHelpDialog({ open, onClose }: Readonly<TableBlockHelpD
       open={open}
       onClose={onClose}
       titleId="table-block-help-title"
+      titleIcon={<Table2 aria-hidden />}
+      title="Table block"
+      description="Paste, grid, and limits."
       panelClassName={cn('max-w-2xl max-h-[min(88vh,720px)] flex flex-col overflow-hidden')}
       contentClassName="flex min-h-0 flex-1 flex-col p-6 sm:p-8"
     >
-      <div className="mb-4 shrink-0 border-b border-border/60 pb-4">
-        <h2
-          id="table-block-help-title"
-          className="flex items-center gap-2 text-base font-black uppercase tracking-wide text-foreground"
-        >
-          <Table2 className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
-          Table block
-        </h2>
-        <p className="mt-1 text-xs font-medium text-muted-foreground">Paste, grid, and limits.</p>
-      </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
         <div className="flex gap-2 rounded-none border-2 border-border bg-muted/25 px-3 py-2.5 text-[11px] leading-snug text-muted-foreground">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />

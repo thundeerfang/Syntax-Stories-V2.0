@@ -1,6 +1,11 @@
 import { blogAuthFetch, blogPublicFetch } from '@/lib/blogAuthFetch';
 import { resolvePublicApiBase } from '@/lib/publicApiBase';
-import type { PublicBlogComment, PublicBlogPostDetail, PublicFeedPost } from '@/types/blog';
+import type {
+  BlogTaxonomyRow,
+  PublicBlogComment,
+  PublicBlogPostDetail,
+  PublicFeedPost,
+} from '@/types/blog';
 
 const getApiBase = () => resolvePublicApiBase();
 
@@ -24,6 +29,9 @@ export interface CreatePostPayload {
   content: string;
   thumbnailUrl?: string;
   status?: 'draft' | 'published';
+  category?: string;
+  tags?: string[];
+  language?: string;
 }
 
 export interface BlogPostResponse {
@@ -38,6 +46,9 @@ export interface BlogPostResponse {
   updatedAt: string;
   /** Present when listing soft-deleted posts (`status=deleted`). */
   deletedAt?: string;
+  category?: string;
+  tags?: string[];
+  language?: string;
 }
 
 export interface GetDraftResponse {
@@ -46,6 +57,22 @@ export interface GetDraftResponse {
 }
 
 export const blogApi = {
+  getTaxonomy: async (): Promise<{ success: boolean; categories: BlogTaxonomyRow[]; tags: BlogTaxonomyRow[] }> => {
+    const r = await blogPublicFetch(`${getApiBase()}/api/blog/taxonomy`);
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      categories?: BlogTaxonomyRow[];
+      tags?: BlogTaxonomyRow[];
+    };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return {
+      success: true,
+      categories: data.categories ?? [],
+      tags: data.tags ?? [],
+    };
+  },
+
   getPublishedFeed: async (limit = 24): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
     const r = await blogPublicFetch(`${getApiBase()}/api/blog/feed?limit=${encodeURIComponent(String(limit))}`);
     const data = (await readJson(r)) as { success?: boolean; message?: string; posts?: PublicFeedPost[] };
@@ -164,7 +191,15 @@ export const blogApi = {
   },
 
   saveDraft: async (
-    payload: { title: string; summary?: string; content: string; thumbnailUrl?: string },
+    payload: {
+      title: string;
+      summary?: string;
+      content: string;
+      thumbnailUrl?: string;
+      category?: string;
+      tags?: string[];
+      language?: string;
+    },
     accessToken: string,
   ): Promise<{ success: boolean; post: BlogPostResponse }> => {
     const r = await blogAuthFetch(
@@ -198,6 +233,9 @@ export const blogApi = {
       thumbnailUrl?: string;
       status?: 'draft' | 'published';
       silent?: boolean;
+      category?: string;
+      tags?: string[];
+      language?: string;
     },
     accessToken: string,
   ): Promise<{ success: boolean; post: BlogPostResponse; forkedFromPublished?: boolean }> => {

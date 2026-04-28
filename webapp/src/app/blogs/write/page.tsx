@@ -6,23 +6,29 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSidebar } from '@/hooks/useSidebar';
 import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
 import { uploadCover, type CropArea } from '@/api/upload';
-import { TerminalLoaderPage } from '@/components/loader';
+import { BlogWritePageSkeletonInner } from '@/components/skeletons';
 import { Dialog } from '@/components/ui/Dialog';
 import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { BlogWriteDeployOverlay } from '@/components/blog/BlogWriteDeployOverlay';
+import type { BlogPublishTaxonomy } from '@/lib/blogPublishTaxonomy';
+import type { BlogTaxonomyRow } from '@/types/blog';
 import {
   Save, Send, ChevronRight,
-  Activity, Cpu, History, Wrench,
+  Activity, Cpu, History, ListTree, Wrench,
   Globe, ShieldCheck, Image as ImageIcon, Trash2,
   Bold, Italic, Underline as UnderlineIcon,
   Link2, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight,
   FileText,
 } from 'lucide-react';
-import { RetroAccordion } from '@/components/ui/RetroAccordion';
 import Cropper, { Area } from 'react-easy-crop';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getWriteEditorSessionPostId, setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
+import {
+  blockTypeDisplayName,
+  totalWorkspaceWordCount,
+} from '@/lib/writeWorkspaceStats';
 import {
   BlogWriteEditor,
   Block,
@@ -237,24 +243,63 @@ function draftSyncBadgeLabel(status: DraftSyncUi): string {
   }
 }
 
-function blockCountSubtitle(count: number): string {
-  const suffix = count === 1 ? '' : 's';
-  return `${count} block${suffix}`;
+const MAX_BLOCKS_PER_SECTION = 20;
+
+type RevisionKind = 'initial' | 'opened' | 'draft_saved' | 'autosynced' | 'edited' | 'published';
+
+type RevisionEntry = {
+  id: string;
+  kind: RevisionKind;
+  label: string;
+  at: number;
+};
+
+function formatRevisionWhen(ts: number): string {
+  return new Date(ts).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
-const MAX_BLOCKS_PER_SECTION = 20;
+function revisionKindBadgeClass(kind: RevisionKind): string {
+  switch (kind) {
+    case 'initial':
+    case 'opened':
+      return 'border-primary/50 bg-primary/10 text-primary';
+    case 'draft_saved':
+    case 'autosynced':
+      return 'border-border bg-card text-foreground';
+    case 'edited':
+      return 'border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100';
+    case 'published':
+      return 'border-green-500/50 bg-green-500/10 text-green-900 dark:text-green-100';
+    default:
+      return 'border-border bg-muted text-foreground';
+  }
+}
 const PRIMARY_SECTION_ID = 's-1';
 const THUMB_ACCEPT = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const THUMB_MAX_MB = 10;
+const REVISIONS_SIDEBAR_VISIBLE = 10;
+
+function formatThumbFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
 
 function SummaryEditor({
   value,
   onChange,
   maxWords,
+  onFocusCapture,
 }: Readonly<{
   value: string;
   onChange: (v: string) => void;
   maxWords: number;
+  onFocusCapture?: () => void;
 }>) {
   const ref = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -466,6 +511,7 @@ function SummaryEditor({
           ref={ref}
           contentEditable
           suppressContentEditableWarning
+          onFocusCapture={onFocusCapture}
           tabIndex={0} // NOSONAR S6845 — editing host must be in sequential focus order
           aria-label="Summary"
           aria-multiline
@@ -589,9 +635,25 @@ function ThumbnailCropDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
+  useEffect(() => {
+    if (!imageUrl) {
+      setNaturalSize(null);
+      return;
+    }
+    setNaturalSize(null);
+    const img = new Image();
+    const url = imageUrl;
+    img.onload = () => setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = url;
+    return () => {
+      img.onload = null;
+    };
+  }, [imageUrl]);
 
   const handleFile = (f: File | null) => {
     if (!f) return;
@@ -638,24 +700,23 @@ function ThumbnailCropDialog({
     onClose();
   };
 
+  const thumbDescription = `JPEG, PNG, GIF, or WebP · max ${THUMB_MAX_MB} MB`;
+
   return (
     <Dialog
       open={open}
       onClose={handleCancel}
       titleId="thumbnail-crop-title"
+      title="Upload thumbnail"
+      titleIcon={<ImageIcon className="size-5" strokeWidth={2} aria-hidden />}
+      description={thumbDescription}
       panelClassName={cn(
-        'pointer-events-auto w-full max-w-sm max-h-[90vh] overflow-y-auto',
-        'border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]'
+        'pointer-events-auto w-full max-w-md max-h-[90vh]',
+        'border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]',
       )}
-      contentClassName="relative p-6 pt-10"
-      backdropClassName="fixed inset-0 z-50 bg-black/40"
+      contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 sm:p-8"
+      backdropClassName="fixed inset-0 bg-black/40 backdrop-blur-[2px]"
     >
-      <h2 id="thumbnail-crop-title" className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-4">
-        <ImageIcon className="size-4 text-primary" /> Upload thumbnail
-      </h2>
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
-        JPEG, PNG, GIF or WebP. Max {THUMB_MAX_MB}MB. Cropped on publish.
-      </p>
       <label htmlFor="thumbnail-crop-file-input" className="sr-only">
         Choose thumbnail image file
       </label>
@@ -682,6 +743,28 @@ function ThumbnailCropDialog({
       )}
       {imageUrl && (
         <div className="space-y-4">
+          {file ? (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border border-border/60 bg-muted/25 px-3 py-2.5 text-[10px]">
+              <dt className="font-bold uppercase tracking-wide text-muted-foreground">File</dt>
+              <dd className="min-w-0 truncate font-mono text-foreground" title={file.name}>
+                {file.name}
+              </dd>
+              <dt className="font-bold uppercase tracking-wide text-muted-foreground">Size</dt>
+              <dd className="font-mono text-foreground">{formatThumbFileSize(file.size)}</dd>
+              <dt className="font-bold uppercase tracking-wide text-muted-foreground">Type</dt>
+              <dd className="font-mono text-foreground">{file.type || '—'}</dd>
+              {naturalSize ? (
+                <>
+                  <dt className="font-bold uppercase tracking-wide text-muted-foreground">Dimensions</dt>
+                  <dd className="font-mono text-foreground">
+                    {naturalSize.w}×{naturalSize.h}px
+                  </dd>
+                </>
+              ) : null}
+              <dt className="font-bold uppercase tracking-wide text-muted-foreground">Aspect</dt>
+              <dd className="text-foreground">16:9 (thumbnail frame)</dd>
+            </dl>
+          ) : null}
           <CropperKeyboardWrapper imageReady={!!imageUrl} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
             <Cropper
               image={imageUrl}
@@ -765,7 +848,9 @@ type BlogWritePageSyncEffectsInput = Readonly<{
 function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void {
   const {
     title,
+    summary,
     blocks,
+    thumbnailPreviewUrl,
     isOnline,
     draftSyncStatus,
     isDirty,
@@ -790,6 +875,7 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
   }, [title, blocks, draftSyncStatus, isOnline, setDraftSyncStatus]);
 
   useEffect(() => {
+    setIsOnline(globalThis.navigator?.onLine ?? true);
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => {
       setIsOnline(false);
@@ -855,6 +941,29 @@ function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void
   }, [latestForSyncRef, syncDraftToServer, tokenRef]);
 }
 
+function taxonomyApiFields(t: BlogPublishTaxonomy): { category: string; tags: string[]; language: string } {
+  const cat = t.category
+    .trim()
+    .toLowerCase()
+    .replaceAll(/\s+/g, '-')
+    .replaceAll(/[^\w-]/g, '')
+    .slice(0, 48);
+  return {
+    category: cat,
+    tags: t.tags.slice(0, 20),
+    language: (t.language || 'en').toLowerCase().replaceAll(/[^a-z-]/g, '').slice(0, 12) || 'en',
+  };
+}
+
+function taxonomyPayload(t: BlogPublishTaxonomy): { category: string; tags: string[]; language: string } {
+  const tf = taxonomyApiFields(t);
+  return {
+    category: tf.category || '',
+    tags: tf.tags.length ? tf.tags : [],
+    language: tf.language,
+  };
+}
+
 async function runBlogWriteSubmit(args: Readonly<{
   status: 'draft' | 'published';
   token: string;
@@ -872,6 +981,8 @@ async function runBlogWriteSubmit(args: Readonly<{
   setTitle: React.Dispatch<React.SetStateAction<string>>;
   setSummary: React.Dispatch<React.SetStateAction<string>>;
   setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
+  /** When set on draft saves, persists category/tags/language. Omit on autosync paths. */
+  taxonomy?: BlogPublishTaxonomy | null;
 }>): Promise<void> {
   const {
     status,
@@ -890,10 +1001,12 @@ async function runBlogWriteSubmit(args: Readonly<{
     setTitle,
     setSummary,
     setBlocks,
+    taxonomy,
   } = args;
   const content = JSON.stringify(stripLegacyGifBlocks(blocks));
   const summaryToSend =
     summary && summary !== '<br>' && summaryWordCount(summary) > 0 ? summary.trim() : undefined;
+  const taxBody = taxonomy == null ? {} : taxonomyPayload(taxonomy);
 
   if (status === 'draft') {
     const thumbRemote = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
@@ -906,6 +1019,7 @@ async function runBlogWriteSubmit(args: Readonly<{
           content,
           thumbnailUrl: thumbRemote,
           status: 'draft',
+          ...taxBody,
         },
         token,
       );
@@ -924,6 +1038,7 @@ async function runBlogWriteSubmit(args: Readonly<{
           summary: summaryToSend,
           content,
           thumbnailUrl: thumbRemote,
+          ...taxBody,
         },
         token,
       );
@@ -945,6 +1060,8 @@ async function runBlogWriteSubmit(args: Readonly<{
     thumbnailUrl = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
   }
 
+  const publishTax = taxonomyPayload(taxonomy ?? { category: '', tags: [], language: 'en' });
+
   if (activePostId) {
     await blogApi.updatePost(
       activePostId,
@@ -954,11 +1071,22 @@ async function runBlogWriteSubmit(args: Readonly<{
         content,
         thumbnailUrl,
         status: 'published',
+        ...publishTax,
       },
       token,
     );
   } else {
-    await blogApi.createPost({ title, summary: summaryToSend, content, thumbnailUrl, status: 'published' }, token);
+    await blogApi.createPost(
+      {
+        title,
+        summary: summaryToSend,
+        content,
+        thumbnailUrl,
+        status: 'published',
+        ...publishTax,
+      },
+      token,
+    );
   }
   toast.success('POST_LIVE');
   setWriteEditorSessionPostId(null);
@@ -1001,14 +1129,8 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
 
   const activePostIdRef = useRef(activePostId);
   const loadedPostStatusRef = useRef(loadedPostStatus);
-
-  useEffect(() => {
-    activePostIdRef.current = activePostId;
-  }, [activePostId]);
-
-  useEffect(() => {
-    loadedPostStatusRef.current = loadedPostStatus;
-  }, [loadedPostStatus]);
+  activePostIdRef.current = activePostId;
+  loadedPostStatusRef.current = loadedPostStatus;
 
   const syncDraftToServer = useCallback((): Promise<void> => {
     if (!navigator.onLine) return Promise.resolve();
@@ -1074,9 +1196,13 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
   return { syncDraftToServer };
 }
 
+type WriteFocusChrome = 'title' | 'summary' | 'body' | null;
+
 type BlogWriteTopNavProps = Readonly<{
   username: string;
   title: string;
+  focusChrome: WriteFocusChrome;
+  activeBodyBlock: Block | null;
   hasDraftContent: boolean;
   loadedPostStatus: 'draft' | 'published' | null;
   leftSidebarOpen: boolean;
@@ -1087,9 +1213,19 @@ type BlogWriteTopNavProps = Readonly<{
   currentTime: string;
 }>;
 
+function focusContextLabel(chrome: WriteFocusChrome, bodyBlock: Block | null): string {
+  if (chrome === 'title') return 'Title';
+  if (chrome === 'summary') return 'Summary';
+  if (chrome === 'body' && bodyBlock) return blockTypeDisplayName(bodyBlock.type);
+  if (chrome === 'body') return 'Body';
+  return '—';
+}
+
 function BlogWriteTopNav({
   username,
   title,
+  focusChrome,
+  activeBodyBlock,
   hasDraftContent,
   loadedPostStatus,
   leftSidebarOpen,
@@ -1099,21 +1235,32 @@ function BlogWriteTopNav({
   draftSyncStatus,
   currentTime,
 }: BlogWriteTopNavProps) {
+  const activeLabel = focusContextLabel(focusChrome, activeBodyBlock);
   return (
-    <div className="flex-shrink-0 bg-card px-4 py-2 flex items-center justify-between z-50 border-b border-border">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
+    <div className="flex-shrink-0 bg-card px-4 py-2 flex items-center gap-3 z-50 border-b border-border min-w-0">
+      <div className="flex items-center gap-4 shrink-0 min-w-0">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter min-w-0">
           <FileText className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
-          <span>Workspace</span>
-          <ChevronRight className="h-3 w-3 opacity-30" />
-          <span className="text-primary text-[9px] font-semibold">{username}</span>
-          <ChevronRight className="h-3 w-3 opacity-30" />
-          <span className="bg-muted px-2 border border-border truncate max-w-[200px] md:max-w-[280px]" title={title.trim() || 'new_entry.log'}>
+          <span className="shrink-0">Workspace</span>
+          <ChevronRight className="h-3 w-3 opacity-30 shrink-0" />
+          <span className="text-primary text-[9px] font-semibold shrink-0">{username}</span>
+          <ChevronRight className="h-3 w-3 opacity-30 shrink-0" />
+          <span className="bg-muted px-2 border border-border truncate max-w-[120px] sm:max-w-[200px] md:max-w-[280px]" title={title.trim() || 'new_entry.log'}>
             {title.trim() ? title.trim().replaceAll(/\s+/g, '_') : 'new_entry.log'}
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+
+      <div className="hidden min-w-0 flex-1 flex-col gap-0.5 border-l border-border pl-3 sm:flex">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active</span>
+          <span className="min-w-0 truncate text-[10px] font-bold text-foreground" title={activeLabel}>
+            {activeLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         <button
           type="button"
           onClick={onToggleLeft}
@@ -1161,7 +1308,9 @@ function BlogWriteTopNav({
             )
           ) : null}
         </div>
-        <div className="hidden md:block text-[8px] font-medium text-muted-foreground">{currentTime}</div>
+        <div className="hidden min-w-[5.5rem] tabular-nums md:block text-[8px] font-medium text-muted-foreground">
+          {currentTime || '\u00a0'}
+        </div>
       </div>
     </div>
   );
@@ -1177,29 +1326,111 @@ export default function WriteBlogPage() {
   const [thumbnailCropArea, setThumbnailCropArea] = useState<CropArea | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [thumbnailDialogOpen, setThumbnailDialogOpen] = useState(false);
+  const [postCategory, setPostCategory] = useState('');
+  const [postTags, setPostTags] = useState<string[]>([]);
+  const [postLanguage, setPostLanguage] = useState('en');
+  const [taxonomyCategories, setTaxonomyCategories] = useState<BlogTaxonomyRow[]>([]);
+  const [taxonomyTags, setTaxonomyTags] = useState<BlogTaxonomyRow[]>([]);
+  const [deployOverlayOpen, setDeployOverlayOpen] = useState(false);
+  const [publishDialogSnapshot, setPublishDialogSnapshot] = useState<BlogPublishTaxonomy>({
+    category: '',
+    tags: [],
+    language: 'en',
+  });
   const [summary, setSummary] = useState('');
   const [blocks, setBlocks] = useState<Block[]>(() => []);
   const [submitting, setSubmitting] = useState(false);
-  const [submitAction, setSubmitAction] = useState<'draft' | 'published' | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  const [submitAction, setSubmitAction] = useState<'draft' | 'published' | 'metadata' | null>(null);
+  /** Empty until client mount — avoids SSR/client `toLocaleTimeString()` mismatch. */
+  const [currentTime, setCurrentTime] = useState('');
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(() =>
-    globalThis.navigator === undefined ? true : globalThis.navigator.onLine,
-  );
+  const [isOnline, setIsOnline] = useState(true);
   const [draftSyncStatus, setDraftSyncStatus] = useState<'idle' | 'offline' | 'local' | 'syncing' | 'synced'>('idle');
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [loadedPostStatus, setLoadedPostStatus] = useState<'draft' | 'published' | null>(null);
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [contentBaseline, setContentBaseline] = useState<string | null>(null);
+  const [focusChrome, setFocusChrome] = useState<WriteFocusChrome>(null);
+  const [activeBodyBlock, setActiveBodyBlock] = useState<Block | null>(null);
+  const [revisions, setRevisions] = useState<RevisionEntry[]>([]);
+  const [revisionHistoryOpen, setRevisionHistoryOpen] = useState(false);
+  const revisionDialogScrollRef = useRef<HTMLDivElement>(null);
+  const revisionHistorySectionRef = useRef<HTMLDivElement>(null);
+  const prevRightSidebarOpenRef = useRef(true);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const latestForSyncRef = useRef({ title: '', summary: '', blocks: [] as Block[], thumbnailPreviewUrl: null as string | null });
   const tokenRef = useRef<string | undefined>(token);
   const skipNextPopStateRef = useRef(false);
   const autosyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRevisionSessionKeyRef = useRef<string | null>(null);
+  const prevDraftSyncForRevisionRef = useRef<DraftSyncUi>('idle');
+  const lastAutosyncRevisionAtRef = useRef(0);
+  const idleEditRevisionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastEditedRevisionAtRef = useRef(0);
   latestForSyncRef.current = { title, summary, blocks, thumbnailPreviewUrl };
   tokenRef.current = token;
+
+  useEffect(() => {
+    let cancelled = false;
+    void blogApi
+      .getTaxonomy()
+      .then((r) => {
+        if (cancelled) return;
+        setTaxonomyCategories(r.categories);
+        setTaxonomyTags(r.tags);
+      })
+      .catch(() => {
+        // suggestions optional
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!revisionHistoryOpen) return;
+    const el = revisionDialogScrollRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = 0;
+    });
+  }, [revisionHistoryOpen]);
+
+  useEffect(() => {
+    if (rightSidebarOpen) {
+      const wasClosed = !prevRightSidebarOpenRef.current;
+      if (wasClosed) {
+        requestAnimationFrame(() => {
+          revisionHistorySectionRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+      }
+    }
+    prevRightSidebarOpenRef.current = rightSidebarOpen;
+  }, [rightSidebarOpen]);
+
+  const appendRevision = useCallback((entry: Omit<RevisionEntry, 'id'>) => {
+    const id = `r-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setRevisions((prev) => [{ id, ...entry }, ...prev].slice(0, 500));
+  }, []);
+
+  const revisionSessionKey = `${token ?? 'anon'}:${activePostId ?? 'scratch'}:${loadedPostStatus ?? 'none'}`;
+
+  const primarySectionBlocks = useMemo(
+    () => blocks.filter((b) => (b.sectionId ?? PRIMARY_SECTION_ID) === PRIMARY_SECTION_ID),
+    [blocks],
+  );
+
+  const totalWords = useMemo(
+    () => totalWorkspaceWordCount({ title, summaryHtml: summary, blocks }),
+    [title, summary, blocks],
+  );
+
+  const handleBodyActiveBlock = useCallback((b: Block | null) => {
+    setFocusChrome('body');
+    setActiveBodyBlock(b);
+  }, []);
 
   const captureBaseline = useCallback(() => {
     setContentBaseline(serializeWriteWorkspace({ title, summary, blocks, thumbnailPreviewUrl }));
@@ -1222,6 +1453,52 @@ export default function WriteBlogPage() {
     loadedPostStatus,
     refs: { latestForSyncRef, tokenRef },
   });
+
+  useEffect(() => {
+    if (!workspaceReady || !token) return;
+    if (lastRevisionSessionKeyRef.current === revisionSessionKey) return;
+    lastRevisionSessionKeyRef.current = revisionSessionKey;
+    const at = Date.now();
+    const id = `r-${at}-boot`;
+    const first: RevisionEntry = activePostId
+      ? {
+          id,
+          kind: 'opened',
+          label:
+            loadedPostStatus === 'published'
+              ? 'Published post opened from server'
+              : 'Draft opened from server',
+          at,
+        }
+      : { id, kind: 'initial', label: 'Initial blog', at };
+    setRevisions([first]);
+    prevDraftSyncForRevisionRef.current = draftSyncStatus;
+  }, [workspaceReady, token, revisionSessionKey, activePostId, loadedPostStatus]);
+
+  useEffect(() => {
+    if (!workspaceReady) return;
+    const prev = prevDraftSyncForRevisionRef.current;
+    prevDraftSyncForRevisionRef.current = draftSyncStatus;
+    if (prev !== 'syncing' || draftSyncStatus !== 'synced') return;
+    const now = Date.now();
+    if (now - lastAutosyncRevisionAtRef.current < 90_000) return;
+    lastAutosyncRevisionAtRef.current = now;
+    appendRevision({ kind: 'autosynced', label: 'Draft synced to server', at: now });
+  }, [draftSyncStatus, workspaceReady, appendRevision]);
+
+  useEffect(() => {
+    if (!workspaceReady || !isDirty) return;
+    if (idleEditRevisionTimerRef.current) clearTimeout(idleEditRevisionTimerRef.current);
+    idleEditRevisionTimerRef.current = setTimeout(() => {
+      const now = Date.now();
+      if (now - lastEditedRevisionAtRef.current < 4 * 60 * 1000) return;
+      lastEditedRevisionAtRef.current = now;
+      appendRevision({ kind: 'edited', label: 'Content updated', at: now });
+    }, 8000);
+    return () => {
+      if (idleEditRevisionTimerRef.current) clearTimeout(idleEditRevisionTimerRef.current);
+    };
+  }, [title, summary, blocks, isDirty, workspaceReady, appendRevision]);
 
   useEffect(() => {
     try {
@@ -1248,6 +1525,7 @@ export default function WriteBlogPage() {
     let cancelled = false;
     setWorkspaceReady(false);
     setContentBaseline(null);
+    lastRevisionSessionKeyRef.current = null;
     (async () => {
       try {
         const targetId = getWriteEditorSessionPostId();
@@ -1270,6 +1548,9 @@ export default function WriteBlogPage() {
           setThumbnailPreviewUrl(nextThumb);
           setThumbnailFile(null);
           setThumbnailCropArea(null);
+          setPostCategory(post.category ?? '');
+          setPostTags(Array.isArray(post.tags) ? post.tags : []);
+          setPostLanguage(post.language ?? 'en');
           setActivePostId(post._id);
           setLoadedPostStatus(post.status);
           setDraftSyncStatus('synced');
@@ -1304,6 +1585,9 @@ export default function WriteBlogPage() {
             setThumbnailPreviewUrl(nextThumb);
             setThumbnailFile(null);
             setThumbnailCropArea(null);
+            setPostCategory(draft.category ?? '');
+            setPostTags(Array.isArray(draft.tags) ? draft.tags : []);
+            setPostLanguage(draft.language ?? 'en');
             setActivePostId(draft._id);
             setLoadedPostStatus('draft');
             setDraftSyncStatus('synced');
@@ -1320,6 +1604,9 @@ export default function WriteBlogPage() {
             setTitle('');
             setSummary('');
             setBlocks([]);
+            setPostCategory('');
+            setPostTags([]);
+            setPostLanguage('en');
             setThumbnailPreviewUrl(null);
             setThumbnailFile(null);
             setThumbnailCropArea(null);
@@ -1371,7 +1658,9 @@ export default function WriteBlogPage() {
   }, [title, resizeTitleInput]);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString()), 1000);
+    const tick = () => setCurrentTime(new Date().toLocaleTimeString());
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -1440,18 +1729,32 @@ export default function WriteBlogPage() {
     history.pushState({ blogWriteGuard: true }, '', location.href);
   }, []);
 
-  const handleSubmit = useCallback(
-    async (status: 'draft' | 'published') => {
+  const openDeployOverlay = useCallback(() => {
+    if (!title.trim()) {
+      toast.error('ERROR: TITLE_REQUIRED');
+      return;
+    }
+    setPublishDialogSnapshot({
+      category: postCategory,
+      tags: [...postTags],
+      language: postLanguage,
+    });
+    setDeployOverlayOpen(true);
+  }, [title, postCategory, postTags, postLanguage]);
+
+  const executePublish = useCallback(
+    async (taxonomy: BlogPublishTaxonomy) => {
       if (!title.trim()) {
         toast.error('ERROR: TITLE_REQUIRED');
         return;
       }
       if (!token) return;
+      setDeployOverlayOpen(false);
       setSubmitting(true);
-      setSubmitAction(status);
+      setSubmitAction('published');
       try {
         await runBlogWriteSubmit({
-          status,
+          status: 'published',
           token,
           title,
           summary,
@@ -1467,12 +1770,142 @@ export default function WriteBlogPage() {
           setTitle,
           setSummary,
           setBlocks,
+          taxonomy,
         });
-        if (status === 'published') {
-          setContentBaseline(null);
+        appendRevision({ kind: 'published', label: 'Post published', at: Date.now() });
+        setContentBaseline(null);
+        setPostCategory('');
+        setPostTags([]);
+        setPostLanguage('en');
+      } catch (e) {
+        console.error(e);
+        toast.error('FATAL: UPLOAD_FAILED');
+      } finally {
+        setSubmitting(false);
+        setSubmitAction(null);
+      }
+    },
+    [
+      title,
+      token,
+      summary,
+      blocks,
+      thumbnailFile,
+      thumbnailCropArea,
+      thumbnailPreviewUrl,
+      clearThumbnail,
+      activePostId,
+      setDraftSyncStatus,
+      appendRevision,
+      setContentBaseline,
+      setPostCategory,
+      setPostTags,
+      setPostLanguage,
+    ],
+  );
+
+  const handleSavePostDetailsFromDialog = useCallback(
+    async (tax: BlogPublishTaxonomy) => {
+      if (!token) return;
+      setPostCategory(tax.category);
+      setPostTags(tax.tags);
+      setPostLanguage(tax.language);
+      setSubmitting(true);
+      setSubmitAction('metadata');
+      try {
+        const content = JSON.stringify(stripLegacyGifBlocks(blocks));
+        const summaryToSend =
+          summary && summary !== '<br>' && summaryWordCount(summary) > 0 ? summary.trim() : undefined;
+        const tr = taxonomyPayload(tax);
+        const thumbUrl = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
+        if (activePostId) {
+          const st = loadedPostStatus === 'published' ? 'published' : 'draft';
+          await blogApi.updatePost(
+            activePostId,
+            {
+              title: title.trim() || 'Untitled draft',
+              summary: summaryToSend,
+              content,
+              thumbnailUrl: thumbUrl,
+              status: st,
+              category: tr.category || '',
+              tags: tr.tags,
+              language: tr.language,
+            },
+            token,
+          );
         } else {
-          captureBaseline();
+          const { post } = await blogApi.saveDraft(
+            {
+              title: title.trim() || 'Untitled draft',
+              summary: summaryToSend,
+              content,
+              thumbnailUrl: thumbUrl,
+              category: tr.category || '',
+              tags: tr.tags,
+              language: tr.language,
+            },
+            token,
+          );
+          setActivePostId(post._id);
+          setLoadedPostStatus('draft');
+          setWriteEditorSessionPostId(post._id);
         }
+        toast.success('Classification saved to draft');
+        appendRevision({ kind: 'draft_saved', label: 'Details updated', at: Date.now() });
+      } catch (e) {
+        console.error(e);
+        toast.error(e instanceof Error ? e.message : 'Could not save details');
+      } finally {
+        setSubmitting(false);
+        setSubmitAction(null);
+      }
+    },
+    [
+      token,
+      blocks,
+      summary,
+      title,
+      thumbnailPreviewUrl,
+      activePostId,
+      loadedPostStatus,
+      appendRevision,
+      setActivePostId,
+      setLoadedPostStatus,
+    ],
+  );
+
+  const handleSaveDraft = useCallback(
+    async () => {
+      if (!title.trim()) {
+        toast.error('ERROR: TITLE_REQUIRED');
+        return;
+      }
+      if (!token) return;
+      setSubmitting(true);
+      setSubmitAction('draft');
+      try {
+        await runBlogWriteSubmit({
+          status: 'draft',
+          token,
+          title,
+          summary,
+          blocks,
+          thumbnailFile,
+          thumbnailCropArea,
+          thumbnailPreviewUrl,
+          clearThumbnail,
+          activePostId,
+          setActivePostId,
+          setLoadedPostStatus,
+          setDraftSyncStatus,
+          setTitle,
+          setSummary,
+          setBlocks,
+          taxonomy: { category: postCategory, tags: postTags, language: postLanguage },
+        });
+        appendRevision({ kind: 'draft_saved', label: 'Draft saved', at: Date.now() });
+        captureBaseline();
       } catch (e) {
         console.error(e);
         toast.error('FATAL: UPLOAD_FAILED');
@@ -1493,21 +1926,29 @@ export default function WriteBlogPage() {
       setDraftSyncStatus,
       activePostId,
       captureBaseline,
+      appendRevision,
+      postCategory,
+      postTags,
+      postLanguage,
     ],
   );
 
-  if (shouldBlock) return <TerminalLoaderPage />;
-  if (token && !workspaceReady) return <TerminalLoaderPage />;
+  if (shouldBlock) return <BlogWritePageSkeletonInner />;
+  if (token && !workspaceReady) return <BlogWritePageSkeletonInner />;
 
   const centreMaxWidthClass = resolveCentreMaxWidthClass(leftSidebarOpen, rightSidebarOpen);
 
   return (
-    <div className={cn(
-      'ss-write-theme-transition flex flex-col h-screen bg-background font-mono text-foreground border-2 border-border shadow-[4px_4px_0_0_rgba(0,0,0,1)] overflow-hidden'
-    )}>
+    <div
+      className={cn(
+        'ss-write-theme-transition flex h-screen max-h-screen w-full flex-col overflow-hidden border-2 border-border bg-background font-mono text-foreground shadow-[4px_4px_0_0_rgba(0,0,0,1)]',
+      )}
+    >
       <BlogWriteTopNav
         username={user?.username || 'user'}
         title={title}
+        focusChrome={focusChrome}
+        activeBodyBlock={activeBodyBlock}
         hasDraftContent={Boolean(title.trim() || blocks.length > 0)}
         loadedPostStatus={loadedPostStatus}
         leftSidebarOpen={leftSidebarOpen}
@@ -1539,29 +1980,13 @@ export default function WriteBlogPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="flex flex-col p-4 space-y-6 min-h-0 h-full w-[280px]"
+                className="flex h-full min-h-0 w-[280px] flex-col p-4"
               >
-                <section className="min-h-0 flex flex-col">
-                  <RetroAccordion
-                    label="Blocks"
-                    subtitle={blockCountSubtitle(blocks.length)}
-                    defaultOpen={true}
-                    className="flex-1 min-h-0 flex flex-col"
-                  >
-                    <div className="space-y-0.5 overflow-y-auto max-h-[200px]">
-                      {blocks.map((b) => (
-                        <div key={b.id} className="text-[10px] py-0.5 px-2 text-muted-foreground truncate border-b border-border/40 last:border-b-0">
-                          {b.type}
-                        </div>
-                      ))}
-                    </div>
-                  </RetroAccordion>
-                </section>
-                <section className="pt-6 border-t border-border/10">
-                  <h3 className="text-[10px] font-black text-muted-foreground uppercase mb-3 flex items-center gap-2">
+                <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <h3 className="mb-3 flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground">
                     <Wrench className="h-3.5 w-3.5" /> Tools
                   </h3>
-                  <div className="space-y-1">
+                  <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-0.5">
                     {DEFAULT_ITEMS.map((item) => {
                       const Icon = item.icon;
                       return (
@@ -1569,23 +1994,41 @@ export default function WriteBlogPage() {
                           key={item.id}
                           type="button"
                           onClick={() => addBlock(item.id as BlockType)}
-                          className="w-full text-left text-[11px] py-1.5 px-2 border border-transparent hover:border-border hover:bg-card cursor-pointer transition-all flex items-center gap-2 rounded"
+                          className="flex w-full cursor-pointer items-center gap-2 rounded border border-transparent px-2 py-1.5 text-left text-[11px] transition-all hover:border-border hover:bg-card"
                         >
-                          <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
                           <span className="truncate">{item.label}</span>
                         </button>
                       );
                     })}
                   </div>
                 </section>
-                <section className="pt-6 border-t border-border/10">
-                  <h3 className="text-[10px] font-black text-muted-foreground uppercase mb-3 flex items-center gap-2">
+                <section className="mt-auto shrink-0 border-t border-border/40 pt-4">
+                  <h3 className="mb-3 flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground">
                     <Cpu className="h-3.5 w-3.5" /> Stats
                   </h3>
-                  <div className="bg-black/5 p-3 border-2 border-border space-y-2">
-                    <div className="flex justify-between text-[9px]"><span>Blocks:</span> <span className="text-primary">{blocks.length}</span></div>
-                    <div className="flex justify-between text-[9px]"><span>Words:</span> <span className="text-primary">~{blocks.length * 12}</span></div>
-                    <div className="w-full bg-border h-1 mt-2"><div className="bg-primary h-full w-2/3"></div></div>
+                  <div className="space-y-2 border-2 border-border bg-black/5 p-3">
+                    <div className="flex justify-between text-[9px]">
+                      <span className="text-muted-foreground">Blocks (body)</span>
+                      <span className="font-mono font-bold text-primary">
+                        {primarySectionBlocks.length}/{MAX_BLOCKS_PER_SECTION}
+                      </span>
+                    </div>
+                    <div className="h-1 w-full bg-border">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{
+                          width: `${Math.min(100, (primarySectionBlocks.length / MAX_BLOCKS_PER_SECTION) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between gap-2 text-[9px]">
+                      <span className="text-muted-foreground">Words (workspace)</span>
+                      <span className="shrink-0 font-mono font-bold text-primary">{totalWords.toLocaleString()}</span>
+                    </div>
+                    <p className="text-[8px] leading-snug text-muted-foreground">
+                      Title, summary, and every block (paragraphs, headings, code, tables, captions, …).
+                    </p>
                   </div>
                 </section>
               </motion.div>
@@ -1598,10 +2041,7 @@ export default function WriteBlogPage() {
                 transition={{ duration: 0.15 }}
                 className="flex flex-col items-center py-3 gap-1 w-14 min-h-0 flex-1"
               >
-                <div className="text-[10px] font-bold text-primary shrink-0 mb-1" title={blockCountSubtitle(blocks.length)}>
-                  {blocks.length}
-                </div>
-                <div className="flex-1 overflow-y-auto flex flex-col items-center gap-0.5 min-h-0">
+                <div className="flex-1 overflow-y-auto flex flex-col items-center gap-0.5 min-h-0 pt-1">
                   {DEFAULT_ITEMS.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -1626,17 +2066,17 @@ export default function WriteBlogPage() {
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="3"
-                        strokeDasharray={`${Math.min(blocks.length / 10, 1) * 88} 88`}
+                        strokeDasharray={`${Math.min(primarySectionBlocks.length / MAX_BLOCKS_PER_SECTION, 1) * 88} 88`}
                         strokeLinecap="round"
                         className="text-primary transition-all duration-300"
                       />
                     </svg>
                     <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-foreground">
-                      {blocks.length}
+                      {primarySectionBlocks.length}
                     </span>
                   </div>
-                  <div className="text-[8px] text-center text-muted-foreground space-y-0.5">
-                    <div className="font-semibold text-foreground">~{blocks.length * 12}</div>
+                  <div className="space-y-0.5 text-center text-[8px] text-muted-foreground">
+                    <div className="font-semibold text-foreground">{totalWords.toLocaleString()}</div>
                     <div>words</div>
                   </div>
                 </div>
@@ -1658,6 +2098,10 @@ export default function WriteBlogPage() {
                  <textarea
                   ref={titleInputRef}
                   value={title}
+                  onFocus={() => {
+                    setFocusChrome('title');
+                    setActiveBodyBlock(null);
+                  }}
                   onChange={(e) => {
                     const next = e.target.value.slice(0, TITLE_MAX).replaceAll(/\s+/g, ' ');
                     setTitle(next);
@@ -1688,7 +2132,15 @@ export default function WriteBlogPage() {
                   rows={1}
                  />
                </div>
-               <SummaryEditor value={summary} onChange={setSummary} maxWords={SUMMARY_MAX_WORDS} />
+               <SummaryEditor
+                 value={summary}
+                 onChange={setSummary}
+                 maxWords={SUMMARY_MAX_WORDS}
+                 onFocusCapture={() => {
+                   setFocusChrome('summary');
+                   setActiveBodyBlock(null);
+                 }}
+               />
              </div>
 
              <BlogWriteEditor
@@ -1700,6 +2152,7 @@ export default function WriteBlogPage() {
                isSidebarOpen={isOpen}
                maxWidthClassName="max-w-full"
                activeSectionId={PRIMARY_SECTION_ID}
+               onActiveBlockChange={handleBodyActiveBlock}
              />
           </div>
         </div>
@@ -1711,7 +2164,7 @@ export default function WriteBlogPage() {
           animate={{ width: rightSidebarOpen ? 300 : 56 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className={cn(
-            'flex-shrink-0 flex flex-col border-l-2 border-border bg-card overflow-hidden min-h-full',
+            'flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-l-2 border-border bg-card',
             'hidden lg:flex',
           )}
         >
@@ -1723,16 +2176,17 @@ export default function WriteBlogPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="flex flex-col p-6 space-y-6 min-h-0 h-full w-[300px] overflow-y-auto"
+                className="flex h-full min-h-0 w-[300px] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain p-6 [scrollbar-width:thin]"
               >
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border-b border-border pb-2">
+                <div className="shrink-0 space-y-4">
+                  <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em]">
                     <ShieldCheck className="h-4 w-4 text-primary" /> Publish_Control
                   </h3>
                   <div className="grid grid-cols-1 gap-3">
                     <button
-                      onClick={() => handleSubmit('published')}
-                      disabled={submitting || saveDisabledNoEdits}
+                      type="button"
+                      onClick={openDeployOverlay}
+                      disabled={submitting || !title.trim()}
                       className="group relative bg-primary text-primary-foreground border-2 border-black p-3 font-black uppercase text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -1740,7 +2194,8 @@ export default function WriteBlogPage() {
                       </div>
                     </button>
                     <button
-                      onClick={() => handleSubmit('draft')}
+                      type="button"
+                      onClick={() => void handleSaveDraft()}
                       disabled={submitting || saveDisabledNoEdits}
                       className="bg-muted border-2 border-border p-3 font-black uppercase text-xs shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all hover:bg-card disabled:opacity-40 disabled:pointer-events-none"
                     >
@@ -1750,31 +2205,29 @@ export default function WriteBlogPage() {
                     </button>
                   </div>
                 </div>
-                <div className="space-y-4 pt-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border-b border-border pb-2">
+                <div className="mb-6 shrink-0 space-y-4 border-t border-border/40 pt-6">
+                  <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
                     <Globe className="h-4 w-4 text-primary" /> Asset_Configuration
                   </h3>
                   <div>
-                    <label htmlFor="write-blog-thumbnail-trigger" className="text-[9px] font-bold text-muted-foreground uppercase block mb-1">
-                      Thumbnail
-                    </label>
+                   
                     {thumbnailPreviewUrl ? (
                       <div className="space-y-2">
-                        <div className="aspect-video border-2 border-border overflow-hidden rounded-lg bg-muted">
+                        <div className="aspect-video overflow-hidden bg-muted ring-1 ring-border/40">
                           <img src={thumbnailPreviewUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => setThumbnailDialogOpen(true)}
-                            className="flex-1 px-2 py-1.5 text-[10px] font-bold uppercase rounded border border-border hover:bg-muted/40"
+                            className="flex-1 px-2 py-1.5 text-[10px] font-bold uppercase border-0 bg-muted/50 ring-1 ring-border/40 hover:bg-muted/70"
                           >
                             Change
                           </button>
                           <button
                             type="button"
                             onClick={clearThumbnail}
-                            className="px-2 py-1.5 text-[10px] font-bold uppercase rounded border border-destructive text-destructive hover:bg-destructive/10 flex items-center gap-1"
+                            className="px-2 py-1.5 text-[10px] font-bold uppercase rounded-md border-0 bg-destructive/10 text-destructive ring-1 ring-destructive/30 hover:bg-destructive/15 flex items-center gap-1"
                           >
                             <Trash2 className="h-3 w-3" /> Remove
                           </button>
@@ -1786,30 +2239,60 @@ export default function WriteBlogPage() {
                         id="write-blog-thumbnail-trigger"
                         onClick={() => setThumbnailDialogOpen(true)}
                         className={cn(
-                          'w-full aspect-video border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer',
-                          'bg-muted/20 hover:bg-muted/30 transition-colors text-left',
+                          'w-full aspect-video flex flex-col items-center justify-center gap-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]  border border-dashed border-border ',
+                          'hover:bg-muted/35 transition-colors text-left',
                         )}
                       >
                         <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase placeholder:text-muted-foreground">Upload thumbnail</span>
-                        <span className="text-[9px] text-muted-foreground">JPEG, PNG, GIF, WebP. Max {THUMB_MAX_MB}MB</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Upload thumbnail</span>
+                        <span className="text-[9px] text-muted-foreground">JPEG, PNG, GIF, WebP · max {THUMB_MAX_MB}MB</span>
                       </button>
                     )}
                   </div>
                 </div>
-                <ThumbnailCropDialog
-                  open={thumbnailDialogOpen}
-                  onClose={() => setThumbnailDialogOpen(false)}
-                  onConfirm={handleThumbnailConfirm}
-                />
-                <div className="mt-auto bg-muted/50 p-4 border-2 border-border border-dashed">
-                  <h4 className="text-[9px] font-black uppercase mb-2 flex items-center gap-2">
-                    <History className="h-3 w-3" /> Revision_History
-                  </h4>
-                  <div className="space-y-2 opacity-50">
-                    <div className="text-[8px] flex justify-between italic"><span>v1.0.2 - Initial</span> <span>12:40</span></div>
-                    <div className="text-[8px] flex justify-between italic"><span>v1.0.3 - Layout</span> <span>12:45</span></div>
+                <div
+                  ref={revisionHistorySectionRef}
+                  className="mt-auto flex min-h-0 flex-1 flex-col border-t border-border/50 pt-6 scroll-mt-6"
+                >
+                  <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+                    <h4 className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wide text-foreground">
+                      <History className="h-3.5 w-3.5 shrink-0 text-primary" /> Revision history
+                    </h4>
+                    {revisions.length > 0 ? (
+                      <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{revisions.length}</span>
+                    ) : null}
                   </div>
+                  <ul className="min-h-0 max-h-[min(42vh,15rem)] flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-1 [scrollbar-width:thin]">
+                    {revisions.slice(0, REVISIONS_SIDEBAR_VISIBLE).map((r) => (
+                      <li
+                        key={r.id}
+                        className="flex gap-2 border-l-2 border-primary/50 pl-2.5 text-[9px] leading-snug"
+                      >
+                        <span
+                          className={cn(
+                            'mt-0.5 shrink-0 rounded border px-1 py-0.5 text-[7px] font-black uppercase tracking-wider',
+                            revisionKindBadgeClass(r.kind),
+                          )}
+                        >
+                          {r.kind.replaceAll('_', ' ')}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-foreground">{r.label}</div>
+                          <div className="mt-0.5 font-mono text-[8px] text-muted-foreground">{formatRevisionWhen(r.at)}</div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {revisions.length > REVISIONS_SIDEBAR_VISIBLE ? (
+                    <button
+                      type="button"
+                      onClick={() => setRevisionHistoryOpen(true)}
+                      className="mt-3 flex w-full shrink-0 items-center justify-center gap-2 border-2 border-border bg-muted/30 px-2 py-2 text-[9px] font-black uppercase tracking-wide text-foreground transition-colors hover:border-primary hover:bg-primary/10"
+                    >
+                      <ListTree className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+                      View all ({revisions.length})
+                    </button>
+                  ) : null}
                 </div>
               </motion.div>
             ) : (
@@ -1823,8 +2306,8 @@ export default function WriteBlogPage() {
               >
                 <button
                   type="button"
-                  onClick={() => handleSubmit('published')}
-                  disabled={submitting || saveDisabledNoEdits}
+                  onClick={openDeployOverlay}
+                  disabled={submitting || !title.trim()}
                   title="Deploy post"
                   className="p-2 rounded border border-transparent hover:border-border hover:bg-muted text-muted-foreground hover:text-primary transition-all disabled:opacity-50"
                 >
@@ -1832,7 +2315,7 @@ export default function WriteBlogPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSubmit('draft')}
+                  onClick={() => void handleSaveDraft()}
                   disabled={submitting || saveDisabledNoEdits}
                   title="Save draft"
                   className="p-2 rounded border border-transparent hover:border-border hover:bg-muted text-muted-foreground hover:text-primary transition-all disabled:opacity-50"
@@ -1857,6 +2340,82 @@ export default function WriteBlogPage() {
           </AnimatePresence>
         </motion.div>
       </div>
+
+      <ThumbnailCropDialog
+        open={thumbnailDialogOpen}
+        onClose={() => setThumbnailDialogOpen(false)}
+        onConfirm={handleThumbnailConfirm}
+      />
+
+      <BlogWriteDeployOverlay
+        open={deployOverlayOpen}
+        onClose={() => !submitting && setDeployOverlayOpen(false)}
+        snapshot={publishDialogSnapshot}
+        taxonomyCategories={taxonomyCategories}
+        taxonomyTags={taxonomyTags}
+        title={title}
+        summaryHtml={summary}
+        thumbnailPreviewUrl={thumbnailPreviewUrl}
+        deploying={submitting && submitAction === 'published'}
+        savingClassification={submitting && submitAction === 'metadata'}
+        onSaveClassification={(t) => void handleSavePostDetailsFromDialog(t)}
+        onDeploy={(t) => void executePublish(t)}
+      />
+
+      <Dialog
+        open={revisionHistoryOpen}
+        onClose={() => setRevisionHistoryOpen(false)}
+        titleId="revision-history-all-title"
+        panelClassName={cn(
+          'pointer-events-auto flex h-[min(90vh,560px)] max-h-[min(90vh,560px)] w-full max-w-lg flex-col overflow-hidden',
+          'border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]',
+        )}
+        contentClassName="relative flex h-full min-h-0 flex-1 flex-col p-0"
+      >
+        <div className="shrink-0 border-b-2 border-border px-5 py-4 sm:px-6">
+          <h2 id="revision-history-all-title" className="text-sm font-black uppercase tracking-widest">
+            All revision history
+          </h2>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {revisions.length} {revisions.length === 1 ? 'entry' : 'entries'} · newest first
+          </p>
+        </div>
+        <div
+          ref={revisionDialogScrollRef}
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-5 py-4 sm:px-6 [scrollbar-width:thin]"
+        >
+          <ul className="space-y-3">
+            {revisions.map((r) => (
+              <li
+                key={r.id}
+                className="flex gap-2 border-l-2 border-primary/50 pl-2.5 text-[10px] leading-snug"
+              >
+                <span
+                  className={cn(
+                    'mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider',
+                    revisionKindBadgeClass(r.kind),
+                  )}
+                >
+                  {r.kind.replaceAll('_', ' ')}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-foreground">{r.label}</div>
+                  <div className="mt-0.5 font-mono text-[9px] text-muted-foreground">{formatRevisionWhen(r.at)}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="shrink-0 border-t-2 border-border bg-muted/15 px-5 py-3 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setRevisionHistoryOpen(false)}
+            className="w-full border-2 border-border bg-card px-4 py-2 text-[10px] font-black uppercase tracking-wide hover:bg-muted/50"
+          >
+            Close
+          </button>
+        </div>
+      </Dialog>
 
       <ConfirmDialog
         open={leaveConfirmOpen}

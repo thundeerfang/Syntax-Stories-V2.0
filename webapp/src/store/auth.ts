@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware';
 import { authApi, AuthError, normalizeUser, type AuthUser, type ProfileUpdateSection, type UpdateProfilePayload } from '@/api/auth';
 import { runProfilePatch } from '@/lib/auth/runProfilePatch';
 import { setLastUserName } from '@/lib/lastUser';
+import { consumePostAuthRedirect } from '@/lib/postAuthRedirect';
 
 const AUTH_KEY = 'syntax-stories-auth';
 
@@ -136,11 +137,19 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const otpVersion = get().pendingOtpVersion;
+          const pendingRef =
+            typeof globalThis.sessionStorage !== 'undefined'
+              ? globalThis.sessionStorage.getItem('pendingReferralCode')
+              : null;
           const res = await authApi.verifyOtp({
             email,
             code,
             ...(typeof otpVersion === 'number' ? { otpVersion } : {}),
+            ...(pendingRef ? { referralCode: pendingRef } : {}),
           });
+          if (pendingRef && typeof globalThis.sessionStorage !== 'undefined') {
+            globalThis.sessionStorage.removeItem('pendingReferralCode');
+          }
           if (res.twoFactorRequired && res.challengeToken) {
             set({
               twoFactor: {
@@ -163,6 +172,7 @@ export const useAuthStore = create<AuthState>()(
             pendingOtpVersion: null,
           });
           if (user?.fullName) setLastUserName(user.fullName);
+          if (consumePostAuthRedirect()) return;
         } catch (err) {
           const stale =
             err instanceof AuthError && err.extras?.code === 'OTP_STALE_VERSION';
@@ -181,6 +191,7 @@ export const useAuthStore = create<AuthState>()(
           const user = normalizeUser(res.user);
           set({ user, token: res.accessToken, refreshToken: res.refreshToken ?? null, isLoading: false, twoFactor: null });
           if (user?.fullName) setLastUserName(user.fullName);
+          if (consumePostAuthRedirect()) return;
         } catch (err) {
           set({ isLoading: false });
           const message =

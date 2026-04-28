@@ -53,7 +53,7 @@ export function MermaidBlockEditor({
   }, [source]);
 
   return (
-    <div className="group space-y-2 rounded-none border-2 border-border bg-card p-3 shadow-[3px_3px_0_0_var(--border)]">
+    <div className="group space-y-2 rounded-md border-0 bg-muted/10 p-3 ring-1 ring-border/35">
       <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
         <span className="flex items-center gap-2">
           <Network className="h-3.5 w-3.5" /> Mermaid diagram
@@ -73,9 +73,9 @@ export function MermaidBlockEditor({
         spellCheck={false}
         placeholder="graph TD ..."
         className={cn(
-          'min-h-[160px] w-full resize-y rounded-none border-2 border-border bg-background p-3 font-mono text-[11px] leading-relaxed',
-          'text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none',
-          parseHint ? 'border-destructive/60' : '',
+          'min-h-[160px] w-full resize-y rounded-md border-0 bg-muted/25 p-3 font-mono text-[11px] leading-relaxed ring-1 ring-border/40',
+          'text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35',
+          parseHint ? 'ring-destructive/50' : '',
         )}
       />
       {parseHint ? (

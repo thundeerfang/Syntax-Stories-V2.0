@@ -42,7 +42,7 @@ export type BlogCardProps = Readonly<{
   viewerUsername?: string | null;
   /** Shorter cover + tighter body for dashboard grids. */
   density?: 'default' | 'compact';
-  /** Activity grids: disable lift/shadow and cover zoom on hover. */
+  /** When true, no border/shadow lift or cover zoom on hover (e.g. profile grid with its own overlay). */
   suppressChromeHover?: boolean;
   className?: string;
 }>;
@@ -98,7 +98,9 @@ export function BlogCard({
                 alt=""
                 className={cn(
                   'h-full w-full object-cover',
-                  !suppressChromeHover && 'transition-transform duration-300 group-hover:scale-[1.02]',
+                  suppressChromeHover
+                    ? 'transition-none'
+                    : 'transition-transform duration-300 group-hover:scale-[1.02]',
                 )}
               />
             ) : (

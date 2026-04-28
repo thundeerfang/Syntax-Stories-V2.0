@@ -35,6 +35,7 @@ export const rateLimitVerifyOtp = createRateLimiter(authConfig.RATE_LIMIT_VERIFY
 export const rateLimitSignupEmail = createRateLimiter(authConfig.RATE_LIMIT_SIGNUP.windowMs, authConfig.RATE_LIMIT_SIGNUP.max, redisKeys.rateLimit.signupEmail, true);
 export const rateLimitRefresh = createRateLimiter(authConfig.RATE_LIMIT_REFRESH.windowMs, authConfig.RATE_LIMIT_REFRESH.max, redisKeys.rateLimit.refresh);
 export const rateLimitUpdateProfile = createRateLimiter(authConfig.RATE_LIMIT_UPDATE_PROFILE.windowMs, authConfig.RATE_LIMIT_UPDATE_PROFILE.max, redisKeys.rateLimit.updateProfile);
-export const rateLimitFeedback = createRateLimiter(authConfig.RATE_LIMIT_FEEDBACK.windowMs, authConfig.RATE_LIMIT_FEEDBACK.max, redisKeys.rateLimit.feedback, true);
-export const rateLimitInviteResolve = createRateLimiter(authConfig.RATE_LIMIT_INVITE_RESOLVE.windowMs, authConfig.RATE_LIMIT_INVITE_RESOLVE.max, redisKeys.rateLimit.inviteResolve);
+/** POST /api/feedback — per IP + optional device fingerprint. */
+export const rateLimitFeedback = createRateLimiter(60 * 60 * 1000, 20, redisKeys.rateLimit.feedback, true);
+export const rateLimitInviteResolve = createRateLimiter(authConfig.RATE_LIMIT_INVITE_RESOLVE.windowMs, authConfig.RATE_LIMIT_INVITE_RESOLVE.max, redisKeys.rateLimit.inviteResolve, false);
 //# sourceMappingURL=rateLimitAuth.js.map

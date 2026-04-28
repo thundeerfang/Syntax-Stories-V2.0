@@ -11,6 +11,7 @@
     "dev:clean": "rimraf dist && npm run dev",
     "generate-keys": "node scripts/generate-keys.js",
     "reconcile:follow-counts": "node --loader ts-node/esm src/scripts/reconcileFollowCounts.ts",
+    "referral:integrity": "tsx src/scripts/referralIntegrityCheck.ts",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",

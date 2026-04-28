@@ -71,9 +71,10 @@ export const rateLimitUpdateProfile = createRateLimiter(
   redisKeys.rateLimit.updateProfile
 );
 
+/** POST /api/feedback — per IP + optional device fingerprint. */
 export const rateLimitFeedback = createRateLimiter(
-  authConfig.RATE_LIMIT_FEEDBACK.windowMs,
-  authConfig.RATE_LIMIT_FEEDBACK.max,
+  60 * 60 * 1000,
+  20,
   redisKeys.rateLimit.feedback,
   true
 );
@@ -81,5 +82,6 @@ export const rateLimitFeedback = createRateLimiter(
 export const rateLimitInviteResolve = createRateLimiter(
   authConfig.RATE_LIMIT_INVITE_RESOLVE.windowMs,
   authConfig.RATE_LIMIT_INVITE_RESOLVE.max,
-  redisKeys.rateLimit.inviteResolve
+  redisKeys.rateLimit.inviteResolve,
+  false
 );

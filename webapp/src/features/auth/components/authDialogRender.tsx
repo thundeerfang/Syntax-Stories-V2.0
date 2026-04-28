@@ -20,6 +20,20 @@ const TERMS_LINK = '/terms';
 const PRIVACY_LINK = '/privacy';
 const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
+/** Append `?ref=` from sessionStorage for OAuth signup (invite / ?ref= flows). */
+function oauthSignupHref(providerPath: string): string | undefined {
+  if (!BACKEND_BASE) return undefined;
+  const base = `${BACKEND_BASE.replace(/\/$/, '')}${providerPath}`;
+  let ref = '';
+  try {
+    ref = globalThis.sessionStorage?.getItem('pendingReferralCode')?.trim() ?? '';
+  } catch {
+    ref = '';
+  }
+  if (!ref) return base;
+  return `${base}?ref=${encodeURIComponent(ref)}`;
+}
+
 type FormSubmit = { preventDefault(): void; currentTarget: HTMLFormElement };
 
 function SocialButton({
@@ -336,31 +350,31 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
             <SocialButton
               icon={GoogleIcon}
               label="Sign up with Google"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/signup` : undefined}
+              href={oauthSignupHref('/auth/google/signup')}
               onBeforeNavigate={p.close}
             />
             <SocialButton
               icon={FacebookIcon}
               label="Sign up with Facebook"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/signup` : undefined}
+              href={oauthSignupHref('/auth/facebook/signup')}
               onBeforeNavigate={p.close}
             />
             <SocialButton
               icon={GithubIcon}
               label="Sign up with GitHub"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/signup` : undefined}
+              href={oauthSignupHref('/auth/github/signup')}
               onBeforeNavigate={p.close}
             />
             <SocialButton
               iconSrc={ICON_DISCORD}
               label="Sign up with Discord"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/discord/signup` : undefined}
+              href={oauthSignupHref('/auth/discord/signup')}
               onBeforeNavigate={p.close}
             />
             <SocialButton
               icon={XIcon}
               label="Sign up with X"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/signup` : undefined}
+              href={oauthSignupHref('/auth/x/signup')}
               onBeforeNavigate={p.close}
             />
           </div>

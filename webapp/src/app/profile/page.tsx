@@ -13,7 +13,6 @@ import {
   Users,
   Award,
   Terminal,
-  Eye,
 
   TrendingUp,
   Copy,
@@ -30,8 +29,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
 import { setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
-import { Switch, AreaChart } from '@/components/retroui';
-import { useSidebar } from '@/hooks/useSidebar';
+import { AreaChart } from '@/components/retroui';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
 import {
@@ -49,7 +47,7 @@ import { ProfileBlogPanel } from '@/components/profile/ProfileBlogPanel';
 import { ProfileActivityBlogList } from '@/components/blog/ProfileActivityBlogList';
 import { FollowersFollowingDialog, MissingFieldsDialog, MediaFullViewDialog } from '@/components/profile/dialog';
 import { getSkillIconUrl } from '@/lib/skillIcons';
-import { TerminalLoaderPage } from '@/components/loader';
+import { ProfilePageSkeletonInner } from '@/components/skeletons';
 import { WorkExperienceCard } from '@/app/settings/settings-list/WorkExperienceCard';
 import { EducationCard } from '@/app/settings/settings-list/EducationCard';
 import { CertificationCard } from '@/app/settings/settings-list/CertificationCard';
@@ -59,6 +57,7 @@ import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/component
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { GithubIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from '@/components/icons/SocialProviderIcons';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
 import {
   certificationListKey,
   domainFromUrl,
@@ -127,13 +126,11 @@ const COMPLETE_ITEM_PROFILE_SECTION: Record<CompleteItemDialogSection, ProfileUp
 
 export default function ProfilePage() { // NOSONAR S3776 — large owner dashboard; split into section components incrementally
   const router = useRouter();
-  const { isOpen } = useSidebar();
   const { user, token, isHydrated, shouldBlock } = useRequireAuth();
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const [activityTab, setActivityTab] = useState<ActivityTab>('posts');
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [profileUrlCopied, setProfileUrlCopied] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [pdfUploading, setPdfUploading] = useState(false);
   const [missingFieldsDialogOpen, setMissingFieldsDialogOpen] = useState(false);
   const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
@@ -362,7 +359,7 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
   );
 
   if (!isHydrated || shouldBlock) {
-    return <TerminalLoaderPage pageName="profile" />;
+    return <ProfilePageSkeletonInner />;
   }
 
   const goToSettingsSection = (section: string, opts?: { editIndex?: number }) => {
@@ -382,8 +379,9 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 font-sans text-foreground ss-profile-readonly">
-      <div className={cn('mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8', isOpen ? 'max-w-6xl' : 'max-w-7xl')}>
+    <div className="min-h-screen w-full py-6 font-sans text-foreground ss-profile-readonly md:py-8">
+      <div className={SHELL_CONTENT_RAIL_CLASS}>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         
         {/* ================= LEFT COLUMN ================= */}
         <div className="lg:col-span-8 space-y-8">
@@ -393,17 +391,23 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             {/* Cover: user cover or gradient */}
             <div className="h-48 relative border-b-4 border-border overflow-hidden">
               {user?.coverBanner ? (
-                <img src={user.coverBanner} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={user.coverBanner}
+                  alt={user.coverBannerAlt?.trim() || 'Cover banner'}
+                  title={user.coverBannerAlt?.trim() || undefined}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full gradient-auto" />
               )}
             </div>
 
             <div className="px-6 pb-8 pt-24 md:pt-32 relative bg-card">
-              <div className="absolute -top-14 left-6 size-28 md:size-36 border-4 border-border bg-muted shadow-[6px_6px_0px_0px_var(--primary)] overflow-hidden">
+              <div className="absolute -top-14 left-6 size-28 md:size-36 border-4 border-border bg-muted shadow-[6px_6px_0px_0px_var(--border)] overflow-hidden">
                 <img
                   src={user?.profileImg || user?.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
-                  alt="Avatar"
+                  alt={user?.profileImgAlt?.trim() || 'Profile photo'}
+                  title={user?.profileImgAlt?.trim() || undefined}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -440,27 +444,24 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                       )}
                     </div>
                   </div>
-                  {!isPreviewMode && (
-                    <div className="flex gap-3 md:pt-1">
-                      <Link href="/settings" className="flex items-center gap-2 px-4 py-2 border-2 border-border bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] active:shadow-none transition-all">
-                        <Edit3 className="size-3.5" /> Edit Profile
-                      </Link>
-                    </div>
-                  )}
+                  <div className="flex gap-3 md:pt-1">
+                    <Link href="/settings" className="flex items-center gap-2 px-4 py-2 border-2 border-border bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)] active:shadow-none transition-all">
+                      <Edit3 className="size-3.5" /> Edit Profile
+                    </Link>
+                  </div>
                 </div>
 
                 {user?.bio?.trim() ? (
-                  <div className="relative border-2 border-border bg-muted/5 p-6 pt-10 group">
-                    <div className="absolute top-0 left-0 flex items-stretch">
-                      <div className="bg-primary px-3 py-1.5 flex items-center gap-2">
+                  <div className="relative border-2 border-primary bg-muted/5 p-6 pt-8 group">
+                    <div className="absolute -top-3 left-6 inline-flex items-center bg-background px-2">
+                      <div className="flex items-center bg-primary px-2 py-1 ">
                         <Terminal className="size-3 text-primary-foreground" />
                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
                           Summary_Report
                         </span>
                       </div>
-                      <div className="w-4 bg-primary" style={{ clipPath: 'polygon(0 0, 0% 100%, 100% 100%)' }} />
                     </div>
-
+                    
                     <div className="absolute top-2 right-4 text-[8px] font-mono text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
                       REF_NO: {String((user as any)?.id ?? (user as any)?._id ?? '').slice(-8) || '0000X-SYS'}
                     </div>
@@ -478,14 +479,12 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">
                       &gt; Biography_Data_Missing
                     </p>
-                    {!isPreviewMode && (
-                      <Link
-                        href="/settings"
-                        className="px-4 py-2 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
-                      >
-                        Initialize Summary
-                      </Link>
-                    )}
+                    <Link
+                      href="/settings"
+                      className="px-4 py-2 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
+                    >
+                      Initialize Summary
+                    </Link>
                   </div>
                 )}
               </div>
@@ -521,7 +520,7 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             </div>
           </section>
 
-          {!isPreviewMode && token && user?.username ? (
+          {token && user?.username ? (
             <ProfileBlogPanel
               token={token}
               username={user.username}
@@ -536,15 +535,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               <h2 className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
                 <Activity className="size-4 text-primary" /> Activity
               </h2>
-              {!isPreviewMode && (
-                <Link
-                  href="/blogs/write"
-                  onClick={() => setWriteEditorSessionPostId(null)}
-                  className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest shadow-[3px_3px_0px_0px_var(--border)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
-                >
-                  <PenSquare className="size-3.5" /> Add post
-                </Link>
-              )}
+              <Link
+                href="/blogs/write"
+                onClick={() => setWriteEditorSessionPostId(null)}
+                className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest shadow-[3px_3px_0px_0px_var(--border)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+              >
+                <PenSquare className="size-3.5" /> Add post
+              </Link>
             </div>
             <div className="flex gap-1 border-b-4 border-border pb-3">
               {(['posts', 'replies', 'repost'] as const).map((tab) => (
@@ -552,10 +549,10 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                   key={tab}
                   onClick={() => setActivityTab(tab)}
                   className={cn(
-                    'flex-1 px-3 py-2 font-black text-[10px] uppercase tracking-widest border-2 border-border transition-all',
+                    'flex-1 px-3 py-2 font-black text-[10px] uppercase tracking-widest border-2 border-border transition-all duration-200 ease-out',
                     activityTab === tab
                       ? 'bg-primary text-primary-foreground border-primary shadow-[3px_3px_0px_0px_var(--border)]'
-                      : 'bg-card hover:bg-muted text-muted-foreground'
+                      : 'bg-card hover:bg-muted/70 text-muted-foreground hover:text-foreground'
                   )}
                 >
                   {activityTabLabel(tab)}
@@ -579,8 +576,7 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             </div>
           </section>
 
-          {/* AUTOFILL - hidden in preview (owner-only) */}
-          {!isPreviewMode && (
+          {/* AUTOFILL (owner-only) */}
           <div className="border-4 border-border bg-primary p-6 flex flex-col md:flex-row items-center gap-6 shadow-[8px_8px_0px_0px_var(--border)]">
             <input
               ref={pdfInputRef}
@@ -625,7 +621,6 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               {pdfUploading ? 'Parsing…' : 'Upload PDF'}
             </button>
           </div>
-          )}
 
           <MissingFieldsDialog
             open={missingFieldsDialogOpen}
@@ -673,7 +668,6 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                 icon={Monitor}
                 title="Stack & Tools"
                 settingsSection="stack-tools"
-                isPreviewMode={isPreviewMode}
                 settingsUrl={() => '/settings'}
               />
               {user?.stackAndTools?.length ? (
@@ -712,15 +706,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               ) : (
                 <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase">Add your tech stack</p>
-                  {!isPreviewMode && (
-                    <button
-                      type="button"
-                      onClick={() => goToSettingsSection('stack-tools')}
-                      className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                    >
-                      <Plus className="size-3" /> Add
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToSettingsSection('stack-tools')}
+                    className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
+                  >
+                    <Plus className="size-3" /> Add
+                  </button>
                 </div>
               )}
             </section>
@@ -730,14 +722,14 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                 icon={Wrench}
                 title="My Setup"
                 settingsSection="my-setup"
-                isPreviewMode={isPreviewMode}
                 settingsUrl={() => '/settings'}
               />
               {(user as any)?.mySetup?.length ? (
                 <div className="relative">
                   <div className="flex gap-3 overflow-x-auto ss-scrollbar-hide py-1 pr-1 snap-x">
-                    {((user as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string }>).slice(0, 5).map((it) => {
+                    {((user as any).mySetup as Array<{ label: string; imageUrl: string; productUrl?: string; imageAlt?: string }>).slice(0, 5).map((it) => {
                       const hasProduct = Boolean((it.productUrl ?? '').trim());
+                      const setupImgLabel = it.imageAlt?.trim() || it.label;
                       return (
                         <div
                           key={`setup-${it.imageUrl}-${it.label}`}
@@ -745,13 +737,14 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                         >
                           <button
                             type="button"
-                            onClick={() => setMySetupPreview({ src: it.imageUrl, title: it.label })}
+                            onClick={() => setMySetupPreview({ src: it.imageUrl, title: setupImgLabel })}
                             className="relative block h-28 w-full cursor-zoom-in border-b-2 border-border bg-muted/20 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                             aria-label={`View ${it.label} image larger`}
                           >
                             <img
                               src={it.imageUrl}
-                              alt={it.label}
+                              alt={setupImgLabel}
+                              title={it.imageAlt?.trim() || undefined}
                               className="h-full w-full object-cover transition-opacity hover:opacity-90"
                               loading="lazy"
                             />
@@ -781,15 +774,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               ) : (
                 <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase">Add your setup</p>
-                  {!isPreviewMode && (
-                    <button
-                      type="button"
-                      onClick={() => goToSettingsSection('my-setup')}
-                      className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                    >
-                      <Plus className="size-3" /> Add
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToSettingsSection('my-setup')}
+                    className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
+                  >
+                    <Plus className="size-3" /> Add
+                  </button>
                 </div>
               )}
             </section>
@@ -802,26 +793,24 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               onOpenChange={(open) => setSectionOpen('workExperience', open)}
               subtitle={entriesCountSubtitle(user?.workExperiences?.length ?? 0)}
               headerAction={
-                !isPreviewMode && (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
-                    onClick={(e) => {
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToSettingsSection('work-experiences');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
                       e.stopPropagation();
                       goToSettingsSection('work-experiences');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        goToSettingsSection('work-experiences');
-                      }
-                    }}
-                  >
-                    <Plus className="size-3" /> Add
-                  </div>
-                )
+                    }
+                  }}
+                >
+                  <Plus className="size-3" /> Add
+                </div>
               }
             >
               {user?.workExperiences?.length ? (
@@ -861,7 +850,6 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               ) : (
                 <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add work experience</p>
-                  {!isPreviewMode && (
                   <button
                     type="button"
                     onClick={() => goToSettingsSection('work-experiences')}
@@ -869,7 +857,6 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                   >
                     <Plus className="size-3" /> Add
                   </button>
-                  )}
                 </div>
               )}
             </ProfileSectionAccordion>
@@ -880,26 +867,24 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             onOpenChange={(open) => setSectionOpen('education', open)}
             subtitle={entriesCountSubtitle(user?.education?.length ?? 0)}
             headerAction={
-              !isPreviewMode && (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
-                  onClick={(e) => {
+              <div
+                role="button"
+                tabIndex={0}
+                className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToSettingsSection('education');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
                     e.stopPropagation();
                     goToSettingsSection('education');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      goToSettingsSection('education');
-                    }
-                  }}
-                >
-                  <Plus className="size-3" /> Add
-                </div>
-              )
+                  }
+                }}
+              >
+                <Plus className="size-3" /> Add
+              </div>
             }
           >
               {user?.education?.length ? (
@@ -935,15 +920,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               ) : (
                 <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add education</p>
-                  {!isPreviewMode && (
-                    <button
-                      type="button"
-                      onClick={() => goToSettingsSection('education')}
-                      className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                    >
-                      <Plus className="size-3" /> Add
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToSettingsSection('education')}
+                    className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
+                  >
+                    <Plus className="size-3" /> Add
+                  </button>
                 </div>
               )}
             </ProfileSectionAccordion>
@@ -954,26 +937,24 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             onOpenChange={(open) => setSectionOpen('certification', open)}
             subtitle={entriesCountSubtitle(user?.certifications?.length ?? 0)}
             headerAction={
-              !isPreviewMode && (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
-                  onClick={(e) => {
+              <div
+                role="button"
+                tabIndex={0}
+                className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToSettingsSection('certifications');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
                     e.stopPropagation();
                     goToSettingsSection('certifications');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      goToSettingsSection('certifications');
-                    }
-                  }}
-                >
-                  <Plus className="size-3" /> Add
-                </div>
-              )
+                  }
+                }}
+              >
+                <Plus className="size-3" /> Add
+              </div>
             }
           >
             {user?.certifications?.length ? (
@@ -1012,15 +993,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             ) : (
                 <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add certifications</p>
-                  {!isPreviewMode && (
-                    <button
-                      type="button"
-                      onClick={() => goToSettingsSection('certifications')}
-                      className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                    >
-                      <Plus className="size-3" /> Add
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToSettingsSection('certifications')}
+                    className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
+                  >
+                    <Plus className="size-3" /> Add
+                  </button>
                 </div>
             )}
           </ProfileSectionAccordion>
@@ -1031,26 +1010,24 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             onOpenChange={(open) => setSectionOpen('project', open)}
             subtitle={entriesCountSubtitle(profileProjects.nonGithub.length)}
             headerAction={
-              !isPreviewMode && (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
-                  onClick={(e) => {
+              <div
+                role="button"
+                tabIndex={0}
+                className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToSettingsSection('projects');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
                     e.stopPropagation();
                     goToSettingsSection('projects');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      goToSettingsSection('projects');
-                    }
-                  }}
-                >
-                  <Plus className="size-3" /> Add
-                </div>
-              )
+                  }
+                }}
+              >
+                <Plus className="size-3" /> Add
+              </div>
             }
           >
             {profileProjects.nonGithub.length > 0 ? (
@@ -1089,15 +1066,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             ) : (
               <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add your projects</p>
-                {!isPreviewMode && (
-                  <button
-                    type="button"
-                    onClick={() => goToSettingsSection('projects')}
-                    className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                  >
-                    <Plus className="size-3" /> Add
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => goToSettingsSection('projects')}
+                  className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
+                >
+                  <Plus className="size-3" /> Add
+                </button>
               </div>
             )}
           </ProfileSectionAccordion>
@@ -1108,26 +1083,24 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               onOpenChange={(open) => setSectionOpen('openSource', open)}
               subtitle={reposCountSubtitle(openSourceList.length)}
               headerAction={
-                !isPreviewMode && (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
-                    onClick={(e) => {
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToSettingsSection('open-source');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
                       e.stopPropagation();
                       goToSettingsSection('open-source');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        goToSettingsSection('open-source');
-                      }
-                    }}
-                  >
-                    <Plus className="size-3" /> Add
-                  </div>
-                )
+                    }
+                  }}
+                >
+                  <Plus className="size-3" /> Add
+                </div>
               }
             >
               {openSourceList.length > 0 ? (
@@ -1170,15 +1143,13 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               ) : (
                 <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Add contributions</p>
-                  {!isPreviewMode && (
-                    <button
-                      type="button"
-                      onClick={() => goToSettingsSection('open-source')}
-                      className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                    >
-                      <Plus className="size-3" /> Add contribution
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToSettingsSection('open-source')}
+                    className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
+                  >
+                    <Plus className="size-3" /> Add contribution
+                  </button>
                 </div>
               )}
             </ProfileSectionAccordion>
@@ -1187,22 +1158,8 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
 
         {/* ================= RIGHT COLUMN ================= */}
         <div className="lg:col-span-4 space-y-6">
-          
-          {/* 1. PREVIEW MODE */}
-          <div className="border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="size-9 border-2 border-border bg-muted flex items-center justify-center shadow-[2px_2px_0px_0px_var(--border)]">
-                <Eye className="size-4" />
-              </div>
-              <div>
-                <h3 className="text-[10px] font-black uppercase">Preview Mode</h3>
-                <p className="text-[9px] font-bold text-muted-foreground uppercase">Public View</p>
-              </div>
-            </div>
-            <Switch checked={isPreviewMode} onCheckedChange={setIsPreviewMode} />
-          </div>
 
-          {/* 2. FOLLOWERS / FOLLOWING CARD */}
+          {/* 1. FOLLOWERS / FOLLOWING CARD */}
           <div className="border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1233,8 +1190,7 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             </div>
           </div>
 
-          {/* 3. PUBLIC PROFILE URL + SOCIAL LINKS — from backend */}
-          {!isPreviewMode && (
+          {/* 2. PUBLIC PROFILE URL + SOCIAL LINKS — from backend */}
           <div className="border-4 border-border bg-card p-5 shadow-[4px_4px_0px_0px_var(--border)] space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-widest">Public Profile</h3>
             <p className="text-[9px] font-bold text-muted-foreground uppercase">Your profile link. Copy or share.</p>
@@ -1279,7 +1235,6 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               )}
             </div>
           </div>
-          )}
 
           <FollowersFollowingDialog
             open={followersDialogOpen}
@@ -1304,14 +1259,12 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
               <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                 Profile Activity <span className="size-4 bg-muted text-[8px] flex items-center justify-center border-2 border-border">?</span>
               </h3>
-              {!isPreviewMode && (
-                <Link
-                  href="/profile/analytics"
-                  className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-border bg-card font-black text-[9px] uppercase tracking-widest hover:bg-muted hover:border-primary transition-colors shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                >
-                  <BarChart2 className="size-3.5" /> Detailed analysis
-                </Link>
-              )}
+              <Link
+                href="/profile/analytics"
+                className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-border bg-card font-black text-[9px] uppercase tracking-widest hover:bg-muted hover:border-primary transition-colors shadow-[2px_2px_0px_0px_var(--border)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+              >
+                <BarChart2 className="size-3.5" /> Detailed analysis
+              </Link>
             </div>
             {overviewMetrics && (
               <div className="mb-3 flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest">
@@ -1524,6 +1477,7 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             </div>
           </div>
 
+        </div>
         </div>
       </div>
     </div>

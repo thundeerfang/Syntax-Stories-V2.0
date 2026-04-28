@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import { Extension, Node as TipTapNode, mergeAttributes } from '@tiptap/core';
 import type { Editor, JSONContent } from '@tiptap/core';
@@ -57,6 +58,8 @@ export interface RichParagraphEditorProps {
   /** When set, hovering `a.ss-link` in read-only mode shows this preview (e.g. `LinkPreviewCardContent`). */
   readOnlyLinkPreview?: (href: string) => React.ReactNode;
   className?: string;
+  /** Empty-editor hint (write mode only). */
+  editorPlaceholder?: string;
 }
 
 const READONLY_LINK_SEL = 'a.ss-link';
@@ -1447,6 +1450,9 @@ function toInitialDoc(initialDoc?: any, legacyText?: string): any {
   };
 }
 
+const DEFAULT_EDITOR_PLACEHOLDER =
+  'Start writing… Use lists, links, @mentions, or insert a GIF.';
+
 export function RichParagraphEditor({
   initialDoc,
   legacyText,
@@ -1455,6 +1461,7 @@ export function RichParagraphEditor({
   readOnly = false,
   readOnlyLinkPreview,
   className,
+  editorPlaceholder = DEFAULT_EDITOR_PLACEHOLDER,
 }: Readonly<RichParagraphEditorProps>) {
   const normalizeContent = normalizeContentProp !== false && !readOnly;
   const editorRef = useRef<Editor | null>(null);
@@ -1465,6 +1472,15 @@ export function RichParagraphEditor({
       StarterKit.configure({
         heading: false,
       }),
+      ...(readOnly
+        ? []
+        : [
+            Placeholder.configure({
+              placeholder: editorPlaceholder,
+              showOnlyWhenEditable: true,
+              showOnlyCurrent: true,
+            }),
+          ]),
       Underline,
       LinkMark.configure({
         openOnClick: readOnly,
@@ -1482,7 +1498,7 @@ export function RichParagraphEditor({
       createSplitListItemWithoutScrollExtension(),
       createListEmptyLastBackspaceExtension(),
     ],
-    [normalizeContent, readOnly],
+    [normalizeContent, readOnly, editorPlaceholder],
   );
 
   const editor = useEditor({
@@ -1587,14 +1603,12 @@ export function RichParagraphEditor({
       ? Math.min(440, Math.max(280, window.innerWidth - 2 * margin))
       : Math.min(300, Math.max(220, window.innerWidth - 2 * margin));
 
-    let estH: number;
+    let estH = 260;
     if (showGifPanel) estH = 340;
     else if (showMentionPanel) estH = 300;
     else if (showLinkPanel) {
       estH = linkUrl.trim() && linkPreview.valid ? 340 : 220;
-    } else {
-      estH = 260;
-    }
+    } else estH = 260;
 
     const measured = popoverContainerRef.current?.offsetHeight;
     const h = measured && measured > 48 ? measured : estH;
@@ -1810,6 +1824,28 @@ export function RichParagraphEditor({
     [editor],
   );
 
+  const setAlign = (align: GifAlign) => {
+    const win = typeof globalThis !== 'undefined' ? globalThis : null;
+    const sel = win && 'getSelection' in win ? win.getSelection() : null;
+    const anchor = sel?.anchorNode as globalThis.Node | null;
+    const el =
+      anchor && anchor.nodeType === globalThis.Node.ELEMENT_NODE
+        ? (anchor as Element)
+        : anchor?.parentElement;
+    const span = el instanceof Element ? el.closest('span[data-inline-gif]') as HTMLElement | null : null;
+    if (span) {
+      span.dataset.align = align;
+      span.classList.remove('ss-inline-gif-left', 'ss-inline-gif-center', 'ss-inline-gif-right');
+      span.classList.add(
+        align === 'left'
+          ? 'ss-inline-gif-left'
+          : align === 'right'
+            ? 'ss-inline-gif-right'
+            : 'ss-inline-gif-center',
+      );
+    }
+  };
+
   const isGifSelected = editor?.isActive('inlineGif') ?? false;
 
   const onEditorLinkClickCapture = useCallback(
@@ -1855,8 +1891,10 @@ export function RichParagraphEditor({
 
   const toolbarButton = (active: boolean) =>
     cn(
-      'inline-flex items-center justify-center rounded border px-2 py-1.5 text-[11px] font-semibold min-h-[30px]',
-      active ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted/70',
+      'inline-flex items-center justify-center rounded-none border-2 border-border px-2 py-1.5 text-[11px] font-semibold min-h-[30px] shadow-[2px_2px_0_0_var(--border)]',
+      active
+        ? 'border-primary bg-primary/15 text-primary'
+        : 'bg-muted/40 text-muted-foreground hover:bg-muted/70',
     );
 
   const popoverCard =
@@ -1890,7 +1928,7 @@ export function RichParagraphEditor({
   }
 
   return (
-    <div className="ss-rich-paragraph-editor border border-border bg-card rounded relative overflow-visible">
+    <div className="ss-rich-paragraph-editor relative overflow-visible border-0 bg-transparent">
       <div ref={toolbarPopoverRef} className="relative z-30 overflow-visible px-2 pt-2">
         <AnimatePresence mode="wait">
           {anyPanelOpen && popoverCoords && (
@@ -2218,7 +2256,8 @@ export function RichParagraphEditor({
       <EditorContent
         editor={editor}
         className={cn(
-          'prose prose-sm max-w-none focus:outline-none mt-2 mx-2 mb-2',
+          'prose prose-sm dark:prose-invert max-w-none focus:outline-none mt-2 mx-2 mb-2',
+          '[&_.ProseMirror]:rounded-md',
         )}
         onClickCapture={onEditorLinkClickCapture}
       />
