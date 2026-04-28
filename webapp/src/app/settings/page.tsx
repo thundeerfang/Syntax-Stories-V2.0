@@ -2305,8 +2305,7 @@ function WorkExperiencesContent() {
     openedEditFromUrlRef.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-    // Intentionally list.length only: open once when list hydrates; ref blocks repeats. openEdit/router/searchParams vary each render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync-open from ?edit= once after list loads
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
   }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
@@ -3149,7 +3148,8 @@ function EducationContent() {
     openedEditFromUrlRefEd.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length, searchParams, router, openEdit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
+  }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((e) => ({
       school: e.school,
@@ -3476,7 +3476,8 @@ function CertificationsContent() {
     openedEditFromUrlRefCert.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length, searchParams, router, openEdit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
+  }, [list.length]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((c) => ({
       name: c.name,
@@ -3964,7 +3965,8 @@ function ProjectsContent() {
     openedEditFromUrlRefProj.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length, searchParams, router, openEdit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
+  }, [list.length]);
   const remove = async (i: number) => {
     const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
     setSaving(true);
