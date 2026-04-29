@@ -1,0 +1,1 @@
+{"version":3,"file":"sendAppHttpError.d.ts","sourceRoot":"","sources":["../../src/errors/sendAppHttpError.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AACxC,OAAO,EAAE,YAAY,EAAsB,MAAM,iBAAiB,CAAC;AAEnE,wIAAwI;AACxI,wBAAgB,gBAAgB,CAAC,GAAG,EAAE,QAAQ,EAAE,GAAG,EAAE,YAAY,GAAG,IAAI,CAWvE"}

@@ -22,9 +22,9 @@ function isLegacyUserAgent(ua: string): boolean {
   // Windows Vista, 7, 8, 8.1
   if (/Windows NT 6\.[0-3]/i.test(ua)) return true;
 
-  // macOS 10.12 and older, and 10.13 High Sierra (do not match 10.14+ — many modern UAs still claim 10.15)
-  if (/Mac OS X 10[._](?:\d|1[0-2])(?:[._]\d+)*/i.test(ua)) return true;
-  if (/Mac OS X 10[._]13(?:[._]\d+)*/i.test(ua)) return true;
+  // macOS 10.0–10.13 only (Mojave 10.14+, Catalina 10.15+, Big Sur 11+ must pass). A single `\d` after `10_`
+  // wrongly matched the leading `1` of `10_15_7` as “10.1”; use explicit minors or a digit not followed by another digit.
+  if (/Mac OS X 10[._](?:[0-9](?![0-9])|10|11|12|13)(?:[._]\d+)*/i.test(ua)) return true;
 
   // Very old Safari (e.g. ≤12) on any macOS — Version/12.x or lower in WebKit UA
   const VERSION_RE = /\bVersion\/(\d+)/i;

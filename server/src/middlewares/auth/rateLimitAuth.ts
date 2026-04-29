@@ -70,3 +70,16 @@ export const rateLimitUpdateProfile = createRateLimiter(
   authConfig.RATE_LIMIT_UPDATE_PROFILE.max,
   redisKeys.rateLimit.updateProfile
 );
+
+export const rateLimitFeedback = createRateLimiter(
+  authConfig.RATE_LIMIT_FEEDBACK.windowMs,
+  authConfig.RATE_LIMIT_FEEDBACK.max,
+  redisKeys.rateLimit.feedback,
+  true
+);
+
+export const rateLimitInviteResolve = createRateLimiter(
+  authConfig.RATE_LIMIT_INVITE_RESOLVE.windowMs,
+  authConfig.RATE_LIMIT_INVITE_RESOLVE.max,
+  redisKeys.rateLimit.inviteResolve
+);

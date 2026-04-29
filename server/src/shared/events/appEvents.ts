@@ -23,11 +23,19 @@ export type ProfileUpdatedPayload = {
   section: ProfileUpdateSection | 'legacy';
 };
 
+export type ReferralConvertedPayload = {
+  referrerId: string;
+  refereeUserId: string;
+  source: string;
+};
+
 export type AppEventMap = {
   /** Successful sign-in after session + JWT issuance (email OTP, OAuth, etc.). */
   'auth.signin.success': AuthSigninSuccessPayload;
   /** Profile document updated (post-DB write). */
   'profile.updated': ProfileUpdatedPayload;
+  /** New user stored `referredByUserId` from a valid referral code. */
+  'referral.converted': ReferralConvertedPayload;
 };
 
 type Listener<K extends keyof AppEventMap> = (payload: AppEventMap[K]) => void | Promise<void>;

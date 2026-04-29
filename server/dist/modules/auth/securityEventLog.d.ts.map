@@ -1,0 +1,1 @@
+{"version":3,"file":"securityEventLog.d.ts","sourceRoot":"","sources":["../../../src/modules/auth/securityEventLog.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,SAAS,CAAC;AAavC,wBAAsB,gBAAgB,CACpC,MAAM,EAAE,MAAM,GAAG,IAAI,EACrB,IAAI,EAAE,MAAM,EACZ,GAAG,EAAE,OAAO,EACZ,QAAQ,GAAE,MAAM,CAAC,MAAM,EAAE,OAAO,CAAM,GACrC,OAAO,CAAC,IAAI,CAAC,CASf"}

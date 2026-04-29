@@ -11,6 +11,7 @@ function layoutFromRoot(root: string): UploadDirectoryLayout {
     logos: path.join(root, 'logos'),
     schoolLogos: path.join(root, 'school-logos'),
     orgLogos: path.join(root, 'org-logos'),
+    feedback: path.join(root, 'feedback'),
   };
 }
 

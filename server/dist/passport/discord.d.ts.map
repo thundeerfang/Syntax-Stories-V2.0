@@ -1,0 +1,1 @@
+{"version":3,"file":"discord.d.ts","sourceRoot":"","sources":["../../src/passport/discord.ts"],"names":[],"mappings":"AAAA,OAAO,QAAQ,MAAM,UAAU,CAAC;AAIhC,OAAO,EAA2C,KAAK,gBAAgB,EAAE,MAAM,4BAA4B,CAAC;AAI5G,eAAO,MAAM,gBAAgB,SAI5B,CAAC;AAIF,MAAM,MAAM,SAAS,GAAG,gBAAgB,CAAC;AAEzC,wBAAgB,eAAe,CAAC,gBAAgB,EAAE,QAAQ,CAAC,cAAc,GAAG,IAAI,CA6C/E"}

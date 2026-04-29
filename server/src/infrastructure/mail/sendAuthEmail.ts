@@ -13,7 +13,12 @@ export function isAuthEmailConfigured(): boolean {
 /**
  * Try SMTP first when configured; on failure (or if SMTP missing) try Resend when RESEND_API_KEY is set.
  */
-export async function sendAuthEmail(opts: { to: string; subject: string; html: string }): Promise<void> {
+export async function sendAuthEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<void> {
   const smtp = getSmtpTransporter();
   let smtpErr: unknown;
   if (smtp) {
@@ -26,7 +31,7 @@ export async function sendAuthEmail(opts: { to: string; subject: string; html: s
   }
   if (env.RESEND_API_KEY?.trim()) {
     try {
-      await sendViaResend(opts.to, opts.subject, opts.html);
+      await sendViaResend(opts.to, opts.subject, opts.html, opts.replyTo);
       return;
     } catch (e) {
       if (smtpErr) {

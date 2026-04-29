@@ -8,9 +8,8 @@ import { cn } from '@/lib/utils';
 export const HOVER_CARD_Z_INDEX = 90;
 const HOVER_Z = HOVER_CARD_Z_INDEX;
 const EXIT_DURATION_MS = 180;
+/** Gap (px) between trigger and card for placement above or below. */
 const GAP_BOTTOM = 8;
-/** Match bottom gap so popovers sit equally tight above or below the trigger. */
-const GAP_TOP = 8;
 const CARD_WIDTH = 280;
 
 /** Matches GifPopoverCard + read-only GIF shell: object-contain inside max height/width box. */

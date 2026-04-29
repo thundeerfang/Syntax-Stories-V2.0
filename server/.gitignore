@@ -1,6 +1,18 @@
+# Dependencies
 node_modules/
-dist/
-coverage/
+
 .env
-keys/*.pem
-uploads/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+dist
+
+privateKey.pem
+publicKey.pem
+keys/
+keys/privateKey.pem
+keys/publicKey.pem
+keys/privateKey.pem.pub
+keys/publicKey.pem.pub
+keys/privateKey.pem.pub

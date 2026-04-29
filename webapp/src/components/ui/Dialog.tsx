@@ -29,6 +29,10 @@ export interface DialogProps {
   closeOnEscape?: boolean;
 }
 
+/** Shared footer layout for simple dialogs (primary action full width). */
+export const DIALOG_FOOTER_ACTIONS_CLASS =
+  'flex flex-col gap-2 border-t-2 border-border bg-muted/20 px-6 py-4 sm:flex-row sm:justify-end';
+
 const defaultBackdropClass =
   'fixed inset-0 min-h-full min-w-full h-screen w-screen bg-black/60 backdrop-blur-[2px] pointer-events-auto';
 const defaultPanelClass =

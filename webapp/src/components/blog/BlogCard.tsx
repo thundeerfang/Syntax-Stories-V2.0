@@ -42,6 +42,8 @@ export type BlogCardProps = Readonly<{
   viewerUsername?: string | null;
   /** Shorter cover + tighter body for dashboard grids. */
   density?: 'default' | 'compact';
+  /** Activity grids: disable lift/shadow and cover zoom on hover. */
+  suppressChromeHover?: boolean;
   className?: string;
 }>;
 
@@ -50,6 +52,7 @@ export function BlogCard({
   showSocialActions = true,
   viewerUsername = null,
   density = 'default',
+  suppressChromeHover = false,
   className,
 }: BlogCardProps) {
   const username = post.author.username ?? post.author.id;
@@ -74,7 +77,8 @@ export function BlogCard({
     <article
       className={cn(
         'group flex h-full min-h-0 w-full flex-col overflow-hidden rounded-none border-2 border-border bg-card shadow-[6px_6px_0_0_var(--border)]',
-        'transition-[transform,box-shadow] duration-200 hover:-translate-y-px hover:shadow-[8px_8px_0_0_var(--border)]',
+        !suppressChromeHover &&
+          'transition-[transform,box-shadow] duration-200 hover:-translate-y-px hover:shadow-[8px_8px_0_0_var(--border)]',
         !compact && 'min-h-[200px]',
         className,
       )}
@@ -92,7 +96,10 @@ export function BlogCard({
               <img
                 src={post.coverImage}
                 alt=""
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                className={cn(
+                  'h-full w-full object-cover',
+                  !suppressChromeHover && 'transition-transform duration-300 group-hover:scale-[1.02]',
+                )}
               />
             ) : (
               <div

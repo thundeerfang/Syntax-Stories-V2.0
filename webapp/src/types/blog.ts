@@ -26,6 +26,13 @@ export type BlockType =
 
 export type HeadingLevel = 2 | 3;
 
+/** Row from taxonomy API for publish overlay (category or tag). */
+export type BlogTaxonomyRow = {
+  slug: string;
+  name: string;
+  postCount: number;
+};
+
 export interface BlockBase {
   id: string;
   type: BlockType;
