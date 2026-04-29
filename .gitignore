@@ -6,6 +6,9 @@ node_modules
 .env.production.local
 dist
 
+webapp/.env
+server/.env
+
 privateKey.pem
 publicKey.pem
 keys/
