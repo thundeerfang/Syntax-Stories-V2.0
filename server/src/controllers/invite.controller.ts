@@ -10,7 +10,7 @@ import {
   buildSignedReferralCookieValue,
   REFERRAL_COOKIE,
 } from '../services/referral.service.js';
-import { UserModel } from '../models/User.js';
+import { UserModel, normalizeProfileImg } from '../models/User.js';
 
 /** Allow same-origin path or full URL matching configured frontend. */
 function sanitizeRedirectTarget(raw: unknown): string {
@@ -132,5 +132,49 @@ export async function getInviteStats(req: Request, res: Response): Promise<void>
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to load stats' });
+  }
+}
+
+/** GET /api/invites/referred?limit=&skip= — accounts that signed up with your referral. */
+export async function getInviteReferred(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user?: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+    const rawLimit = Number(req.query.limit);
+    const rawSkip = Number(req.query.skip);
+    const limit = Math.min(Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 25, 100);
+    const skip = Math.min(Number.isFinite(rawSkip) && rawSkip >= 0 ? Math.floor(rawSkip) : 0, 50_000);
+
+    const filter = { referredByUserId: user._id };
+    const [total, rows] = await Promise.all([
+      UserModel.countDocuments(filter),
+      UserModel.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('username fullName profileImg createdAt isActive')
+        .lean(),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      total,
+      skip,
+      limit,
+      items: rows.map((r) => ({
+        id: String(r._id),
+        username: r.username,
+        fullName: r.fullName,
+        profileImg: normalizeProfileImg(r.profileImg as string | undefined),
+        joinedAt: r.createdAt?.toISOString?.() ?? null,
+        isActive: Boolean(r.isActive),
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to load referrals' });
   }
 }

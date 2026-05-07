@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   FileText,
   BookOpen,
+  Wallet,
   LogOut,
   Camera,
   Code2,
@@ -51,6 +52,7 @@ import {
   Lock,
   Loader2,
   Image as LucideImage,
+  Flame,
 } from 'lucide-react';
 import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
 import { OptimizedRemoteImage } from '@/components/ui/OptimizedRemoteImage';
@@ -100,6 +102,8 @@ import { type SetupItem as MySetupItem } from './settings-list/MySetupCard';
 import { SettingsSectionHeader } from './settings-list/Header';
 import { SettingsSectionHeading } from './settings-list/SettingsSectionHeading';
 import { SettingsContentSkeleton, SettingsSidebarSkeleton } from '@/components/skeletons';
+import { PaymentsSettingsContent } from './PaymentsSettingsContent';
+import { BlogStreakSettingsContent } from './BlogStreakSettingsContent';
 
 interface NavItem {
   id: string;
@@ -145,6 +149,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: 'certifications', label: 'License & Certifications', icon: Award },
       { id: 'projects', label: 'Projects & Publications', icon: FolderGit2 },
       { id: 'open-source', label: 'Open Source', icon: Code2 },
+      { id: 'blog-streak', label: 'Blog read streak', icon: Flame },
     ],
   },
   {
@@ -158,6 +163,7 @@ const NAV_GROUPS: NavGroup[] = [
     heading: 'Other',
     items: [
       { id: 'syntax-card', label: 'Syntax card', icon: CreditCard },
+      { id: 'payments', label: 'Payments', icon: Wallet },
       { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
   },
@@ -4582,7 +4588,7 @@ function OpenSourceContent() {
         </div>
       </div>
     ) : (
-      <div className="flex flex-col items-center gap-4 text-center">
+      <div className="flex flex-col items-center gap-4 rounded-none border-2 border-border bg-muted/25 px-10 py-12 text-center dark:bg-black/55 dark:border-border">
         <Loader2 className="size-10 shrink-0 animate-spin text-primary" aria-hidden />
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
           {saving ? 'Saving…' : 'Loading repositories…'}
@@ -4758,8 +4764,11 @@ export default function SettingsPage() {
       router.replace('/settings', { scroll: false });
     } else if (section && validSectionIds.includes(section)) {
       setActiveSection(section);
-      // Clean up the URL so only `/settings` is visible, even when opened with ?section=...
-      router.replace('/settings', { scroll: false });
+      // Preserve checkout return params until verify-checkout runs (Payments section).
+      const checkout = searchParams.get('checkout');
+      if (checkout !== 'success') {
+        router.replace('/settings', { scroll: false });
+      }
     }
   }, [searchParams, router, refreshUser, validSectionIds]);
 
@@ -4928,9 +4937,11 @@ export default function SettingsPage() {
                     {activeSection === 'certifications' && <CertificationsContent />}
                     {activeSection === 'projects' && <ProjectsContent />}
                     {activeSection === 'open-source' && <OpenSourceContent />}
+                    {activeSection === 'blog-streak' && <BlogStreakSettingsContent />}
                     {activeSection === 'security-email' && <SecurityEmailContent />}
                     {activeSection === 'connected-accounts' && <ConnectedAccountsContent />}
                     {activeSection === 'syntax-card' && <SyntaxCardContent />}
+                    {activeSection === 'payments' && <PaymentsSettingsContent />}
                     {activeSection === 'notifications' && (
                       <SettingsComingSoonPlaceholder
                         title={activeItemLabel}
@@ -4938,7 +4949,7 @@ export default function SettingsPage() {
                         description="Notification channels and digest schedules will be configurable here."
                       />
                     )}
-                    {!['edit-profile', 'stack-tools', 'my-setup', 'work-experiences', 'education', 'certifications', 'projects', 'open-source', 'security-email', 'connected-accounts', 'syntax-card', 'notifications'].includes(activeSection) && (
+                    {!['edit-profile', 'stack-tools', 'my-setup', 'work-experiences', 'education', 'certifications', 'projects', 'open-source', 'blog-streak', 'security-email', 'connected-accounts', 'syntax-card', 'payments', 'notifications'].includes(activeSection) && (
                       <SettingsComingSoonPlaceholder title={activeItemLabel} />
                     )}
                   </motion.div>

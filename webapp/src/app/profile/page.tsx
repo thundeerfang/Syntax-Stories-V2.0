@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { followApi } from '@/api/follow';
+import { followApi, type ReadStreakPayload } from '@/api/follow';
 import { analyticsApi, type ProfileOverviewMetrics, type ProfileTimePoint } from '@/api/analytics';
 import {
   Edit3,
@@ -140,6 +140,8 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
   const [pendingCvExtracted, setPendingCvExtracted] = useState<Parameters<typeof updateProfile>[0] | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const [followCounts, setFollowCounts] = useState({ followersCount: 0, followingCount: 0 });
+  const [readStreak, setReadStreak] = useState<ReadStreakPayload | null>(null);
+  const [readHeatmapDays, setReadHeatmapDays] = useState<string[] | null>(null);
   const [overviewMetrics, setOverviewMetrics] = useState<ProfileOverviewMetrics | null>(null);
   const [timeSeries, setTimeSeries] = useState<ProfileTimePoint[]>([]);
   /** Only one section accordion open at a time; default Work Experience */
@@ -201,9 +203,16 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
 
   useEffect(() => {
     if (!user?.username) return;
-    followApi.getFollowCounts(user.username).then((res) => {
-      if (res.success) setFollowCounts({ followersCount: res.followersCount, followingCount: res.followingCount });
-    }).catch(() => {});
+    followApi
+      .getPublicProfile(user.username)
+      .then((res) => {
+        if (res.success) {
+          setFollowCounts({ followersCount: res.followersCount, followingCount: res.followingCount });
+          setReadStreak(res.readStreak ?? null);
+          setReadHeatmapDays(res.readHeatmapDays ?? null);
+        }
+      })
+      .catch(() => {});
   }, [user?.username]);
 
   useEffect(() => {
@@ -503,8 +512,8 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                 </div>
                 <div className="flex items-center gap-2">
                   <StreakFireLottie play size={24} />
-                  <span className="font-black text-sm uppercase">0</span>
-                  <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">Streak</span>
+                  <span className="font-black text-sm uppercase">{readStreak?.current ?? 0}</span>
+                  <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">Read streak</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="size-4 text-primary" />
@@ -1384,12 +1393,12 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1 p-2 border-2 border-border bg-muted/10">
                 <div className="text-lg font-black italic flex items-center gap-2">
-                  1 <StreakFireLottie play size={28} />
+                  {readStreak?.longest ?? 0} <StreakFireLottie play size={28} />
                 </div>
-                <p className="text-[8px] font-bold text-muted-foreground uppercase">Longest streak</p>
+                <p className="text-[8px] font-bold text-muted-foreground uppercase">Longest read streak</p>
               </div>
               <div className="space-y-1 p-2 border-2 border-border bg-muted/10">
-                <p className="text-lg font-black italic">3</p>
+                <p className="text-lg font-black italic">{readStreak?.totalDistinctReadDays ?? 0}</p>
                 <p className="text-[8px] font-bold text-muted-foreground uppercase">Total reading days</p>
               </div>
             </div>
@@ -1423,22 +1432,19 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                 </div>
                 <div className="p-2 border-2 border-border bg-card text-center shadow-[2px_2px_0px_0px_var(--border)]">
                   <p className="text-sm font-black italic">0</p>
-                  <p className="text-[7px] font-bold uppercase text-muted-foreground">Replies</p>
+                  <p className="text-[7px] font-bold uppercase text-muted-foreground">Reposts</p>
                 </div>
                 <div className="p-2 border-2 border-border bg-card text-center shadow-[2px_2px_0px_0px_var(--border)]">
                   <p className="text-sm font-black italic">0</p>
-                  <p className="text-[7px] font-bold uppercase text-muted-foreground">Upvoted</p>
+                  <p className="text-[7px] font-bold uppercase text-muted-foreground">Respect</p>
                 </div>
               </div>
             </div>
 
-            {/* Heatmap with hidden scrollbar restored */}
             <div className="pt-2 space-y-2">
-              <p className="text-[9px] font-black uppercase text-muted-foreground">Contribution Heatmap</p>
-              <div className="overflow-x-auto hide-scrollbar border-2 border-border p-2 bg-muted/5">
-                <div className="min-w-[400px]">
-                  <ProfileHeatmap />
-                </div>
+              <p className="text-[9px] font-black uppercase text-muted-foreground">Reading activity</p>
+              <div className="w-full min-w-0 max-w-full border-2 border-border p-2 bg-muted/5">
+                <ProfileHeatmap readHeatmapDays={readHeatmapDays} />
               </div>
             </div>
           </div>

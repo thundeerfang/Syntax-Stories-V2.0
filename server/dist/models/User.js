@@ -192,6 +192,11 @@ const UserSchema = new Schema({
     emailVerified: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
     subscription: { type: Schema.Types.ObjectId, ref: 'subscriptions', default: null },
+    stripeCustomerId: { type: String, sparse: true, unique: true, trim: true },
+    subscriptionStatus: { type: String, trim: true, maxlength: 32 },
+    subscriptionPlanKey: { type: String, trim: true, maxlength: 16 },
+    subscriptionPeriodEnd: { type: Date },
+    lastSubscriptionReconciledAt: { type: Date, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, select: false },
     followersCount: { type: Number, default: 0 },
@@ -203,7 +208,14 @@ const UserSchema = new Schema({
     referredAt: { type: Date, default: null },
     referralSource: { type: String, trim: true, maxlength: 32, default: undefined },
     referralCapturedAt: { type: Date, default: null },
+    staffRole: { type: String, enum: ['editor', 'admin'], required: false, select: true },
+    staffPasswordHash: { type: String, select: false },
+    deletedAt: { type: Date, default: null, index: true },
+    deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    blogStreakMode: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'daily' },
+    readStreakLongest: { type: Number, min: 0 },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 UserSchema.index({ referredByUserId: 1, createdAt: -1 });
+UserSchema.index({ deletedAt: 1, createdAt: -1 });
 export const UserModel = mongoose.models?.users ?? mongoose.model('users', UserSchema);
 //# sourceMappingURL=User.js.map

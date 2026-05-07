@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { isRedisAvailable } from '../../config/redis.js';
 import { getAltchaChallenge, sendOtp, signupEmail, verifyOtp } from './controllers/otp.controller.js';
+import { staffLogin } from './controllers/staffLogin.controller.js';
 import { initEmailChange, verifyEmailChange, cancelEmailChange } from './controllers/emailChange.controller.js';
 import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller.js';
 import { me, updateProfile, updateProfileSection, parseCv } from '../profile/profile.controller.js';
@@ -14,6 +15,7 @@ import {
   sendOtpValidation,
   signupEmailValidation,
   verifyOtpValidation,
+  staffLoginValidation,
   updateProfileValidation,
   updateProfileSectionBodyValidation,
   verifyToken,
@@ -21,6 +23,7 @@ import {
   rateLimitSendOtp,
   rateLimitVerifyOtp,
   rateLimitSignupEmail,
+  rateLimitStaffLogin,
   rateLimitRefresh,
   rateLimitUpdateProfile,
 } from '../../middlewares/auth/index.js';
@@ -29,6 +32,7 @@ const router = Router();
 
 router.get('/altcha/challenge', getAltchaChallenge);
 router.post('/oauth/exchange', exchangeOAuthCode);
+router.post('/staff-login', rateLimitStaffLogin, staffLoginValidation, staffLogin);
 router.post('/send-otp', rateLimitSendOtp, idempotency, verifyAltchaIfConfigured, sendOtpValidation, sendOtp);
 router.post(
   '/signup-email',

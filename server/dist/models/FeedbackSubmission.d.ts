@@ -33,6 +33,8 @@ export interface IFeedbackSubmission extends Document {
     };
     emailDelivered: boolean;
     emailError?: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 export declare const FeedbackSubmissionModel: Model<IFeedbackSubmission>;
 //# sourceMappingURL=FeedbackSubmission.d.ts.map

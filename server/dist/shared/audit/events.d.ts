@@ -44,6 +44,11 @@ export declare const AuditAction: {
     readonly MY_SETUP_ADDED: "my_setup_added";
     readonly MY_SETUP_UPDATED: "my_setup_updated";
     readonly MY_SETUP_REMOVED: "my_setup_removed";
+    readonly ADMIN_HELP_SOFT_DELETED: "admin.help.soft_deleted";
+    readonly ADMIN_HELP_RESTORED: "admin.help.restored";
+    readonly ADMIN_BLOG_RESTORED: "admin.blog.restored";
+    readonly ADMIN_USER_RESTORED: "admin.user.restored";
+    readonly ADMIN_TRASH_LISTED: "admin.trash.listed";
 };
 export type AuditActionName = (typeof AuditAction)[keyof typeof AuditAction];
 /** Example payload shapes per action (for documentation / future strict typing). */

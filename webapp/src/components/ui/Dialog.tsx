@@ -8,7 +8,12 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /** z-index for dialog overlay so it appears above navbar (z-40) and other layout. */
-const DIALOG_Z = 100;
+export const DIALOG_Z_INDEX = 100;
+/**
+ * Use for a second dialog opened while another is visible (e.g. confirm on top of tour/modal).
+ * Must be above {@link DIALOG_Z_INDEX} and above `UiProcessingShield` (110) so ties don’t hide the confirm.
+ */
+export const DIALOG_Z_INDEX_STACKED = 120;
 
 /**
  * 2px rules for title bar bottom + footer top: readable on `bg-muted/*` in light and dark.
@@ -73,6 +78,11 @@ export interface DialogProps {
   closeOnBackdropClick?: boolean;
   /** Close when Escape is pressed. Default true. */
   closeOnEscape?: boolean;
+  /**
+   * Stacking order when multiple dialogs are open. Default {@link DIALOG_Z_INDEX}.
+   * Nested confirms / secondary modals should use {@link DIALOG_Z_INDEX_STACKED} or higher.
+   */
+  zIndex?: number;
 }
 
 const defaultBackdropClass =
@@ -136,6 +146,7 @@ export function Dialog({
   showCloseButton = true,
   closeOnBackdropClick = true,
   closeOnEscape = true,
+  zIndex = DIALOG_Z_INDEX,
 }: Readonly<DialogProps>) {
   const reactId = useId();
   const generatedTitleId = `dialog-title-${reactId.replaceAll(':', '')}`;
@@ -175,13 +186,13 @@ export function Dialog({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className={cn(defaultBackdropClass, backdropClassName)}
-            style={{ zIndex: DIALOG_Z }}
+            style={{ zIndex }}
             onClick={closeOnBackdropClick ? onClose : undefined}
             aria-hidden
           />
           <div
             className="fixed inset-0 min-h-screen min-w-full flex items-center justify-center p-4 pointer-events-none"
-            style={{ zIndex: DIALOG_Z }}
+            style={{ zIndex }}
           >
             <motion.div
               key="dialog-panel"

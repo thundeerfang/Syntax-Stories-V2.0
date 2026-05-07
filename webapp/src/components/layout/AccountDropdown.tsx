@@ -74,7 +74,7 @@ export function AccountDropdown() {
       id: 'account-settings-stack',
       items: [
         { href: '/settings', label: 'Settings', icon: Settings },
-        { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
+        { href: '/pricing', label: 'Pricing', icon: CreditCard },
         { href: '/invite', label: 'Invite friends', icon: UserPlus },
       ],
     },
@@ -114,8 +114,7 @@ export function AccountDropdown() {
             {/* Header Section */}
             <div className="p-3 border-b-2 border-border bg-muted/20">
               <div className="flex items-center gap-3">
-                <div className="relative">
-                    <div className="w-10 h-10 border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden shrink-0">
+                <div className="w-10 h-10 border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden shrink-0">
                     {avatarUrl ? (
                         <img src={fullAvatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -123,8 +122,6 @@ export function AccountDropdown() {
                             <User className="h-5 w-5 text-muted-foreground" />
                         </div>
                     )}
-                    </div>
-                    <div className="absolute -top-1 -left-1 px-1 bg-primary border border-border text-[7px] font-black text-primary-foreground uppercase">Pro</div>
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-[12px] font-black uppercase italic truncate text-foreground leading-none">{displayName}</h3>
@@ -139,7 +136,7 @@ export function AccountDropdown() {
               </div>
               
               <Link
-                href="/upgrade"
+                href="/pricing"
                 onClick={() => setOpen(false)}
                 className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 border-2 border-border bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-tight shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
               >
@@ -242,10 +239,12 @@ export function AccountDropdown() {
                 Sign Out
               </button>
               
-              <div className="mt-2.5 flex justify-center items-center gap-2">
+              <div className="mt-2.5 flex flex-wrap justify-center items-center gap-2">
                 <Link href="/terms" onClick={() => setOpen(false)} className="text-[8px] font-bold uppercase text-muted-foreground hover:text-primary transition-colors">Terms</Link>
                 <div className="w-1 h-1 bg-border rounded-full" />
                 <Link href="/privacy" onClick={() => setOpen(false)} className="text-[8px] font-bold uppercase text-muted-foreground hover:text-primary transition-colors">Privacy</Link>
+                <div className="w-1 h-1 bg-border rounded-full" />
+                <Link href="/user-data-deletion" onClick={() => setOpen(false)} className="text-[8px] font-bold uppercase text-muted-foreground hover:text-primary transition-colors">UDD</Link>
               </div>
             </div>
           </motion.div>

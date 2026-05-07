@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Dialog } from './Dialog';
+import { Dialog, DIALOG_Z_INDEX_STACKED } from './Dialog';
 import { cn } from '@/lib/utils';
 
 export interface ConfirmDialogProps {
@@ -60,6 +60,7 @@ export function ConfirmDialog({
       panelClassName="max-w-sm"
       contentClassName="p-6"
       showCloseButton={true}
+      zIndex={DIALOG_Z_INDEX_STACKED}
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-start gap-3">

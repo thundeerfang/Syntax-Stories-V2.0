@@ -5,6 +5,7 @@ export { ProfileViewEventModel, ProfileDailyMetricsModel, } from './ProfileAnaly
 export { AnalyticsEventModel } from './AnalyticsEvent.js';
 export { AuditLogModel, AUDIT_ACTIONS } from './AuditLog.js';
 export { BlogPostModel } from './BlogPost.js';
+export { BlogReadDayModel } from './BlogReadDay.js';
 export { BlogCategoryModel } from './BlogCategory.js';
 export { BlogTagModel } from './BlogTag.js';
 export { BlogCommentModel } from './BlogComment.js';

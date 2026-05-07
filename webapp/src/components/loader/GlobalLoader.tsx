@@ -204,7 +204,7 @@ export function GlobalLoaderOverlay() {
     >
       {/* Separate layer: heavy bg + blur on one element makes frosted glass visible */}
       <div
-        className="absolute inset-0 bg-background/55 dark:bg-black/50 backdrop-blur-xl backdrop-saturate-150"
+        className="absolute inset-0 bg-background/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-black/72 dark:backdrop-saturate-100"
         style={{ WebkitBackdropFilter: 'blur(20px) saturate(1.5)' }}
         aria-hidden
       />

@@ -34,6 +34,7 @@ const UPDATE_PROFILE_KEYS = [
     'isXAccount',
     'isAppleAccount',
     'isDiscordAccount',
+    'blogStreakMode',
 ];
 const profileSectionKeys = [
     'education',

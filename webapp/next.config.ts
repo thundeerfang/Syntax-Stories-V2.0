@@ -4,6 +4,12 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      { source: '/upgrade', destination: '/pricing', permanent: true },
+      { source: '/documentation', destination: '/docs', permanent: false },
+    ];
+  },
   /** Linked `file:./packages/shared` lives under the app; transpile its TypeScript for the bundler. */
   transpilePackages: ['@syntax-stories/shared'],
   images: {

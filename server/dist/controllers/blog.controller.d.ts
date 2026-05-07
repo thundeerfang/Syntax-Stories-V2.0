@@ -11,6 +11,12 @@ export declare function listPublishedFeed(req: Request, res: Response): Promise<
 export declare function listUserPublishedPosts(req: Request, res: Response): Promise<void>;
 /** GET /api/blog/p/:username/:slug — public: one published post by author username + slug. */
 export declare function getPublishedPostBySlug(req: Request, res: Response): Promise<void>;
+/** POST /api/blog/p/:username/:slug/read-day — logged-in reader; counts toward public reading streak (UTC day). */
+export declare function recordBlogReadDay(req: Request, res: Response): Promise<void>;
+/** POST /api/blog/p/:username/:slug/read/start — VIEW_START (BLOG_READ_STREAK.md §16); requires Redis. */
+export declare function startBlogReadView(req: Request, res: Response): Promise<void>;
+/** POST /api/blog/p/:username/:slug/read/commit — VIEW_COMMIT + F.1 Lua; Mongo upsert before EVAL. */
+export declare function commitBlogReadView(req: Request, res: Response): Promise<void>;
 /** GET /api/blog - list current user's posts (for now: my posts only) */
 export declare function listMyPosts(req: Request, res: Response): Promise<void>;
 /** GET /api/blog/post/:postId — owner-only: load one post for editing. */

@@ -32,10 +32,14 @@ function createRateLimiter(windowMs, max, prefix, useFingerprint = false) {
 }
 export const rateLimitSendOtp = createRateLimiter(authConfig.RATE_LIMIT_SEND_OTP.windowMs, authConfig.RATE_LIMIT_SEND_OTP.max, redisKeys.rateLimit.sendOtp, true);
 export const rateLimitVerifyOtp = createRateLimiter(authConfig.RATE_LIMIT_VERIFY_OTP.windowMs, authConfig.RATE_LIMIT_VERIFY_OTP.max, redisKeys.rateLimit.verifyOtp, true);
+/** POST /auth/staff-login — per IP (brute-force protection). */
+export const rateLimitStaffLogin = createRateLimiter(15 * 60 * 1000, 30, redisKeys.rateLimit.staffLogin, false);
 export const rateLimitSignupEmail = createRateLimiter(authConfig.RATE_LIMIT_SIGNUP.windowMs, authConfig.RATE_LIMIT_SIGNUP.max, redisKeys.rateLimit.signupEmail, true);
 export const rateLimitRefresh = createRateLimiter(authConfig.RATE_LIMIT_REFRESH.windowMs, authConfig.RATE_LIMIT_REFRESH.max, redisKeys.rateLimit.refresh);
 export const rateLimitUpdateProfile = createRateLimiter(authConfig.RATE_LIMIT_UPDATE_PROFILE.windowMs, authConfig.RATE_LIMIT_UPDATE_PROFILE.max, redisKeys.rateLimit.updateProfile);
 /** POST /api/feedback — per IP + optional device fingerprint. */
 export const rateLimitFeedback = createRateLimiter(60 * 60 * 1000, 20, redisKeys.rateLimit.feedback, true);
+/** POST /api/contact — per IP + optional device fingerprint. */
+export const rateLimitContact = createRateLimiter(60 * 60 * 1000, 15, redisKeys.rateLimit.contact, true);
 export const rateLimitInviteResolve = createRateLimiter(authConfig.RATE_LIMIT_INVITE_RESOLVE.windowMs, authConfig.RATE_LIMIT_INVITE_RESOLVE.max, redisKeys.rateLimit.inviteResolve, false);
 //# sourceMappingURL=rateLimitAuth.js.map

@@ -19,6 +19,7 @@ const BlogPostSchema = new Schema({
     },
     language: { type: String, trim: true, lowercase: true, maxlength: 12, default: 'en' },
     status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
+    publishedAt: { type: Date, default: null, index: true },
     lastEditedAt: { type: Date, default: null },
     lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     deletedAt: { type: Date, default: null, index: true },

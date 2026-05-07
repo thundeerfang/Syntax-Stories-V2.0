@@ -44,6 +44,8 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
         : typeof found.profileUpdatedAt === 'string'
           ? found.profileUpdatedAt
           : undefined,
+    staffRole: (found as { staffRole?: string }).staffRole ?? null,
+    blogStreakMode: (found as { blogStreakMode?: string }).blogStreakMode ?? 'daily',
   };
 }
 

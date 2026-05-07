@@ -613,6 +613,7 @@ export default function PublicBlogPostPage() {
   const username = typeof params.username === 'string' ? params.username : '';
   const slug = typeof params.slug === 'string' ? params.slug : '';
   const viewerUsername = useAuthStore((s) => s.user?.username ?? null);
+  const token = useAuthStore((s) => s.token);
   const [post, setPost] = useState<PublicBlogPostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -644,6 +645,54 @@ export default function PublicBlogPostPage() {
     };
     void load();
   }, [username, slug]);
+
+  useEffect(() => {
+    if (!post || !token) return;
+    const authorU = post.author.username.trim().toLowerCase();
+    const viewerU = (viewerUsername ?? '').trim().toLowerCase();
+    if (!viewerU || viewerU === authorU) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const start = await blogApi.startReadView(username, slug, token);
+        if (cancelled) return;
+        if (start.kind === 'self') return;
+
+        const dwellMs = start.minDwellMs;
+        await new Promise((r) => setTimeout(r, dwellMs));
+        if (cancelled) return;
+
+        if (start.kind === 'redis_unavailable') {
+          void blogApi.recordReadDay(username, slug, token).catch(() => {
+            /* best-effort */
+          });
+          return;
+        }
+
+        try {
+          await blogApi.commitReadView(username, slug, token, start.sessionId);
+        } catch {
+          void blogApi.recordReadDay(username, slug, token).catch(() => {
+            /* best-effort */
+          });
+        }
+      } catch {
+        if (cancelled) return;
+        await new Promise((r) => setTimeout(r, 10_000));
+        if (cancelled) return;
+        void blogApi.recordReadDay(username, slug, token).catch(() => {
+          /* best-effort */
+        });
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [post, token, username, slug, viewerUsername]);
 
   if (loading) {
     return (
@@ -861,14 +910,7 @@ export default function PublicBlogPostPage() {
             </footer>
           </article>
 
-          <div className="mt-8 flex justify-between px-2 font-mono text-[10px] uppercase text-muted-foreground opacity-40">
-            <span>
-              Lat: {username.length}.{slug.length}
-              {' // '}
-              Node: Web-Public
-            </span>
-            <span>Ref: 000-X-{refSuffix}</span>
-          </div>
+      
         </div>
       </div>
     </BlogImagePreviewProvider>

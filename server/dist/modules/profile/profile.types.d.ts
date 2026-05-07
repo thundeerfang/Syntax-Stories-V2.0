@@ -11,8 +11,8 @@ export type ProfileSections = {
     mySetup?: unknown[];
 };
 /** URL segment for `PATCH /auth/profile/:section` (see `registerAuthModuleRoutes`). */
-export type ProfileUpdateSection = 'basic' | 'social' | 'stack' | 'work' | 'education' | 'certifications' | 'projects' | 'setup';
-export declare const PROFILE_UPDATE_SECTIONS: readonly ["basic", "social", "stack", "work", "education", "certifications", "projects", "setup"];
+export type ProfileUpdateSection = 'basic' | 'social' | 'stack' | 'work' | 'education' | 'certifications' | 'projects' | 'setup' | 'blog-streak';
+export declare const PROFILE_UPDATE_SECTIONS: readonly ["basic", "social", "stack", "work", "education", "certifications", "projects", "setup", "blog-streak"];
 export declare function isProfileUpdateSection(s: string): s is ProfileUpdateSection;
 /** Keys allowed per section endpoint (subset of legacy `PATCH /auth/profile`). */
 export declare const PROFILE_SECTION_KEYS: Record<ProfileUpdateSection, readonly string[]>;

@@ -26,6 +26,8 @@ export interface IBlogPost extends Document {
   /** BCP-47-ish language code (e.g. en, en-us). */
   language?: string;
   status: BlogPostStatus;
+  /** First time the post became published (create-as-published or draft→publish); falls back to `createdAt` when unset. */
+  publishedAt?: Date;
   /** Set when a published (or draft) post is saved after create; used for “edited” UI. */
   lastEditedAt?: Date;
   lastEditedById?: mongoose.Types.ObjectId;
@@ -57,6 +59,7 @@ const BlogPostSchema = new Schema<IBlogPost>(
     },
     language: { type: String, trim: true, lowercase: true, maxlength: 12, default: 'en' },
     status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
+    publishedAt: { type: Date, default: null, index: true },
     lastEditedAt: { type: Date, default: null },
     lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     deletedAt: { type: Date, default: null, index: true },

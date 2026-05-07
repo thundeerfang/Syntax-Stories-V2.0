@@ -27,6 +27,11 @@ const verifyOtpSchema = z.object({
   otpVersion: z.number().int().min(1).optional(),
 });
 
+const staffLoginSchema = z.object({
+  email: z.string().email().toLowerCase().trim(),
+  password: z.string().min(1).max(200),
+});
+
 export function sendOtpValidation(req: Request, res: Response, next: NextFunction): void {
   const r = sendOtpSchema.safeParse(req.body);
   if (!r.success) {
@@ -52,6 +57,16 @@ export function verifyOtpValidation(req: Request, res: Response, next: NextFunct
   if (!r.success) {
     const msg = r.error.issues[0]?.message?.replaceAll('"', '') ?? 'Validation error';
     res.status(400).json({ message: msg, error: formatZodError(r.error), success: false });
+    return;
+  }
+  req.body = r.data;
+  next();
+}
+
+export function staffLoginValidation(req: Request, res: Response, next: NextFunction): void {
+  const r = staffLoginSchema.safeParse(req.body);
+  if (!r.success) {
+    res.status(400).json({ message: 'Validation error', error: formatZodError(r.error), success: false });
     return;
   }
   req.body = r.data;

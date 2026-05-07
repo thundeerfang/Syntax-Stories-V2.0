@@ -10,9 +10,11 @@ import { AuditAction } from '../shared/audit/events.js';
 import { redisKeys } from '../shared/redis/keys.js';
 import { RateLimitHttpError, isAppHttpError } from '../errors/httpErrors.js';
 import { sendAppHttpError } from '../errors/sendAppHttpError.js';
+import { computeReadStreakPayload, loadReadDayBucketsForHeatmap } from '../services/readStreak.service.js';
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
-const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount';
+const PUBLIC_PROFILE_FIELDS =
+  'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest';
 
 const DAILY_FOLLOW_LIMIT = 500;
 
@@ -63,11 +65,31 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
     const u = user as { _id: mongoose.Types.ObjectId; profileImg?: string; followersCount?: number; followingCount?: number };
     const counts = await ensureStoredFollowCounts(u._id, u.followersCount, u.followingCount);
     const profileImg = normalizeProfileImg(u.profileImg);
+    const modeRaw = (user as { blogStreakMode?: string }).blogStreakMode;
+    const now = new Date();
+    const [readStreak, readHeatmapDays] = await Promise.all([
+      computeReadStreakPayload(
+        u._id,
+        modeRaw === 'weekly' || modeRaw === 'monthly' ? modeRaw : 'daily',
+        now,
+        getRedis()
+      ),
+      loadReadDayBucketsForHeatmap(u._id, now),
+    ]);
+    const durableLongest = (user as { readStreakLongest?: number }).readStreakLongest;
+    if (durableLongest != null && durableLongest > 0) {
+      readStreak.byMode.daily.longest = Math.max(readStreak.byMode.daily.longest, durableLongest);
+      if (readStreak.displayMode === 'daily') {
+        readStreak.longest = readStreak.byMode.daily.longest;
+      }
+    }
     res.status(200).json({
       success: true,
       user: { ...user, id: String(user._id), profileImg },
       followersCount: counts.followersCount,
       followingCount: counts.followingCount,
+      readStreak,
+      readHeatmapDays,
     });
   } catch (err) {
     console.error(err);

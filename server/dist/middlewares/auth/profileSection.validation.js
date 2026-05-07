@@ -1,5 +1,5 @@
 import { isProfileUpdateSection } from '../../modules/profile/profile.types.js';
-import { updateProfileBasicSchema, updateProfileCertificationsSchema, updateProfileEducationSchema, updateProfileProjectsSchema, updateProfileSetupSchema, updateProfileSocialSchema, updateProfileStackSchema, updateProfileWorkSchema, } from './profileZodSchemas.js';
+import { updateProfileBasicSchema, updateProfileBlogStreakSchema, updateProfileCertificationsSchema, updateProfileEducationSchema, updateProfileProjectsSchema, updateProfileSetupSchema, updateProfileSocialSchema, updateProfileStackSchema, updateProfileWorkSchema, } from './profileZodSchemas.js';
 import { formatZodError } from './zodFormat.js';
 function sectionValidation(schema, req, res, next) {
     const r = schema.safeParse(req.body);
@@ -39,6 +39,9 @@ export function updateProfileSetupValidation(req, res, next) {
 export function updateProfileStackValidation(req, res, next) {
     sectionValidation(updateProfileStackSchema, req, res, next);
 }
+export function updateProfileBlogStreakValidation(req, res, next) {
+    sectionValidation(updateProfileBlogStreakSchema, req, res, next);
+}
 function paramSection(req) {
     const raw = req.params.section;
     const s = Array.isArray(raw) ? raw[0] : raw;
@@ -72,6 +75,8 @@ export function updateProfileSectionBodyValidation(req, res, next) {
             return updateProfileProjectsValidation(req, res, next);
         case 'setup':
             return updateProfileSetupValidation(req, res, next);
+        case 'blog-streak':
+            return updateProfileBlogStreakValidation(req, res, next);
         default:
             res.status(400).json({
                 success: false,

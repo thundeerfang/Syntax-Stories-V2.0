@@ -110,6 +110,104 @@ export const blogApi = {
     return { success: true, post: data.post };
   },
 
+  /** VIEW_START — returns session for VIEW_COMMIT when Redis is available (BLOG_READ_STREAK §16). */
+  startReadView: async (
+    username: string,
+    slug: string,
+    accessToken: string,
+  ): Promise<
+    | { kind: 'session'; sessionId: string; minDwellMs: number }
+    | { kind: 'self' }
+    | { kind: 'redis_unavailable'; minDwellMs: number }
+  > => {
+    const u = encodeURIComponent(username);
+    const s = encodeURIComponent(slug);
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/blog/p/${u}/${s}/read/start`,
+      { method: 'POST' },
+      accessToken,
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      code?: string;
+      sessionId?: string | null;
+      reason?: string;
+      minDwellMs?: number;
+    };
+    if (r.status === 503 && data.code === 'READ_STREAK_REDIS_UNAVAILABLE') {
+      return { kind: 'redis_unavailable', minDwellMs: data.minDwellMs ?? 10_000 };
+    }
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    if (data.reason === 'self') return { kind: 'self' };
+    if (!data.sessionId) throw new Error('Invalid read/start response');
+    return { kind: 'session', sessionId: data.sessionId, minDwellMs: data.minDwellMs ?? 10_000 };
+  },
+
+  /** VIEW_COMMIT — merged Redis path; requires prior startReadView session. */
+  commitReadView: async (
+    username: string,
+    slug: string,
+    accessToken: string,
+    sessionId: string,
+  ): Promise<{
+    success: boolean;
+    counted?: boolean;
+    alreadyProcessed?: boolean;
+    dayBucket?: string;
+    reason?: string;
+    redisApplied?: boolean;
+  }> => {
+    const u = encodeURIComponent(username);
+    const s = encodeURIComponent(slug);
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/blog/p/${u}/${s}/read/commit`,
+      { method: 'POST', body: JSON.stringify({ sessionId }) },
+      accessToken,
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      counted?: boolean;
+      alreadyProcessed?: boolean;
+      dayBucket?: string;
+      reason?: string;
+      redisApplied?: boolean;
+    };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return {
+      success: data.success !== false,
+      counted: data.counted,
+      alreadyProcessed: data.alreadyProcessed,
+      dayBucket: data.dayBucket,
+      reason: data.reason,
+      redisApplied: data.redisApplied,
+    };
+  },
+
+  /** Records today (UTC) as a reading day for streaks; no-op for guests or when reading your own post. */
+  recordReadDay: async (
+    username: string,
+    slug: string,
+    accessToken: string,
+  ): Promise<{ success: boolean; counted?: boolean; reason?: string }> => {
+    const u = encodeURIComponent(username);
+    const s = encodeURIComponent(slug);
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/blog/p/${u}/${s}/read-day`,
+      { method: 'POST' },
+      accessToken,
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      counted?: boolean;
+      reason?: string;
+    };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return { success: data.success !== false, counted: data.counted, reason: data.reason };
+  },
+
   getComments: async (
     username: string,
     slug: string,

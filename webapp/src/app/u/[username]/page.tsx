@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ExternalLink, FolderGit2, Link2, Monitor, Users, Wrench, Share2, Play, UserPlus, Terminal, Activity, ChevronRight, Globe } from 'lucide-react';
-import { followApi, type PublicProfileUser } from '@/api/follow';
+import { followApi, type ReadStreakPayload, type PublicProfileUser } from '@/api/follow';
 import { analyticsApi } from '@/api/analytics';
 import { useAuthStore } from '@/store/auth';
 import { FollowersFollowingDialog, MediaFullViewDialog } from '@/components/profile/dialog';
@@ -217,6 +217,8 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
   const [activityTab, setActivityTab] = useState<'posts' | 'repost'>('posts');
+  const [readStreak, setReadStreak] = useState<ReadStreakPayload | null>(null);
+  const [readHeatmapDays, setReadHeatmapDays] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!username) {
@@ -224,6 +226,8 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
       return;
     }
     setLoading(true);
+    setReadStreak(null);
+    setReadHeatmapDays(null);
     followApi
       .getPublicProfile(username)
       .then((res) => {
@@ -231,6 +235,8 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
           setProfile(res.user);
           setFollowersCount(res.followersCount);
           setFollowingCount(res.followingCount);
+          setReadStreak(res.readStreak ?? null);
+          setReadHeatmapDays(res.readHeatmapDays ?? null);
         }
       })
       .catch(() => {
@@ -397,7 +403,12 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
   const stats = [
     { key: 'respect', label: 'Respect', value: 10, iconNode: <SparkLottie play size={24} /> },
     { key: 'wallet', label: 'Wallet', value: 0, iconNode: <WalletLottie play size={24} /> },
-    { key: 'streak', label: 'Streak', value: 0, iconNode: <StreakFireLottie play size={24} /> },
+    {
+      key: 'streak',
+      label: 'Read streak',
+      value: readStreak?.current ?? 0,
+      iconNode: <StreakFireLottie play size={24} />,
+    },
     { key: 'followers', label: 'Followers', value: followersCount, iconNode: <Users className="size-4 text-primary" /> },
     { key: 'following', label: 'Following', value: followingCount, iconNode: <UserPlus className="size-4 text-primary" /> },
   ] as const;
@@ -994,9 +1005,9 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1 p-2 border-2 border-border bg-muted/10">
                 <div className="text-lg font-black italic flex items-center gap-2">
-                  0 <StreakFireLottie play size={28} />
+                  {readStreak?.longest ?? 0} <StreakFireLottie play size={28} />
                 </div>
-                <p className="text-[8px] font-bold text-muted-foreground uppercase">Total streak</p>
+                <p className="text-[8px] font-bold text-muted-foreground uppercase">Longest read streak</p>
               </div>
               <div className="space-y-1 p-2 border-2 border-border bg-muted/10">
                 <p className="text-lg font-black italic">0</p>
@@ -1039,11 +1050,9 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
             </div>
 
             <div className="pt-2 space-y-2">
-              <p className="text-[9px] font-black uppercase text-muted-foreground">Contribution Heatmap</p>
-              <div className="overflow-x-auto ss-scrollbar-hide border-2 border-border p-2 bg-muted/5">
-                <div className="min-w-[400px]">
-                  <ProfileHeatmap />
-                </div>
+              <p className="text-[9px] font-black uppercase text-muted-foreground">Reading activity</p>
+              <div className="w-full min-w-0 max-w-full border-2 border-border p-2 bg-muted/5">
+                <ProfileHeatmap readHeatmapDays={readHeatmapDays} />
               </div>
             </div>
           </div>

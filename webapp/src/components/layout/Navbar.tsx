@@ -14,6 +14,7 @@ import { AccountDropdown } from './AccountDropdown';
 import { cn } from '@/lib/utils';
 import { setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
 import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
+import { NavbarSkeleton } from '@/components/layout/NavbarSkeleton';
 
 const navLinks = [
   { href: '/', label: 'HOME' },
@@ -60,7 +61,7 @@ export function Navbar() {
     setBannerDismissed(true);
   };
 
-  if (!mounted) return <div className="h-16 w-full bg-background border-b-2 border-border" />;
+  if (!mounted) return <NavbarSkeleton />;
 
   return (
     <header 
@@ -93,10 +94,15 @@ export function Navbar() {
           {/* Left: Menu + Logo */}
           <div className="flex flex-1 items-center gap-3">
             <button
+              type="button"
               onClick={toggleSidebar}
-              className="group relative p-2 border-2 border-border bg-card hover:border-primary transition-all active:translate-y-0.5"
+              className="group relative border-2 border-border bg-card p-2 text-foreground transition-all hover:border-primary active:translate-y-0.5"
             >
-              <Menu className="h-5 w-5 group-hover:text-primary transition-colors" strokeWidth={2.5} />
+              <Menu
+                className="h-5 w-5 text-foreground transition-colors group-hover:text-primary"
+                strokeWidth={2.5}
+                aria-hidden
+              />
             </button>
             <Link href="/" className="shrink-0">
               <img src="/svg/logo_hori.png" alt="Syntax Stories" className="h-6 w-auto object-contain sm:h-9" />
@@ -159,8 +165,12 @@ export function Navbar() {
             </button>
 
             {/* Mobile Search Icon only */}
-            <button onClick={openSearch} className="md:hidden p-2 text-foreground border-2 border-transparent hover:border-primary transition-all">
-              <Search className="h-5 w-5" />
+            <button
+              type="button"
+              onClick={openSearch}
+              className="border-2 border-transparent p-2 text-foreground transition-all hover:border-primary md:hidden"
+            >
+              <Search className="h-5 w-5 text-foreground" strokeWidth={2.5} />
             </button>
 
             <div className="flex items-center gap-2">

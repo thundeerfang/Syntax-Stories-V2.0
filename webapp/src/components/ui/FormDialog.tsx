@@ -152,7 +152,12 @@ export function FormDialog({
         )}
         {interactionLock && (
           <div
-            className="absolute inset-0 z-[20] flex min-h-0 flex-col bg-background/92 backdrop-blur-sm pointer-events-auto"
+            className={cn(
+              'absolute inset-0 z-[20] flex min-h-0 flex-col pointer-events-auto',
+              /* Light: slightly warm scrim. Dark: near-black (avoid milky/white from blur + semitransparent background). */
+              'bg-background/90 backdrop-blur-[2px]',
+              'dark:bg-black/88 dark:backdrop-blur-md'
+            )}
             role="status"
             aria-live="polite"
             aria-busy="true"

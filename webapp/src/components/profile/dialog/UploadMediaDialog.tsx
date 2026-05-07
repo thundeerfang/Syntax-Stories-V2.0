@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus } from 'lucide-react';
 import Cropper, { Area } from 'react-easy-crop';
-import { Dialog } from '@/components/ui/Dialog';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
 import { ImageDropzone } from '@/components/ui/ImageDropzone';
+import { Button } from '@/components/ui';
 import { Input, Label } from '@/components/retroui';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -148,42 +149,20 @@ export function UploadMediaDialog({
   const uploadProgressWidth = `${Math.round(progress * 100)}%`;
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
-      onClose={handleClose}
+      onClose={() => {
+        if (!uploading) handleClose();
+      }}
       titleId="upload-media-title"
-      showCloseButton={false}
-      panelClassName={cn(
-        'pointer-events-auto w-full max-w-lg max-h-[90vh] overflow-y-auto',
-        'border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]'
-      )}
-      contentClassName="relative p-6 sm:p-8"
-      backdropClassName="fixed inset-0 z-[101] bg-black/40"
+      title="Upload media"
+      titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
+      subtitle={`Crop to thumbnail. JPEG, PNG, GIF or WebP. Max ${MAX_MB} MB. Title is used as the image description.`}
+      subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+      panelClassName="max-w-md sm:max-w-lg"
+      interactionLock={uploading}
     >
       <div className="flex flex-col gap-4">
-        <header className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 flex flex-col gap-1.5">
-            <h2
-              id="upload-media-title"
-              className="text-sm font-black uppercase tracking-widest flex flex-wrap items-center gap-2"
-            >
-              <ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />
-              <span>Upload media</span>
-            </h2>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              Crop to thumbnail. JPEG, PNG, GIF or WebP. Max {MAX_MB}MB. Title is used as the image description.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="shrink-0 flex size-9 items-center justify-center rounded-sm border-2 border-border bg-card text-muted-foreground shadow-[2px_2px_0px_0px_var(--border)] transition-colors hover:text-foreground hover:border-primary"
-            aria-label="Close"
-          >
-            <X className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
-          </button>
-        </header>
-
         <div className="grid gap-1.5">
           <Label htmlFor="media-title">Title (optional)</Label>
           <Input
@@ -192,6 +171,7 @@ export function UploadMediaDialog({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={120}
+            disabled={uploading}
           />
         </div>
 
@@ -200,26 +180,34 @@ export function UploadMediaDialog({
             disabled={uploading}
             maxSizeBytes={MAX_MB * 1024 * 1024}
             className={cn(
-              'flex min-h-[152px] w-full flex-col items-center justify-center border-2 border-dashed rounded-lg px-6 py-8 text-center transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-              'border-border bg-muted/20 hover:bg-muted/30',
+              'flex min-h-[152px] w-full flex-col items-center justify-center border-2 border-dashed px-6 py-8 text-center transition-colors',
+              'rounded-none border-border bg-muted/20 outline-none hover:bg-muted/30',
+              'cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/40',
               uploading && 'pointer-events-none opacity-70'
             )}
             dragActiveClassName="border-primary bg-primary/5"
             onFile={(f) => handleFile(f)}
           >
-            <p className="text-sm font-bold text-foreground text-balance max-w-[16rem]">Drop an image here or click to browse</p>
-            <p className="text-[10px] text-muted-foreground mt-2 text-balance max-w-[16rem]">You will crop before upload</p>
+            <p className="max-w-[16rem] text-balance text-sm font-bold text-foreground">Drop an image here or click to browse</p>
+            <p className="mt-2 max-w-[16rem] text-balance text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              You will crop before upload
+            </p>
           </ImageDropzone>
         )}
 
         {imageUrl && (
           <div className="flex flex-col gap-4">
-            <CropperKeyboardWrapper imageReady={!!imageUrl} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
+            <CropperKeyboardWrapper
+              imageReady={!!imageUrl}
+              className="h-56 w-full overflow-hidden rounded-none border-2 border-border bg-muted"
+            >
               <Cropper
                 image={imageUrl}
                 crop={crop}
                 zoom={zoom}
                 aspect={1}
+                cropShape="rect"
+                showGrid
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
@@ -234,43 +222,48 @@ export function UploadMediaDialog({
                 value={zoom}
                 onChange={(e) => setZoom(Number(e.target.value))}
                 className="flex-1"
+                disabled={uploading}
+                aria-label="Zoom"
               />
-              <span className="text-[10px] font-bold text-muted-foreground w-16 text-right">{zoom.toFixed(1)}x</span>
+              <span className="w-14 text-right text-[10px] font-bold text-muted-foreground">{zoom.toFixed(1)}×</span>
             </div>
             <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-              Tip: focus the crop frame (click it), then arrow keys to pan. Hold Shift for smaller steps.
+              Tip: click the crop frame, then arrow keys to pan. Hold Shift for smaller steps.
             </p>
 
             {uploading && (
-              <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div className="h-full bg-primary transition-all" style={{ width: uploadProgressWidth }} />
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
-              <button
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t-2 border-border pt-4">
+              <Button
                 type="button"
+                variant="outline"
+                size="lg"
+                className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
                 disabled={uploading}
                 onClick={() => {
                   if (imageUrl) URL.revokeObjectURL(imageUrl);
                   resetState();
                 }}
-                className="px-3 py-1.5 text-[10px] font-bold uppercase rounded border border-border text-muted-foreground hover:bg-muted/40"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                size="lg"
+                className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
                 disabled={uploading}
                 onClick={() => void handleUpload()}
-                className="px-4 py-1.5 text-[10px] font-bold uppercase rounded border-2 border-border bg-primary text-primary-foreground shadow-[2px_2px_0px_0px_var(--border)] hover:brightness-110 disabled:opacity-60"
               >
                 {uploading ? 'Uploading…' : 'Save & add'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
       </div>
-    </Dialog>
+    </FormDialog>
   );
 }

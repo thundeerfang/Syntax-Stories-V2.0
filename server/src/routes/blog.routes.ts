@@ -1,17 +1,20 @@
 import { Router } from 'express';
 import { verifyToken } from '../middlewares/auth/index.js';
 import {
+  commitBlogReadView,
   createPost,
   deleteMyPost,
   getBlogTaxonomy,
   getDraft,
   getMyPostById,
   getPublishedPostBySlug,
+  recordBlogReadDay,
   listMyPosts,
   listPublishedFeed,
   listUserPublishedPosts,
   purgeMyPostPermanently,
   restoreMyPost,
+  startBlogReadView,
   updateMyPost,
   upsertDraft,
 } from '../controllers/blog.controller.js';
@@ -24,6 +27,9 @@ router.get('/feed', listPublishedFeed);
 router.get('/u/:username/posts', listUserPublishedPosts);
 router.get('/p/:username/:slug/comments', listBlogComments);
 router.post('/p/:username/:slug/comments', verifyToken, addBlogComment);
+router.post('/p/:username/:slug/read/start', verifyToken, startBlogReadView);
+router.post('/p/:username/:slug/read/commit', verifyToken, commitBlogReadView);
+router.post('/p/:username/:slug/read-day', verifyToken, recordBlogReadDay);
 router.get('/p/:username/:slug', getPublishedPostBySlug);
 router.post('/', verifyToken, createPost);
 router.get('/draft', verifyToken, getDraft);

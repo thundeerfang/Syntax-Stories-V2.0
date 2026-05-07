@@ -163,6 +163,13 @@ export interface IUser extends Document {
     emailVerified: boolean;
     lastLoginAt?: Date;
     subscription?: mongoose.Types.ObjectId;
+    /** Stripe Customer id (`cus_...`); one per user when billing is set up. */
+    stripeCustomerId?: string | null;
+    /** Denormalized from Subscription / Stripe for fast reads. */
+    subscriptionStatus?: string;
+    subscriptionPlanKey?: string;
+    subscriptionPeriodEnd?: Date;
+    lastSubscriptionReconciledAt?: Date | null;
     twoFactorEnabled: boolean;
     twoFactorSecret?: string;
     /** Denormalized: updated on follow/unfollow */
@@ -179,6 +186,19 @@ export interface IUser extends Document {
     /** e.g. `link`, `blog`, `oauth` */
     referralSource?: string;
     referralCapturedAt?: Date;
+    /** CMS / help admin access; unset = no staff UI. */
+    staffRole?: 'editor' | 'admin';
+    /** Bcrypt hash for `POST /auth/staff-login` (staff accounts only). Not selected by default. */
+    staffPasswordHash?: string;
+    /** Admin soft-delete (platform user directory); omit or null = active in directory. */
+    deletedAt?: Date | null;
+    deletedById?: mongoose.Types.ObjectId;
+    /** Which blog posting streak granularity is shown on the public profile (`daily` default). */
+    blogStreakMode?: 'daily' | 'weekly' | 'monthly';
+    /** Durable max daily read streak length from Mongo recompute (F.5); merged into public `readStreak`. */
+    readStreakLongest?: number;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 export declare const UserModel: Model<IUser>;
 //# sourceMappingURL=User.d.ts.map

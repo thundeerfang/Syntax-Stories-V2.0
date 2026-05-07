@@ -20,7 +20,8 @@ export type ProfileUpdateSection =
   | 'education'
   | 'certifications'
   | 'projects'
-  | 'setup';
+  | 'setup'
+  | 'blog-streak';
 
 export const PROFILE_UPDATE_SECTIONS = [
   'basic',
@@ -31,6 +32,7 @@ export const PROFILE_UPDATE_SECTIONS = [
   'certifications',
   'projects',
   'setup',
+  'blog-streak',
 ] as const satisfies readonly ProfileUpdateSection[];
 
 export function isProfileUpdateSection(s: string): s is ProfileUpdateSection {
@@ -63,6 +65,7 @@ export const PROFILE_SECTION_KEYS: Record<ProfileUpdateSection, readonly string[
   certifications: ['certifications'],
   projects: ['projects', 'openSourceContributions', 'isGitAccount'],
   setup: ['mySetup'],
+  'blog-streak': ['blogStreakMode'],
 };
 
 export const ProfileErrorCode = {

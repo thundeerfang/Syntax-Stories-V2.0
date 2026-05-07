@@ -10,6 +10,11 @@ import { createSession, generateRefreshToken } from './session.service.js';
 import { emitAppEvent } from '../shared/events/appEvents.js';
 import { REFERRAL_COOKIE } from './referral.service.js';
 
+type EmailAuthOpts = {
+  /** When set from staff password login, audit + app events use this source; 2FA is skipped. */
+  loginSource?: 'otp' | 'staff_password';
+};
+
 /**
  * After email OTP is verified: 2FA branch, or issue JWT + session JSON (same shape as verifyOtp).
  */
@@ -17,9 +22,11 @@ export async function respondWithSessionAfterEmailAuth(
   req: Request,
   res: Response,
   user: HydratedDocument<IUser>,
-  isNewUser: boolean
+  isNewUser: boolean,
+  opts?: EmailAuthOpts
 ): Promise<void> {
-  if (user.twoFactorEnabled) {
+  const skipTwoFactor = opts?.loginSource === 'staff_password';
+  if (user.twoFactorEnabled && !skipTwoFactor) {
     try {
       const { challengeToken, expiresIn } = await createAuthChallenge(String(user._id));
       if (isNewUser) {
@@ -47,7 +54,11 @@ export async function respondWithSessionAfterEmailAuth(
   const refreshToken = generateRefreshToken();
   const session = await createSession(String(user._id), req, refreshToken);
   const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
-  const auditSource = isNewUser ? 'signup_email' : 'otp';
+  const auditSource = isNewUser
+    ? 'signup_email'
+    : opts?.loginSource === 'staff_password'
+      ? 'staff_password'
+      : 'otp';
   void writeAuditLog(req, AuditAction.SESSION_CREATED, {
     actorId: String(user._id),
     metadata: {

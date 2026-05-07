@@ -42,6 +42,8 @@ export function mapUserDocumentToApiUser(found) {
             : typeof found.profileUpdatedAt === 'string'
                 ? found.profileUpdatedAt
                 : undefined,
+        staffRole: found.staffRole ?? null,
+        blogStreakMode: found.blogStreakMode ?? 'daily',
     };
 }
 /** Alias for account responses (settings / session user). */

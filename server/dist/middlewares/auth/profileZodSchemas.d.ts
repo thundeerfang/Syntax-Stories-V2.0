@@ -959,6 +959,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     isXAccount: z.ZodOptional<z.ZodBoolean>;
     isAppleAccount: z.ZodOptional<z.ZodBoolean>;
     isDiscordAccount: z.ZodOptional<z.ZodBoolean>;
+    blogStreakMode: z.ZodOptional<z.ZodEnum<["daily", "weekly", "monthly"]>>;
 }, "strip", z.ZodTypeAny, {
     github?: string | undefined;
     expectedProfileVersion?: number | undefined;
@@ -1080,6 +1081,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     isXAccount?: boolean | undefined;
     isAppleAccount?: boolean | undefined;
     isDiscordAccount?: boolean | undefined;
+    blogStreakMode?: "daily" | "weekly" | "monthly" | undefined;
 }, {
     github?: string | undefined;
     expectedProfileVersion?: number | undefined;
@@ -1201,6 +1203,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     isXAccount?: boolean | undefined;
     isAppleAccount?: boolean | undefined;
     isDiscordAccount?: boolean | undefined;
+    blogStreakMode?: "daily" | "weekly" | "monthly" | undefined;
 }>, {
     github?: string | undefined;
     expectedProfileVersion?: number | undefined;
@@ -1322,6 +1325,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     isXAccount?: boolean | undefined;
     isAppleAccount?: boolean | undefined;
     isDiscordAccount?: boolean | undefined;
+    blogStreakMode?: "daily" | "weekly" | "monthly" | undefined;
 }, {
     github?: string | undefined;
     expectedProfileVersion?: number | undefined;
@@ -1443,6 +1447,7 @@ export declare const updateProfileSchema: z.ZodEffects<z.ZodObject<{
     isXAccount?: boolean | undefined;
     isAppleAccount?: boolean | undefined;
     isDiscordAccount?: boolean | undefined;
+    blogStreakMode?: "daily" | "weekly" | "monthly" | undefined;
 }>;
 export declare const updateProfileBasicSchema: z.ZodEffects<z.ZodObject<{
     fullName: z.ZodOptional<z.ZodString>;
@@ -2350,6 +2355,16 @@ export declare const updateProfileSetupSchema: z.ZodObject<{
         productUrl?: string | undefined;
         imageAlt?: string | undefined;
     }[];
+    expectedProfileVersion?: number | undefined;
+}>;
+export declare const updateProfileBlogStreakSchema: z.ZodObject<{
+    blogStreakMode: z.ZodEnum<["daily", "weekly", "monthly"]>;
+    expectedProfileVersion: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    blogStreakMode: "daily" | "weekly" | "monthly";
+    expectedProfileVersion?: number | undefined;
+}, {
+    blogStreakMode: "daily" | "weekly" | "monthly";
     expectedProfileVersion?: number | undefined;
 }>;
 /** Legacy names (previously Joi schemas). */

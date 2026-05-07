@@ -342,6 +342,7 @@ const profilePatchFields = {
   isXAccount: z.boolean().optional(),
   isAppleAccount: z.boolean().optional(),
   isDiscordAccount: z.boolean().optional(),
+  blogStreakMode: z.enum(['daily', 'weekly', 'monthly']).optional(),
 };
 
 export const updateProfileSchema = z
@@ -441,6 +442,11 @@ export const updateProfileProjectsSchema = z
 
 export const updateProfileSetupSchema = z.object({
   mySetup: z.array(setupItemSchema).max(5),
+  expectedProfileVersion: expectedProfileVersionField,
+});
+
+export const updateProfileBlogStreakSchema = z.object({
+  blogStreakMode: z.enum(['daily', 'weekly', 'monthly']),
   expectedProfileVersion: expectedProfileVersionField,
 });
 

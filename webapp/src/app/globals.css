@@ -584,3 +584,14 @@ html * {
 .ss-profile-readonly .ss-btn-remove {
   display: none !important;
 }
+
+/* ========== Route loader (react-loaders / loaders.css) ========== */
+/* Pacman dots sit in a white “well” by default — breaks dark terminal chrome */
+.terminal-loader-pacman-refined .loader-inner,
+.terminal-loader-pacman-refined .loader-active .loader-inner {
+  background-color: transparent !important;
+}
+.terminal-loader-pacman-refined div[class*='loader-inner'],
+.terminal-loader-pacman-refined .pacman > div {
+  background-color: transparent !important;
+}

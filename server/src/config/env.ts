@@ -84,6 +84,15 @@ export const env = {
    * (host must be configured or uploads fail with 503).
    */
   CLAMAV_REQUIRED: (process.env.CLAMAV_REQUIRED ?? '').toLowerCase() === 'true',
+  /**
+   * When true, ensure local clamd is running before listen (127.0.0.1 / localhost only).
+   * Default: on in `NODE_ENV=development`, off otherwise. Ignored in production deploy if false.
+   */
+  CLAMAV_AUTO_START: (() => {
+    const v = process.env.CLAMAV_AUTO_START;
+    if (v !== undefined && v !== '') return v.toLowerCase() === 'true';
+    return process.env.NODE_ENV === 'development';
+  })(),
 
   /** When `'false'`, skip referral attribution (signup still works). Default: enabled. */
   REFERRALS_ENABLED: (process.env.REFERRALS_ENABLED ?? '').toLowerCase() !== 'false',
@@ -93,4 +102,45 @@ export const env = {
     process.env.SESSION_SECRET?.trim() ||
     process.env.JWT_SECRET?.trim() ||
     '',
+
+  /** Public web app origin for Stripe success/cancel URLs (defaults to first `FRONTEND_URL` entry). */
+  PUBLIC_APP_URL: (() => {
+    const explicit = process.env.PUBLIC_APP_URL?.trim();
+    if (explicit) return explicit.replace(/\/$/, '');
+    const fe = process.env.FRONTEND_URL?.split(',')[0]?.trim();
+    return fe ? fe.replace(/\/$/, '') : '';
+  })(),
+  STRIPE_PORTAL_RETURN_URL: process.env.STRIPE_PORTAL_RETURN_URL?.trim().replace(/\/$/, '') || '',
+
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY?.trim() || '',
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET?.trim() || '',
+  STRIPE_PRICE_PRO: process.env.STRIPE_PRICE_PRO?.trim() || '',
+  STRIPE_PRICE_PROPLUS: process.env.STRIPE_PRICE_PROPLUS?.trim() || '',
+  STRIPE_PRICE_ULTRA: process.env.STRIPE_PRICE_ULTRA?.trim() || '',
+
+  /** Shared secret for internal billing tools (replay webhook). Header: `X-Internal-Billing-Secret`. */
+  INTERNAL_BILLING_SECRET: process.env.INTERNAL_BILLING_SECRET?.trim() || '',
+
+  BILLING_SYNC_STALE_SEC: Number.parseInt(process.env.BILLING_SYNC_STALE_SEC ?? '120', 10),
+  BILLING_SUMMARY_CACHE_TTL_SEC: Number.parseInt(process.env.BILLING_SUMMARY_CACHE_TTL_SEC ?? '60', 10),
+  BILLING_WEBHOOK_RETRY_MS: Number.parseInt(process.env.BILLING_WEBHOOK_RETRY_MS ?? '60000', 10),
+  BILLING_RECONCILE_INTERVAL_MS: Number.parseInt(process.env.BILLING_RECONCILE_INTERVAL_MS ?? `${6 * 60 * 60 * 1000}`, 10),
+  BILLING_RECONCILE_SHARD_PCT: Number.parseInt(process.env.BILLING_RECONCILE_SHARD_PCT ?? '5', 10),
+  BILLING_WEBHOOK_MAX_RETRIES: Number.parseInt(process.env.BILLING_WEBHOOK_MAX_RETRIES ?? '25', 10),
+
+  /**
+   * When `false`, staff JWT routes use legacy `requireStaff` only (all-or-nothing for management APIs).
+   * When `true` (default), `/api/v1/admin/management/*` enforces per-permission RBAC from AdminRole documents.
+   */
+  FEATURE_ADMIN_RBAC_ENABLED: (process.env.FEATURE_ADMIN_RBAC_ENABLED ?? 'true').toLowerCase() !== 'false',
+
+  /** §21 — `strict` blocks writes when mustReaccept; `soft` sets X-Legal-Reconsent-Required only. */
+  LEGAL_ENFORCEMENT_MODE: process.env.LEGAL_ENFORCEMENT_MODE === 'strict' ? 'strict' : 'soft',
+  LEGAL_DELETION_COOLDOWN_HOURS: Number.parseInt(process.env.LEGAL_DELETION_COOLDOWN_HOURS ?? '24', 10),
+  LEGAL_DELETION_SLA_DAYS: Number.parseInt(process.env.LEGAL_DELETION_SLA_DAYS ?? '30', 10),
+  LEGAL_JOB_POLL_MS: Number.parseInt(process.env.LEGAL_JOB_POLL_MS ?? '5000', 10),
+  LEGAL_INTEGRITY_INTERVAL_MS: Number.parseInt(
+    process.env.LEGAL_INTEGRITY_INTERVAL_MS ?? `${24 * 60 * 60 * 1000}`,
+    10
+  ),
 } as const;

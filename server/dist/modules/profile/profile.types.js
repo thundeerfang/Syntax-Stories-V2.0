@@ -7,6 +7,7 @@ export const PROFILE_UPDATE_SECTIONS = [
     'certifications',
     'projects',
     'setup',
+    'blog-streak',
 ];
 export function isProfileUpdateSection(s) {
     return PROFILE_UPDATE_SECTIONS.includes(s);
@@ -37,6 +38,7 @@ export const PROFILE_SECTION_KEYS = {
     certifications: ['certifications'],
     projects: ['projects', 'openSourceContributions', 'isGitAccount'],
     setup: ['mySetup'],
+    'blog-streak': ['blogStreakMode'],
 };
 export const ProfileErrorCode = {
     USERNAME_TAKEN: 'USERNAME_TAKEN',

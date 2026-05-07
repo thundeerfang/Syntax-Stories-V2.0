@@ -18,10 +18,15 @@ import {
   registerAuthModuleRoutes,
   registerOAuthRoutes,
 } from './bootstrap/index.js';
+import { handleStripeWebhook } from './controllers/stripeWebhook.controller.js';
+import internalBillingRoutes from './routes/internalBilling.routes.js';
 
 const app = express();
 
 registerAppListeners();
+
+/** Stripe webhooks require the raw body for signature verification (§3.6). */
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Trust first proxy (e.g. Nginx, load balancer) so req.ip and rate limiting are correct
 app.set('trust proxy', 1);
@@ -66,6 +71,7 @@ app.use(
       'Authorization',
       'X-Request-Id',
       'X-Idempotency-Key',
+      'Idempotency-Key',
       'X-Intent-Token',
       'X-Device-Fingerprint',
     ],
@@ -97,6 +103,7 @@ registerApiRoutes(app);
 registerUploadApiRoutes(app);
 registerAuthModuleRoutes(app);
 registerOAuthRoutes(app);
+app.use('/api/internal/billing', internalBillingRoutes);
 
 app.use(errorHandler);
 

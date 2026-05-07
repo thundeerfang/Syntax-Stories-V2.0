@@ -10,8 +10,9 @@ import { REFERRAL_COOKIE } from './referral.service.js';
 /**
  * After email OTP is verified: 2FA branch, or issue JWT + session JSON (same shape as verifyOtp).
  */
-export async function respondWithSessionAfterEmailAuth(req, res, user, isNewUser) {
-    if (user.twoFactorEnabled) {
+export async function respondWithSessionAfterEmailAuth(req, res, user, isNewUser, opts) {
+    const skipTwoFactor = opts?.loginSource === 'staff_password';
+    if (user.twoFactorEnabled && !skipTwoFactor) {
         try {
             const { challengeToken, expiresIn } = await createAuthChallenge(String(user._id));
             if (isNewUser) {
@@ -39,7 +40,11 @@ export async function respondWithSessionAfterEmailAuth(req, res, user, isNewUser
     const refreshToken = generateRefreshToken();
     const session = await createSession(String(user._id), req, refreshToken);
     const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
-    const auditSource = isNewUser ? 'signup_email' : 'otp';
+    const auditSource = isNewUser
+        ? 'signup_email'
+        : opts?.loginSource === 'staff_password'
+            ? 'staff_password'
+            : 'otp';
     void writeAuditLog(req, AuditAction.SESSION_CREATED, {
         actorId: String(user._id),
         metadata: {

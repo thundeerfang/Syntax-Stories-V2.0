@@ -50,6 +50,16 @@ export const redisKeys = {
     dailyCap: (userId: string, dayKey: string) => `cap:follow:${userId}:${dayKey}`,
   },
 
+  /** Read-streak hot cache (Mongo remains SoT; see `readStreakRedis.ts`, BLOG_READ_STREAK.md). */
+  readStreak: {
+    dailyHash: (userId: string) => `user:${userId}:streak:daily`,
+    readDaysZset: (userId: string) => `user:${userId}:readDays`,
+    viewSession: (sessionId: string) => `read:session:${sessionId}`,
+    viewCommitAck: (userId: string, sessionId: string) => `read:view_commit_ack:${userId}:${sessionId}`,
+    /** F.2 — per-user rolling minute bucket for VIEW_START spam control. */
+    viewStartRateLimit: (userId: string, minuteEpoch: number) => `rl:read:start:${userId}:${minuteEpoch}`,
+  },
+
   invite: {
     /** Referrer ObjectId string, or sentinel `__NONE__` for negative cache. */
     codeCache: (normalizedCode: string) => `invite:code:${normalizedCode}`,
@@ -64,11 +74,24 @@ export const redisKeys = {
   rateLimit: {
     sendOtp: 'rl:sendotp:',
     verifyOtp: 'rl:verifyotp:',
+    staffLogin: 'rl:stafflogin:',
     signupEmail: 'rl:signupemail:',
     refresh: 'rl:refresh:',
     updateProfile: 'rl:updateprofile:',
     feedback: 'rl:feedback:',
+    contact: 'rl:contact:',
     inviteResolve: 'rl:invite:resolve:',
+    createCheckout: 'rl:billing:checkout:',
+    verifyCheckout: 'rl:billing:verify:',
     authHttpKey: (prefix: string, keySuffix: string) => `${prefix}${keySuffix}`,
   },
+
+  billing: {
+    webhookDedup: (eventId: string) => `stripe:wh:${eventId}`,
+    subscriptionSummary: (userId: string) => `subscription:summary:${userId}`,
+    billingLock: (stripeSubscriptionId: string) => `lock:billing:${stripeSubscriptionId}`,
+  },
+
+  /** Resolved permission set for staff user (JSON string[]); invalidate on role assignment change. */
+  adminPerms: (staffUserId: string) => `admin:perms:${staffUserId}`,
 } as const;

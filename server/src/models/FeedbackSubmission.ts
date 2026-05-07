@@ -35,6 +35,8 @@ export interface IFeedbackSubmission extends Document {
   };
   emailDelivered: boolean;
   emailError?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const FeedbackSubmissionSchema = new Schema<IFeedbackSubmission>(

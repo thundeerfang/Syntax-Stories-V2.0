@@ -307,6 +307,7 @@ export interface AuthUser {
   /** Optimistic concurrency: incremented on each successful profile write. */
   profileVersion?: number;
   profileUpdatedAt?: string;
+  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
 }
 
 /** User object returned inside API envelopes (`data.user` or legacy `user`). */
@@ -343,6 +344,7 @@ export type AccountUser = {
   createdAt?: string;
   profileVersion?: number;
   profileUpdatedAt?: string;
+  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
 };
 
 /** Raw JSON from `GET /auth/me` or `PATCH /auth/profile` (envelope + backward-compatible top-level `user`). */
@@ -393,6 +395,7 @@ export type UpdateProfilePayload = Partial<{
   isXAccount: boolean;
   isAppleAccount: boolean;
   isDiscordAccount: boolean;
+  blogStreakMode: 'daily' | 'weekly' | 'monthly';
   /** When set, overrides the version taken from the current session user (advanced). */
   expectedProfileVersion: number;
 }>;
@@ -641,5 +644,6 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     createdAt: backendUser.createdAt,
     profileVersion: typeof backendUser.profileVersion === 'number' ? backendUser.profileVersion : 0,
     profileUpdatedAt: backendUser.profileUpdatedAt,
+    blogStreakMode: backendUser.blogStreakMode,
   };
 }
