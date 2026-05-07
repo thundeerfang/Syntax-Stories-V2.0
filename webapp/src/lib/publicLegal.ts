@@ -1,14 +1,12 @@
+import { cache } from 'react';
 import type { PublishedPolicyResponse } from '@contracts/legalApi';
+import { publicApiAbortSignal } from '@/lib/publicApiFetchTimeout';
 
 export type PublicLegalKind = 'terms' | 'privacy' | 'udd';
 
 const apiBase = (): string => (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
 
-/**
- * Server-side fetch for published legal policy (§17.1).
- * Requires `NEXT_PUBLIC_API_BASE_URL` pointing at the API (same pattern as `publicHelp`).
- */
-export async function fetchPublishedLegalPolicy(
+async function fetchPublishedLegalPolicyUncached(
   kind: PublicLegalKind
 ): Promise<PublishedPolicyResponse | null> {
   const base = apiBase();
@@ -17,6 +15,7 @@ export async function fetchPublishedLegalPolicy(
     const res = await fetch(`${base}/api/v1/legal/policies/${kind}`, {
       next: { revalidate: 60 },
       headers: { Accept: 'application/json' },
+      signal: publicApiAbortSignal(),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as { ok?: boolean };
@@ -26,3 +25,9 @@ export async function fetchPublishedLegalPolicy(
     return null;
   }
 }
+
+/**
+ * Server-side fetch for published legal policy (§17.1).
+ * Cached per-request so `generateMetadata` + page share one fetch during static generation.
+ */
+export const fetchPublishedLegalPolicy = cache(fetchPublishedLegalPolicyUncached);

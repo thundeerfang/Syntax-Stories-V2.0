@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { publicApiAbortSignal } from '@/lib/publicApiFetchTimeout';
 
 type Item = {
   slug: string;
@@ -14,6 +15,7 @@ async function fetchList(): Promise<Item[]> {
   try {
     const res = await fetch(`${base}/api/v1/help/articles?page=1&pageSize=50`, {
       next: { revalidate: 60 },
+      signal: publicApiAbortSignal(),
     });
     if (!res.ok) return [];
     const json = (await res.json()) as { data?: Item[] };

@@ -1,3 +1,5 @@
+import { publicApiAbortSignal } from '@/lib/publicApiFetchTimeout';
+
 /** Matches server `helpArticle.category` for product docs (see help.mappers `helpCanonicalPath`). */
 export const HELP_CATEGORY_DOCUMENTATION = 'documentation';
 
@@ -30,6 +32,7 @@ export async function fetchPublishedHelpList(opts?: {
   try {
     const res = await fetch(`${base}/api/v1/help/articles?${q.toString()}`, {
       next: { revalidate: 60 },
+      signal: publicApiAbortSignal(),
     });
     if (!res.ok) return [];
     const json = (await res.json()) as { data?: HelpArticlePublic[] };
@@ -47,6 +50,7 @@ export async function fetchPublishedArticleBySlug(
   try {
     const res = await fetch(`${base}/api/v1/help/articles/${encodeURIComponent(slug)}`, {
       next: { revalidate: 60 },
+      signal: publicApiAbortSignal(),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as { success?: boolean; data?: HelpArticlePublic };

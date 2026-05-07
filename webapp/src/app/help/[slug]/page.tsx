@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { publicApiAbortSignal } from '@/lib/publicApiFetchTimeout';
 
 type ApiArticle = {
   slug: string;
@@ -18,6 +19,7 @@ async function fetchArticle(slug: string): Promise<ApiArticle | null> {
   try {
     const res = await fetch(`${base}/api/v1/help/articles/${encodeURIComponent(slug)}`, {
       next: { revalidate: 60 },
+      signal: publicApiAbortSignal(),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as { success?: boolean; data?: ApiArticle };
