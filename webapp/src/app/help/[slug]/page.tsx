@@ -15,12 +15,16 @@ type ApiArticle = {
 async function fetchArticle(slug: string): Promise<ApiArticle | null> {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
   if (!base) return null;
-  const res = await fetch(`${base}/api/v1/help/articles/${encodeURIComponent(slug)}`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { success?: boolean; data?: ApiArticle };
-  return json.data ?? null;
+  try {
+    const res = await fetch(`${base}/api/v1/help/articles/${encodeURIComponent(slug)}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { success?: boolean; data?: ApiArticle };
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export default async function HelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {

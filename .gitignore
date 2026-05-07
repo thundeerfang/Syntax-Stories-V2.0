@@ -34,4 +34,4 @@ webapp/node_modules
 webapp/.next
 admin/.next
 admin/node_modules
-server/.env
+server/coverage/

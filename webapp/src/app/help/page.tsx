@@ -11,13 +11,17 @@ type Item = {
 async function fetchList(): Promise<Item[]> {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
   if (!base) return [];
-  const res = await fetch(`${base}/api/v1/help/articles?page=1&pageSize=50`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return [];
-  const json = (await res.json()) as { data?: Item[] };
-  const rows = json.data ?? [];
-  return rows.filter((a) => (a.category ?? 'general').toLowerCase() !== 'documentation');
+  try {
+    const res = await fetch(`${base}/api/v1/help/articles?page=1&pageSize=50`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data?: Item[] };
+    const rows = json.data ?? [];
+    return rows.filter((a) => (a.category ?? 'general').toLowerCase() !== 'documentation');
+  } catch {
+    return [];
+  }
 }
 
 export default async function HelpHubPage() {
