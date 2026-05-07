@@ -90,8 +90,14 @@ export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCa
       </a>
       <div className="w-full h-[140px] bg-muted/30 relative overflow-hidden flex items-center justify-center">
         {loading && (
-          <div className="absolute inset-0 bg-muted/50 flex items-center justify-center">
-            <span className="text-[10px] text-muted-foreground uppercase">Loading preview…</span>
+          <div className="absolute inset-0 bg-muted/40 p-3">
+            <div className="h-full w-full animate-pulse border border-border/50 bg-card/40 p-3">
+              <div className="h-16 w-full border border-border/40 bg-muted/50" />
+              <div className="mt-3 space-y-2">
+                <div className="h-2 w-3/4 bg-muted" />
+                <div className="h-2 w-1/2 bg-muted" />
+              </div>
+            </div>
           </div>
         )}
         {!loading && screenshotUrl && (

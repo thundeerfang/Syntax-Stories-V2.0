@@ -158,7 +158,8 @@ export function WorkExperienceCard({
                   {e.companyLogo ? (
                     <img
                       src={e.companyLogo}
-                      alt=""
+                      alt={e.companyLogoAlt?.trim() || e.company || 'Company logo'}
+                      title={e.companyLogoAlt?.trim() || undefined}
                       className="ss-card-logo-img size-full object-contain p-2"
                     />
                   ) : (

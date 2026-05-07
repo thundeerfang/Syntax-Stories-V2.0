@@ -168,6 +168,7 @@ export const workExperienceItemSchema = z
     company: z.string().max(200).trim(),
     companyDomain: z.string().max(120).trim().optional(),
     companyLogo: optUriMax(500),
+    companyLogoAlt: z.string().max(120).trim().optional(),
     currentPosition: z.boolean().optional(),
     startDate: z.string().max(20).trim(),
     endDate: z.string().max(20).trim().nullable().optional(),
@@ -199,6 +200,7 @@ export const educationItemSchema = z
     school: z.string().max(200).trim(),
     schoolDomain: z.string().max(120).trim().optional(),
     schoolLogo: optUriMax(2000),
+    schoolLogoAlt: z.string().max(120).trim().optional(),
     degree: z.string().max(80).trim(),
     fieldOfStudy: z.string().max(120).trim().optional(),
     currentEducation: z.boolean().optional(),
@@ -227,6 +229,7 @@ export const certificationItemSchema = z.object({
   name: z.string().max(120).trim(),
   issuingOrganization: z.string().max(120).trim(),
   issuerLogo: optUriMax(2000),
+  issuerLogoAlt: z.string().max(120).trim().optional(),
   currentlyValid: z.boolean().optional(),
   issueDate: z.string().max(20).trim(),
   expirationDate: z.string().max(20).trim().optional(),
@@ -287,6 +290,7 @@ export const setupItemSchema = z.object({
   label: z.string().max(80).trim(),
   imageUrl: z.string().url().max(500).trim(),
   productUrl: optUriMax(500),
+  imageAlt: z.string().max(120).trim().optional(),
 });
 
 const projectsArraySchema = z
@@ -316,7 +320,9 @@ const profilePatchFields = {
   username: usernameSchema.optional(),
   bio: z.string().max(500).trim().optional(),
   profileImg: z.string().max(2000).trim().optional(),
+  profileImgAlt: z.string().max(120).trim().optional(),
   coverBanner: z.string().max(2000).trim().optional(),
+  coverBannerAlt: z.string().max(120).trim().optional(),
   job: z.string().max(100).trim().optional(),
   portfolioUrl: optUriMax(500),
   linkedin: z.union([z.string().url().trim(), z.literal('')]).optional(),
@@ -336,6 +342,7 @@ const profilePatchFields = {
   isXAccount: z.boolean().optional(),
   isAppleAccount: z.boolean().optional(),
   isDiscordAccount: z.boolean().optional(),
+  blogStreakMode: z.enum(['daily', 'weekly', 'monthly']).optional(),
 };
 
 export const updateProfileSchema = z
@@ -358,7 +365,9 @@ export const updateProfileBasicSchema = z
     username: profilePatchFields.username,
     bio: profilePatchFields.bio,
     profileImg: profilePatchFields.profileImg,
+    profileImgAlt: profilePatchFields.profileImgAlt,
     coverBanner: profilePatchFields.coverBanner,
+    coverBannerAlt: profilePatchFields.coverBannerAlt,
     job: profilePatchFields.job,
     portfolioUrl: profilePatchFields.portfolioUrl,
     isGoogleAccount: profilePatchFields.isGoogleAccount,
@@ -433,6 +442,11 @@ export const updateProfileProjectsSchema = z
 
 export const updateProfileSetupSchema = z.object({
   mySetup: z.array(setupItemSchema).max(5),
+  expectedProfileVersion: expectedProfileVersionField,
+});
+
+export const updateProfileBlogStreakSchema = z.object({
+  blogStreakMode: z.enum(['daily', 'weekly', 'monthly']),
   expectedProfileVersion: expectedProfileVersionField,
 });
 

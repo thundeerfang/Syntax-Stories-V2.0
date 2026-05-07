@@ -8,8 +8,9 @@ import { AuditAction } from '../shared/audit/events.js';
 import { redisKeys } from '../shared/redis/keys.js';
 import { RateLimitHttpError, isAppHttpError } from '../errors/httpErrors.js';
 import { sendAppHttpError } from '../errors/sendAppHttpError.js';
+import { computeReadStreakPayload, loadReadDayBucketsForHeatmap } from '../services/readStreak.service.js';
 const FOLLOWED_FIELDS = 'username fullName profileImg';
-const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount';
+const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest blogRespectReceivedCount';
 const DAILY_FOLLOW_LIMIT = 500;
 function secondsUntilUtcMidnight() {
     const now = new Date();
@@ -46,11 +47,28 @@ export async function getPublicProfile(req, res) {
         const u = user;
         const counts = await ensureStoredFollowCounts(u._id, u.followersCount, u.followingCount);
         const profileImg = normalizeProfileImg(u.profileImg);
+        const modeRaw = user.blogStreakMode;
+        const now = new Date();
+        const [readStreak, readHeatmapDays] = await Promise.all([
+            computeReadStreakPayload(u._id, modeRaw === 'weekly' || modeRaw === 'monthly' ? modeRaw : 'daily', now, getRedis()),
+            loadReadDayBucketsForHeatmap(u._id, now),
+        ]);
+        const durableLongest = user.readStreakLongest;
+        if (durableLongest != null && durableLongest > 0) {
+            readStreak.byMode.daily.longest = Math.max(readStreak.byMode.daily.longest, durableLongest);
+            if (readStreak.displayMode === 'daily') {
+                readStreak.longest = readStreak.byMode.daily.longest;
+            }
+        }
+        const blogRespectReceivedCount = Math.max(0, Math.floor(Number(user.blogRespectReceivedCount ?? 0)));
         res.status(200).json({
             success: true,
-            user: { ...user, id: String(user._id), profileImg },
+            user: { ...user, id: String(user._id), profileImg, blogRespectReceivedCount },
             followersCount: counts.followersCount,
             followingCount: counts.followingCount,
+            blogRespectReceivedCount,
+            readStreak,
+            readHeatmapDays,
         });
     }
     catch (err) {

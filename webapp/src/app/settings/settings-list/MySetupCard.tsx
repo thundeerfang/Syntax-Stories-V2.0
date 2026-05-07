@@ -4,7 +4,7 @@ import React from 'react';
 import { ExternalLink, Pencil, Trash2, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type SetupItem = { label: string; imageUrl: string; productUrl?: string };
+export type SetupItem = { label: string; imageUrl: string; productUrl?: string; imageAlt?: string };
 
 type MySetupCardProps = Readonly<{
   item: SetupItem;
@@ -68,7 +68,8 @@ export function MySetupCard({
             <div className="size-12 border-2 border-border bg-muted/30 overflow-hidden">
               <img
                 src={item.imageUrl}
-                alt={item.label}
+                alt={item.imageAlt?.trim() || item.label}
+                title={item.imageAlt?.trim() || undefined}
                 className="h-full w-full object-cover"
                 loading="lazy"
               />

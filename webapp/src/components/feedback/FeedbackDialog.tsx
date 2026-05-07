@@ -361,8 +361,8 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
       title="Feedback"
       titleIcon={<MessageSquare className="size-5" strokeWidth={2.5} aria-hidden />}
       subtitle={FEEDBACK_SUBTITLE}
-      subtitleClassName="min-w-0 max-w-full text-[10px] sm:text-[11px] font-medium leading-tight tracking-wide text-muted-foreground line-clamp-1 normal-case"
-      panelClassName="max-w-[min(42rem,calc(100vw-1.5rem))] sm:max-w-[42rem]"
+      subtitleClassName="min-w-0 max-w-full text-[10px] sm:text-[11px] font-medium leading-snug tracking-wide text-muted-foreground sm:line-clamp-2 normal-case"
+      panelClassName="max-w-[min(56rem,calc(100vw-1.25rem))] sm:max-w-[56rem]"
       footer={formFooter}
       footerClassName="flex flex-row flex-wrap items-center justify-end gap-2"
       interactionLock={submitting}
@@ -393,23 +393,27 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
           </Button>
         </div>
       ) : (
-        <form id={FEEDBACK_FORM_ID} onSubmit={runSubmit} className="flex flex-col gap-6 lg:grid lg:grid-cols-[12.25rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-          {/* Left: preview + one-of capture / upload (retro panel) */}
-          <aside className="order-first flex w-full max-w-[13rem] flex-col gap-3 lg:mx-0 lg:max-w-none lg:shrink-0">
-            <div className="border-2 border-border bg-muted/10 shadow-[3px_3px_0_0_var(--border)]">
-              <p className="border-b-2 border-border bg-muted/30 px-2 py-1.5 text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">
+        <form
+          id={FEEDBACK_FORM_ID}
+          onSubmit={runSubmit}
+          className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:grid-rows-[auto_auto] lg:items-stretch lg:gap-x-8 lg:gap-y-6"
+        >
+          {/* Left: preview + capture / upload — on lg, column height matches category→subject block */}
+          <aside className="order-first flex w-full max-w-[15rem] flex-col lg:col-start-1 lg:row-start-1 lg:max-w-none lg:h-full lg:min-h-0">
+            <div className="flex min-h-[14rem] flex-1 flex-col border-2 border-border bg-muted/10 shadow-[3px_3px_0_0_var(--border)] lg:min-h-0">
+              <p className="shrink-0 border-b-2 border-border bg-muted/30 px-2 py-1.5 text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">
                 Attachment
               </p>
-              <div className="relative aspect-square w-full border-b-2 border-dashed border-border/80 bg-background/50">
+              <div className="relative min-h-[9rem] flex-1 border-b-2 border-dashed border-border/80 bg-background/50 lg:min-h-0">
                 {attachmentPreview ? (
                   <img
                     src={attachmentPreview}
                     alt={attachmentImageTitle.trim() || 'Screenshot preview'}
                     title={attachmentImageTitle.trim() || undefined}
-                    className="size-full object-contain p-1"
+                    className="absolute inset-0 size-full object-contain p-1"
                   />
                 ) : (
-                  <div className="flex size-full flex-col items-center justify-center gap-1 p-3 text-center">
+                  <div className="flex size-full min-h-[9rem] flex-col items-center justify-center gap-1 p-3 text-center lg:min-h-0">
                     <ImagePlus className="size-7 text-muted-foreground/40" strokeWidth={1.5} aria-hidden />
                     <span className="text-[8px] font-bold uppercase leading-tight tracking-wide text-muted-foreground">
                       None yet
@@ -417,7 +421,7 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
                   </div>
                 )}
               </div>
-              <div className="space-y-1.5 p-2">
+              <div className="shrink-0 space-y-1.5 p-2">
                 <p id="fb-screenshot-hint" className="text-[8px] leading-snug text-muted-foreground">
                   One optional image — Chrome screen share or upload. Max{' '}
                   {Math.round(FEEDBACK_MAX_IMAGE_BYTES / (1024 * 1024))} MB. Server scans (malware) and re-encodes.
@@ -464,7 +468,7 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
             </div>
           </aside>
 
-          <div className="min-w-0 space-y-4 lg:pt-0">
+          <div className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-1 lg:pt-0">
           <div className="space-y-2">
             <p id="fb-category-label" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
               Category
@@ -500,7 +504,7 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
                       disabled={categoriesLoading}
                       onClick={() => setCategoryId(c.id)}
                       className={cn(
-                        'rounded-none border-2 px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest transition-all',
+                        'whitespace-nowrap rounded-none border-2 px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest transition-all',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                         selected
                           ? 'border-primary bg-primary text-primary-foreground shadow-[3px_3px_0_0_var(--border)]'
@@ -585,33 +589,36 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
               className={fieldClass}
             />
           </div>
-          <div className="space-y-1.5">
-            <label htmlFor="fb-desc" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-              Message
-            </label>
-            <textarea
-              id="fb-desc"
-              rows={5}
-              maxLength={MAX_DESC}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              minLength={MIN_DESC}
-              className={cn(fieldClass, 'min-h-[120px] resize-y')}
-            />
-            <p className="text-[9px] text-muted-foreground">
-              {description.trim().length}/{MAX_DESC} · minimum {MIN_DESC} characters
-            </p>
           </div>
 
-          {altchaOn && (
-            <div className="flex w-full flex-col gap-2">
-              <AltchaField enabled floating="bottom" floatingAnchor="#fb-submit" floatingOffset={8} />
-              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                Verification required when not signed in.
+          <div className="min-w-0 space-y-4 lg:col-span-2 lg:row-start-2">
+            <div className="space-y-1.5">
+              <label htmlFor="fb-desc" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                Message
+              </label>
+              <textarea
+                id="fb-desc"
+                rows={5}
+                maxLength={MAX_DESC}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                minLength={MIN_DESC}
+                className={cn(fieldClass, 'min-h-[120px] resize-y')}
+              />
+              <p className="text-[9px] text-muted-foreground">
+                {description.trim().length}/{MAX_DESC} · minimum {MIN_DESC} characters
               </p>
             </div>
-          )}
+
+            {altchaOn && (
+              <div className="flex w-full flex-col gap-2">
+                <AltchaField enabled floating="bottom" floatingAnchor="#fb-submit" floatingOffset={8} />
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Verification required when not signed in.
+                </p>
+              </div>
+            )}
           </div>
         </form>
       )}

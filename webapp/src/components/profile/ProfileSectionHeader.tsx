@@ -9,7 +9,6 @@ type ProfileSectionHeaderProps = Readonly<{
   title: string;
   showAdd?: boolean;
   settingsSection?: string;
-  isPreviewMode: boolean;
   settingsUrl: (section: string) => string;
 }>;
 
@@ -18,11 +17,10 @@ const ADD_BTN_CLASS =
 
 function renderAddControl(
   showAdd: boolean,
-  isPreviewMode: boolean,
   settingsSection: string | undefined,
   settingsUrl: (section: string) => string,
 ): React.ReactNode {
-  if (!showAdd || isPreviewMode) return null;
+  if (!showAdd) return null;
   if (settingsSection) {
     return (
       <Link
@@ -49,7 +47,6 @@ export function ProfileSectionHeader({
   title,
   showAdd = true,
   settingsSection,
-  isPreviewMode,
   settingsUrl,
 }: ProfileSectionHeaderProps) {
   return (
@@ -57,7 +54,7 @@ export function ProfileSectionHeader({
       <h2 className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
         <Icon className="size-4 text-primary" /> {title}
       </h2>
-      {renderAddControl(showAdd, isPreviewMode, settingsSection, settingsUrl)}
+      {renderAddControl(showAdd, settingsSection, settingsUrl)}
     </div>
   );
 }

@@ -11,7 +11,9 @@ export function mapUserDocumentToApiUser(found) {
         username: found.username,
         email: found.email,
         profileImg: normalizeProfileImg(found.profileImg),
+        profileImgAlt: found.profileImgAlt,
         coverBanner: found.coverBanner,
+        coverBannerAlt: found.coverBannerAlt,
         bio: found.bio,
         job: found.job,
         portfolioUrl: found.portfolioUrl,
@@ -40,6 +42,8 @@ export function mapUserDocumentToApiUser(found) {
             : typeof found.profileUpdatedAt === 'string'
                 ? found.profileUpdatedAt
                 : undefined,
+        staffRole: found.staffRole ?? null,
+        blogStreakMode: found.blogStreakMode ?? 'daily',
     };
 }
 /** Alias for account responses (settings / session user). */

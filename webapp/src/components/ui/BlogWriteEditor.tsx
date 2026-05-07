@@ -1,4 +1,4 @@
-import React, { useCallback, useId, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { JSONContent } from '@tiptap/core';
 import {
   Trash2,
@@ -141,7 +141,7 @@ function ParagraphBlockEditor({
   const effectiveDoc: JSONContent | undefined = payload.doc ?? coerceParagraphDoc(payload);
 
   return (
-    <div className="group border-2 border-border bg-card p-3 space-y-2 rounded-md">
+    <div className="group border-0 bg-muted/10 p-3 space-y-2 rounded-md ring-1 ring-border/35">
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
         <span className="flex items-center gap-2">
           <Type className="h-3.5 w-3.5" /> Paragraph
@@ -194,7 +194,7 @@ function HeadingBlockEditor({
   }[level];
 
   return (
-    <div className="border-2 border-border bg-card p-3 space-y-2">
+    <div className="border-0 bg-muted/10 p-3 space-y-2 rounded-md ring-1 ring-border/35">
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
         <span className="flex items-center gap-2">
           <Type className="h-3.5 w-3.5" /> Sub-heading
@@ -228,7 +228,10 @@ function HeadingBlockEditor({
         value={text}
         onChange={(e) => onUpdate({ ...payload, text: e.target.value })}
         placeholder="Heading text..."
-        className={cn('w-full bg-transparent border-b-2 border-border focus:outline-none focus:border-primary placeholder:text-muted-foreground', sizeClass)}
+        className={cn(
+          'w-full border-0 border-b border-border/40 bg-transparent focus:outline-none focus:border-primary/60 placeholder:text-muted-foreground',
+          sizeClass,
+        )}
       />
     </div>
   );
@@ -246,7 +249,7 @@ function BlockCard({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="border-2 border-border bg-card p-3 space-y-3">
+    <div className="border-0 bg-muted/10 p-3 space-y-3 rounded-md ring-1 ring-border/35">
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
         <span className="flex items-center gap-2">
           <Icon className="h-3.5 w-3.5" /> {title}
@@ -1017,7 +1020,7 @@ function VideoEmbedBlockEditor({
                     }}
                     onBlur={() => handleSlotBlur(i)}
                     placeholder="Paste video or embed URL…"
-                    className="w-full border-2 border-border bg-background py-2.5 pl-8 pr-3 text-xs shadow-[inset_2px_2px_0_0_rgba(0,0,0,0.04)] focus:border-primary focus:outline-none focus:ring-0 font-mono"
+                    className="w-full border-0 bg-muted/25 py-2.5 pl-8 pr-3 text-xs font-mono ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-primary/35"
                   />
                 </div>
                 {slots.length > 1 ? (
@@ -1391,13 +1394,13 @@ function UnsplashBlockEditor({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search photos..."
-                className="flex-1 border-2 border-border bg-background p-2 text-xs focus:outline-none focus:border-primary"
+                className="flex-1 border-0 bg-muted/25 p-2 text-xs ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-primary/35"
               />
               <button
                 type="button"
                 onClick={handleSearch}
                 disabled={searching || !searchQuery.trim()}
-                className="px-3 py-1.5 text-[10px] font-bold uppercase border-2 border-border bg-primary text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+                className="rounded-md border-0 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase text-primary-foreground hover:brightness-110 disabled:opacity-50"
               >
                 {searching ? '…' : 'Search'}
               </button>
@@ -1406,14 +1409,14 @@ function UnsplashBlockEditor({
               <p className="text-[10px] text-destructive">{searchError}</p>
             )}
             {results.length > 0 && (
-              <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto border-2 border-border p-1.5 bg-muted/20">
+              <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto border-0 bg-muted/15 p-1.5 ring-1 ring-border/30">
                 {results.map((photo) => (
                   <button
                     key={photo.id}
                     type="button"
                     onClick={() => selectPhoto(photo)}
                     onKeyDown={(e) => e.key === 'Enter' && selectPhoto(photo)}
-                    className="aspect-square overflow-hidden border-2 border-border hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="aspect-square overflow-hidden border-0 ring-1 ring-border/40 hover:ring-primary/60 focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <img
                       src={photo.urls?.small ?? photo.urls?.thumb}
@@ -1444,6 +1447,8 @@ export interface BlogWriteEditorProps {
   isSidebarOpen: boolean;
   maxWidthClassName?: string;
   activeSectionId: string;
+  /** Fires when focus moves inside the body editor (identified block, or null when focus is in chrome but not on a block row). */
+  onActiveBlockChange?: (active: Block | null) => void;
 }
 
 export function BlogWriteEditor({
@@ -1455,6 +1460,7 @@ export function BlogWriteEditor({
   isSidebarOpen,
   maxWidthClassName = 'max-w-3xl',
   activeSectionId,
+  onActiveBlockChange,
 }: Readonly<BlogWriteEditorProps>) {
   const updateBlock = useCallback(
     (id: string, payload: any) => {
@@ -1575,6 +1581,27 @@ export function BlogWriteEditor({
 
   const blockListDropRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (visibleBlocks.length === 0) onActiveBlockChange?.(null);
+  }, [visibleBlocks.length, onActiveBlockChange]);
+
+  const handleBodyFocusIn = useCallback(
+    (e: React.FocusEvent<HTMLDivElement>) => {
+      if (!onActiveBlockChange) return;
+      const t = e.target as HTMLElement | null;
+      if (!t || !blockListDropRef.current?.contains(t)) return;
+      const row = t.closest('[data-block-id]') as HTMLElement | null;
+      const id = row?.dataset.blockId;
+      if (id) {
+        const hit = blocks.find((b) => b.id === id);
+        if (hit) onActiveBlockChange(hit);
+        return;
+      }
+      onActiveBlockChange(null);
+    },
+    [blocks, onActiveBlockChange],
+  );
+
   if (visibleBlocks.length === 0) {
     return (
       <div className="pb-16 flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-border rounded-lg bg-muted/20">
@@ -1591,6 +1618,7 @@ export function BlogWriteEditor({
   return (
     <div
       ref={blockListDropRef}
+      onFocusCapture={handleBodyFocusIn}
       className="pb-16 selection:bg-primary selection:text-primary-foreground"
     >
       <ul className="mb-6 list-none space-y-4 p-0">
@@ -1715,6 +1743,7 @@ export function BlogWriteEditor({
           return (
             <li
               key={block.id}
+              data-block-id={block.id}
               onDragOver={(e) => handleDragOver(e, blockIndex)}
               onDrop={(e) => handleDropOnRow(e, blockIndex)}
               className={cn(

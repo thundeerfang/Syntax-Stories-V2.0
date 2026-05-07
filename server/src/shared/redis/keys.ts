@@ -14,12 +14,6 @@ export const redisKeys = {
     exchange: (code: string) => `oauth:exchange:${code}`,
   },
 
-  /** Invite / referral: OAuth signup nonce → referral code; code → referrer userId cache. */
-  invite: {
-    oauthSignupNonce: (nonce: string) => `invite:oauth-signup:${nonce}`,
-    codeCache: (normalizedCode: string) => `invite:code:${normalizedCode}`,
-  },
-
   auth: {
     intent: (tokenHash: string) => `intent:user:${tokenHash}`,
     twoFactorSetup: (userId: string) => `2fa:setup:${userId}`,
@@ -56,6 +50,23 @@ export const redisKeys = {
     dailyCap: (userId: string, dayKey: string) => `cap:follow:${userId}:${dayKey}`,
   },
 
+  /** Read-streak hot cache (Mongo remains SoT; see `readStreakRedis.ts`, BLOG_READ_STREAK.md). */
+  readStreak: {
+    dailyHash: (userId: string) => `user:${userId}:streak:daily`,
+    readDaysZset: (userId: string) => `user:${userId}:readDays`,
+    viewSession: (sessionId: string) => `read:session:${sessionId}`,
+    viewCommitAck: (userId: string, sessionId: string) => `read:view_commit_ack:${userId}:${sessionId}`,
+    /** F.2 — per-user rolling minute bucket for VIEW_START spam control. */
+    viewStartRateLimit: (userId: string, minuteEpoch: number) => `rl:read:start:${userId}:${minuteEpoch}`,
+  },
+
+  invite: {
+    /** Referrer ObjectId string, or sentinel `__NONE__` for negative cache. */
+    codeCache: (normalizedCode: string) => `invite:code:${normalizedCode}`,
+    /** OAuth signup: nonce → normalized referral code (TTL ~10m). */
+    oauthSignupNonce: (nonce: string) => `invite:oauth:signup:${nonce}`,
+  },
+
   /**
    * Auth HTTP rate limits via RedisRateLimitStore.
    * Full key = `authRateLimitKey(prefix, suffix)` where `suffix` comes from express-rate-limit’s keyGenerator.
@@ -63,11 +74,24 @@ export const redisKeys = {
   rateLimit: {
     sendOtp: 'rl:sendotp:',
     verifyOtp: 'rl:verifyotp:',
+    staffLogin: 'rl:stafflogin:',
     signupEmail: 'rl:signupemail:',
     refresh: 'rl:refresh:',
     updateProfile: 'rl:updateprofile:',
     feedback: 'rl:feedback:',
-    inviteResolve: 'rl:invite-resolve:',
+    contact: 'rl:contact:',
+    inviteResolve: 'rl:invite:resolve:',
+    createCheckout: 'rl:billing:checkout:',
+    verifyCheckout: 'rl:billing:verify:',
     authHttpKey: (prefix: string, keySuffix: string) => `${prefix}${keySuffix}`,
   },
+
+  billing: {
+    webhookDedup: (eventId: string) => `stripe:wh:${eventId}`,
+    subscriptionSummary: (userId: string) => `subscription:summary:${userId}`,
+    billingLock: (stripeSubscriptionId: string) => `lock:billing:${stripeSubscriptionId}`,
+  },
+
+  /** Resolved permission set for staff user (JSON string[]); invalidate on role assignment change. */
+  adminPerms: (staffUserId: string) => `admin:perms:${staffUserId}`,
 } as const;

@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
-import { Button, Dialog, useGlobalAltchaBusy } from '@/components/ui';
+import { Button, Dialog, DIALOG_Z_INDEX_STACKED, useGlobalAltchaBusy } from '@/components/ui';
 import { AltchaField } from './AltchaField';
 import { readAltchaPayload, useOtpFlow } from '../hooks/useOtpFlow';
 import type { AuthDialogView } from '@/store/authDialog';
@@ -287,6 +287,7 @@ export function AuthDialog() {
         closeOnBackdropClick={!blockResendDialogDismiss}
         closeOnEscape={!blockResendDialogDismiss}
         showCloseButton={!blockResendDialogDismiss}
+        zIndex={DIALOG_Z_INDEX_STACKED}
       >
         <h3 id="resend-otp-title" className="pr-8 text-sm font-black uppercase tracking-tight text-card-foreground">
           Resend code

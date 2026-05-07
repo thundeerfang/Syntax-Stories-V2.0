@@ -59,6 +59,11 @@ export const AUDIT_ACTIONS = [
     'my_setup_removed',
     'account_locked',
     'account_deleted',
+    'admin.help.soft_deleted',
+    'admin.help.restored',
+    'admin.blog.restored',
+    'admin.user.restored',
+    'admin.trash.listed',
 ];
 const AuditLogSchema = new Schema({
     action: { type: String, required: true, index: true, maxlength: 80 },

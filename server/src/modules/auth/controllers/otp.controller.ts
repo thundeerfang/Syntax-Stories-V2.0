@@ -15,6 +15,7 @@ import {
 import { bumpOtpMetric } from '../../../shared/metrics/otpMetrics.js';
 import { createChallenge } from 'altcha-lib';
 import { respondWithSessionAfterEmailAuth } from '../../../services/authLogin.service.js';
+import { resolveReferralInput, applyReferralOnNewUser } from '../../../services/referral.service.js';
 import {
   generateEmailOtpDigits,
   getStoredLoginOtp,
@@ -296,6 +297,12 @@ async function createUserFromEmailSignup(
   await user.save();
   await logSecurityEvent(String(user._id), 'login_success', req, { source: 'signup_email' });
   void writeAuditLog(req, AuditAction.USER_SIGNUP, { actorId: String(user._id), metadata: { source: 'email' } });
+  try {
+    const refCode = await resolveReferralInput(req);
+    await applyReferralOnNewUser({ req, newUser: user, refCode, source: 'email' });
+  } catch (e) {
+    console.error(e);
+  }
   return { user, isNewUser: true };
 }
 

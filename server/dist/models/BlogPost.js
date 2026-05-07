@@ -6,11 +6,25 @@ const BlogPostSchema = new Schema({
     summary: { type: String, trim: true, maxlength: 12000, default: '' },
     content: { type: String, required: true, default: '' },
     thumbnailUrl: { type: String, trim: true, maxlength: 2000 },
+    category: { type: String, trim: true, lowercase: true, maxlength: 48, default: undefined, index: true },
+    tags: {
+        type: [{ type: String, trim: true, lowercase: true, maxlength: 40 }],
+        default: undefined,
+        validate: {
+            validator(v) {
+                return v == null || v.length <= 20;
+            },
+            message: 'At most 20 tags',
+        },
+    },
+    language: { type: String, trim: true, lowercase: true, maxlength: 12, default: 'en' },
     status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
+    publishedAt: { type: Date, default: null, index: true },
     lastEditedAt: { type: Date, default: null },
     lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     deletedAt: { type: Date, default: null, index: true },
     deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    respectCount: { type: Number, default: 0, min: 0, index: true },
 }, { timestamps: true });
 // Unique slug per author (same author cannot have two posts with same slug)
 BlogPostSchema.index({ authorId: 1, slug: 1 }, { unique: true });

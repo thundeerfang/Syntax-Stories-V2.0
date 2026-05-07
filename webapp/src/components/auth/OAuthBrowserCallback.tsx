@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi, normalizeUser } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
-import { TerminalLoaderPage } from '@/components/loader';
+import { consumePostAuthRedirect } from '@/lib/postAuthRedirect';
+import { DialogPanelSkeleton } from '@/components/skeletons';
 import { toast } from 'sonner';
 
 type FormSubmit = { preventDefault(): void };
@@ -55,6 +56,7 @@ export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCal
           return authApi.getAccount(res.accessToken).then((accountRes) => {
             const user = normalizeUser(accountRes.user);
             setAuth(user, res.accessToken!, res.refreshToken ?? undefined);
+            if (consumePostAuthRedirect()) return;
             router.replace('/');
           });
         })
@@ -81,6 +83,7 @@ export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCal
       const user = normalizeUser(res.user);
       setAuth(user, res.accessToken, res.refreshToken ?? undefined);
       toast.success('Signed in successfully.');
+      if (consumePostAuthRedirect()) return;
       router.replace('/');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Invalid 2FA code');
@@ -109,7 +112,7 @@ export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCal
           </button>
         </form>
       ) : (
-        <TerminalLoaderPage pageName="auth" inline status={`Completing ${providerLabel} sign-in…`} />
+        <DialogPanelSkeleton statusLine={`Completing ${providerLabel} sign-in…`} />
       )}
     </div>
   );

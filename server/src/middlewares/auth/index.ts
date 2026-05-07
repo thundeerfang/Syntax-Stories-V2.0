@@ -2,6 +2,7 @@ export {
   sendOtpValidation,
   signupEmailValidation,
   verifyOtpValidation,
+  staffLoginValidation,
   updateProfileValidation,
 } from './authValidation.js';
 export { updateProfileSectionBodyValidation } from './profileSection.validation.js';
@@ -10,6 +11,7 @@ export {
   rateLimitSendOtp,
   rateLimitVerifyOtp,
   rateLimitSignupEmail,
+  rateLimitStaffLogin,
   rateLimitRefresh,
   rateLimitUpdateProfile,
 } from './rateLimitAuth.js';

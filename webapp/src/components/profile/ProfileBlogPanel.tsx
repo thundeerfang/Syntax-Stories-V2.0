@@ -227,7 +227,7 @@ export function ProfileBlogPanel({
             No published posts yet.
           </p>
         ) : (
-          <ul className="grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-2">
+          <ul className="grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-2 2xl:grid-cols-3">
             {published.map((p) => (
               <li
                 key={p._id}
@@ -238,20 +238,27 @@ export function ProfileBlogPanel({
                   showSocialActions={false}
                   viewerUsername={username}
                   density="compact"
+                  suppressChromeHover
                   className="relative z-0 border-0 shadow-none"
                 />
                 <div
                   className={cn(
-                    'pointer-events-none absolute inset-0 z-10 flex flex-col justify-end opacity-0 transition-opacity duration-200',
-                    'group-hover/card:pointer-events-auto group-hover/card:opacity-100',
-                    'group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100',
+                    'pointer-events-none absolute inset-0 z-10 flex flex-col justify-end',
+                    'translate-y-2.5 opacity-0',
+                    'transform-gpu transition-[opacity,transform] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+                    'motion-reduce:translate-y-0 motion-reduce:duration-0 motion-reduce:transition-none',
+                    'group-hover/card:pointer-events-auto group-hover/card:translate-y-0 group-hover/card:opacity-100',
+                    'group-focus-within/card:pointer-events-auto group-focus-within/card:translate-y-0 group-focus-within/card:opacity-100',
                   )}
                 >
-                  <div className="min-h-0 flex-1 bg-black/60" aria-hidden />
-                  <div className="flex border-t border-white/10 bg-black/85 font-mono text-[9px] font-black uppercase tracking-wide text-primary-foreground">
+                  <div
+                    className="min-h-0 flex-1 bg-gradient-to-t from-muted/75 via-muted/30 to-transparent dark:from-black/55 dark:via-black/25 dark:to-transparent"
+                    aria-hidden
+                  />
+                  <div className="flex gap-2 border-t-2 border-border bg-card/95 p-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-md dark:border-border/40 dark:bg-black/88 dark:shadow-none">
                     <Link
                       href={publicHref(p.slug)}
-                      className="flex flex-1 items-center justify-center gap-1 py-3 hover:bg-white/10"
+                      className="flex-1 flex items-center justify-center gap-1 py-2.5 border-2 border-border bg-muted/40 font-mono text-[9px] font-black uppercase tracking-wide text-foreground transition-[background-color,transform,border-color] duration-300 ease-out hover:bg-muted/70 dark:border-border/50 dark:bg-white/10 dark:hover:bg-white/18"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -260,17 +267,17 @@ export function ProfileBlogPanel({
                     <button
                       type="button"
                       onClick={() => setEditTarget(p)}
-                      className="flex flex-1 items-center justify-center gap-1 border-x border-white/10 py-3 hover:bg-white/10"
+                      className="flex-1 flex items-center justify-center gap-1 py-2.5 border-2 border-border bg-muted/40 font-mono text-[9px] font-black uppercase tracking-wide text-foreground transition-[background-color,transform,border-color] duration-300 ease-out hover:bg-muted/70 dark:border-border/50 dark:bg-white/10 dark:hover:bg-white/18"
                     >
                       <Pencil className="size-3" /> Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(p)}
-                      className="flex flex-1 items-center justify-center gap-1 py-3 text-red-200 hover:bg-red-500/20"
+                      className="flex-1 flex items-center justify-center gap-1 py-2.5 border-2 border-destructive/60 bg-destructive/20 font-mono text-[9px] font-black uppercase tracking-wide text-destructive transition-[background-color,border-color] duration-300 ease-out hover:bg-destructive/35 dark:bg-red-500/12 dark:text-red-300 dark:hover:bg-red-500/22"
                       aria-label="Move post to trash"
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-3.5" /> Delete
                     </button>
                   </div>
                 </div>

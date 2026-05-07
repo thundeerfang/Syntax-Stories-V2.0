@@ -16,7 +16,9 @@ const UPDATE_PROFILE_KEYS = [
   'username',
   'bio',
   'profileImg',
+  'profileImgAlt',
   'coverBanner',
+  'coverBannerAlt',
   'job',
   'portfolioUrl',
   'linkedin',
@@ -36,6 +38,7 @@ const UPDATE_PROFILE_KEYS = [
   'isXAccount',
   'isAppleAccount',
   'isDiscordAccount',
+  'blogStreakMode',
 ] as const;
 
 const profileSectionKeys = [

@@ -17,13 +17,23 @@ export interface IBlogPost extends Document {
     /** JSON string of Block[] (full editor state per block, no server-side stripping) */
     content: string;
     thumbnailUrl?: string;
+    /** Lowercase slug; optional. */
+    category?: string;
+    /** Lowercase slug tokens, max 20 on write. */
+    tags?: string[];
+    /** BCP-47-ish language code (e.g. en, en-us). */
+    language?: string;
     status: BlogPostStatus;
+    /** First time the post became published (create-as-published or draft→publish); falls back to `createdAt` when unset. */
+    publishedAt?: Date;
     /** Set when a published (or draft) post is saved after create; used for “edited” UI. */
     lastEditedAt?: Date;
     lastEditedById?: mongoose.Types.ObjectId;
     /** Soft-delete: set instead of removing the document. */
     deletedAt?: Date;
     deletedById?: mongoose.Types.ObjectId;
+    /** Denormalized: distinct accounts currently Respecting this post while it is published and not deleted. */
+    respectCount: number;
     createdAt: Date;
     updatedAt: Date;
 }

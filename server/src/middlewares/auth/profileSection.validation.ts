@@ -3,6 +3,7 @@ import type { ZodTypeAny } from 'zod';
 import { isProfileUpdateSection } from '../../modules/profile/profile.types.js';
 import {
   updateProfileBasicSchema,
+  updateProfileBlogStreakSchema,
   updateProfileCertificationsSchema,
   updateProfileEducationSchema,
   updateProfileProjectsSchema,
@@ -60,6 +61,10 @@ export function updateProfileStackValidation(req: Request, res: Response, next: 
   sectionValidation(updateProfileStackSchema, req, res, next);
 }
 
+export function updateProfileBlogStreakValidation(req: Request, res: Response, next: NextFunction): void {
+  sectionValidation(updateProfileBlogStreakSchema, req, res, next);
+}
+
 function paramSection(req: Request): string | undefined {
   const raw = req.params.section;
   const s = Array.isArray(raw) ? raw[0] : raw;
@@ -94,6 +99,8 @@ export function updateProfileSectionBodyValidation(req: Request, res: Response, 
       return updateProfileProjectsValidation(req, res, next);
     case 'setup':
       return updateProfileSetupValidation(req, res, next);
+    case 'blog-streak':
+      return updateProfileBlogStreakValidation(req, res, next);
     default:
       res.status(400).json({
         success: false,

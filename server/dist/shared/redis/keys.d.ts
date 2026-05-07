@@ -12,11 +12,6 @@ export declare const redisKeys: {
         /** One-time OAuth browser callback; value is JSON payload (tokens, userId). TTL ~90s. */
         readonly exchange: (code: string) => string;
     };
-    /** Invite / referral: OAuth signup nonce → referral code; code → referrer userId cache. */
-    readonly invite: {
-        readonly oauthSignupNonce: (nonce: string) => string;
-        readonly codeCache: (normalizedCode: string) => string;
-    };
     readonly auth: {
         readonly intent: (tokenHash: string) => string;
         readonly twoFactorSetup: (userId: string) => string;
@@ -43,6 +38,21 @@ export declare const redisKeys: {
     readonly follow: {
         readonly dailyCap: (userId: string, dayKey: string) => string;
     };
+    /** Read-streak hot cache (Mongo remains SoT; see `readStreakRedis.ts`, BLOG_READ_STREAK.md). */
+    readonly readStreak: {
+        readonly dailyHash: (userId: string) => string;
+        readonly readDaysZset: (userId: string) => string;
+        readonly viewSession: (sessionId: string) => string;
+        readonly viewCommitAck: (userId: string, sessionId: string) => string;
+        /** F.2 — per-user rolling minute bucket for VIEW_START spam control. */
+        readonly viewStartRateLimit: (userId: string, minuteEpoch: number) => string;
+    };
+    readonly invite: {
+        /** Referrer ObjectId string, or sentinel `__NONE__` for negative cache. */
+        readonly codeCache: (normalizedCode: string) => string;
+        /** OAuth signup: nonce → normalized referral code (TTL ~10m). */
+        readonly oauthSignupNonce: (nonce: string) => string;
+    };
     /**
      * Auth HTTP rate limits via RedisRateLimitStore.
      * Full key = `authRateLimitKey(prefix, suffix)` where `suffix` comes from express-rate-limit’s keyGenerator.
@@ -50,12 +60,23 @@ export declare const redisKeys: {
     readonly rateLimit: {
         readonly sendOtp: "rl:sendotp:";
         readonly verifyOtp: "rl:verifyotp:";
+        readonly staffLogin: "rl:stafflogin:";
         readonly signupEmail: "rl:signupemail:";
         readonly refresh: "rl:refresh:";
         readonly updateProfile: "rl:updateprofile:";
         readonly feedback: "rl:feedback:";
-        readonly inviteResolve: "rl:invite-resolve:";
+        readonly contact: "rl:contact:";
+        readonly inviteResolve: "rl:invite:resolve:";
+        readonly createCheckout: "rl:billing:checkout:";
+        readonly verifyCheckout: "rl:billing:verify:";
         readonly authHttpKey: (prefix: string, keySuffix: string) => string;
     };
+    readonly billing: {
+        readonly webhookDedup: (eventId: string) => string;
+        readonly subscriptionSummary: (userId: string) => string;
+        readonly billingLock: (stripeSubscriptionId: string) => string;
+    };
+    /** Resolved permission set for staff user (JSON string[]); invalidate on role assignment change. */
+    readonly adminPerms: (staffUserId: string) => string;
 };
 //# sourceMappingURL=keys.d.ts.map

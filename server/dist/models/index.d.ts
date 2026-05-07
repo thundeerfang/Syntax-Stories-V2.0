@@ -5,5 +5,11 @@ export { ProfileViewEventModel, type IProfileViewEvent, ProfileDailyMetricsModel
 export { AnalyticsEventModel, type IAnalyticsEvent } from './AnalyticsEvent.js';
 export { AuditLogModel, type IAuditLog, AUDIT_ACTIONS, type AuditAction } from './AuditLog.js';
 export { BlogPostModel, type IBlogPost, type BlogPostStatus } from './BlogPost.js';
+export { BlogReadDayModel, type IBlogReadDay } from './BlogReadDay.js';
+export { BlogCategoryModel, type IBlogCategory } from './BlogCategory.js';
+export { BlogTagModel, type IBlogTag } from './BlogTag.js';
 export { BlogCommentModel, type IBlogComment } from './BlogComment.js';
+export { BlogRespectModel, type IBlogRespect } from './BlogRespect.js';
+export { FeedbackSubmissionModel, type IFeedbackSubmission, type IFeedbackAttachmentMeta, } from './FeedbackSubmission.js';
+export { FeedbackCategoryModel, type IFeedbackCategory } from './FeedbackCategory.js';
 //# sourceMappingURL=index.d.ts.map

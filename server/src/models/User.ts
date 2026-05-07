@@ -19,6 +19,8 @@ export interface IWorkExperience {
   company: string;
   companyDomain?: string;
   companyLogo?: string;
+  /** Optional HTML title + img alt for company logo. */
+  companyLogoAlt?: string;
   currentPosition?: boolean;
   startDate?: string;
   endDate?: string;
@@ -51,6 +53,8 @@ export interface IEducation {
   school: string;
   schoolDomain?: string;
   schoolLogo?: string;
+  /** Optional HTML title + img alt for school logo. */
+  schoolLogoAlt?: string;
   degree: string;
   fieldOfStudy?: string;
   currentEducation?: boolean;
@@ -74,6 +78,8 @@ export interface ICertification {
   name: string;
   issuingOrganization: string;
   issuerLogo?: string;
+  /** Optional HTML title + img alt for issuer logo. */
+  issuerLogoAlt?: string;
   currentlyValid?: boolean;
   issueDate?: string;
   expirationDate?: string;
@@ -119,6 +125,8 @@ export interface ISetupItem {
   label: string;
   imageUrl: string;
   productUrl?: string;
+  /** Optional accessibility text for the image (HTML title + alt). */
+  imageAlt?: string;
 }
 
 export interface IUser extends Document {
@@ -126,7 +134,11 @@ export interface IUser extends Document {
   username: string;
   email: string;
   profileImg?: string;
+  /** Optional; used as HTML title + img alt for profile photo. */
+  profileImgAlt?: string;
   coverBanner?: string;
+  /** Optional; used as HTML title + img alt for cover banner. */
+  coverBannerAlt?: string;
   gender?: string;
   job?: string;
   bio?: string;
@@ -164,6 +176,13 @@ export interface IUser extends Document {
   emailVerified: boolean;
   lastLoginAt?: Date;
   subscription?: mongoose.Types.ObjectId;
+  /** Stripe Customer id (`cus_...`); one per user when billing is set up. */
+  stripeCustomerId?: string | null;
+  /** Denormalized from Subscription / Stripe for fast reads. */
+  subscriptionStatus?: string;
+  subscriptionPlanKey?: string;
+  subscriptionPeriodEnd?: Date;
+  lastSubscriptionReconciledAt?: Date | null;
   twoFactorEnabled: boolean;
   twoFactorSecret?: string;
   /** Denormalized: updated on follow/unfollow */
@@ -172,12 +191,29 @@ export interface IUser extends Document {
   /** Incremented on each successful profile PATCH; used for optimistic concurrency (optional client `expectedProfileVersion`). */
   profileVersion?: number;
   profileUpdatedAt?: Date;
-  /** Crockford-base32 style code for `/invite/:code`; unique when set. */
-  referralCode?: string | null;
-  referredByUserId?: mongoose.Types.ObjectId | null;
+  /** Public invite code (opaque); unique when set. */
+  referralCode?: string;
+  /** User who referred this account (immutable once set). */
+  referredByUserId?: mongoose.Types.ObjectId;
   referredAt?: Date;
-  referralCapturedAt?: Date;
+  /** e.g. `link`, `blog`, `oauth` */
   referralSource?: string;
+  referralCapturedAt?: Date;
+  /** CMS / help admin access; unset = no staff UI. */
+  staffRole?: 'editor' | 'admin';
+  /** Bcrypt hash for `POST /auth/staff-login` (staff accounts only). Not selected by default. */
+  staffPasswordHash?: string;
+  /** Admin soft-delete (platform user directory); omit or null = active in directory. */
+  deletedAt?: Date | null;
+  deletedById?: mongoose.Types.ObjectId;
+  /** Which blog posting streak granularity is shown on the public profile (`daily` default). */
+  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
+  /** Durable max daily read streak length from Mongo recompute (F.5); merged into public `readStreak`. */
+  readStreakLongest?: number;
+  /** Denormalized: total Respect received on published, non-deleted blog posts (see blog Respect spec). */
+  blogRespectReceivedCount?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const WorkExperienceSchema = new Schema({
@@ -187,6 +223,7 @@ const WorkExperienceSchema = new Schema({
   company: { type: String, required: true, trim: true, maxlength: 200 },
   companyDomain: { type: String, trim: true, maxlength: 120 },
   companyLogo: { type: String, trim: true, maxlength: 500 },
+  companyLogoAlt: { type: String, trim: true, maxlength: 120 },
   currentPosition: { type: Boolean, default: false },
   startDate: { type: String, trim: true, maxlength: 20 },
   endDate: { type: String, trim: true, maxlength: 20 },
@@ -236,6 +273,7 @@ const EducationSchema = new Schema({
   school: { type: String, required: true, trim: true, maxlength: 200 },
   schoolDomain: { type: String, trim: true, maxlength: 120 },
   schoolLogo: { type: String, trim: true, maxlength: 2000 },
+  schoolLogoAlt: { type: String, trim: true, maxlength: 120 },
   degree: { type: String, required: true, trim: true, maxlength: 80 },
   fieldOfStudy: { type: String, trim: true, maxlength: 120 },
   currentEducation: { type: Boolean, default: false },
@@ -252,6 +290,7 @@ const CertificationSchema = new Schema({
   name: { type: String, required: true, trim: true, maxlength: 120 },
   issuingOrganization: { type: String, required: true, trim: true, maxlength: 120 },
   issuerLogo: { type: String, trim: true, maxlength: 2000 },
+  issuerLogoAlt: { type: String, trim: true, maxlength: 120 },
   currentlyValid: { type: Boolean, default: false },
   issueDate: { type: String, trim: true, maxlength: 20 },
   expirationDate: { type: String, trim: true, maxlength: 20 },
@@ -303,6 +342,7 @@ const SetupItemSchema = new Schema({
   label: { type: String, required: true, trim: true, maxlength: 80 },
   imageUrl: { type: String, required: true, trim: true, maxlength: 500 },
   productUrl: { type: String, trim: true, maxlength: 500 },
+  imageAlt: { type: String, trim: true, maxlength: 120 },
 }, { _id: false });
 
 const UserSchema = new Schema<IUser>(
@@ -314,7 +354,9 @@ const UserSchema = new Schema<IUser>(
       type: String,
       default: DEFAULT_AVATAR_URL,
     },
+    profileImgAlt: { type: String, trim: true, maxlength: 120 },
     coverBanner: { type: String },
+    coverBannerAlt: { type: String, trim: true, maxlength: 120 },
     gender: { type: String },
     job: { type: String },
     bio: {
@@ -364,20 +406,35 @@ const UserSchema = new Schema<IUser>(
     emailVerified: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
     subscription: { type: Schema.Types.ObjectId, ref: 'subscriptions', default: null },
+    stripeCustomerId: { type: String, sparse: true, unique: true, trim: true },
+    subscriptionStatus: { type: String, trim: true, maxlength: 32 },
+    subscriptionPlanKey: { type: String, trim: true, maxlength: 16 },
+    subscriptionPeriodEnd: { type: Date },
+    lastSubscriptionReconciledAt: { type: Date, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, select: false },
     followersCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
     profileVersion: { type: Number, default: 0, min: 0 },
     profileUpdatedAt: { type: Date },
-    referralCode: { type: String, sparse: true, unique: true, trim: true, uppercase: true },
-    referredByUserId: { type: Schema.Types.ObjectId, ref: 'users', default: null, index: true },
-    referredAt: { type: Date },
-    referralCapturedAt: { type: Date },
-    referralSource: { type: String, trim: true, maxlength: 32 },
+    referralCode: { type: String, trim: true, uppercase: true, sparse: true, unique: true, maxlength: 24 },
+    referredByUserId: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    referredAt: { type: Date, default: null },
+    referralSource: { type: String, trim: true, maxlength: 32, default: undefined },
+    referralCapturedAt: { type: Date, default: null },
+    staffRole: { type: String, enum: ['editor', 'admin'], required: false, select: true },
+    staffPasswordHash: { type: String, select: false },
+    deletedAt: { type: Date, default: null, index: true },
+    deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    blogStreakMode: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'daily' },
+    readStreakLongest: { type: Number, min: 0 },
+    blogRespectReceivedCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+UserSchema.index({ referredByUserId: 1, createdAt: -1 });
+UserSchema.index({ deletedAt: 1, createdAt: -1 });
 
 export const UserModel: Model<IUser> =
   mongoose.models?.users ?? mongoose.model<IUser>('users', UserSchema);

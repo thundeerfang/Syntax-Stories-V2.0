@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   FileText,
   BookOpen,
+  Wallet,
   LogOut,
   Camera,
   Code2,
@@ -50,10 +51,13 @@ import {
   Globe,
   Lock,
   Loader2,
+  Image as LucideImage,
+  Flame,
 } from 'lucide-react';
 import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
 import { OptimizedRemoteImage } from '@/components/ui/OptimizedRemoteImage';
 import { cn } from '@/lib/utils';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
 import { STACK_AND_TOOLS_MAX } from '@/lib/stackAndToolsLimits';
 import {
   PROFILE_INSTAGRAM_MAX,
@@ -75,20 +79,15 @@ import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { authApi } from '@/api/auth';
 import { projectMatchesGithubRepo } from '@/lib/githubProjectIdentity';
 import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
-import {
-  UploadProfilePicDialog,
-  UploadCoverDialog,
-  UploadMediaDialog,
-  UploadLogoDialog,
-  MediaFullViewDialog,
-} from '@/components/profile/dialog';
+import { UploadLogoDialog, MediaFullViewDialog } from '@/components/profile/dialog';
+import { ImageUploadCropDialog } from '@/components/upload';
+import { uploadAvatar, uploadCover, uploadMedia } from '@/api/upload';
 import { FormDialog } from '@/components/ui/FormDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { GhostOutlineButton } from '@/components/ui';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { Dialog } from '@/components/ui/Dialog';
-import { uploadMedia } from '@/api/upload';
 import { getSkillIconUrl, getSkillIconUrlBySlug } from '@/lib/skillIcons';
 import { searchTechStack, type TechStackItem } from '@/data/techStack';
 import { Toggle, ToggleGroup, ToggleGroupItem, FormInput, FormTextarea, FormCheckbox, Input, Label, SearchableSelect, EntitySearchInput, Textarea } from '@/components/retroui';
@@ -101,6 +100,10 @@ import { ProjectCard } from './settings-list/ProjectCard';
 import { OpenSourceCard } from './settings-list/OpenSourceCard';
 import { type SetupItem as MySetupItem } from './settings-list/MySetupCard';
 import { SettingsSectionHeader } from './settings-list/Header';
+import { SettingsSectionHeading } from './settings-list/SettingsSectionHeading';
+import { SettingsContentSkeleton, SettingsSidebarSkeleton } from '@/components/skeletons';
+import { PaymentsSettingsContent } from './PaymentsSettingsContent';
+import { BlogStreakSettingsContent } from './BlogStreakSettingsContent';
 
 interface NavItem {
   id: string;
@@ -146,6 +149,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: 'certifications', label: 'License & Certifications', icon: Award },
       { id: 'projects', label: 'Projects & Publications', icon: FolderGit2 },
       { id: 'open-source', label: 'Open Source', icon: Code2 },
+      { id: 'blog-streak', label: 'Blog read streak', icon: Flame },
     ],
   },
   {
@@ -159,6 +163,7 @@ const NAV_GROUPS: NavGroup[] = [
     heading: 'Other',
     items: [
       { id: 'syntax-card', label: 'Syntax card', icon: CreditCard },
+      { id: 'payments', label: 'Payments', icon: Wallet },
       { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
   },
@@ -181,12 +186,11 @@ function FormSection({ title, children }: { title?: string; children: React.Reac
 function SyntaxCardContent() {
   return (
     <div className="space-y-8">
-      <header>
-        <h2 className="text-2xl font-black uppercase tracking-tight">Syntax DevCard</h2>
-        <p className="text-sm font-medium text-muted-foreground mt-1">
-          Your developer identity card. This is how you appear across the platform.
-        </p>
-      </header>
+      <SettingsSectionHeading
+        icon={<CreditCard />}
+        title="Syntax DevCard"
+        description="Your developer identity card. This is how you appear across the platform."
+      />
 
       <div className="max-w-md mx-auto lg:mx-0">
         <div className="relative group">
@@ -248,6 +252,8 @@ function EditProfileContent() {
   const [profileImgBlurDataUrl, setProfileImgBlurDataUrl] = useState<string | null>(null);
   const [coverBanner, setCoverBanner] = useState(user?.coverBanner ?? '');
   const [coverBannerBlurDataUrl, setCoverBannerBlurDataUrl] = useState<string | null>(null);
+  const [profileImgAlt, setProfileImgAlt] = useState((user as { profileImgAlt?: string })?.profileImgAlt ?? '');
+  const [coverBannerAlt, setCoverBannerAlt] = useState((user as { coverBannerAlt?: string })?.coverBannerAlt ?? '');
   const [portfolioUrl, setPortfolioUrl] = useState((user as any)?.portfolioUrl ?? '');
   const [linkedin, setLinkedin] = useState(user?.linkedin ?? '');
   const [github, setGithub] = useState(user?.github ?? '');
@@ -324,6 +330,8 @@ function EditProfileContent() {
     setProfileImgBlurDataUrl(null);
     setCoverBanner(user?.coverBanner ?? '');
     setCoverBannerBlurDataUrl(null);
+    setProfileImgAlt((user as { profileImgAlt?: string })?.profileImgAlt ?? '');
+    setCoverBannerAlt((user as { coverBannerAlt?: string })?.coverBannerAlt ?? '');
     setPortfolioUrl((user as any)?.portfolioUrl ?? '');
     setLinkedin(user?.linkedin ?? '');
     setGithub(user?.github ?? '');
@@ -348,21 +356,37 @@ function EditProfileContent() {
     return () => doc.removeEventListener('selectionchange', onSelectionChange);
   }, [updateFormatState]);
 
-  const handleCoverUploadSuccess = async (result: { url: string; blurDataUrl?: string }) => {
+  const handleCoverUploadSuccess = async (
+    result: { url: string; blurDataUrl?: string },
+    imageTitle?: string
+  ) => {
     setCoverBanner(result.url);
     setCoverBannerBlurDataUrl(result.blurDataUrl ?? null);
+    const alt = imageTitle?.trim();
+    if (alt) setCoverBannerAlt(alt);
     try {
-      await updateProfile({ coverBanner: result.url }, { section: 'basic' });
+      await updateProfile(
+        alt ? { coverBanner: result.url, coverBannerAlt: alt } : { coverBanner: result.url },
+        { section: 'basic' }
+      );
     } catch {
       // already set in state; user can Save again if needed
     }
   };
 
-  const handleProfilePicUploadSuccess = async (result: { url: string; blurDataUrl?: string }) => {
+  const handleProfilePicUploadSuccess = async (
+    result: { url: string; blurDataUrl?: string },
+    imageTitle?: string
+  ) => {
     setProfileImg(result.url);
     setProfileImgBlurDataUrl(result.blurDataUrl ?? null);
+    const alt = imageTitle?.trim();
+    if (alt) setProfileImgAlt(alt);
     try {
-      await updateProfile({ profileImg: result.url }, { section: 'basic' });
+      await updateProfile(
+        alt ? { profileImg: result.url, profileImgAlt: alt } : { profileImg: result.url },
+        { section: 'basic' }
+      );
     } catch {
       // already set in state; user can Save again if needed
     }
@@ -506,7 +530,9 @@ function EditProfileContent() {
       t(username) === t(user.username) &&
       t(bio) === t(user.bio) &&
       t(profileImg) === t(user.profileImg) &&
+      t(profileImgAlt) === t((user as { profileImgAlt?: string }).profileImgAlt) &&
       t(coverBanner) === t(user.coverBanner) &&
+      t(coverBannerAlt) === t((user as { coverBannerAlt?: string }).coverBannerAlt) &&
       t(portfolioUrl) === t((user as { portfolioUrl?: string }).portfolioUrl) &&
       t(linkedin) === t(user.linkedin) &&
       t(github) === t(user.github) &&
@@ -523,7 +549,9 @@ function EditProfileContent() {
         username: username.trim() || undefined,
         bio: bio.trim() || undefined,
         profileImg: profileImg.trim() || undefined,
+        profileImgAlt: profileImgAlt.trim() || undefined,
         coverBanner: coverBanner.trim() || undefined,
+        coverBannerAlt: coverBannerAlt.trim() || undefined,
         portfolioUrl: portfolioUrl.trim() || undefined,
         linkedin: linkedin.trim() || undefined,
         github: github.trim() || undefined,
@@ -552,7 +580,8 @@ function EditProfileContent() {
           {coverBanner ? (
             <OptimizedRemoteImage
               src={coverBanner}
-              alt="Cover"
+              alt={coverBannerAlt.trim() || 'Cover banner'}
+              title={coverBannerAlt.trim() || undefined}
               fill
               sizes="100vw"
               blurDataUrl={coverBannerBlurDataUrl}
@@ -576,7 +605,8 @@ function EditProfileContent() {
               <div className="relative size-20 md:size-24 border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] bg-muted overflow-hidden">
                 <OptimizedRemoteImage
                   src={profileImg || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
-                  alt="Avatar"
+                  alt={profileImgAlt.trim() || 'Profile photo'}
+                  title={profileImgAlt.trim() || undefined}
                   fill
                   sizes="96px"
                   blurDataUrl={profileImg ? profileImgBlurDataUrl : null}
@@ -597,24 +627,56 @@ function EditProfileContent() {
                 {user.fullName || user.username || user.email}
               </h2>
               <p className="text-xs md:text-sm text-muted-foreground mt-1 max-w-xl">
-                Update your photo, cover, bio, username and social links.
+                Update your photo, cover, bio, username, and social links.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <UploadCoverDialog
+      <ImageUploadCropDialog
         open={coverDialogOpen}
         onClose={() => setCoverDialogOpen(false)}
-        token={token ?? ''}
-        onSuccess={handleCoverUploadSuccess}
+        titleId="settings-cover-crop"
+        title="Upload cover image"
+        titleIcon={<LucideImage className="size-4 shrink-0 text-primary" aria-hidden />}
+        subtitle="JPEG, PNG, GIF or WebP. Max 10 MB. Recommended width 1200px+."
+        subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+        maxSizeBytes={10 * 1024 * 1024}
+        aspect={4}
+        imageTitleField
+        imageTitleLabel="Cover title (optional)"
+        imageTitlePlaceholder="e.g. Team offsite banner"
+        confirmLabel="Save & upload"
+        onConfirm={async (file, meta) => {
+          if (!token) throw new Error('Not signed in.');
+          const data = await uploadCover(token, file);
+          if (!data.url) throw new Error(data.message ?? 'Upload failed');
+          void handleCoverUploadSuccess({ url: data.url, blurDataUrl: data.blurDataUrl }, meta?.imageTitle);
+          toast.success('Cover image updated.');
+        }}
       />
-      <UploadProfilePicDialog
+      <ImageUploadCropDialog
         open={profilePicDialogOpen}
         onClose={() => setProfilePicDialogOpen(false)}
-        token={token ?? ''}
-        onSuccess={handleProfilePicUploadSuccess}
+        titleId="settings-avatar-crop"
+        title="Upload profile photo"
+        titleIcon={<Camera className="size-4 shrink-0 text-primary" aria-hidden />}
+        subtitle="JPEG, PNG, GIF or WebP. Max 5 MB."
+        subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+        maxSizeBytes={5 * 1024 * 1024}
+        aspect={1}
+        imageTitleField
+        imageTitleLabel="Photo title (optional)"
+        imageTitlePlaceholder="e.g. Headshot, 2025"
+        confirmLabel="Save & upload"
+        onConfirm={async (file, meta) => {
+          if (!token) throw new Error('Not signed in.');
+          const data = await uploadAvatar(token, file);
+          if (!data.url) throw new Error(data.message ?? 'Upload failed');
+          void handleProfilePicUploadSuccess({ url: data.url, blurDataUrl: data.blurDataUrl }, meta?.imageTitle);
+          toast.success('Profile photo updated.');
+        }}
       />
 
       {/* Basic info — card */}
@@ -918,14 +980,13 @@ function SecurityEmailContent() {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-start justify-between">
-        <div>
-          <h2 className="text-2xl font-black uppercase tracking-tight">Security Protocol: Email</h2>
-          <p className="text-sm font-medium text-muted-foreground mt-1">
-            Authorized personnel only. Changing your primary email requires dual-factor verification.
-          </p>
-        </div>
-        <div className="hidden md:flex gap-1">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <SettingsSectionHeading
+          icon={<Mail />}
+          title="Security Protocol: Email"
+          description="Authorized personnel only. Changing your primary email requires dual-factor verification."
+        />
+        <div className="hidden shrink-0 md:flex gap-1">
           <div className={cn("px-2 py-1 text-[9px] font-black border-2 transition-colors", step === 'enter' ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground")}>01. INITIATE</div>
           <div className={cn("px-2 py-1 text-[9px] font-black border-2 transition-colors", step === 'verify' ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground")}>02. VERIFY</div>
         </div>
@@ -1075,12 +1136,11 @@ function ConnectedAccountsContent() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h2 className="text-2xl font-black uppercase tracking-tight">Connected Nodes</h2>
-        <p className="text-sm font-medium text-muted-foreground mt-1">
-          Manage your external authentication modules.
-        </p>
-      </header>
+      <SettingsSectionHeading
+        icon={<Plug />}
+        title="Connected Nodes"
+        description="Manage your external authentication modules."
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         {providers.map((p) => {
@@ -1272,15 +1332,11 @@ function StackAndToolsContent() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-1">
-        <div className="flex items-center gap-2 ">
-          <Monitor className="size-5 text-primary" strokeWidth={2.5} />
-          <h2 className="text-2xl font-black uppercase tracking-tighter">Stack & Tools</h2>
-        </div>
-        <p className="text-sm font-medium text-muted-foreground">
-          Search and add up to {STACK_AND_TOOLS_MAX} languages, frameworks, and tools.
-        </p>
-      </header>
+      <SettingsSectionHeading
+        icon={<Monitor strokeWidth={2.5} />}
+        title="Stack & Tools"
+        description={`Search and add up to ${STACK_AND_TOOLS_MAX} languages, frameworks, and tools.`}
+      />
 
       <div className="border-4 border-border bg-muted/5 p-6 space-y-8">
         <div className="space-y-3">
@@ -1447,6 +1503,7 @@ function MySetupContent() {
   const [draftLabel, setDraftLabel] = useState('');
   const [draftProductUrl, setDraftProductUrl] = useState('');
   const [draftImageUrl, setDraftImageUrl] = useState('');
+  const [draftImageAlt, setDraftImageAlt] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
 
@@ -1465,13 +1522,15 @@ function MySetupContent() {
       label: draftLabel.trim().slice(0, 80),
       imageUrl: draftImageUrl.trim().slice(0, 500),
       productUrl: normalizeUrl(draftProductUrl).slice(0, 500),
+      imageAlt: draftImageAlt.trim().slice(0, 120) || undefined,
     };
     if (editIndex !== null && items[editIndex]) {
       const e = items[editIndex];
       const same =
         nextItem.label === (e.label ?? '').trim() &&
         nextItem.imageUrl === (e.imageUrl ?? '').trim() &&
-        nextItem.productUrl === normalizeUrl(e.productUrl ?? '').slice(0, 500);
+        nextItem.productUrl === normalizeUrl(e.productUrl ?? '').slice(0, 500) &&
+        (nextItem.imageAlt ?? '') === ((e as { imageAlt?: string }).imageAlt ?? '').trim();
       if (same) {
         toast.error('No changes to save.', { id: 'syntax-no-changes' });
         return;
@@ -1485,7 +1544,7 @@ function MySetupContent() {
     try {
       await updateProfile({ mySetup: next.slice(0, 5) } as any, { section: 'setup' });
       setItems(next.slice(0, 5));
-      setDraftLabel(''); setDraftImageUrl(''); setDraftProductUrl(''); setEditIndex(null);
+      setDraftLabel(''); setDraftImageUrl(''); setDraftImageAlt(''); setDraftProductUrl(''); setEditIndex(null);
       toast.success('My Setup updated.', { id: 'syntax-setup-success' });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to update setup.', { id: 'syntax-setup-error' });
@@ -1496,18 +1555,11 @@ function MySetupContent() {
 
   return (
     <div className="space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Wrench className="size-5 text-primary" />
-            <h2 className="text-2xl font-black uppercase tracking-tighter">My Setup</h2>
-          </div>
-          <p className="text-sm font-medium text-muted-foreground">
-            Configure your physical workstation components (Max 5 slots).
-          </p>
-        </div>
-     
-      </header>
+      <SettingsSectionHeading
+        icon={<Wrench />}
+        title="My Setup"
+        description="Configure your physical workstation components (max 5 slots)."
+      />
 
       <div className="border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)] overflow-hidden">
         <div className="bg-muted/40 text-foreground px-4 py-2 flex items-center justify-between border-b-2 border-border">
@@ -1551,7 +1603,12 @@ function MySetupContent() {
             >
               {draftImageUrl ? (
                 <div className="size-10 border-2 border-primary overflow-hidden">
-                  <img src={draftImageUrl} alt="" className="size-full object-cover" />
+                  <img
+                    src={draftImageUrl}
+                    alt={draftImageAlt.trim() || draftLabel.trim() || 'Component preview'}
+                    title={draftImageAlt.trim() || undefined}
+                    className="size-full object-cover"
+                  />
                 </div>
               ) : <ImagePlus className="size-5 text-muted-foreground group-hover:text-primary" />}
               <span className="text-[10px] font-black uppercase tracking-widest">
@@ -1564,7 +1621,7 @@ function MySetupContent() {
             {editIndex !== null && (
               <button
                 type="button"
-                onClick={() => { setEditIndex(null); setDraftLabel(''); setDraftImageUrl(''); setDraftProductUrl(''); }}
+                onClick={() => { setEditIndex(null); setDraftLabel(''); setDraftImageUrl(''); setDraftImageAlt(''); setDraftProductUrl(''); }}
                 className="text-[10px] font-black uppercase tracking-widest underline underline-offset-4 hover:text-primary"
               >
                 Cancel
@@ -1595,7 +1652,12 @@ function MySetupContent() {
               className="group relative border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] hover:border-primary transition-colors overflow-hidden"
             >
               <div className="aspect-video relative overflow-hidden border-b-4 border-border">
-                <img src={it.imageUrl} alt={it.label} className="size-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                <img
+                  src={it.imageUrl}
+                  alt={(it as { imageAlt?: string }).imageAlt?.trim() || it.label}
+                  title={(it as { imageAlt?: string }).imageAlt?.trim() || undefined}
+                  className="size-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                />
                 <div className="absolute top-2 left-2 px-2 py-1 bg-background/90 text-foreground border border-border text-[8px] font-black tracking-widest">
                   SLOT_0{idx + 1}
                 </div>
@@ -1605,7 +1667,13 @@ function MySetupContent() {
                 <div className="flex items-center gap-4 mt-4">
                   <button
                     type="button"
-                    onClick={() => { setEditIndex(idx); setDraftLabel(it.label); setDraftImageUrl(it.imageUrl); setDraftProductUrl(it.productUrl || ''); }}
+                    onClick={() => {
+                      setEditIndex(idx);
+                      setDraftLabel(it.label);
+                      setDraftImageUrl(it.imageUrl);
+                      setDraftImageAlt((it as { imageAlt?: string }).imageAlt ?? '');
+                      setDraftProductUrl(it.productUrl || '');
+                    }}
                     className="p-2 border-2 border-border hover:bg-muted transition-colors"
                   >
                     <Pencil className="size-3" />
@@ -1648,13 +1716,30 @@ function MySetupContent() {
         )}
       </div>
 
-      <UploadMediaDialog
+      <ImageUploadCropDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        token={token ?? ''}
-        onSuccess={(item) => {
-          setDraftImageUrl(item.url);
-          setUploadOpen(false);
+        titleId="my-setup-component-crop"
+        title="Component image"
+        titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
+        subtitle="16∶9 crop · max 5 MB · uploads when you mount the component."
+        subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+        maxSizeBytes={5 * 1024 * 1024}
+        aspect={16 / 9}
+        cropMinHeightClass="min-h-[12rem] h-48"
+        imageTitleField
+        imageTitleLabel="Title (optional)"
+        imageTitlePlaceholder="Shown as title and alt for this photo"
+        confirmLabel="Use image"
+        onConfirm={async (file, meta) => {
+          if (!token) throw new Error('Not signed in.');
+          const data = await uploadMedia(token, file);
+          if (!data.url) throw new Error(data.message ?? 'Upload failed');
+          setDraftImageUrl(data.url);
+          const alt = meta?.imageTitle?.trim();
+          if (alt) setDraftImageAlt(alt);
+          else setDraftImageAlt('');
+          toast.success('Image ready.');
         }}
       />
     </div>
@@ -1667,8 +1752,28 @@ type MediaItem = {
   /** When true, this media item only exists locally and must be uploaded on Save. */
   isPending?: boolean;
   pendingFile?: File;
+  /** When set with staged `pendingFile`, passed to `uploadMedia` for server-side crop (legacy). */
   pendingCrop?: import('@/api/upload').CropArea;
 };
+
+/** Resolve staged uploads (blob + pending file) to final URLs before profile PATCH. */
+async function resolveProfileMediaItems(
+  token: string | null | undefined,
+  items: MediaItem[]
+): Promise<{ url: string; title?: string }[]> {
+  const out: { url: string; title?: string }[] = [];
+  for (const m of items.slice(0, 5)) {
+    if (m.isPending && m.pendingFile) {
+      if (!token) throw new Error('Sign in again to finish uploading staged media.');
+      const data = await uploadMedia(token, m.pendingFile, m.pendingCrop, () => {});
+      if (!data.url) throw new Error('Media upload failed.');
+      out.push({ url: data.url.trim(), title: m.title?.trim() || undefined });
+    } else if (m.url.trim() && !m.url.startsWith('blob:')) {
+      out.push({ url: m.url.trim(), title: m.title?.trim() || undefined });
+    }
+  }
+  return out.slice(0, 5);
+}
 
 /** Normalize link input: full http(s) URLs, or bare domains / www… → https://… */
 function normalizeMediaLinkInput(raw: string): string | null {
@@ -1926,6 +2031,7 @@ type WorkExpForm = {
   company: string;
   companyDomain: string;
   companyLogo: string;
+  companyLogoAlt: string;
   currentPosition: boolean;
   startDate: string;
   endDate: string;
@@ -1961,6 +2067,7 @@ const WORK_EXP_DEFAULT: WorkExpForm = {
   company: '',
   companyDomain: '',
   companyLogo: '',
+  companyLogoAlt: '',
   currentPosition: false,
   startDate: '',
   endDate: '',
@@ -2138,6 +2245,7 @@ function buildWorkExperienceProfileEntry(
     company: form.company.trim(),
     companyDomain: form.companyDomain.trim() || undefined,
     companyLogo: form.companyLogo.trim() || undefined,
+    companyLogoAlt: form.companyLogoAlt.trim() || undefined,
     currentPosition: form.currentPosition,
     startDate: startDateVal,
     endDate: endDateVal,
@@ -2190,6 +2298,7 @@ function WorkExperiencesContent() {
       company: w.company ?? '',
       companyDomain: w.companyDomain ?? '',
       companyLogo: (w as { companyLogo?: string }).companyLogo ?? '',
+      companyLogoAlt: (w as { companyLogoAlt?: string }).companyLogoAlt ?? '',
       currentPosition: !!w.currentPosition,
       startDate: w.startDate ?? '',
       endDate: w.endDate ?? '',
@@ -2245,56 +2354,60 @@ function WorkExperiencesContent() {
     setPromoFullViewMedia(null);
     setDialogOpen(true);
   };
-  const openEdit = (i: number) => {
-    const e = list[i];
-    const parsed = parseLocationString(e.location ?? '');
-    const start = valueToMonthYear(e.startDate ?? '');
-    const end = valueToMonthYear(e.endDate ?? '');
-    const locType = e.locationType ?? '';
-    const nextForm: WorkExpForm = {
-      ...WORK_EXP_DEFAULT,
-      jobTitle: e.jobTitle,
-      employmentType: e.employmentType,
-      company: e.company,
-      companyDomain: e.companyDomain,
-      companyLogo: e.companyLogo ?? '',
-      currentPosition: e.currentPosition,
-      startDate: e.startDate,
-      endDate: e.endDate,
-      startMonth: start.month,
-      startYear: start.year,
-      endMonth: end.month,
-      endYear: end.year,
-      location: e.location ?? '',
-      locationType: locType,
-      locationCountry: parsed.countryCode,
-      locationState: parsed.stateCode,
-      locationCity: parsed.city,
-      description: e.description,
-      skills: e.skills ?? [],
-      promotions: (e.promotions ?? []).map((p) => ({
-        jobTitle: p.jobTitle ?? '',
-        startMonth: valueToMonthYear(p.startDate ?? '').month,
-        startYear: valueToMonthYear(p.startDate ?? '').year,
-        endMonth: valueToMonthYear(p.endDate ?? '').month,
-        endYear: valueToMonthYear(p.endDate ?? '').year,
-        currentPosition: !!p.currentPosition,
-        mediaItems: (p.mediaItems ?? []).map((m) => ({ url: m.url, title: m.title })),
-      })),
-      mediaItems: e.mediaItems ?? [],
-    };
-    setForm(nextForm);
-    setInitialForm(nextForm);
-    setEditingIndex(i);
-    setFieldErrors({});
-    setPromoMediaDropdownIndex(null);
-    setPromoMediaLinkIndex(null);
-    setPromoMediaUploadIndex(null);
-    setPromoLinkUrl('');
-    setPromoLinkTitle('');
-    setPromoFullViewMedia(null);
-    setDialogOpen(true);
-  };
+  const openEdit = useCallback(
+    (i: number) => {
+      const e = list[i];
+      const parsed = parseLocationString(e.location ?? '');
+      const start = valueToMonthYear(e.startDate ?? '');
+      const end = valueToMonthYear(e.endDate ?? '');
+      const locType = e.locationType ?? '';
+      const nextForm: WorkExpForm = {
+        ...WORK_EXP_DEFAULT,
+        jobTitle: e.jobTitle,
+        employmentType: e.employmentType,
+        company: e.company,
+        companyDomain: e.companyDomain,
+        companyLogo: e.companyLogo ?? '',
+        companyLogoAlt: e.companyLogoAlt ?? '',
+        currentPosition: e.currentPosition,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        startMonth: start.month,
+        startYear: start.year,
+        endMonth: end.month,
+        endYear: end.year,
+        location: e.location ?? '',
+        locationType: locType,
+        locationCountry: parsed.countryCode,
+        locationState: parsed.stateCode,
+        locationCity: parsed.city,
+        description: e.description,
+        skills: e.skills ?? [],
+        promotions: (e.promotions ?? []).map((p) => ({
+          jobTitle: p.jobTitle ?? '',
+          startMonth: valueToMonthYear(p.startDate ?? '').month,
+          startYear: valueToMonthYear(p.startDate ?? '').year,
+          endMonth: valueToMonthYear(p.endDate ?? '').month,
+          endYear: valueToMonthYear(p.endDate ?? '').year,
+          currentPosition: !!p.currentPosition,
+          mediaItems: (p.mediaItems ?? []).map((m) => ({ url: m.url, title: m.title })),
+        })),
+        mediaItems: e.mediaItems ?? [],
+      };
+      setForm(nextForm);
+      setInitialForm(nextForm);
+      setEditingIndex(i);
+      setFieldErrors({});
+      setPromoMediaDropdownIndex(null);
+      setPromoMediaLinkIndex(null);
+      setPromoMediaUploadIndex(null);
+      setPromoLinkUrl('');
+      setPromoLinkTitle('');
+      setPromoFullViewMedia(null);
+      setDialogOpen(true);
+    },
+    [list],
+  );
   const openedEditFromUrlRef = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRef.current || list.length === 0) return;
@@ -2305,8 +2418,7 @@ function WorkExperiencesContent() {
     openedEditFromUrlRef.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
     setSaving(true);
@@ -2347,35 +2459,21 @@ function WorkExperiencesContent() {
     const endDateVal = form.currentPosition ? undefined : monthYearToValue(form.endMonth, form.endYear) || undefined;
 
     // Resolve pending media items (work experience + promotions) before building the entry.
-    const resolveItems = async (items: MediaItem[]): Promise<MediaItem[]> => {
-      if (!items.length || !token) {
-        return items
-          .filter((m) => m.url.trim())
-          .slice(0, 5)
-          .map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined }));
+    const resolveItems = async (items: MediaItem[]): Promise<MediaItem[] | null> => {
+      try {
+        return (await resolveProfileMediaItems(token, items)).map((x) => ({ url: x.url, title: x.title }));
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to upload media.', { id: 'syntax-media-upload' });
+        return null;
       }
-      const out: MediaItem[] = [];
-      for (const m of items.slice(0, 5)) {
-        if (!m.isPending || !m.pendingFile || !m.pendingCrop) {
-          if (m.url.trim()) out.push({ url: m.url.trim(), title: m.title?.trim() || undefined });
-        } else {
-          try {
-            const data = await uploadMedia(token, m.pendingFile, m.pendingCrop, () => {});
-            if (data.url) out.push({ url: data.url.trim(), title: m.title?.trim() || undefined });
-          } catch (e) {
-            toast.error(e instanceof Error ? e.message : 'Failed to upload media.', {
-              id: 'syntax-media-upload',
-            });
-          }
-        }
-      }
-      return out.slice(0, 5);
     };
 
     const resolvedMainMedia = await resolveItems(form.mediaItems);
+    if (resolvedMainMedia === null) return;
     const resolvedPromotions: PromotionForm[] = [];
     for (const p of form.promotions) {
       const resolvedPromoMedia = await resolveItems(p.mediaItems ?? []);
+      if (resolvedPromoMedia === null) return;
       resolvedPromotions.push({ ...p, mediaItems: resolvedPromoMedia });
     }
 
@@ -2462,8 +2560,12 @@ function WorkExperiencesContent() {
           onClose={() => setCompanyLogoDialogOpen(false)}
           token={token}
           kind="company-logo"
-          onSuccess={(url) => {
-            setForm((f) => ({ ...f, companyLogo: url }));
+          onSuccess={({ url, imageTitle }) => {
+            setForm((f) => ({
+              ...f,
+              companyLogo: url,
+              companyLogoAlt: imageTitle ?? '',
+            }));
             setCompanyLogoDialogOpen(false);
           }}
         />
@@ -2472,14 +2574,8 @@ function WorkExperiencesContent() {
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={
-          <span className="inline-flex items-center gap-2">
-            <span className="flex items-center justify-center size-8 border-2 border-primary/30 bg-primary/10 text-primary">
-              <Briefcase className="size-4" />
-            </span>
-            {editingIndex !== null ? 'Edit Position' : 'Work experience'}
-          </span>
-        }
+        titleIcon={<Briefcase aria-hidden />}
+        title={editingIndex !== null ? 'Edit Position' : 'Work experience'}
         titleId="work-dialog"
         subtitle="Provide the details of your professional journey."
         panelClassName="max-w-2xl"
@@ -2531,7 +2627,13 @@ function WorkExperiencesContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.companyLogo ? (
-                  <img src={form.companyLogo} alt="Logo" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
+                  <img
+                    src={form.companyLogo}
+                    alt={form.companyLogoAlt.trim() || 'Company logo'}
+                    title={form.companyLogoAlt.trim() || undefined}
+                    className="size-full object-contain"
+                    onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                 ) : form.companyDomain ? (
                   <img src={`https://logo.clearbit.com/${form.companyDomain.replace(/^https?:\/\//i, '').replace(/\/$/, '')}`} alt="" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
@@ -2548,7 +2650,7 @@ function WorkExperiencesContent() {
                   Upload logo
                 </button>
                 {form.companyLogo && (
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, companyLogo: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">
+                  <button type="button" onClick={() => setForm((f) => ({ ...f, companyLogo: '', companyLogoAlt: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">
                     Remove
                   </button>
                 )}
@@ -2969,14 +3071,28 @@ function WorkExperiencesContent() {
           </div>
           {token && (
             <>
-              <UploadMediaDialog
+              <ImageUploadCropDialog
                 open={uploadMediaDialogOpen}
                 onClose={() => setUploadMediaDialogOpen(false)}
-                token={token}
-                mode="staged"
-                onSuccess={(item) => {
-                  setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
-                  setUploadMediaDialogOpen(false);
+                titleId="work-exp-main-media-crop"
+                title="Upload media"
+                titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
+                subtitle="Square crop · max 5 MB · uploads when you save this experience."
+                subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+                maxSizeBytes={5 * 1024 * 1024}
+                aspect={1}
+                imageTitleField
+                confirmLabel="Save & add"
+                chooseAnotherLabel="Choose another"
+                onConfirm={async (file, meta) => {
+                  if (!token) throw new Error('Not signed in.');
+                  const url = URL.createObjectURL(file);
+                  const title = (meta?.imageTitle ?? '').trim() || 'Media image';
+                  setForm((f) => ({
+                    ...f,
+                    mediaItems: [...f.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5),
+                  }));
+                  toast.success('Media staged. It will upload when you save.');
                 }}
               />
               <AddMediaLinksDialog
@@ -2994,21 +3110,33 @@ function WorkExperiencesContent() {
                   });
                 }}
               />
-              <UploadMediaDialog
+              <ImageUploadCropDialog
                 open={promoMediaUploadIndex !== null}
                 onClose={() => setPromoMediaUploadIndex(null)}
-                token={token}
-                mode="staged"
-                onSuccess={(item) => {
-                  if (promoMediaUploadIndex !== null) {
-                    setForm((f) => ({
-                      ...f,
-                      promotions: f.promotions.map((p, i) =>
-                        i === promoMediaUploadIndex ? { ...p, mediaItems: [...p.mediaItems, item].slice(0, 5) } : p
-                      ),
-                    }));
-                    setPromoMediaUploadIndex(null);
-                  }
+                titleId="work-exp-promo-media-crop"
+                title="Upload media"
+                titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
+                subtitle="Square crop · max 5 MB · uploads when you save this experience."
+                subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+                maxSizeBytes={5 * 1024 * 1024}
+                aspect={1}
+                imageTitleField
+                confirmLabel="Save & add"
+                chooseAnotherLabel="Choose another"
+                onConfirm={async (file, meta) => {
+                  if (!token) throw new Error('Not signed in.');
+                  const idx = promoMediaUploadIndex;
+                  if (idx === null) return;
+                  const url = URL.createObjectURL(file);
+                  const title = (meta?.imageTitle ?? '').trim() || 'Media image';
+                  setForm((f) => ({
+                    ...f,
+                    promotions: f.promotions.map((p, i) =>
+                      i === idx ? { ...p, mediaItems: [...p.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5) } : p
+                    ),
+                  }));
+                  setPromoMediaUploadIndex(null);
+                  toast.success('Media staged. It will upload when you save.');
                 }}
               />
             </>
@@ -3069,6 +3197,7 @@ type EducationForm = {
   school: string;
   schoolDomain: string;
   schoolLogo: string;
+  schoolLogoAlt: string;
   degree: string;
   fieldOfStudy: string;
   currentEducation: boolean;
@@ -3087,6 +3216,7 @@ const EDUCATION_DEFAULT: EducationForm = {
   school: '',
   schoolDomain: '',
   schoolLogo: '',
+  schoolLogoAlt: '',
   degree: '',
   fieldOfStudy: '',
   currentEducation: false,
@@ -3112,6 +3242,7 @@ function EducationContent() {
       school: e.school ?? '',
       schoolDomain: e.schoolDomain ?? '',
       schoolLogo: (e as { schoolLogo?: string }).schoolLogo ?? '',
+      schoolLogoAlt: (e as { schoolLogoAlt?: string }).schoolLogoAlt ?? '',
       degree: e.degree ?? '',
       fieldOfStudy: e.fieldOfStudy ?? (e as { field?: string }).field ?? '',
       currentEducation: !!e.currentEducation,
@@ -3137,7 +3268,14 @@ function EducationContent() {
   const [schoolLogoDialogOpen, setSchoolLogoDialogOpen] = useState(false);
   const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
   const openAdd = () => { setForm(EDUCATION_DEFAULT); setInitialForm(EDUCATION_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = (i: number) => { const next = { ...EDUCATION_DEFAULT, ...list[i] }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openEdit = useCallback((i: number) => {
+    const next = { ...EDUCATION_DEFAULT, ...list[i] };
+    setForm(next);
+    setInitialForm(next);
+    setEditingIndex(i);
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, [list]);
   const openedEditFromUrlRefEd = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefEd.current || list.length === 0) return;
@@ -3148,13 +3286,13 @@ function EducationContent() {
     openedEditFromUrlRefEd.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((e) => ({
       school: e.school,
       schoolDomain: e.schoolDomain,
       schoolLogo: e.schoolLogo,
+      schoolLogoAlt: e.schoolLogoAlt,
       degree: e.degree,
       fieldOfStudy: e.fieldOfStudy,
       currentEducation: e.currentEducation,
@@ -3193,6 +3331,7 @@ function EducationContent() {
       school: form.school.trim(),
       schoolDomain: form.schoolDomain.trim().slice(0, 120) || undefined,
       schoolLogo: form.schoolLogo.trim() || undefined,
+      schoolLogoAlt: form.schoolLogoAlt.trim() || undefined,
       degree: form.degree.trim().slice(0, 80),
       fieldOfStudy: form.fieldOfStudy.trim().slice(0, 120) || undefined,
       currentEducation: form.currentEducation,
@@ -3256,8 +3395,12 @@ function EducationContent() {
           onClose={() => setSchoolLogoDialogOpen(false)}
           token={token}
           kind="school-logo"
-          onSuccess={(url) => {
-            setForm((f) => ({ ...f, schoolLogo: url }));
+          onSuccess={({ url, imageTitle }) => {
+            setForm((f) => ({
+              ...f,
+              schoolLogo: url,
+              schoolLogoAlt: imageTitle ?? '',
+            }));
             setSchoolLogoDialogOpen(false);
           }}
         />
@@ -3265,14 +3408,8 @@ function EducationContent() {
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={
-          <span className="inline-flex items-center gap-2">
-            <span className="flex items-center justify-center size-8 border-2 border-primary/30 bg-primary/10 text-primary">
-              <GraduationCap className="size-4" />
-            </span>
-            Education
-          </span>
-        }
+        titleIcon={<GraduationCap aria-hidden />}
+        title="Education"
         titleId="edu-dialog"
         subtitle="School, degree, and dates. Add activity or grade if needed."
         panelClassName="max-w-2xl"
@@ -3306,7 +3443,8 @@ function EducationContent() {
                 {form.schoolLogo ? (
                   <img
                     src={form.schoolLogo}
-                    alt="Logo"
+                    alt={form.schoolLogoAlt.trim() || 'School logo'}
+                    title={form.schoolLogoAlt.trim() || undefined}
                     className="size-full object-contain"
                     onError={(ev) => {
                       (ev.target as HTMLImageElement).style.display = 'none';
@@ -3328,7 +3466,7 @@ function EducationContent() {
                 {form.schoolLogo && (
                   <button
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, schoolLogo: '' }))}
+                    onClick={() => setForm((f) => ({ ...f, schoolLogo: '', schoolLogoAlt: '' }))}
                     className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10"
                   >
                     Remove
@@ -3401,6 +3539,7 @@ type CertForm = {
   name: string;
   issuingOrganization: string;
   issuerLogo: string;
+  issuerLogoAlt: string;
   issueDate: string;
   expirationDate: string;
   issueMonth: string;
@@ -3414,7 +3553,7 @@ type CertForm = {
   mediaItems: MediaItem[];
 };
 
-const CERT_DEFAULT: CertForm = { name: '', issuingOrganization: '', issuerLogo: '', issueDate: '', expirationDate: '', issueMonth: '', issueYear: '', expMonth: '', expYear: '', credentialId: '', credentialUrl: '', description: '', skills: [], mediaItems: [] };
+const CERT_DEFAULT: CertForm = { name: '', issuingOrganization: '', issuerLogo: '', issuerLogoAlt: '', issueDate: '', expirationDate: '', issueMonth: '', issueYear: '', expMonth: '', expYear: '', credentialId: '', credentialUrl: '', description: '', skills: [], mediaItems: [] };
 
 function CertificationsContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
@@ -3427,6 +3566,7 @@ function CertificationsContent() {
       name: c.name ?? '',
       issuingOrganization: c.issuingOrganization ?? '',
       issuerLogo: (c as { issuerLogo?: string }).issuerLogo ?? '',
+      issuerLogoAlt: (c as { issuerLogoAlt?: string }).issuerLogoAlt ?? '',
       issueDate: c.issueDate ?? '',
       expirationDate: c.expirationDate ?? '',
       issueMonth: issue.month,
@@ -3465,7 +3605,14 @@ function CertificationsContent() {
   }, []);
 
   const openAdd = () => { setForm(CERT_DEFAULT); setInitialForm(CERT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = (i: number) => { const next = { ...CERT_DEFAULT, ...list[i] }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openEdit = useCallback((i: number) => {
+    const next = { ...CERT_DEFAULT, ...list[i] };
+    setForm(next);
+    setInitialForm(next);
+    setEditingIndex(i);
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, [list]);
   const openedEditFromUrlRefCert = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefCert.current || list.length === 0) return;
@@ -3476,13 +3623,13 @@ function CertificationsContent() {
     openedEditFromUrlRefCert.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((c) => ({
       name: c.name,
       issuingOrganization: c.issuingOrganization,
       issuerLogo: c.issuerLogo,
+      issuerLogoAlt: c.issuerLogoAlt,
       issueDate: c.issueDate,
       expirationDate: c.expirationDate,
       credentialId: c.credentialId,
@@ -3517,17 +3664,25 @@ function CertificationsContent() {
     if (form.skills.filter(Boolean).length < 1) err.skills = 'At least 1 skill is required.';
     if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
     setFieldErrors({});
+    let resolvedCertMedia: { url: string; title?: string }[];
+    try {
+      resolvedCertMedia = await resolveProfileMediaItems(token, form.mediaItems);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to upload media.', { id: 'syntax-media-upload' });
+      return;
+    }
     const entry = {
       name: form.name.trim().slice(0, 120),
       issuingOrganization: form.issuingOrganization.trim().slice(0, 120),
       issuerLogo: form.issuerLogo.trim() || undefined,
+      issuerLogoAlt: form.issuerLogoAlt.trim() || undefined,
       issueDate: issueDateVal,
       expirationDate: expDateVal || undefined,
       credentialId: form.credentialId.trim().slice(0, 80) || undefined,
       credentialUrl: form.credentialUrl.trim().slice(0, 500) || undefined,
       description: form.description.trim().slice(0, 2000) || undefined,
       skills: form.skills.filter(Boolean).slice(0, 30),
-      media: form.mediaItems.filter((m) => m.url.trim()).slice(0, 5).map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined })),
+      media: resolvedCertMedia,
     };
     const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
     setSaving(true);
@@ -3592,8 +3747,12 @@ function CertificationsContent() {
           onClose={() => setCertLogoDialogOpen(false)}
           token={token}
           kind="org-logo"
-          onSuccess={(url) => {
-            setForm((f) => ({ ...f, issuerLogo: url }));
+          onSuccess={({ url, imageTitle }) => {
+            setForm((f) => ({
+              ...f,
+              issuerLogo: url,
+              issuerLogoAlt: imageTitle ?? '',
+            }));
             setCertLogoDialogOpen(false);
           }}
         />
@@ -3601,14 +3760,8 @@ function CertificationsContent() {
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={
-          <span className="inline-flex items-center gap-2">
-            <span className="flex items-center justify-center size-8 border-2 border-primary/30 bg-primary/10 text-primary">
-              <Award className="size-4" />
-            </span>
-            License or certification
-          </span>
-        }
+        titleIcon={<Award aria-hidden />}
+        title="License or certification"
         titleId="cert-dialog"
         subtitle="Name, issuing organization, issue date, and at least 1 skill. Add issuer logo, credential URL, or media if needed."
         panelClassName="max-w-2xl"
@@ -3639,7 +3792,13 @@ function CertificationsContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.issuerLogo ? (
-                  <img src={form.issuerLogo} alt="Logo" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
+                  <img
+                    src={form.issuerLogo}
+                    alt={form.issuerLogoAlt.trim() || 'Issuer logo'}
+                    title={form.issuerLogoAlt.trim() || undefined}
+                    className="size-full object-contain"
+                    onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                 ) : (
                   <Award className="size-6 text-muted-foreground" />
                 )}
@@ -3647,7 +3806,7 @@ function CertificationsContent() {
               <div className="flex gap-2">
                 <button type="button" onClick={() => setCertLogoDialogOpen(true)} disabled={!token} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50">Upload logo</button>
                 {form.issuerLogo && (
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, issuerLogo: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">Remove</button>
+                  <button type="button" onClick={() => setForm((f) => ({ ...f, issuerLogo: '', issuerLogoAlt: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">Remove</button>
                 )}
               </div>
             </div>
@@ -3860,14 +4019,25 @@ function CertificationsContent() {
             )}
           </div>
           {token && (
-            <UploadMediaDialog
+            <ImageUploadCropDialog
               open={certUploadMediaDialogOpen}
               onClose={() => setCertUploadMediaDialogOpen(false)}
-              token={token}
-              mode="staged"
-              onSuccess={(item) => {
-                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
-                setCertUploadMediaDialogOpen(false);
+              titleId="cert-media-crop"
+              title="Upload media"
+              titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
+              subtitle="Square crop · max 5 MB · uploads when you save this certification."
+              subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+              maxSizeBytes={5 * 1024 * 1024}
+              aspect={1}
+              imageTitleField
+              confirmLabel="Save & add"
+              chooseAnotherLabel="Choose another"
+              onConfirm={async (file, meta) => {
+                if (!token) throw new Error('Not signed in.');
+                const url = URL.createObjectURL(file);
+                const title = (meta?.imageTitle ?? '').trim() || 'Media image';
+                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5) }));
+                toast.success('Media staged. It will upload when you save.');
               }}
             />
           )}
@@ -3954,7 +4124,15 @@ function ProjectsContent() {
   }, []);
 
   const openAdd = () => { setForm(PROJECT_DEFAULT); setInitialForm(PROJECT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = (i: number) => { const item = list[i]; const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openEdit = useCallback((i: number) => {
+    const item = list[i];
+    const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type };
+    setForm(next);
+    setInitialForm(next);
+    setEditingIndex(i);
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, [list]);
   const openedEditFromUrlRefProj = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefProj.current || list.length === 0) return;
@@ -3965,8 +4143,7 @@ function ProjectsContent() {
     openedEditFromUrlRefProj.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- open from ?edit= once after list loads; ref prevents repeats
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
     setSaving(true);
@@ -3988,6 +4165,13 @@ function ProjectsContent() {
     if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
     setFieldErrors({});
     const endDateVal = form.ongoing ? undefined : (monthYearToValue(form.endMonth, form.endYear) || undefined);
+    let resolvedProjMedia: { url: string; title?: string }[];
+    try {
+      resolvedProjMedia = await resolveProfileMediaItems(token, form.mediaItems);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to upload media.', { id: 'syntax-media-upload' });
+      return;
+    }
     const entry = {
       type: form.type,
       title: form.title.trim().slice(0, 120),
@@ -3997,7 +4181,7 @@ function ProjectsContent() {
       endDate: endDateVal,
       publicationUrl: form.publicationUrl.trim().slice(0, 500) || undefined,
       description: form.description.trim().slice(0, 2000) || undefined,
-      media: form.mediaItems.filter((m) => m.url.trim()).slice(0, 5).map((m) => ({ url: m.url.trim(), title: m.title?.trim() || undefined })),
+      media: resolvedProjMedia,
     };
     const next = editingIndex !== null
       ? [...githubProjects, ...nonGithubProjects.map((p, j) => (j === editingIndex ? entry : p))]
@@ -4059,14 +4243,8 @@ function ProjectsContent() {
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={
-          <span className="inline-flex items-center gap-2">
-            <span className="flex items-center justify-center size-8 border-2 border-primary/30 bg-primary/10 text-primary">
-              <FileText className="size-4" />
-            </span>
-            Projects & publications
-          </span>
-        }
+        titleIcon={<FileText aria-hidden />}
+        title="Projects & publications"
         titleId="proj-dialog"
         subtitle="Title, publisher, and publication date. Add media or URL if needed."
         headerRight={
@@ -4254,14 +4432,25 @@ function ProjectsContent() {
             )}
           </div>
           {token && (
-            <UploadMediaDialog
+            <ImageUploadCropDialog
               open={projUploadMediaDialogOpen}
               onClose={() => setProjUploadMediaDialogOpen(false)}
-              token={token}
-              mode="staged"
-              onSuccess={(item) => {
-                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, item].slice(0, 5) }));
-                setProjUploadMediaDialogOpen(false);
+              titleId="project-media-crop"
+              title="Upload media"
+              titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
+              subtitle="Square crop · max 5 MB · uploads when you save this entry."
+              subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+              maxSizeBytes={5 * 1024 * 1024}
+              aspect={1}
+              imageTitleField
+              confirmLabel="Save & add"
+              chooseAnotherLabel="Choose another"
+              onConfirm={async (file, meta) => {
+                if (!token) throw new Error('Not signed in.');
+                const url = URL.createObjectURL(file);
+                const title = (meta?.imageTitle ?? '').trim() || 'Media image';
+                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5) }));
+                toast.success('Media staged. It will upload when you save.');
               }}
             />
           )}
@@ -4417,7 +4606,7 @@ function OpenSourceContent() {
         </div>
       </div>
     ) : (
-      <div className="flex flex-col items-center gap-4 text-center">
+      <div className="flex flex-col items-center gap-4 rounded-none border-2 border-border bg-muted/25 px-10 py-12 text-center dark:bg-black/55 dark:border-border">
         <Loader2 className="size-10 shrink-0 animate-spin text-primary" aria-hidden />
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
           {saving ? 'Saving…' : 'Loading repositories…'}
@@ -4459,14 +4648,8 @@ function OpenSourceContent() {
       <FormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={
-          <span className="inline-flex items-center gap-2">
-            <span className="flex items-center justify-center size-8 border-2 border-primary/30 bg-primary/10 text-primary">
-              <Github className="size-4" />
-            </span>
-            Add open source
-          </span>
-        }
+        titleIcon={<Github aria-hidden />}
+        title="Add open source"
         titleId="open-source-import"
         subtitle={
           user?.isGitAccount && !openSourceDialogLocked ? 'Pick a repo to add to Projects.' : undefined
@@ -4544,92 +4727,18 @@ function OpenSourceContent() {
   );
 }
 
-function SkeletonBar({ width = '100%', className }: { width?: string; className?: string }) {
+function SettingsComingSoonPlaceholder({
+  title,
+  description = 'This module is not available yet.',
+  icon = <Settings />,
+}: Readonly<{ title: string | undefined; description?: string; icon?: React.ReactNode }>) {
   return (
-    <div
-      className={cn('h-2.5 bg-muted animate-pulse', className)}
-      style={{ width }}
-    />
-  );
-}
-
-function SidebarSkeleton({ itemCount }: { itemCount: number }) {
-  return (
-    <div className="space-y-4">
-      {/* Profile skeleton */}
-      <div className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-4 flex items-center gap-3">
-        <div className="size-10 bg-muted animate-pulse shrink-0" />
-        <div className="flex-1 space-y-2">
-          <SkeletonBar width="70%" />
-          <SkeletonBar width="50%" className="h-2" />
-        </div>
+    <div className="space-y-8">
+      <SettingsSectionHeading icon={icon} title={title ?? 'Section'} description={description} />
+      <div className="flex flex-col items-center justify-center rounded-none border-2 border-dashed border-border bg-muted/10 py-16 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Status</p>
+        <p className="mt-2 text-sm font-medium text-muted-foreground">Coming soon.</p>
       </div>
-      {/* Nav skeleton */}
-      <div className="border-4 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)] p-3 space-y-2">
-        {Array.from({ length: itemCount }, (_, idx) => `nav-skeleton-${idx + 1}`).map((itemId, i) => (
-          <div key={itemId} className="flex items-center gap-3 px-1 py-1.5">
-            <div className="size-4 bg-muted animate-pulse shrink-0" />
-            <SkeletonBar width={`${45 + ((i * 11) % 41)}%`} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ContentSkeleton() {
-  return (
-    <div className="space-y-8 animate-pulse">
-      <div className="space-y-3">
-        <SkeletonBar width="40%" className="h-6" />
-        <SkeletonBar width="65%" className="h-3" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-3">
-          <SkeletonBar width="30%" className="h-2" />
-          <div className="h-32 bg-muted/30" />
-        </div>
-        <div className="space-y-3">
-          <SkeletonBar width="25%" className="h-2" />
-          <div className="flex items-center gap-4">
-            <div className="size-20 bg-muted/30" />
-            <SkeletonBar width="80px" className="h-8" />
-          </div>
-        </div>
-      </div>
-      <div className="space-y-4 pt-6 border-t-2 border-border/20">
-        <SkeletonBar width="25%" className="h-2" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <SkeletonBar width="20%" className="h-2" />
-            <div className="h-10 bg-muted/30" />
-          </div>
-          <div className="space-y-2">
-            <SkeletonBar width="20%" className="h-2" />
-            <div className="h-10 bg-muted/30" />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <SkeletonBar width="15%" className="h-2" />
-          <div className="h-24 bg-muted/30" />
-        </div>
-      </div>
-      <div className="flex justify-end gap-3 pt-6 border-t-2 border-border/20">
-        <SkeletonBar width="80px" className="h-10" />
-        <SkeletonBar width="120px" className="h-10" />
-      </div>
-    </div>
-  );
-}
-
-function SettingsComingSoonPlaceholder({ title }: Readonly<{ title: string | undefined }>) {
-  return (
-    <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-      <div className="size-16 bg-muted flex items-center justify-center border-2 border-border mb-4">
-        <Settings className="size-8 text-muted-foreground" />
-      </div>
-      <h2 className="text-xl font-black uppercase">{title}</h2>
-      <p className="text-sm text-muted-foreground mt-2 font-medium">Coming soon.</p>
     </div>
   );
 }
@@ -4673,8 +4782,11 @@ export default function SettingsPage() {
       router.replace('/settings', { scroll: false });
     } else if (section && validSectionIds.includes(section)) {
       setActiveSection(section);
-      // Clean up the URL so only `/settings` is visible, even when opened with ?section=...
-      router.replace('/settings', { scroll: false });
+      // Preserve checkout return params until verify-checkout runs (Payments section).
+      const checkout = searchParams.get('checkout');
+      if (checkout !== 'success') {
+        router.replace('/settings', { scroll: false });
+      }
     }
   }, [searchParams, router, refreshUser, validSectionIds]);
 
@@ -4711,18 +4823,17 @@ export default function SettingsPage() {
     return NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === activeSection)?.label;
   }, [activeSection]);
 
-  // Use skeleton layout instead of a second terminal loader (avoids double loader with GlobalLoaderOverlay)
   if (!isHydrated || shouldBlock) {
     return (
       <div className="min-h-screen text-foreground font-sans">
-        <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-12')}>
           <div className="grid items-start gap-6 grid-cols-1 lg:grid-cols-[256px_1fr]">
             <aside className="overflow-hidden w-64">
-              <SidebarSkeleton itemCount={totalItems + 1} />
+              <SettingsSidebarSkeleton itemCount={totalItems + 1} />
             </aside>
             <main className="min-w-0">
               <div className="border-4 border-border bg-card p-6 md:p-10 shadow-[8px_8px_0px_0px_var(--border)] min-h-[600px]">
-                <ContentSkeleton />
+                <SettingsContentSkeleton className="animate-pulse" />
               </div>
             </main>
           </div>
@@ -4733,7 +4844,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen text-foreground font-sans">
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-12')}>
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-[256px_1fr]">
 
           {/* SIDEBAR */}
@@ -4827,7 +4938,7 @@ export default function SettingsPage() {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
                   >
-                    <ContentSkeleton />
+                    <SettingsContentSkeleton className="animate-pulse" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -4844,13 +4955,19 @@ export default function SettingsPage() {
                     {activeSection === 'certifications' && <CertificationsContent />}
                     {activeSection === 'projects' && <ProjectsContent />}
                     {activeSection === 'open-source' && <OpenSourceContent />}
+                    {activeSection === 'blog-streak' && <BlogStreakSettingsContent />}
                     {activeSection === 'security-email' && <SecurityEmailContent />}
                     {activeSection === 'connected-accounts' && <ConnectedAccountsContent />}
                     {activeSection === 'syntax-card' && <SyntaxCardContent />}
+                    {activeSection === 'payments' && <PaymentsSettingsContent />}
                     {activeSection === 'notifications' && (
-                      <SettingsComingSoonPlaceholder title={activeItemLabel} />
+                      <SettingsComingSoonPlaceholder
+                        title={activeItemLabel}
+                        icon={<Bell />}
+                        description="Notification channels and digest schedules will be configurable here."
+                      />
                     )}
-                    {!['edit-profile', 'stack-tools', 'my-setup', 'work-experiences', 'education', 'certifications', 'projects', 'open-source', 'security-email', 'connected-accounts', 'syntax-card', 'notifications'].includes(activeSection) && (
+                    {!['edit-profile', 'stack-tools', 'my-setup', 'work-experiences', 'education', 'certifications', 'projects', 'open-source', 'blog-streak', 'security-email', 'connected-accounts', 'syntax-card', 'payments', 'notifications'].includes(activeSection) && (
                       <SettingsComingSoonPlaceholder title={activeItemLabel} />
                     )}
                   </motion.div>

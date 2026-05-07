@@ -25,7 +25,7 @@ import {
 import { analyticsApi, type ProfileOverviewMetrics, type ProfileTimePoint } from '@/api/analytics';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { cn } from '@/lib/utils';
-import { TerminalLoaderPage } from '@/components/loader';
+import { AnalyticsPageSkeletonInner } from '@/components/skeletons';
 
 type TabId = 'overview' | 'content' | 'audience';
 
@@ -59,7 +59,7 @@ export default function ProfileAnalyticsPage() {
     }));
   }, [timeSeries]);
 
-  if (shouldBlock) return <TerminalLoaderPage />;
+  if (shouldBlock) return <AnalyticsPageSkeletonInner />;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 font-sans text-foreground selection:bg-primary selection:text-primary-foreground">

@@ -10,6 +10,7 @@ export interface UploadDirectoryLayout {
     readonly logos: string;
     readonly schoolLogos: string;
     readonly orgLogos: string;
+    /** Feedback attachments (compressed WebP). */
     readonly feedback: string;
 }
 export interface UploadStorage {

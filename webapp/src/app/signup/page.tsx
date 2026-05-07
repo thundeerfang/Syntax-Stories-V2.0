@@ -10,6 +10,18 @@ export default function SignupPage() {
   const open = useAuthDialogStore((s) => s.open);
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+
+  useEffect(() => {
+    if (typeof globalThis.window === 'undefined') return;
+    const ref = new URLSearchParams(globalThis.window.location.search).get('ref')?.trim();
+    if (!ref) return;
+    try {
+      globalThis.sessionStorage?.setItem('pendingReferralCode', ref.toUpperCase());
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     if (!isHydrated) return;
     if (token) {

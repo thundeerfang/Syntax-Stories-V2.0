@@ -17,9 +17,11 @@ export async function validateMermaidSource(
     return { ok: true };
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
-    const short = raw.includes('Parse error')
+    // Remove version information from mermaid error messages
+    let cleaned = raw.replace(/mermaid\s+v?[\d.]+/gi, 'Mermaid').replace(/\s+Syntax error in textmermaid.*$/i, '');
+    const short = cleaned.includes('Parse error')
       ? 'Invalid Mermaid syntax. Put labels with spaces or special characters in double quotes, e.g. B["Supabase API"]. Each arrow line should end with a newline.'
-      : raw.slice(0, 220);
+      : cleaned.slice(0, 220);
     return { ok: false, message: short };
   }
 }

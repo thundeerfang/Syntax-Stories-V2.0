@@ -44,6 +44,11 @@ export const AuditAction = {
   MY_SETUP_ADDED: 'my_setup_added',
   MY_SETUP_UPDATED: 'my_setup_updated',
   MY_SETUP_REMOVED: 'my_setup_removed',
+  ADMIN_HELP_SOFT_DELETED: 'admin.help.soft_deleted',
+  ADMIN_HELP_RESTORED: 'admin.help.restored',
+  ADMIN_BLOG_RESTORED: 'admin.blog.restored',
+  ADMIN_USER_RESTORED: 'admin.user.restored',
+  ADMIN_TRASH_LISTED: 'admin.trash.listed',
 } as const;
 
 export type AuditActionName = (typeof AuditAction)[keyof typeof AuditAction];

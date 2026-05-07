@@ -13,6 +13,9 @@ import 'highlight.js/styles/github-dark.css';
 
 const DEBOUNCE_MS = 450;
 
+const CODE_INPUT_PLACEHOLDER =
+  'Paste or type your snippet… Language is auto-detected; use the menu below to override.';
+
 export function CodeBlockEditor({
   blockId: _blockId,
   payload,
@@ -101,7 +104,7 @@ export function CodeBlockEditor({
   };
 
   return (
-    <div className="group border-2 border-border bg-card p-3 space-y-2 rounded-md">
+    <div className="group border-0 bg-muted/10 p-3 space-y-2 rounded-md ring-1 ring-border/35">
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
         <span
           className="flex items-center gap-2"
@@ -125,10 +128,12 @@ export function CodeBlockEditor({
         value={localCode}
         onChange={(e) => handleChange(e.target.value)}
         spellCheck={false}
-        placeholder="Paste or write code…"
+        placeholder={CODE_INPUT_PLACEHOLDER}
+        aria-label="Code snippet"
         className={cn(
-          'min-h-[140px] w-full resize-y border-2 border-border bg-background p-3 font-mono text-xs leading-relaxed',
-          'text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary',
+          'min-h-[140px] w-full resize-y rounded-md bg-muted/25 p-3 font-mono text-xs leading-relaxed text-foreground',
+          'ring-1 ring-inset ring-border/45 placeholder:text-muted-foreground placeholder:italic',
+          'focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-inset',
         )}
       />
 
@@ -147,7 +152,7 @@ export function CodeBlockEditor({
             }
             handleSelectLanguage(v);
           }}
-          className="max-w-[min(100%,14rem)] border-2 border-border bg-background px-2 py-1.5 font-mono text-[11px] focus:outline-none focus:border-primary"
+          className="max-w-[min(100%,14rem)] rounded-md border border-border/50 bg-background px-2 py-1.5 font-mono text-[11px] ring-1 ring-inset ring-border/30 focus:outline-none focus:ring-2 focus:ring-primary/30"
         >
           <option value="__auto__">Auto-detect ({previewLang})</option>
           {languageOptions.map((opt) => (
@@ -168,8 +173,8 @@ export function CodeBlockEditor({
       </div>
 
       {localCode.trim() ? (
-        <div className="overflow-hidden border-2 border-border bg-zinc-950">
-          <div className="border-b border-zinc-800 px-2 py-1 font-mono text-[9px] uppercase text-zinc-500">
+        <div className="overflow-hidden rounded-md border border-border/60 bg-zinc-950 shadow-[2px_2px_0_0_var(--border)]">
+          <div className="border-b border-zinc-800/80 px-2 py-1 font-mono text-[9px] uppercase text-zinc-500">
             Preview · {previewLang}
           </div>
           <pre className="m-0 max-h-48 overflow-auto whitespace-pre-wrap break-words p-2">

@@ -7,4 +7,6 @@ export declare function getInviteResolve(req: Request, res: Response): Promise<v
 export declare function getInviteMe(req: Request, res: Response): Promise<void>;
 /** GET /api/invites/stats */
 export declare function getInviteStats(req: Request, res: Response): Promise<void>;
+/** GET /api/invites/referred?limit=&skip= — accounts that signed up with your referral. */
+export declare function getInviteReferred(req: Request, res: Response): Promise<void>;
 //# sourceMappingURL=invite.controller.d.ts.map

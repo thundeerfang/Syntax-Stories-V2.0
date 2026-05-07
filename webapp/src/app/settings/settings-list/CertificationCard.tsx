@@ -101,7 +101,8 @@ export function CertificationCard({
             {e.issuerLogo ? (
               <img
                 src={e.issuerLogo}
-                alt={e.issuingOrganization ? `${e.issuingOrganization} logo` : 'Issuer logo'}
+                alt={e.issuerLogoAlt?.trim() || (e.issuingOrganization ? `${e.issuingOrganization} logo` : 'Issuer logo')}
+                title={e.issuerLogoAlt?.trim() || undefined}
                 className="ss-card-logo-img size-full object-contain p-1 grayscale brightness-90 relative z-10"
                 onError={(ev) => {
                   (ev.target as HTMLImageElement).style.display = 'none';

@@ -11,6 +11,11 @@ export type AuthSigninSuccessPayload = {
     isNewUser?: boolean;
 };
 /** Emitted after a successful profile persist; audit listener diffs sections. */
+export type ReferralConvertedPayload = {
+    referrerId: string;
+    refereeUserId: string;
+    source: string;
+};
 export type ProfileUpdatedPayload = {
     req: Request;
     actorId: string;
@@ -22,18 +27,13 @@ export type ProfileUpdatedPayload = {
     /** `legacy` = monolithic `PATCH /auth/profile`; otherwise the section route used. */
     section: ProfileUpdateSection | 'legacy';
 };
-export type ReferralConvertedPayload = {
-    referrerId: string;
-    refereeUserId: string;
-    source: string;
-};
 export type AppEventMap = {
     /** Successful sign-in after session + JWT issuance (email OTP, OAuth, etc.). */
     'auth.signin.success': AuthSigninSuccessPayload;
+    /** Referral attributed on new user (post-DB conditional update). */
+    'referral.converted': ReferralConvertedPayload;
     /** Profile document updated (post-DB write). */
     'profile.updated': ProfileUpdatedPayload;
-    /** New user stored `referredByUserId` from a valid referral code. */
-    'referral.converted': ReferralConvertedPayload;
 };
 type Listener<K extends keyof AppEventMap> = (payload: AppEventMap[K]) => void | Promise<void>;
 export declare function onAppEvent<K extends keyof AppEventMap>(event: K, fn: Listener<K>): () => void;

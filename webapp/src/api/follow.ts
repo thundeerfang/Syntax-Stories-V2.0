@@ -34,7 +34,20 @@ export interface PublicProfileUser {
   projects?: unknown[];
   openSourceContributions?: unknown[];
   createdAt?: string;
+  /** Read-streak display preference (main stat on `/u/:username`). Stored as `blogStreakMode` in API/DB. */
+  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
 }
+
+export type ReadStreakCounts = { current: number; longest: number };
+
+export type ReadStreakPayload = {
+  displayMode: 'daily' | 'weekly' | 'monthly';
+  current: number;
+  longest: number;
+  /** Distinct UTC days with at least one recorded read of another user’s published post. */
+  totalDistinctReadDays?: number;
+  byMode: Record<'daily' | 'weekly' | 'monthly', ReadStreakCounts>;
+};
 
 export const followApi = {
   searchUsers: (q: string) => {
@@ -49,7 +62,15 @@ export const followApi = {
   getPublicProfile: (username: string) =>
     fetch(`${getApiBase()}/api/follow/profile/${encodeURIComponent(username)}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<{ success: boolean; user: PublicProfileUser; followersCount: number; followingCount: number }>;
+      return r.json() as Promise<{
+        success: boolean;
+        user: PublicProfileUser;
+        followersCount: number;
+        followingCount: number;
+        readStreak?: ReadStreakPayload;
+        /** UTC days (YYYY-MM-DD) with a recorded blog read in the heatmap window */
+        readHeatmapDays?: string[];
+      }>;
     }),
 
   getFollowCounts: (username: string) =>

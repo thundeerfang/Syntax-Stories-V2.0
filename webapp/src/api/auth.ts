@@ -140,7 +140,12 @@ async function authFetch<T>(path: string, options?: RequestInit & { token?: stri
   const timeoutId = setTimeout(() => controller.abort(), AUTH_FETCH_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, { ...restOptions, headers, signal: controller.signal });
+    res = await fetch(url, {
+      ...restOptions,
+      headers,
+      signal: controller.signal,
+      credentials: 'include',
+    });
   } catch (err) {
     clearTimeout(timeoutId);
     if (err instanceof Error && err.name === 'AbortError') {
@@ -170,6 +175,8 @@ export interface WorkExperience {
   employmentType?: string;
   company?: string;
   companyDomain?: string;
+  companyLogo?: string;
+  companyLogoAlt?: string;
   currentPosition?: boolean;
   startDate?: string;
   endDate?: string;
@@ -189,6 +196,8 @@ export interface EducationItem {
   eduId?: string;
   school?: string;
   schoolDomain?: string;
+  schoolLogo?: string;
+  schoolLogoAlt?: string;
   degree?: string;
   fieldOfStudy?: string;
   field?: string;
@@ -208,6 +217,8 @@ export interface CertificationItem {
   certId?: string;
   name?: string;
   issuingOrganization?: string;
+  issuerLogo?: string;
+  issuerLogoAlt?: string;
   currentlyValid?: boolean;
   issueDate?: string;
   expirationDate?: string;
@@ -257,6 +268,7 @@ export interface SetupItem {
   label: string;
   imageUrl: string;
   productUrl?: string;
+  imageAlt?: string;
 }
 
 export interface AuthUser {
@@ -267,8 +279,10 @@ export interface AuthUser {
   email: string;
   name?: string;
   profileImg?: string;
+  profileImgAlt?: string;
   image?: string;
   coverBanner?: string;
+  coverBannerAlt?: string;
   bio?: string;
   job?: string;
   portfolioUrl?: string;
@@ -293,6 +307,7 @@ export interface AuthUser {
   /** Optimistic concurrency: incremented on each successful profile write. */
   profileVersion?: number;
   profileUpdatedAt?: string;
+  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
 }
 
 /** User object returned inside API envelopes (`data.user` or legacy `user`). */
@@ -302,7 +317,9 @@ export type AccountUser = {
   username: string;
   email: string;
   profileImg?: string;
+  profileImgAlt?: string;
   coverBanner?: string;
+  coverBannerAlt?: string;
   bio?: string;
   job?: string;
   portfolioUrl?: string;
@@ -327,6 +344,7 @@ export type AccountUser = {
   createdAt?: string;
   profileVersion?: number;
   profileUpdatedAt?: string;
+  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
 };
 
 /** Raw JSON from `GET /auth/me` or `PATCH /auth/profile` (envelope + backward-compatible top-level `user`). */
@@ -355,7 +373,9 @@ export type UpdateProfilePayload = Partial<{
   username: string;
   bio: string;
   profileImg: string;
+  profileImgAlt: string;
   coverBanner: string;
+  coverBannerAlt: string;
   job: string;
   portfolioUrl: string;
   linkedin: string;
@@ -375,6 +395,7 @@ export type UpdateProfilePayload = Partial<{
   isXAccount: boolean;
   isAppleAccount: boolean;
   isDiscordAccount: boolean;
+  blogStreakMode: 'daily' | 'weekly' | 'monthly';
   /** When set, overrides the version taken from the current session user (advanced). */
   expectedProfileVersion: number;
 }>;
@@ -596,8 +617,10 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     fullName: backendUser.fullName,
     username: backendUser.username,
     profileImg: backendUser.profileImg,
+    profileImgAlt: backendUser.profileImgAlt,
     image: backendUser.profileImg,
     coverBanner: backendUser.coverBanner,
+    coverBannerAlt: backendUser.coverBannerAlt,
     bio: backendUser.bio,
     job: backendUser.job,
     portfolioUrl: backendUser.portfolioUrl,
@@ -621,5 +644,6 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     createdAt: backendUser.createdAt,
     profileVersion: typeof backendUser.profileVersion === 'number' ? backendUser.profileVersion : 0,
     profileUpdatedAt: backendUser.profileUpdatedAt,
+    blogStreakMode: backendUser.blogStreakMode,
   };
 }

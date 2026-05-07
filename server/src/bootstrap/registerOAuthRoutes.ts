@@ -1,9 +1,10 @@
-import type { Express } from 'express';
+import type { Express, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { oauthCallbackHandler, oauthLinkHandler } from '../oauth/oauthExpress.js';
 import { getOAuthProviderRegistrations, type OAuthProviderRegistration } from '../oauth/oauth.providers.js';
 import { hasFacebookConfig, hasXConfig, hasDiscordConfig } from '../passport/index.js';
 import { getFrontendRedirectBase } from '../config/frontendUrl.js';
+import { buildOAuthSignupState } from '../oauth/oauthSignupState.js';
 
 function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): void {
   const base = `/auth/${def.routeKey}`;
@@ -15,8 +16,17 @@ function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): 
       ? passport.authenticate(strat, { scope: scopes, state })
       : passport.authenticate(strat, { state });
 
+  const startSignupWithOptionalRef = async (req: Request, res: Response, next: NextFunction) => {
+    const state = await buildOAuthSignupState(req);
+    const authFn =
+      scopes?.length
+        ? passport.authenticate(strat, { scope: scopes, state })
+        : passport.authenticate(strat, { state });
+    return authFn(req, res, next);
+  };
+
   app.get(`${base}/login`, startAuth('login'));
-  app.get(`${base}/signup`, startAuth('signup'));
+  app.get(`${base}/signup`, startSignupWithOptionalRef);
   app.get(base, startAuth('login'));
 
   const linkStrat = def.linkStrategy ?? def.strategy;

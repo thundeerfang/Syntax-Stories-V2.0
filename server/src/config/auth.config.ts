@@ -19,6 +19,6 @@ export const authConfig = {
   RATE_LIMIT_SIGNUP: { windowMs: 60 * 60 * 1000, max: 5 },
   /** Profile PATCH (legacy + section routes): per-IP, limits spam rewrites and audit noise. */
   RATE_LIMIT_UPDATE_PROFILE: { windowMs: 15 * 60 * 1000, max: 120 },
-  RATE_LIMIT_FEEDBACK: { windowMs: 15 * 60 * 1000, max: 30 },
-  RATE_LIMIT_INVITE_RESOLVE: { windowMs: 15 * 60 * 1000, max: 120 },
+  /** GET /api/invites/resolve — per IP. */
+  RATE_LIMIT_INVITE_RESOLVE: { windowMs: 60 * 1000, max: 60 },
 };

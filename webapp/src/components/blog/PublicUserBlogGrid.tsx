@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { BlogCard } from '@/components/blog/BlogCard';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
@@ -41,10 +41,20 @@ export function PublicUserBlogGrid({ username }: Readonly<{ username: string }>)
       </h2>
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-          <Loader2 className="size-5 animate-spin" />
-          <span className="font-mono text-[10px] uppercase tracking-widest">Loading…</span>
-        </div>
+        <ul className="grid list-none grid-cols-1 gap-4 p-0">
+          {['pub-sk-1', 'pub-sk-2', 'pub-sk-3', 'pub-sk-4', 'pub-sk-5', 'pub-sk-6'].map((key) => (
+            <li key={key} className="flex min-h-0">
+              <div className="w-full overflow-hidden border-2 border-border bg-card shadow-[4px_4px_0px_0px_var(--border)]">
+                <div className="h-24 w-full animate-pulse border-b-2 border-border bg-muted/40" />
+                <div className="space-y-2 p-3">
+                  <div className="h-3 w-2/3 animate-pulse bg-muted" />
+                  <div className="h-2 w-full animate-pulse bg-muted/80" />
+                  <div className="h-2 w-5/6 animate-pulse bg-muted/80" />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
       ) : error ? (
         <p className="border-2 border-dashed border-destructive/30 bg-destructive/5 py-6 text-center text-[10px] text-muted-foreground">{error}</p>
       ) : posts.length === 0 ? (
@@ -52,7 +62,7 @@ export function PublicUserBlogGrid({ username }: Readonly<{ username: string }>)
           No published posts yet.
         </p>
       ) : (
-        <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-2">
+        <ul className="grid list-none grid-cols-1 gap-4 p-0">
           {posts.map((post) => (
             <li key={post.id} className="flex min-h-0">
               <BlogCard post={post} showSocialActions={false} viewerUsername={viewerUsername} density="compact" />

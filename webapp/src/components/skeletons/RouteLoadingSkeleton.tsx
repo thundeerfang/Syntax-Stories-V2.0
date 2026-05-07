@@ -8,8 +8,16 @@ import {
   ProfilePageSkeletonInner,
 } from './page-skeletons';
 import { SettingsPageSkeletonInner } from './settings-page-skeleton';
+import { DocsPageSkeletonInner } from './DocsPageSkeleton';
+import { ContactPageSkeletonInner } from './ContactPageSkeleton';
 
 function pickInner(path: string) {
+  if (path === '/docs' || path.startsWith('/docs/')) {
+    return <DocsPageSkeletonInner />;
+  }
+  if (path === '/contact' || path.startsWith('/contact/')) {
+    return <ContactPageSkeletonInner />;
+  }
   if (path === '/settings' || path.startsWith('/settings/')) {
     return <SettingsPageSkeletonInner />;
   }

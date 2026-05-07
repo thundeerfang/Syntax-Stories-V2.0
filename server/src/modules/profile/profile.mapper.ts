@@ -12,7 +12,9 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     username: found.username,
     email: found.email,
     profileImg: normalizeProfileImg(found.profileImg as string | undefined),
+    profileImgAlt: found.profileImgAlt,
     coverBanner: found.coverBanner,
+    coverBannerAlt: found.coverBannerAlt,
     bio: found.bio,
     job: found.job,
     portfolioUrl: found.portfolioUrl,
@@ -42,6 +44,8 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
         : typeof found.profileUpdatedAt === 'string'
           ? found.profileUpdatedAt
           : undefined,
+    staffRole: (found as { staffRole?: string }).staffRole ?? null,
+    blogStreakMode: (found as { blogStreakMode?: string }).blogStreakMode ?? 'daily',
   };
 }
 

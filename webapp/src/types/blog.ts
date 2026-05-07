@@ -26,13 +26,6 @@ export type BlockType =
 
 export type HeadingLevel = 2 | 3;
 
-/** Row from taxonomy API for publish overlay (category or tag). */
-export type BlogTaxonomyRow = {
-  slug: string;
-  name: string;
-  postCount: number;
-};
-
 export interface BlockBase {
   id: string;
   type: BlockType;
@@ -159,6 +152,13 @@ export interface StoredDraftPayload {
   savedAt: number;
 }
 
+/** Curated or aggregated taxonomy row from `GET /api/blog/taxonomy`. */
+export interface BlogTaxonomyRow {
+  slug: string;
+  name: string;
+  postCount: number;
+}
+
 /** Server response for a single blog post or draft */
 export interface BlogPostResponse {
   _id: string;
@@ -172,6 +172,9 @@ export interface BlogPostResponse {
   updatedAt: string;
   lastEditedAt?: string;
   lastEditedBy?: { username: string; fullName: string };
+  category?: string;
+  tags?: string[];
+  language?: string;
 }
 
 /** Public home feed item (`GET /api/blog/feed`). */
@@ -192,6 +195,9 @@ export interface PublicFeedPost {
   lastEditedAt?: string;
   lastEditedBy?: { username: string; fullName: string };
   author: PublicFeedPostAuthor;
+  category?: string;
+  tags?: string[];
+  language?: string;
 }
 
 /** Public single post (`GET /api/blog/p/:username/:slug`). */
@@ -207,6 +213,9 @@ export interface PublicBlogPostDetail {
   lastEditedAt?: string;
   lastEditedBy?: { username: string; fullName: string };
   author: PublicFeedPostAuthor;
+  category?: string;
+  tags?: string[];
+  language?: string;
 }
 
 /** Public comment on a blog post (`GET/POST /api/blog/p/:username/:slug/comments`). */

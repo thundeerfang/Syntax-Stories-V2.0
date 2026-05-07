@@ -13,7 +13,9 @@ export const profileBasicPatchSchema = z
     username: z.string().min(2).max(30).regex(/^\w+$/).optional(),
     bio: z.string().max(500).optional(),
     profileImg: z.string().max(2000).optional(),
+    profileImgAlt: z.string().max(120).optional(),
     coverBanner: z.string().max(2000).optional(),
+    coverBannerAlt: z.string().max(120).optional(),
     job: z.string().max(100).optional(),
     portfolioUrl: optionalUriOrEmpty,
     isGoogleAccount: z.boolean().optional(),
@@ -81,6 +83,12 @@ export const profileSetupPatchSchema = z
   })
   .strict();
 
+export const profileBlogStreakPatchSchema = z
+  .object({
+    blogStreakMode: z.enum(['daily', 'weekly', 'monthly']),
+  })
+  .strict();
+
 export const profileUpdateSectionSchema = z.enum([
   'basic',
   'social',
@@ -90,6 +98,7 @@ export const profileUpdateSectionSchema = z.enum([
   'certifications',
   'projects',
   'setup',
+  'blog-streak',
 ]);
 
 export type ProfileUpdateSection = z.infer<typeof profileUpdateSectionSchema>;
@@ -102,3 +111,4 @@ export type ProfileEducationPatch = z.infer<typeof profileEducationPatchSchema>;
 export type ProfileCertificationsPatch = z.infer<typeof profileCertificationsPatchSchema>;
 export type ProfileProjectsPatch = z.infer<typeof profileProjectsPatchSchema>;
 export type ProfileSetupPatch = z.infer<typeof profileSetupPatchSchema>;
+export type ProfileBlogStreakPatch = z.infer<typeof profileBlogStreakPatchSchema>;
