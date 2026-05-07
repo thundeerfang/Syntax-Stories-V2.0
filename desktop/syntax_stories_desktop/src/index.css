@@ -1,0 +1,228 @@
+:root {
+  --retro-bg: #0d0d0d;
+  --retro-surface: #1a1a12;
+  --retro-border: #33ff66;
+  --retro-glow: #39ff14;
+  --retro-dim: #1f5c2e;
+  --retro-amber: #ffb000;
+  --retro-muted: #8ae68a;
+  --retro-danger: #ff3366;
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 20px;
+  line-height: 1.25;
+  color: var(--retro-glow);
+  background: var(--retro-bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--retro-bg);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.retro-app {
+  min-height: 100vh;
+  position: relative;
+  background: var(--retro-bg);
+}
+
+.retro-scanlines {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 3px
+  );
+}
+
+.retro-panel {
+  background: var(--retro-surface);
+  border: 2px solid var(--retro-border);
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.12);
+}
+
+.retro-panel--amber {
+  border-color: var(--retro-amber);
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.12);
+}
+
+.retro-panel__title {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(57, 255, 20, 0.08);
+  border-bottom: 2px solid var(--retro-border);
+  color: var(--retro-border);
+}
+
+.retro-panel--amber .retro-panel__title {
+  background: rgba(255, 176, 0, 0.1);
+  border-bottom-color: var(--retro-amber);
+  color: var(--retro-amber);
+}
+
+.retro-panel__body {
+  padding: 16px;
+}
+
+.retro-stack {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.retro-title {
+  text-align: center;
+  font-size: 2.4rem;
+  margin: 12px 0 0;
+  text-shadow: 0 0 18px rgba(57, 255, 20, 0.45);
+  letter-spacing: 0.06em;
+}
+
+.retro-sub {
+  text-align: center;
+  color: var(--retro-muted);
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.retro-hint {
+  color: var(--retro-dim);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.retro-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.retro-field label {
+  color: var(--retro-muted);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.retro-input {
+  font-family: inherit;
+  font-size: 1.2rem;
+  padding: 12px 14px;
+  background: #0a140a;
+  border: 2px solid var(--retro-border);
+  color: var(--retro-glow);
+  outline: none;
+}
+
+.retro-input:focus {
+  border-color: var(--retro-amber);
+}
+
+.retro-input--code {
+  font-size: 1.6rem;
+  letter-spacing: 0.35em;
+}
+
+.retro-btn {
+  font-family: inherit;
+  font-size: 1.2rem;
+  letter-spacing: 0.12em;
+  padding: 14px 20px;
+  cursor: pointer;
+  border: 2px solid var(--retro-border);
+  background: var(--retro-dim);
+  color: var(--retro-glow);
+}
+
+.retro-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.retro-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.retro-btn--outline {
+  background: transparent;
+  color: var(--retro-amber);
+  border-color: var(--retro-amber);
+}
+
+.retro-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--retro-surface);
+  border-bottom: 2px solid var(--retro-border);
+}
+
+.retro-bar h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: normal;
+  letter-spacing: 0.06em;
+}
+
+.retro-bar button {
+  font-family: inherit;
+  background: none;
+  border: none;
+  color: var(--retro-amber);
+  cursor: pointer;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
+.retro-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.retro-row {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.retro-row span:first-child {
+  color: var(--retro-amber);
+}
+
+.retro-linkish {
+  background: none;
+  border: none;
+  color: var(--retro-amber);
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.retro-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 12px;
+}
