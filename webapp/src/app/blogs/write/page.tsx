@@ -1127,8 +1127,10 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
 
   const activePostIdRef = useRef(activePostId);
   const loadedPostStatusRef = useRef(loadedPostStatus);
-  activePostIdRef.current = activePostId;
-  loadedPostStatusRef.current = loadedPostStatus;
+  useEffect(() => {
+    activePostIdRef.current = activePostId;
+    loadedPostStatusRef.current = loadedPostStatus;
+  }, [activePostId, loadedPostStatus]);
 
   const syncDraftToServer = useCallback((): Promise<void> => {
     if (!navigator.onLine) return Promise.resolve();
@@ -1471,6 +1473,7 @@ export default function WriteBlogPage() {
       : { id, kind: 'initial', label: 'Initial blog', at };
     setRevisions([first]);
     prevDraftSyncForRevisionRef.current = draftSyncStatus;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- omit draftSyncStatus: listing it would reset revision history on every sync transition; value here only seeds prev ref when session/workspace identity changes
   }, [workspaceReady, token, revisionSessionKey, activePostId, loadedPostStatus]);
 
   useEffect(() => {

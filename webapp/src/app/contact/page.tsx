@@ -150,7 +150,7 @@ export default function ContactPage() {
                   <div className="space-y-2">
                     <h3 className="text-2xl font-black uppercase tracking-tight">Transmission Sent</h3>
                     <p className="mx-auto max-w-xs text-sm font-medium text-muted-foreground">
-                      We've received your lead. Our average response time is currently <span className="text-foreground underline underline-offset-2">48 hours</span>.
+                      We&apos;ve received your lead. Our average response time is currently <span className="text-foreground underline underline-offset-2">48 hours</span>.
                     </p>
                   </div>
                   <BlockShadowButton

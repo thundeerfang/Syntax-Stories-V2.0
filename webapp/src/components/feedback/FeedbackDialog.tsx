@@ -406,7 +406,6 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
               </p>
               <div className="relative min-h-[9rem] flex-1 border-b-2 border-dashed border-border/80 bg-background/50 lg:min-h-0">
                 {attachmentPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={attachmentPreview}
                     alt={attachmentImageTitle.trim() || 'Screenshot preview'}

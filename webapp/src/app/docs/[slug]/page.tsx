@@ -20,18 +20,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function DocsArticlePage({ params }: Props) {
   const { slug } = await params;
   const article = await fetchPublishedArticleBySlug(slug);
-  if (!article) notFound();
-  if (article.redirectTo) {
-    redirect(article.redirectTo);
-  }
+  if (!article) {
+    notFound();
+  } else {
+    if (article.redirectTo) {
+      redirect(article.redirectTo);
+    }
 
-  return (
-    <div className="mx-auto max-w-prose space-y-6">
-      <header className="space-y-2 border-b-2 border-border pb-6">
-        <h1 className="text-3xl font-black tracking-tight text-foreground">{article.title}</h1>
-        {article.summary ? <p className="text-muted-foreground">{article.summary}</p> : null}
-      </header>
-      <div className="prose prose-neutral max-w-none whitespace-pre-wrap dark:prose-invert">{article.body}</div>
-    </div>
-  );
+    return (
+      <div className="mx-auto max-w-prose space-y-6">
+        <header className="space-y-2 border-b-2 border-border pb-6">
+          <h1 className="text-3xl font-black tracking-tight text-foreground">{article.title}</h1>
+          {article.summary ? <p className="text-muted-foreground">{article.summary}</p> : null}
+        </header>
+        <div className="prose prose-neutral max-w-none whitespace-pre-wrap dark:prose-invert">{article.body}</div>
+      </div>
+    );
+  }
 }

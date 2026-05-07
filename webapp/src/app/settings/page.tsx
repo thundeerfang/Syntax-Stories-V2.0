@@ -2354,57 +2354,60 @@ function WorkExperiencesContent() {
     setPromoFullViewMedia(null);
     setDialogOpen(true);
   };
-  const openEdit = (i: number) => {
-    const e = list[i];
-    const parsed = parseLocationString(e.location ?? '');
-    const start = valueToMonthYear(e.startDate ?? '');
-    const end = valueToMonthYear(e.endDate ?? '');
-    const locType = e.locationType ?? '';
-    const nextForm: WorkExpForm = {
-      ...WORK_EXP_DEFAULT,
-      jobTitle: e.jobTitle,
-      employmentType: e.employmentType,
-      company: e.company,
-      companyDomain: e.companyDomain,
-      companyLogo: e.companyLogo ?? '',
-      companyLogoAlt: e.companyLogoAlt ?? '',
-      currentPosition: e.currentPosition,
-      startDate: e.startDate,
-      endDate: e.endDate,
-      startMonth: start.month,
-      startYear: start.year,
-      endMonth: end.month,
-      endYear: end.year,
-      location: e.location ?? '',
-      locationType: locType,
-      locationCountry: parsed.countryCode,
-      locationState: parsed.stateCode,
-      locationCity: parsed.city,
-      description: e.description,
-      skills: e.skills ?? [],
-      promotions: (e.promotions ?? []).map((p) => ({
-        jobTitle: p.jobTitle ?? '',
-        startMonth: valueToMonthYear(p.startDate ?? '').month,
-        startYear: valueToMonthYear(p.startDate ?? '').year,
-        endMonth: valueToMonthYear(p.endDate ?? '').month,
-        endYear: valueToMonthYear(p.endDate ?? '').year,
-        currentPosition: !!p.currentPosition,
-        mediaItems: (p.mediaItems ?? []).map((m) => ({ url: m.url, title: m.title })),
-      })),
-      mediaItems: e.mediaItems ?? [],
-    };
-    setForm(nextForm);
-    setInitialForm(nextForm);
-    setEditingIndex(i);
-    setFieldErrors({});
-    setPromoMediaDropdownIndex(null);
-    setPromoMediaLinkIndex(null);
-    setPromoMediaUploadIndex(null);
-    setPromoLinkUrl('');
-    setPromoLinkTitle('');
-    setPromoFullViewMedia(null);
-    setDialogOpen(true);
-  };
+  const openEdit = useCallback(
+    (i: number) => {
+      const e = list[i];
+      const parsed = parseLocationString(e.location ?? '');
+      const start = valueToMonthYear(e.startDate ?? '');
+      const end = valueToMonthYear(e.endDate ?? '');
+      const locType = e.locationType ?? '';
+      const nextForm: WorkExpForm = {
+        ...WORK_EXP_DEFAULT,
+        jobTitle: e.jobTitle,
+        employmentType: e.employmentType,
+        company: e.company,
+        companyDomain: e.companyDomain,
+        companyLogo: e.companyLogo ?? '',
+        companyLogoAlt: e.companyLogoAlt ?? '',
+        currentPosition: e.currentPosition,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        startMonth: start.month,
+        startYear: start.year,
+        endMonth: end.month,
+        endYear: end.year,
+        location: e.location ?? '',
+        locationType: locType,
+        locationCountry: parsed.countryCode,
+        locationState: parsed.stateCode,
+        locationCity: parsed.city,
+        description: e.description,
+        skills: e.skills ?? [],
+        promotions: (e.promotions ?? []).map((p) => ({
+          jobTitle: p.jobTitle ?? '',
+          startMonth: valueToMonthYear(p.startDate ?? '').month,
+          startYear: valueToMonthYear(p.startDate ?? '').year,
+          endMonth: valueToMonthYear(p.endDate ?? '').month,
+          endYear: valueToMonthYear(p.endDate ?? '').year,
+          currentPosition: !!p.currentPosition,
+          mediaItems: (p.mediaItems ?? []).map((m) => ({ url: m.url, title: m.title })),
+        })),
+        mediaItems: e.mediaItems ?? [],
+      };
+      setForm(nextForm);
+      setInitialForm(nextForm);
+      setEditingIndex(i);
+      setFieldErrors({});
+      setPromoMediaDropdownIndex(null);
+      setPromoMediaLinkIndex(null);
+      setPromoMediaUploadIndex(null);
+      setPromoLinkUrl('');
+      setPromoLinkTitle('');
+      setPromoFullViewMedia(null);
+      setDialogOpen(true);
+    },
+    [list],
+  );
   const openedEditFromUrlRef = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRef.current || list.length === 0) return;
@@ -2415,7 +2418,7 @@ function WorkExperiencesContent() {
     openedEditFromUrlRef.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i);
     setSaving(true);
@@ -2624,7 +2627,6 @@ function WorkExperiencesContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.companyLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={form.companyLogo}
                     alt={form.companyLogoAlt.trim() || 'Company logo'}
@@ -2633,7 +2635,6 @@ function WorkExperiencesContent() {
                     onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 ) : form.companyDomain ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={`https://logo.clearbit.com/${form.companyDomain.replace(/^https?:\/\//i, '').replace(/\/$/, '')}`} alt="" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
                   <Building2 className="size-6 text-muted-foreground" />
@@ -3267,7 +3268,14 @@ function EducationContent() {
   const [schoolLogoDialogOpen, setSchoolLogoDialogOpen] = useState(false);
   const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
   const openAdd = () => { setForm(EDUCATION_DEFAULT); setInitialForm(EDUCATION_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = (i: number) => { const next = { ...EDUCATION_DEFAULT, ...list[i] }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openEdit = useCallback((i: number) => {
+    const next = { ...EDUCATION_DEFAULT, ...list[i] };
+    setForm(next);
+    setInitialForm(next);
+    setEditingIndex(i);
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, [list]);
   const openedEditFromUrlRefEd = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefEd.current || list.length === 0) return;
@@ -3278,7 +3286,7 @@ function EducationContent() {
     openedEditFromUrlRefEd.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((e) => ({
       school: e.school,
@@ -3433,7 +3441,6 @@ function EducationContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.schoolLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={form.schoolLogo}
                     alt={form.schoolLogoAlt.trim() || 'School logo'}
@@ -3598,7 +3605,14 @@ function CertificationsContent() {
   }, []);
 
   const openAdd = () => { setForm(CERT_DEFAULT); setInitialForm(CERT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = (i: number) => { const next = { ...CERT_DEFAULT, ...list[i] }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openEdit = useCallback((i: number) => {
+    const next = { ...CERT_DEFAULT, ...list[i] };
+    setForm(next);
+    setInitialForm(next);
+    setEditingIndex(i);
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, [list]);
   const openedEditFromUrlRefCert = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefCert.current || list.length === 0) return;
@@ -3609,7 +3623,7 @@ function CertificationsContent() {
     openedEditFromUrlRefCert.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = list.filter((_, idx) => idx !== i).map((c) => ({
       name: c.name,
@@ -3778,7 +3792,6 @@ function CertificationsContent() {
             <div className="flex items-center gap-3">
               <span className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-muted/30 overflow-hidden">
                 {form.issuerLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={form.issuerLogo}
                     alt={form.issuerLogoAlt.trim() || 'Issuer logo'}
@@ -4111,7 +4124,15 @@ function ProjectsContent() {
   }, []);
 
   const openAdd = () => { setForm(PROJECT_DEFAULT); setInitialForm(PROJECT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = (i: number) => { const item = list[i]; const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type }; setForm(next); setInitialForm(next); setEditingIndex(i); setFieldErrors({}); setDialogOpen(true); };
+  const openEdit = useCallback((i: number) => {
+    const item = list[i];
+    const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type };
+    setForm(next);
+    setInitialForm(next);
+    setEditingIndex(i);
+    setFieldErrors({});
+    setDialogOpen(true);
+  }, [list]);
   const openedEditFromUrlRefProj = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefProj.current || list.length === 0) return;
@@ -4122,7 +4143,7 @@ function ProjectsContent() {
     openedEditFromUrlRefProj.current = true;
     openEdit(idx);
     router.replace('/settings', { scroll: false });
-  }, [list.length]);
+  }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
     const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
     setSaving(true);

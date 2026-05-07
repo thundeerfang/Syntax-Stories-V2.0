@@ -34,11 +34,11 @@ export function useLegalPolicyHeaderSnapshot(): LegalPolicyHeaderSnapshot | null
 /** Pushes published policy fields into the shell header; clears on unmount. */
 export function LegalPolicyHeaderPublisher({ data }: { data: PublishedPolicyResponse }) {
   const ctx = useContext(LegalPolicyHeaderContext);
-  if (!ctx) return null;
-  const { setSnapshot } = ctx;
 
   // useLayoutEffect: apply snapshot before paint so the version line does not flash in after paint.
   useLayoutEffect(() => {
+    if (!ctx) return;
+    const { setSnapshot } = ctx;
     const summary = data.summary?.trim() ? data.summary.trim() : null;
     setSnapshot({
       title: data.title,
@@ -47,15 +47,7 @@ export function LegalPolicyHeaderPublisher({ data }: { data: PublishedPolicyResp
       versionAriaLabel: formatLegalPolicyVersionMeta(data),
     });
     return () => setSnapshot(null);
-  }, [
-    data.revisionId,
-    data.title,
-    data.summary,
-    data.version,
-    data.publishedAt,
-    data.effectiveAt,
-    setSnapshot,
-  ]);
+  }, [ctx, data]);
 
   return null;
 }

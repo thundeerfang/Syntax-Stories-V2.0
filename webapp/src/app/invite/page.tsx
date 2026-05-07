@@ -430,7 +430,6 @@ export default function InviteDashboardPage() {
                         >
                           <td className="px-3 py-3 sm:px-4">
                             <div className="flex min-w-0 items-center gap-3">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={row.profileImg}
                                 alt=""
