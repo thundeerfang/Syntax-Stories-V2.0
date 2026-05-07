@@ -6,6 +6,10 @@ node_modules
 .env.production.local
 dist
 
+webapp/.env.local
+server/.env.local
+
+
 webapp/.env
 server/.env
 
@@ -28,3 +32,6 @@ server/keys/privateKey.pem.pub
 server/node_modules
 webapp/node_modules
 webapp/.next
+admin/.next
+admin/node_modules
+server/.env
