@@ -14,7 +14,7 @@ import { computeReadStreakPayload, loadReadDayBucketsForHeatmap } from '../servi
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
 const PUBLIC_PROFILE_FIELDS =
-  'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest';
+  'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest blogRespectReceivedCount';
 
 const DAILY_FOLLOW_LIMIT = 500;
 
@@ -83,11 +83,16 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
         readStreak.longest = readStreak.byMode.daily.longest;
       }
     }
+    const blogRespectReceivedCount = Math.max(
+      0,
+      Math.floor(Number((user as { blogRespectReceivedCount?: number }).blogRespectReceivedCount ?? 0))
+    );
     res.status(200).json({
       success: true,
-      user: { ...user, id: String(user._id), profileImg },
+      user: { ...user, id: String(user._id), profileImg, blogRespectReceivedCount },
       followersCount: counts.followersCount,
       followingCount: counts.followingCount,
+      blogRespectReceivedCount,
       readStreak,
       readHeatmapDays,
     });

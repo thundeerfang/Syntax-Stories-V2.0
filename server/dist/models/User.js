@@ -214,6 +214,7 @@ const UserSchema = new Schema({
     deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     blogStreakMode: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'daily' },
     readStreakLongest: { type: Number, min: 0 },
+    blogRespectReceivedCount: { type: Number, default: 0, min: 0 },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 UserSchema.index({ referredByUserId: 1, createdAt: -1 });
 UserSchema.index({ deletedAt: 1, createdAt: -1 });

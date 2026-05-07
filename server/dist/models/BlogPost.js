@@ -24,6 +24,7 @@ const BlogPostSchema = new Schema({
     lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     deletedAt: { type: Date, default: null, index: true },
     deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    respectCount: { type: Number, default: 0, min: 0, index: true },
 }, { timestamps: true });
 // Unique slug per author (same author cannot have two posts with same slug)
 BlogPostSchema.index({ authorId: 1, slug: 1 }, { unique: true });

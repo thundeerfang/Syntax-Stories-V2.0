@@ -1844,10 +1844,7 @@ function AddMediaLinksDialog({
       return;
     }
     const explicit = title.trim();
-    const inferred =
-      !explicit && normalized
-        ? domainFromUrl(normalized) || 'Link'
-        : undefined;
+    const inferred = !explicit ? domainFromUrl(normalized) || 'Link' : undefined;
     const effectiveTitle = explicit || inferred || 'Link';
     const items: MediaItem[] = [{ url: normalized, title: effectiveTitle }];
 

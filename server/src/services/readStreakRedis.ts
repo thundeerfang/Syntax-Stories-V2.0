@@ -119,7 +119,7 @@ export async function syncReadStreakRedisAfterMongoUpsert(params: {
   if (!mongoMax) return;
 
   const redisLastRaw = await redis.hGet(hashKey, 'lastDay');
-  const redisLast = redisLastRaw && redisLastRaw !== '' ? redisLastRaw : null;
+  const redisLast = redisLastRaw ? redisLastRaw : null;
 
   if (redisLast && dayBucket < redisLast) {
     console.error('[read-streak] STREAK_MONOTONICITY_BROKEN', {

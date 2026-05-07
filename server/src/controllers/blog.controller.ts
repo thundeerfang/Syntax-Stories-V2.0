@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import type { AuthUser } from '../middlewares/auth/index.js';
+import type { RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
 import { sanitizeThumbnailUrl, validateBlogPostContent } from '../modules/blog/blogContentValidation.js';
 import { BlogPostModel, type IBlogPost } from '../models/BlogPost.js';
 import { BlogReadDayModel } from '../models/BlogReadDay.js';
@@ -28,6 +29,13 @@ import { streakUtcDayBucket } from '../services/readStreak.service.js';
 import { readDayZsetScoreMs, readDaysTrimMinRetainMsUtc } from '../services/readStreakZset.js';
 import { syncReadStreakRedisAfterMongoUpsert } from '../services/readStreakRedis.js';
 import { evalReadViewCommitMerged } from '../services/readViewCommitRedis.js';
+import {
+  deleteAllRespectsForPost,
+  normalizeRespectCount,
+  resumeRespectContributionsForPost,
+  suspendRespectContributionsForPost,
+  viewerRespectStatesForPosts,
+} from '../services/blogRespect.service.js';
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -46,6 +54,17 @@ const SUMMARY_MAX_LEN = 12000;
 const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
   $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
 };
+
+function isEligibleForPublicRespect(doc: {
+  status?: string;
+  deletedAt?: Date | null;
+}): boolean {
+  return doc.status === 'published' && (doc.deletedAt == null || doc.deletedAt === undefined);
+}
+
+function optionalViewerId(req: Request): string | undefined {
+  return (req as RequestWithOptionalAuth).authUser?._id;
+}
 
 function mapLastEditor(
   raw: unknown,
@@ -375,6 +394,7 @@ export async function listPublishedFeed(req: Request, res: Response): Promise<vo
           createdAt: p.createdAt,
           lastEditedAt: leAt ? leAt.toISOString() : undefined,
           lastEditedBy: leBy,
+          respectCount: normalizeRespectCount((p as { respectCount?: number }).respectCount),
           author: {
             username: a.username.trim(),
             fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
@@ -385,7 +405,17 @@ export async function listPublishedFeed(req: Request, res: Response): Promise<vo
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
-    res.status(200).json({ success: true, posts: items });
+    const viewerId = optionalViewerId(req);
+    let viewerMap: Record<string, boolean> = {};
+    if (viewerId && items.length) {
+      viewerMap = await viewerRespectStatesForPosts(viewerId, items.map((i) => i._id));
+    }
+    const postsOut = items.map((it) => ({
+      ...it,
+      ...(viewerId ? { viewerHasRespected: !!viewerMap[it._id] } : {}),
+    }));
+
+    res.status(200).json({ success: true, posts: postsOut });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to load feed' });
@@ -444,6 +474,7 @@ export async function listUserPublishedPosts(req: Request, res: Response): Promi
           createdAt: p.createdAt,
           lastEditedAt: leAt ? leAt.toISOString() : undefined,
           lastEditedBy: leBy,
+          respectCount: normalizeRespectCount((p as { respectCount?: number }).respectCount),
           author: {
             username: a.username.trim(),
             fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
@@ -454,7 +485,17 @@ export async function listUserPublishedPosts(req: Request, res: Response): Promi
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
-    res.status(200).json({ success: true, posts: items });
+    const viewerId = optionalViewerId(req);
+    let viewerMap: Record<string, boolean> = {};
+    if (viewerId && items.length) {
+      viewerMap = await viewerRespectStatesForPosts(viewerId, items.map((i) => i._id));
+    }
+    const postsOut = items.map((it) => ({
+      ...it,
+      ...(viewerId ? { viewerHasRespected: !!viewerMap[it._id] } : {}),
+    }));
+
+    res.status(200).json({ success: true, posts: postsOut });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to load posts' });
@@ -500,10 +541,18 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
     const a = aRaw as { username: string; fullName?: string; profileImg?: string };
     const leAt = (post as { lastEditedAt?: Date }).lastEditedAt;
     const leBy = mapLastEditor((post as { lastEditedById?: unknown }).lastEditedById);
+    const postIdStr = String(post._id);
+    const respectCount = normalizeRespectCount((post as { respectCount?: number }).respectCount);
+    const viewerId = optionalViewerId(req);
+    let viewerHasRespected: boolean | undefined;
+    if (viewerId) {
+      const m = await viewerRespectStatesForPosts(viewerId, [postIdStr]);
+      viewerHasRespected = !!m[postIdStr];
+    }
     res.status(200).json({
       success: true,
       post: {
-        _id: String(post._id),
+        _id: postIdStr,
         title: post.title,
         slug: post.slug,
         summary: (post as { summary?: string }).summary ?? '',
@@ -513,6 +562,8 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
         updatedAt: post.updatedAt,
         lastEditedAt: leAt ? leAt.toISOString() : undefined,
         lastEditedBy: leBy,
+        respectCount,
+        ...(viewerId ? { viewerHasRespected: !!viewerHasRespected } : {}),
         author: {
           username: a.username,
           fullName: a.fullName?.trim() ? a.fullName : a.username,
@@ -771,7 +822,7 @@ export async function commitBlogReadView(req: Request, res: Response): Promise<v
 
     const streakKey = redisKeys.readStreak.dailyHash(String(readerId));
     const lastDayRedis = await redis.hGet(streakKey, 'lastDay');
-    if (lastDayRedis && lastDayRedis !== '' && today < lastDayRedis) {
+    if (lastDayRedis && today < lastDayRedis) {
       console.error('[read-streak] STREAK_MONOTONICITY_BROKEN', {
         readerId: String(readerId),
         today,
@@ -999,6 +1050,7 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
       res.status(404).json({ success: false, message: 'Post not found' });
       return;
     }
+    const wasEligibleRespect = isEligibleForPublicRespect(existing);
     const wasPublishedBefore = existing.status === 'published';
     const rawBody = req.body as Record<string, unknown>;
     const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
@@ -1142,7 +1194,20 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
       existing.lastEditedById = user._id as unknown as mongoose.Types.ObjectId;
       existing.lastEditedAt = new Date();
     }
+    const willBeEligibleRespect = isEligibleForPublicRespect(existing);
     await existing.save();
+    if (wasEligibleRespect && !willBeEligibleRespect) {
+      await suspendRespectContributionsForPost(
+        existing._id as mongoose.Types.ObjectId,
+        existing.authorId as mongoose.Types.ObjectId
+      );
+    }
+    if (!wasEligibleRespect && willBeEligibleRespect) {
+      await resumeRespectContributionsForPost(
+        existing._id as mongoose.Types.ObjectId,
+        existing.authorId as mongoose.Types.ObjectId
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -1230,6 +1295,10 @@ export async function restoreMyPost(req: Request, res: Response): Promise<void> 
       restored.publishedAt = new Date();
     }
     await doc.save();
+    await resumeRespectContributionsForPost(
+      doc._id as mongoose.Types.ObjectId,
+      doc.authorId as mongoose.Types.ObjectId
+    );
 
     res.status(200).json({
       success: true,
@@ -1273,6 +1342,7 @@ export async function purgeMyPostPermanently(req: Request, res: Response): Promi
       res.status(404).json({ success: false, message: 'Post not found or not in trash' });
       return;
     }
+    await deleteAllRespectsForPost(removed._id as mongoose.Types.ObjectId);
     res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
@@ -1305,6 +1375,10 @@ export async function deleteMyPost(req: Request, res: Response): Promise<void> {
       res.status(404).json({ success: false, message: 'Post not found' });
       return;
     }
+    await suspendRespectContributionsForPost(
+      updated._id as mongoose.Types.ObjectId,
+      updated.authorId as mongoose.Types.ObjectId
+    );
     res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);

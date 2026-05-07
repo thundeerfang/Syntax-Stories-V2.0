@@ -848,9 +848,7 @@ type BlogWritePageSyncEffectsInput = Readonly<{
 function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput): void {
   const {
     title,
-    summary,
     blocks,
-    thumbnailPreviewUrl,
     isOnline,
     draftSyncStatus,
     isDirty,

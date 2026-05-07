@@ -115,7 +115,6 @@ function escapeRegex(s: string): string {
 }
 
 export async function getUsers(req: Request, res: Response): Promise<void> {
-  const r = req as StaffManagementRequest;
   const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit ?? '20'), 10) || 20, 1), 100);
   const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
 

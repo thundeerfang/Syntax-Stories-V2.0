@@ -17,10 +17,6 @@ export type ReadStreakCounts = { current: number; longest: number };
 const DAY_MS = 86400000;
 const WEEK_MS = 7 * DAY_MS;
 
-function utcMidnight(d: Date): number {
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-}
-
 /** Monday 00:00 UTC of the ISO week containing `d`. */
 export function utcMondayOfWeekContaining(d: Date): number {
   const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -107,7 +103,7 @@ function longestConsecutiveSorted(sortedAsc: number[], stepMs: number): number {
 function currentStreakFromAnchor(
   sortedAsc: Set<number>,
   anchor: number,
-  stepMs: number,
+  _stepMs: number,
   backward: (t: number) => number
 ): number {
   let n = 0;

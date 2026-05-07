@@ -210,6 +210,8 @@ export interface IUser extends Document {
   blogStreakMode?: 'daily' | 'weekly' | 'monthly';
   /** Durable max daily read streak length from Mongo recompute (F.5); merged into public `readStreak`. */
   readStreakLongest?: number;
+  /** Denormalized: total Respect received on published, non-deleted blog posts (see blog Respect spec). */
+  blogRespectReceivedCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -426,6 +428,7 @@ const UserSchema = new Schema<IUser>(
     deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     blogStreakMode: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'daily' },
     readStreakLongest: { type: Number, min: 0 },
+    blogRespectReceivedCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

@@ -110,7 +110,9 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
                 >
                   <FileText size={12} className="shrink-0 text-primary" />
                   <span className="truncate">
-                    {String(i + 1).padStart(2, '0')} // {a.title}
+                    {String(i + 1).padStart(2, '0')}
+                    {' · '}
+                    {a.title}
                   </span>
                 </Link>
               </li>

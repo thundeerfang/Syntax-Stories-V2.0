@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import Stripe from 'stripe';
 import { env } from '../config/env.js';
 import { StripeWebhookEventModel } from '../models/StripeWebhookEvent.js';
 import { dispatchStripeWebhookEvent } from '../services/stripe/webhook.service.js';

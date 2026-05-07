@@ -10,7 +10,7 @@ import { RateLimitHttpError, isAppHttpError } from '../errors/httpErrors.js';
 import { sendAppHttpError } from '../errors/sendAppHttpError.js';
 import { computeReadStreakPayload, loadReadDayBucketsForHeatmap } from '../services/readStreak.service.js';
 const FOLLOWED_FIELDS = 'username fullName profileImg';
-const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest';
+const PUBLIC_PROFILE_FIELDS = 'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest blogRespectReceivedCount';
 const DAILY_FOLLOW_LIMIT = 500;
 function secondsUntilUtcMidnight() {
     const now = new Date();
@@ -60,11 +60,13 @@ export async function getPublicProfile(req, res) {
                 readStreak.longest = readStreak.byMode.daily.longest;
             }
         }
+        const blogRespectReceivedCount = Math.max(0, Math.floor(Number(user.blogRespectReceivedCount ?? 0)));
         res.status(200).json({
             success: true,
-            user: { ...user, id: String(user._id), profileImg },
+            user: { ...user, id: String(user._id), profileImg, blogRespectReceivedCount },
             followersCount: counts.followersCount,
             followingCount: counts.followingCount,
+            blogRespectReceivedCount,
             readStreak,
             readHeatmapDays,
         });

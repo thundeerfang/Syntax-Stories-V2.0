@@ -43,7 +43,7 @@ export async function tryAnchoredDailyReadStreakFromRedis(
     redis.hGet(hashKey, 'current'),
     redis.hGet(hashKey, 'longest'),
   ]);
-  const lastDay = lastDayRaw && lastDayRaw !== '' ? lastDayRaw : '';
+  const lastDay = lastDayRaw ? lastDayRaw : '';
   if (!lastDay) return null;
 
   if (mongoMaxDayBucket && lastDay < mongoMaxDayBucket) {

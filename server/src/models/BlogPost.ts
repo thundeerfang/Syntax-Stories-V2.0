@@ -34,6 +34,8 @@ export interface IBlogPost extends Document {
   /** Soft-delete: set instead of removing the document. */
   deletedAt?: Date;
   deletedById?: mongoose.Types.ObjectId;
+  /** Denormalized: distinct accounts currently Respecting this post while it is published and not deleted. */
+  respectCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,6 +66,7 @@ const BlogPostSchema = new Schema<IBlogPost>(
     lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     deletedAt: { type: Date, default: null, index: true },
     deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    respectCount: { type: Number, default: 0, min: 0, index: true },
   },
   { timestamps: true }
 );

@@ -794,7 +794,6 @@ export default function PublicBlogPostPage() {
 
   const postId = post._id;
   const indexId = postId.length >= 8 ? postId.slice(0, 8) : postId;
-  const refSuffix = postId.length >= 4 ? postId.slice(-4) : postId;
 
   return (
     <BlogImagePreviewProvider>

@@ -197,6 +197,8 @@ export interface IUser extends Document {
     blogStreakMode?: 'daily' | 'weekly' | 'monthly';
     /** Durable max daily read streak length from Mongo recompute (F.5); merged into public `readStreak`. */
     readStreakLongest?: number;
+    /** Denormalized: total Respect received on published, non-deleted blog posts (see blog Respect spec). */
+    blogRespectReceivedCount?: number;
     createdAt?: Date;
     updatedAt?: Date;
 }

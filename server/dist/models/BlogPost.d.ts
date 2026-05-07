@@ -32,6 +32,8 @@ export interface IBlogPost extends Document {
     /** Soft-delete: set instead of removing the document. */
     deletedAt?: Date;
     deletedById?: mongoose.Types.ObjectId;
+    /** Denormalized: distinct accounts currently Respecting this post while it is published and not deleted. */
+    respectCount: number;
     createdAt: Date;
     updatedAt: Date;
 }

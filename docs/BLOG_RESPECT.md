@@ -2,7 +2,7 @@
 
 **Respect** is the platform’s positive reaction on a **published blog post**. It behaves like a familiar **like** control: a signed-in reader can **give** or **withdraw** Respect on a post, and the post exposes a **public count** of how many distinct accounts currently Respect it. Product copy and UI use **Respect** (verb/noun), not “like,” while the underlying interaction model stays the same as a standard toggle-like.
 
-The first sections describe **intended product behavior and data shape**. Later sections cover **production architecture**—API contracts, consistency, failure semantics, scaling, and operations—and **operational stack** ideas (Redis, queues, observability, workers, deployment). This document does not include implementation source.
+The first sections describe **intended product behavior and data shape**. Later sections build through **production architecture**, **operational stack**, **guardrails**, **advanced operations**, **governance**, and a **platform close**: centralized **core principles**, **catastrophic anti-goals**, production readiness levels (PRL), rebuild verification, runbooks, projection classes, **graceful degradation** matrix, cognitive load, **drift and complexity budgets**, infra replaceability, observability ownership, projection bootstrap, **admin-tool safety**, and **documentation freshness**—so the system can stay evolvable for years. This document does not include implementation source.
 
 ---
 
@@ -1007,6 +1007,8 @@ The next step is improving the **operational stack**, **infra tooling**, and **r
 - abuse protection
 - deployment topology
 
+**Adopt incrementally** by stage and measured need—not as a single big bang. See **Boundaries, guardrails, and staged maturity** (staged maturity model, simplicity bias, operational cost philosophy).
+
 ---
 
 ### 1. Redis layer (very important)
@@ -1449,4 +1451,1205 @@ This subsystem is evolving toward:
 - a future ranking and recommendation foundation.
 
 The strongest shift is thinking in **invariants**, **reconciliation**, **canonical truth**, **distributed failure**, and **operational recovery**—instead of only “store likes in DB.” That is the gap between basic backend implementation and **scalable systems architecture**.
+
+Treat everything above as a **roadmap and option set**. The section below defines **when** to adopt it, **who owns** what, and **how** to stay simple enough to operate.
+
+---
+
+## Boundaries, guardrails, and staged maturity
+
+At this stage, the largest improvements are less about new feature sections and more about preventing **future complexity explosions** and clarifying **system boundaries**.
+
+You already have strong coverage of: product semantics, concurrency, idempotency, reconciliation, Redis strategy, events, queues, observability, scaling, fraud thinking, deployment, ranking separation, and distributed-system awareness—that is ahead of many real startup social systems.
+
+The remaining concerns are **risk management** and **operational discipline**.
+
+---
+
+### 1. Over-engineering risk
+
+The document mentions Redis, Kafka, queues, outbox, tracing, sharding, reconciliation, streaming, workers, OpenTelemetry, ClickHouse, projections, and CQRS-style evolution. That is valuable as a **roadmap** and dangerous if **implemented all at once** before scale justifies it.
+
+Otherwise teams risk building:
+
+```text
+Kafka + CQRS + many workers
+```
+
+for:
+
+```text
+very low daily traffic
+```
+
+#### Staged maturity model
+
+**Stage 1 — MVP / early scale**
+
+- Single primary database.
+- Synchronous counters (same transaction as edge when supported).
+- Redis for cache / rate limits / simple patterns as needed.
+- A **simple** queue (or inline async only where unavoidable).
+- Minimal workers (or none beyond the API).
+
+**Stage 2 — growth**
+
+- Async projections where read paths need them.
+- Reconciliation jobs as a first-class habit.
+- Transactional **outbox** (or equivalent) before “fire-and-forget” events become critical.
+- Read replicas as read load grows.
+- Full **observability** stack (metrics, structured logs, tracing as warranted).
+
+**Stage 3 — large scale**
+
+- Kafka (or equivalent) / stream processing where justified.
+- Sharded counters or engagement storage if measured contention requires it.
+- Distributed projections and advanced fraud pipelines.
+- Explicit **multi-region** strategy (only when product and traffic require it).
+
+Introduce complexity **incrementally** from **measured** bottlenecks—not from assumed future load.
+
+---
+
+### 2. Cost awareness
+
+Production systems fail financially too. Some components become expensive quickly:
+
+| System | Often expensive because of |
+| ------ | -------------------------- |
+| Kafka | Operations and cluster footprint |
+| ClickHouse | Storage growth and query volume |
+| Redis | RAM and high-availability sizing |
+| Tracing | Telemetry volume and ingestion |
+| OpenSearch | Cluster overhead and indexing |
+| Event replay | Compute and storage for backfills |
+
+#### Operational cost philosophy
+
+Prefer **simpler** architectures until scaling signals justify streaming infra, distributed projections, heavy analytics warehouses, and multi-region replication. **Operational simplicity** is itself a production feature.
+
+---
+
+### 3. Ownership boundaries
+
+With workers, queues, streams, projections, and fraud systems, **bounded ownership** prevents divergent truths.
+
+#### Ownership boundaries (normative)
+
+| Component | Role |
+| --------- | ---- |
+| Respect edge | **Canonical** write model (authoritative user–post Respect state) |
+| Post/author counters | **Derived** projections (rebuildable from edges + rules) |
+| Ranking / trending | **Independent** consumers; must not become the source of Respect truth |
+| Notifications | **Eventual** side effects; must not mutate canonical state |
+| Analytics / observability | **Observational**; must not silently “fix” Respect rows |
+
+**Rule:** consumers and workers must **not** mutate canonical Respect edge state except through the **defined write path** (the Respect API / domain service that enforces invariants).
+
+---
+
+### 4. Replay philosophy
+
+Event streaming makes **replay** powerful and dangerous.
+
+Replay can:
+
+- resend user-visible notifications,
+- inflate analytics,
+- duplicate projections,
+- retrigger fraud actions.
+
+#### Replay-safe consumers
+
+Consumers must distinguish **historical replay** from **live** processing where behavior differs.
+
+Replay should **not**, by default:
+
+- resend user-visible notifications,
+- re-trigger irreversible external side effects,
+- duplicate immutable audit entries.
+
+Design idempotent handlers and explicit “replay mode” or **segregated** topics/pipelines where needed.
+
+---
+
+### 5. Data retention strategy
+
+Logs, events, metrics, traces, audit records, and fraud signals accumulate without policy → **cost** and **compliance** risk.
+
+#### Retention policies (illustrative)
+
+| Data class | Typical retention stance |
+| ---------- | ------------------------ |
+| Active Respect edges | Long-lived (canonical) |
+| Analytics / engagement events | Medium-term; tiered storage |
+| Traces | Short-term; aggressive sampling |
+| Abuse / fraud signals | Policy and legal driven |
+| Notifications | Product-defined; often shorter |
+
+Tune windows to product, jurisdiction, and budget; document them so storage does not grow without review.
+
+---
+
+### 6. Disaster recovery philosophy
+
+Failures to plan for include: Redis loss, broker partition issues, queue backlog explosions, projection corruption, regional outage.
+
+#### Disaster recovery
+
+The system must tolerate loss or corruption of:
+
+- caches,
+- projections,
+- queues,
+- derived counters,
+
+**without** losing **canonical Respect edge** truth held in the primary datastore.
+
+Derived systems must be **rebuildable** from authoritative state and/or **durable, replayable** logs (with replay rules from **Replay-safe consumers**).
+
+---
+
+### 7. Testing philosophy
+
+Rising complexity requires explicit **testing layers**.
+
+#### Testing strategy
+
+**Unit tests**
+
+- Idempotency of state application (insert/delete/no-op matrix).
+- Edge uniqueness and constraint behavior.
+- Counter transition rules (at-most-once increment/decrement per edge change).
+
+**Integration tests**
+
+- Retries and duplicate delivery.
+- Queue consumers (happy path and poison messages).
+- Reconciliation against intentional drift.
+
+**Chaos / failure tests**
+
+- Redis or cache outages.
+- Duplicate and out-of-order events.
+- Delayed consumers and backlog behavior.
+- Controlled replay scenarios.
+
+**Load tests**
+
+- Hot-post write bursts.
+- Feed hydration and batched viewer-state spikes.
+
+---
+
+### 8. API versioning strategy
+
+Respect APIs will evolve. Without a strategy, especially **mobile** clients become fragile.
+
+#### API evolution
+
+Prefer **backward-compatible** changes (additive fields, tolerant readers).
+
+Breaking changes should use:
+
+- explicit **API versioning** (path or header),
+- **feature negotiation** where appropriate,
+- **staged rollout** (flags, dual-write periods) for risky migrations.
+
+---
+
+### 9. Privacy and compliance layer
+
+Telemetry, analytics, events, fraud signals, and tracing increase exposure of identifiers and behavior.
+
+#### Privacy and compliance
+
+- Minimize unnecessary **PII** in logs, traces, and analytics payloads; prefer stable internal ids and redaction policies.
+- Retention and export/delete workflows should align with applicable **privacy** and **compliance** requirements.
+- Abuse tooling should balance investigation needs with data minimization.
+
+---
+
+### 10. Internal developer experience (operational ergonomics)
+
+As the system grows, **operability** dominates calendar time.
+
+Provide (as the stack matures):
+
+- Safe **replay** and backfill tooling (with guardrails).
+- **Reconciliation** dashboards or runbooks and drift metrics.
+- **Queue** inspection, depth alerts, and **dead-letter** visibility.
+- **Projection health** metrics (lag, error rate, last successful rebuild).
+- Admin or staff **debugging** tools that read canonical state without ad-hoc production SQL.
+
+---
+
+### 11. Non-goals (current system)
+
+Without an explicit **non-goals** list, Respect tends to absorb every engagement idea.
+
+Respect is intentionally:
+
+- **binary** (Respecting or not),
+- **lightweight** and low-friction,
+- **not** a reputation or karma system,
+- **not** weighted voting or elections,
+- **not** the sole **moderation** authority (moderation uses other controls),
+- **not** a full **ranking** system by itself (only an input signal).
+
+This complements the “what not to add yet” list in **Deeper production analysis**—here the emphasis is **architectural scope**, not only feature deferral.
+
+---
+
+### 12. Simplicity bias principle
+
+Complex systems accrete infrastructure, duplicate projections, over-stream events, and over-cache. A written **bias** counteracts that.
+
+#### Simplicity bias
+
+Prefer the **simplest** architecture that satisfies:
+
+- current scale,
+- operational reliability,
+- and product requirements.
+
+Distributed and event-driven complexity should land **incrementally**, driven by **measured** bottlenecks and SLO pressure—not by assumed future scale.
+
+This is the primary guardrail against **infra collapse** while keeping the roadmap credible.
+
+---
+
+### Final production assessment (boundaries and maturity)
+
+This is no longer “design a like button.” It is “design a **scalable social engagement subsystem** with operable boundaries.”
+
+| Strongest area | Why it matters |
+| -------------- | -------------- |
+| Explicit state-setting | Deterministic concurrency and retries |
+| Canonical truth | Rebuildability after cache/projection loss |
+| Reconciliation philosophy | Operational resilience under drift |
+| Event decoupling | Extensibility without blocking writes |
+| Ranking separation | Prevents product/ML corruption from raw counts |
+| Redis and hydration awareness | Realistic scaling path for feeds |
+| Failure semantics | Mature partial-failure story |
+| Staged maturity + simplicity bias | Prevents premature enterprise complexity |
+
+---
+
+### Highest-value additions (this chapter)
+
+| Priority | Addition |
+| -------- | -------- |
+| Critical | Staged maturity model |
+| Critical | Simplicity bias principle |
+| Critical | Disaster recovery philosophy |
+| High | Replay-safe consumers |
+| High | Ownership boundaries |
+| High | Testing philosophy |
+| Medium | Retention policies |
+| Medium | Cost-awareness philosophy |
+| Medium | API versioning |
+| Medium | Operational tooling / DX |
+
+---
+
+### Overall verdict
+
+The architecture is approaching **senior backend** quality, **scalable social-system** design, **production operational** maturity, **distributed-system** awareness, and **infra-aware** thinking.
+
+The hardest remaining question is less “how do we scale Respect?” and more **“how do we keep the system understandable as it scales?”**
+
+That shift—from **backend engineering** to **systems architecture**—is what staged maturity, ownership, replay rules, recovery, and simplicity bias are meant to protect.
+
+---
+
+## Advanced operations and domain discipline
+
+This documentation is now strong **systems architecture**: not only “good for a startup,” but approaching **staff-engineer / platform-architecture** thinking.
+
+The strongest asset is not any single technology (Redis, Kafka, queues). It is **architectural restraint**—the staged maturity model, simplicity bias, ownership, and recovery philosophy. That is what separates **clever** systems from **survivable** systems.
+
+---
+
+### What became exceptionally strong
+
+| Area | Quality |
+| ---- | ------- |
+| Explicit state semantics | Excellent |
+| Canonical truth ownership | Excellent |
+| Reconciliation philosophy | Excellent |
+| Failure semantics | Excellent |
+| Simplicity bias | Extremely strong |
+| Staged maturity model | Excellent |
+| Replay safety | Strong |
+| Ownership boundaries | Strong |
+| Non-goals | Very important |
+| Operational philosophy | Mature |
+
+Most architectures fail because every team adds infra, every system becomes “critical,” and no one defines boundaries. The sections above address a large part of that failure mode.
+
+---
+
+### Biggest architectural achievement
+
+The **simplicity bias** principle (and the **staged maturity model** around it) is among the highest-value additions: it helps prevent premature CQRS, unnecessary Kafka, infra sprawl, microservice explosion, projection duplication, and observability overload without denying a path to scale.
+
+---
+
+### 1. Formal domain boundaries (bounded contexts)
+
+Ownership tables describe **who** mutates what; **bounded contexts** describe **domains** and how they may talk to each other.
+
+Respect touches ranking, feeds, notifications, analytics, fraud, and profiles. Without explicit boundaries, everything eventually couples to everything.
+
+#### Bounded contexts (example)
+
+| Domain | Responsibility |
+| ------ | -------------- |
+| Respect domain | Canonical engagement state (user–post Respect) |
+| Feed domain | Content distribution and presentation |
+| Ranking domain | Ordering and scoring (consumes signals) |
+| Analytics domain | Observational metrics (does not own Respect truth) |
+| Notification domain | User messaging (side effects) |
+
+#### Important rule
+
+Domains should integrate through **events**, **published APIs**, and **explicit projections**—not through **direct shared ownership** of another context’s tables or ad-hoc cross-writes. This matters most as team and codebase size grow.
+
+---
+
+### 2. Operational modes philosophy
+
+Behavior differs under normal traffic, degradation, replay, incident recovery, and maintenance. Make that explicit instead of implied.
+
+#### Operational modes
+
+The system may operate in:
+
+- **normal** mode,
+- **degraded** mode (partial dependency loss),
+- **replay / recovery** mode (backfill or stream replay),
+- **maintenance** mode (migrations, read-only windows).
+
+Different modes may allow:
+
+- delayed projections,
+- disabled or batched notifications,
+- throttled ranking updates,
+- read-only or limited admin operations,
+
+while **canonical Respect writes** (when the product allows them) remain the **highest-priority** user-facing path within capacity and safety rules.
+
+---
+
+### 3. Dependency criticality classification
+
+Not all infrastructure is equally critical. Classify components so incidents get the right response.
+
+#### Example classification
+
+| Component | Criticality |
+| --------- | ----------- |
+| Primary DB holding Respect edges | Critical |
+| Redis cache | Degradable (rebuildable / bypass with cost) |
+| Notifications | Optional / deferrable for core Respect correctness |
+| Ranking projections | Rebuildable from signals + canonical state |
+| Analytics pipelines | Non-blocking relative to Respect writes |
+
+This improves **incident response**, **SLO tradeoffs**, and **degraded-mode** playbooks.
+
+---
+
+### 4. Dead-letter queue philosophy
+
+Queues and replay without **poison-message** handling stall partitions and workers.
+
+#### Dead-letter handling
+
+Repeatedly failing messages should move to:
+
+- dead-letter queues,
+- quarantine topics, or
+- manual review pipelines,
+
+with alerting. **Poison messages** must not indefinitely block live processing or retry forever without escalation.
+
+---
+
+### 5. Backfill philosophy
+
+Replay and reconciliation handle ongoing drift; **large backfills** are a separate operational shape (schema changes, new projections, ranking redesigns).
+
+Eventually you may need to:
+
+```text
+recompute very large historical volumes
+```
+
+#### Backfill strategy
+
+Large recomputation and projection rebuilds should:
+
+- run **incrementally** (chunked, checkpointed),
+- support **pause / resume**,
+- avoid overwhelming live traffic (rate limits, off-peak windows, dedicated pools),
+- expose **progress and health** metrics to operators.
+
+---
+
+### 6. Resource isolation
+
+One subsystem can starve another (e.g. heavy analytics or replay hurting feed latency).
+
+#### Resource isolation
+
+Critical user-facing workloads (Respect writes, core reads) should stay isolated from:
+
+- heavy analytics batch jobs,
+- large replay or stream catch-up,
+- bulk recomputation,
+- abuse scanning at scale,
+
+where practical. Isolation may use **separate worker pools**, **queue partitioning**, **rate limits**, and **workload prioritization**.
+
+---
+
+### 7. Data freshness semantics
+
+Eventual consistency is not one number: different surfaces tolerate different staleness.
+
+| System / signal | Typical freshness expectation (tune to product) |
+| --------------- | ----------------------------------------------- |
+| `viewerHasRespected` (self) | Near-real-time after own write |
+| Public `respectCount` | Seconds of lag often acceptable |
+| Ranking / trending | Minutes often acceptable |
+| Analytics aggregates | Minutes to hours often acceptable |
+
+#### Freshness expectations
+
+Document **per projection** (or per read path) what staleness is acceptable and how the UI should behave—so product and engineering do not argue from different assumptions.
+
+---
+
+### 8. Capacity planning philosophy
+
+Scaling discussion should include **forecasting**, not only reaction.
+
+#### Capacity planning
+
+Track trends such as:
+
+- engagement and Respect write growth,
+- hot-post frequency,
+- queue throughput and depth,
+- cache pressure and eviction behavior,
+- projection lag,
+- storage growth (edges, events, analytics).
+
+Plan capacity **before** bottlenecks become incidents; tie plans to the **staged maturity model**.
+
+---
+
+### 9. Change management and rollout safety
+
+A bad deployment can corrupt counters, emit bad events, poison projections, or break replay assumptions.
+
+#### Safe rollout philosophy
+
+High-risk changes should support:
+
+- feature flags,
+- canary or staged rollouts,
+- shadow traffic where useful,
+- **rollback-safe** migrations,
+
+and projection/schema changes should avoid **irreversible** writes until validated. Align with **API versioning** and **schema evolution** rules from earlier sections.
+
+---
+
+### 10. Human on-call and operational clarity
+
+Advanced systems fail in **human** loops: unclear alerts, opaque failures, no visibility into lag or replay.
+
+#### Operational clarity
+
+Expose:
+
+- **actionable** alerts (symptom + likely owner),
+- understandable **failure modes** and runbooks,
+- replay / backfill **visibility**,
+- projection **lag** and error rates,
+- reconciliation **health**,
+- queue **depth** and DLQ rates.
+
+Incidents should be diagnosable **without** defaulting to ad-hoc production database surgery.
+
+---
+
+### 11. Avoid hidden coupling (coupling discipline)
+
+A common failure mode: analytics depends on ranking, ranking depends on notifications, projections depend on feed internals—recursive fragility.
+
+#### Coupling discipline
+
+Derived systems should avoid **implicit** dependency chains on other derived layers where possible. Prefer rebuilding from:
+
+- **canonical** Respect edges,
+- **authoritative** well-defined projections, or
+- **durable** event logs with clear contracts,
+
+instead of stacking many fragile derived-on-derived dependencies.
+
+---
+
+### 12. Data repair authority clarification
+
+Reconciliation exists; **who wins** when numbers disagree must be explicit.
+
+#### Repair authority
+
+When inconsistencies appear among caches, projections, analytics aggregates, denormalized counters, and stream-derived views, **canonical Respect edge state** in the primary store is **authoritative** for “does user U Respect post P?” unless a **named migration or repair job** explicitly overrides with audited steps.
+
+Rebuild derived data from that truth (plus published eligibility rules).
+
+---
+
+### Final assessment (advanced operations)
+
+This architecture is now **production-aware**, **infra-aware**, **replay-aware**, **scaling-aware**, **operationally mature**, **systems-oriented**, **resilience-oriented**, and guarded against **unbounded complexity growth**.
+
+The strongest evolution was not “add Redis or Kafka,” but **architectural restraint, ownership, and recovery philosophy**—what scalable systems actually need to live for years.
+
+---
+
+### Current maturity level (honest framing)
+
+| Level | Status |
+| ----- | ------ |
+| Mid backend | Exceeded |
+| Senior backend | Exceeded |
+| Staff-level systems thinking | Approaching |
+| Platform architecture thinking | Yes (as documentation and intent) |
+| Distributed systems maturity | Emerging (implement incrementally) |
+
+---
+
+### Biggest remaining risk: organizational scalability
+
+The dominant risk is no longer raw **technical** scalability alone—it is **organizational** scalability:
+
+- too many teams touching the same projections,
+- too many infra systems marked “critical,”
+- **hidden coupling** between derived systems,
+- unclear ownership,
+- operational confusion under incidents.
+
+The newest sections (bounded contexts, operational modes, criticality, DLQ, backfill, isolation, freshness, capacity planning, rollout safety, on-call clarity, coupling discipline, repair authority) are meant to **get ahead** of that class of failure.
+
+---
+
+## Final high-value addons (governance and discipline)
+
+These items are among the last **high-leverage** production upgrades: less about new features, more about **contracts**, **governance**, and **human-scale** operability as the system grows.
+
+---
+
+### 1. Schema and event contract governance
+
+Schema evolution was covered earlier; **ownership and compatibility** of contracts need explicit discipline as consumers multiply.
+
+#### Event and schema contract governance
+
+Event payloads, projections, and public APIs should define:
+
+- **version ownership** (who approves changes),
+- **compatibility guarantees** (backward/forward expectations),
+- **deprecation windows** and communication,
+- **migration** strategy for producers and consumers,
+- **consumer validation** policies (reject vs quarantine unknown schema versions).
+
+**Breaking** event or schema changes must **never** silently propagate: coordinate releases, feature flags, dual-schema periods, or explicit version negotiation.
+
+#### Why this matters
+
+Without governance, one team can break analytics, another breaks ranking, replay fails, and old consumers crash—problems that explode with org and service count.
+
+---
+
+### 2. Immutable operational audit philosophy
+
+Audit of Respect edges differs from **immutable operational history** of how the platform behaved.
+
+#### Immutable operational audit
+
+Critical operational actions may optionally produce **append-only** audit records, including:
+
+- replay or backfill execution,
+- reconciliation runs,
+- projection rebuilds,
+- moderation or policy overrides affecting visibility of engagement,
+- manual repairs.
+
+Each record should identify, where applicable: **actor**, **reason**, **scope**, **timestamp**, **outcome**.
+
+#### Why this matters
+
+When someone asks **“why did counts suddenly change?”**, operators need a defensible trail—not only the current row state.
+
+---
+
+### 3. Blast radius reduction
+
+One bug or bad rollout should not destroy all counters, replay all notifications, overload ranking, or corrupt every projection.
+
+#### Blast radius reduction
+
+Scope failures and dangerous operations where possible through:
+
+- **partitioning** (data, traffic, tenants),
+- **feature isolation** and bounded modules,
+- **staged rollout** and canaries,
+- **bounded replay** (rate limits, scoped topics),
+- **workload segmentation** (pools for batch vs interactive),
+- **fail-closed** defaults for especially dangerous admin or repair tools.
+
+Prefer **small, localized** failures over **system-wide** corruption or amplification.
+
+---
+
+### 4. Architecture decision records (ADR philosophy)
+
+At this maturity, future engineers will not know **why** choices were made unless you capture it.
+
+#### ADR philosophy
+
+Major architectural decisions should leave a lightweight record of:
+
+- **context** and problem,
+- **tradeoffs** and constraints,
+- **alternatives** considered,
+- **operational** implications (on-call, cost, complexity),
+- **rollback** implications,
+- **stage** assumptions (MVP vs growth vs large scale).
+
+This reduces cycles of **reintroducing rejected complexity** or arguing from invalid old assumptions.
+
+---
+
+### 5. Consistency classification matrix
+
+Consistency has been described narratively; a **matrix** clarifies expectations during incidents and design reviews.
+
+#### Consistency classes
+
+Different paths may **intentionally** use different guarantees (tune to product):
+
+| Surface / path | Typical consistency target |
+| -------------- | -------------------------- |
+| Respect edge write | Strong (transactional commit) |
+| `viewerHasRespected` (self, after write) | Near-strong / read-your-writes |
+| Public `respectCount` | Eventual (bounded staleness) |
+| Ranking / trending | Eventual |
+| Analytics | Asynchronous |
+| Recommendations | Eventually derived |
+
+Document exceptions and SLOs per surface so incident response does not fight the wrong battle.
+
+---
+
+### 6. Incident response priorities
+
+On-call clarity helps; **priority order** during severe incidents must be explicit.
+
+#### Incident response priorities
+
+During incidents, prefer:
+
+1. **Protect** canonical Respect writes (within safety and capacity).
+2. **Preserve data integrity** for authoritative state.
+3. **Prevent irreversible corruption** (bad migrations, destructive repairs).
+4. **Degrade** non-critical derived systems (notifications, ranking refresh, heavy analytics).
+5. **Restore** projections and secondary systems **after** the authoritative path is safe.
+
+**Correctness and recoverability** often take priority over **freshness** during severe degradation.
+
+---
+
+### 7. Kill switches and feature degradation
+
+Sometimes ranking fans out, queues backlog, notifications spam, or a fraud pipeline loops. **Emergency controls** are practical.
+
+#### Kill switches and feature degradation
+
+Critical **derived** systems should support independent **disablement** or **throttling**, for example:
+
+- notification fan-out,
+- ranking refresh jobs,
+- analytics ingestion,
+- replay consumers,
+- expensive recomputation or backfill,
+
+**without** corrupting **canonical** Respect edge state. Prefer degrading side effects over losing the ability to accept or truthfully read Respect state.
+
+---
+
+### 8. Cross-system traceability
+
+With queues, events, and workers, a single Respect write spans many components.
+
+#### Cross-system traceability
+
+Propagate across boundaries where practical:
+
+- **request ids**,
+- **correlation ids**,
+- **replay / job ids** for batch work,
+
+so operators can trace one user action from API through queues to projections. Align with OpenTelemetry or equivalent tracing strategy.
+
+---
+
+### 9. Deterministic rebuild philosophy
+
+Rebuilds and reconciliation must be **trustworthy**: same inputs and rules should yield the same outcomes.
+
+#### Deterministic rebuilds
+
+Projection rebuilds and reconciliation processes should produce **deterministic** results from the same canonical inputs and **versioned** business rules.
+
+Non-deterministic rebuild logic complicates recovery, replay validation, and debugging (“why did prod differ from staging?”).
+
+---
+
+### 10. Recoverability over perfection
+
+At scale, **failures will happen**. The design goal is safe recovery, not zero partial failure.
+
+#### Recoverability over perfection
+
+The architecture prioritizes:
+
+- **recoverability**,
+- **deterministic reconciliation**,
+- **rebuildability** from canonical truth,
+- **bounded failure impact** (blast radius),
+- **operational clarity**,
+
+over pretending all async paths succeed synchronously. Systems should fail in ways that remain **observable**, **repairable**, and **understandable**.
+
+---
+
+### 11. Data lifecycle ownership
+
+Retention policies need **named ownership** per major data class.
+
+#### Data lifecycle ownership
+
+For each major class (edges, events, projections, logs, traces, fraud signals), define:
+
+- **owner** (team or role),
+- **retention** window and legal basis if applicable,
+- **rebuildability** (can it be dropped and recomputed?),
+- **archival** policy,
+- **deletion / compliance** workflow,
+- **operational criticality**.
+
+This prevents orphan assets (“who owns this 14TB topic?”) and runaway cost.
+
+---
+
+### 12. Time semantics and clock discipline
+
+Distributed workers and regions introduce **clock skew**, delay, and **out-of-order** observation.
+
+#### Time semantics
+
+Operational logic should **not** assume perfectly synchronized wall clocks everywhere.
+
+Ordering-sensitive behavior should prefer:
+
+- **durable sequence** or offset semantics where available,
+- **logical** ordering tied to committed state,
+- **canonical persisted state** as the tie-breaker,
+
+over naive “latest timestamp wins” across unreliable clocks.
+
+---
+
+### 13. Internal trust boundaries
+
+External auth is not enough: **internal** paths also need least privilege.
+
+#### Internal trust boundaries
+
+Internal consumers, workers, replay tooling, and admin surfaces should **authenticate and authorize** access to:
+
+- canonical write paths (only the Respect domain service),
+- replay and repair capabilities,
+- administrative tooling,
+- sensitive analytics exports.
+
+**Internal** network location must not imply implicit full trust.
+
+---
+
+### 14. Reliability budget philosophy
+
+Operational complexity should earn its keep.
+
+#### Reliability budgets
+
+Justify new infrastructure and projections with **measurable** reliability or scalability benefit. Growth in telemetry, storage, services, and on-call surface area should respect budgets for:
+
+- latency,
+- storage,
+- telemetry volume,
+- staffing,
+- on-call burden.
+
+This pairs directly with **simplicity bias** and **cost awareness**.
+
+---
+
+### 15. Principle of local reasoning
+
+When understanding one feature requires simulating the entire system, velocity and safety collapse.
+
+#### Local reasoning
+
+Subsystems should remain **understandable in isolation** where practical. Engineers should be able to reason about:
+
+- canonical Respect state transitions,
+- a single projection’s correctness contract,
+- replay behavior for one consumer,
+- failure recovery for one bounded context,
+
+without mandatory full-system mental models. **Bounded contexts**, **clear contracts**, and **coupling discipline** exist to preserve this.
+
+---
+
+### Final architectural assessment (governance layer)
+
+This architecture is now approaching:
+
+- scalable **engagement platform** design,
+- **distributed-systems** maturity (implemented incrementally),
+- **operational resilience** engineering,
+- **platform architecture** thinking,
+- **staff-level** backend reasoning,
+- **production governance** (contracts, audit, blast radius, ADRs),
+- **long-term maintainability** discipline.
+
+#### Strongest overall qualities
+
+| Area | Strength |
+| ---- | -------- |
+| Explicit state semantics | Elite |
+| Reconciliation philosophy | Elite |
+| Recoverability mindset | Elite |
+| Simplicity bias | Elite |
+| Canonical truth ownership | Elite |
+| Event decoupling | Extremely strong |
+| Failure semantics | Production-grade |
+| Operational philosophy | Mature |
+| Organizational scaling awareness | Rare and valuable |
+
+---
+
+### The remaining danger: human complexity
+
+The remaining risk is **not** primarily “more technical architecture on paper.” It is **human complexity**:
+
+- too many **services**,
+- too many **projections**,
+- too many **infra** systems,
+- too many **teams** with overlapping touchpoints,
+- too many **hidden assumptions** passed verbally,
+
+so no one can operate or change the system safely.
+
+The principles in this chapter—**contract governance**, **blast radius**, **ADRs**, **consistency matrix**, **incident priorities**, **kill switches**, **traceability**, **deterministic rebuilds**, **recoverability over perfection**, **lifecycle ownership**, **clock discipline**, **internal trust**, **reliability budgets**, and **local reasoning**—are aimed squarely at that class of failure. Mature systems architecture eventually becomes **managing human and organizational complexity** as much as bytes and queues.
+
+---
+
+## Platform principles and long-term operability (final close)
+
+The document is now in **platform architecture / staff-engineer** territory for intent and completeness. Redis, Kafka, queues, and scaling patterns are largely **specified**; the enduring question is whether **humans can safely evolve the system for five or more years**. The sections below centralize principles, define **what must never happen**, and add organizational tools (PRL, degradation matrix, budgets, runbooks) so the spec stays usable when nobody reads every line.
+
+---
+
+### Core platform principles (index)
+
+Principles appear throughout earlier sections; this table is the **canonical index** for reviews and onboarding.
+
+| Principle | Meaning |
+| --------- | ------- |
+| Canonical truth first | Respect **edge** state is authoritative for “does U Respect P?” |
+| Recoverability over perfection | Repairability beats pretending async paths never fail |
+| Simplicity bias | Add complexity only from **measured** need and staged maturity |
+| Derived systems are rebuildable | Counters and projections may be dropped and rebuilt from truth + rules |
+| Explicit ownership | Every projection, queue, and critical path has a **named owner** |
+| Local reasoning | Subsystems understandable **in isolation** where practical |
+| Bounded blast radius | Failures stay **scoped**; avoid system-wide amplification |
+| Eventual consistency by design | Some surfaces **intentionally** tolerate lag—document which |
+
+#### Why this matters
+
+As architecture grows, few people read the full document end-to-end. A short **principles** table becomes **culture**, **review criteria**, and **architecture guardrails**.
+
+---
+
+### System anti-goals and catastrophic invariants
+
+Elite production systems name **catastrophic** outcomes explicitly. Example **must never** list (tune to implementation):
+
+- Permanently **lose** canonical Respect **edge** truth (durability and backup strategy must protect it).
+- Allow **duplicate active** Respect edges for the same `(userId, postId)`.
+- Expose **negative** public Respect counts.
+- **Replay** or batch jobs that **unintentionally** re-trigger destructive or user-visible side effects (notifications, external webhooks) without replay-safe design.
+- **Silently corrupt** projections without detectability (prefer checksums, reconciliation, alerts).
+- Let **derived** systems **overwrite** canonical Respect rows except through the **defined write path** / audited repair.
+- Require **routine** recovery to depend on **ad-hoc production DB surgery** as the default playbook.
+
+These statements support **deployment gates**, **incident priorities**, **migration safety checks**, and **operational philosophy**.
+
+---
+
+### Production readiness levels (PRL)
+
+Not every component should carry the same maturity bar.
+
+| Level | Meaning |
+| ----- | ------- |
+| PRL-1 | Experimental / prototype |
+| PRL-2 | Internal or staff-only |
+| PRL-3 | Production with **limited** blast radius |
+| PRL-4 | Critical **user-facing** path |
+| PRL-5 | **Mission-critical** infrastructure (e.g. primary DB for canonical edges) |
+
+**Why useful:** prevents treating an **experimental fraud worker** like the **canonical write database** in on-call, SLOs, and change control.
+
+---
+
+### Rebuild verification philosophy
+
+Rebuild and reconciliation logic should be **exercised before** disaster.
+
+#### Rebuild verification
+
+Periodically, in **controlled** environments (staging with production-like **snapshots** or masked data), validate:
+
+- **determinism** (same inputs + rules → same outputs),
+- **replay** correctness for representative workloads,
+- **migration** safety for schema changes,
+- **duration** and resource needs of full rebuilds,
+- **operational tooling** (pause/resume, progress, abort).
+
+Most rebuild systems are never tested until the first major incident—then they fail.
+
+---
+
+### Operational knowledge preservation
+
+#### Problem
+
+Over years, people leave, **tribal knowledge** disappears, replay steps are lost, and incident context is not captured.
+
+#### Operational knowledge preservation
+
+Critical procedures should live in **durable** team artifacts:
+
+- **runbooks** and escalation paths,
+- **replay** and backfill guides,
+- **reconciliation** procedures,
+- **rollback** steps for risky releases,
+- **incident retrospectives** linked to action items,
+- **ownership** docs (who to page for which subsystem).
+
+Operational recovery should **not** depend solely on undocumented memory.
+
+---
+
+### Projection classification system
+
+| Class | Example (illustrative) |
+| ----- | ---------------------- |
+| Critical projection | Timely **viewer** Respect state for authenticated reads |
+| Rebuildable projection | Denormalized **`respectCount`** on posts |
+| Advisory projection | Trending / exploratory rank inputs |
+| Experimental projection | Recommendation or ranking experiments |
+
+Different classes deserve different **SLOs**, **storage**, **recovery speed**, and **incident priority**.
+
+---
+
+### Graceful degradation matrix
+
+Formalize **expected** behavior when dependencies fail (tune to stack):
+
+| Failure | Example system response |
+| ------- | ------------------------ |
+| Redis unavailable | Fallback to **DB** for reads where safe; accept higher latency |
+| Ranking queue lag | Serve **stale** ranking; do not block Respect writes |
+| Notification failure | **Retry** async; Respect commit already succeeded |
+| Projection corruption | **Rebuild** projection from canonical truth + rules |
+| Analytics outage | **Drop or delay** analytics only; core product stays up |
+
+Use this as a starting point for **operational modes** and **kill switches**.
+
+---
+
+### Human cognitive load management
+
+Systems fail when **no one can hold an accurate mental model**.
+
+#### Cognitive load management
+
+Architectural choices should account for:
+
+- **operator** comprehension and **on-call** load,
+- **debugging** difficulty,
+- **onboarding** cost,
+- size of the **mental model** needed to change one feature safely,
+- **incident diagnosability** without heroic effort.
+
+**Reducing cognitive load** is a **reliability** feature, not a nice-to-have.
+
+---
+
+### Projection drift budgets
+
+Reconciliation exists; **acceptable temporary drift** should be **quantified** where possible.
+
+#### Drift budgets
+
+Derived systems may tolerate **bounded** divergence from canonical truth during normal operation:
+
+- **Public counts:** small, short-lived drift may be acceptable if SLO-defined,
+- **Viewer state (self, after own write):** near-zero drift expected for read-your-writes,
+- **Analytics aggregates:** larger lag often acceptable.
+
+Expose **thresholds**, **metrics**, and **alerts** on drift and reconciliation backlog.
+
+---
+
+### Infrastructure replaceability
+
+#### Problem
+
+Teams hard-couple correctness to **one** broker, cache, or vendor.
+
+#### Infrastructure replaceability
+
+**Business semantics** and **correctness rules** for Respect should not depend on a **specific** Redis, Kafka, BullMQ, or Elasticsearch implementation. Those are **implementation choices** around canonical semantics—not the semantics themselves. Design boundaries so critical paths can migrate with **controlled** effort when needed.
+
+---
+
+### Observability ownership
+
+Every **critical** subsystem should define:
+
+- **metrics** owner,
+- **alert** owner (and alert policy),
+- **dashboard** owner,
+- **SLO** owner,
+- **escalation** path.
+
+**Unowned** alerts and dashboards become noise and missed incidents.
+
+---
+
+### Projection bootstrap philosophy
+
+#### Problem
+
+New projections ship “empty until new traffic arrives,” which breaks historical surfaces and validation.
+
+#### Projection bootstrap philosophy
+
+New derived systems should support:
+
+- **historical backfill** from canonical sources,
+- **incremental** catch-up,
+- **replay-safe** consumers,
+- **validation** against canonical truth before cutover,
+- **staged** cutover (flags, shadow reads).
+
+---
+
+### Complexity budgets
+
+Every new **worker**, **projection**, **queue**, **stream**, **cache**, or **infra dependency** increases:
+
+- operational **burden**,
+- **incident** surface,
+- **observability** requirements,
+- **replay** complexity,
+- **onboarding** cost.
+
+Treat **complexity** as a **finite operational budget**—complements **simplicity bias** and **reliability budgets**.
+
+---
+
+### Administrative safety controls
+
+Internal tools often become the **largest** risk surface.
+
+#### Administrative safety controls
+
+Dangerous operational actions should support, where feasible:
+
+- **scoped** permissions,
+- **dry-run** mode,
+- **audit** logging (see immutable operational audit),
+- **confirmation** workflows,
+- **rollback** or compensating strategy,
+- **blast-radius** limits (e.g. per-tenant or per-batch caps).
+
+Manual repair tooling should be **safer** than ad-hoc production queries.
+
+---
+
+### Documentation freshness
+
+#### Problem
+
+Architecture docs **rot** and become **hazardous** if trusted when wrong.
+
+#### Documentation freshness
+
+Operational and architectural documentation should **evolve with**:
+
+- deployment and **infra topology** changes,
+- **replay** and backfill procedures,
+- **schema** and contract evolution,
+- **incident** learnings and runbook updates.
+
+Outdated docs are a **production risk**—treat updates as part of **change management**.
+
+---
+
+### Final architectural assessment (platform close)
+
+This architecture now demonstrates:
+
+- scalable **social engagement** design,
+- **production-grade resilience** philosophy,
+- **distributed-systems** awareness (with incremental adoption),
+- **replay and recovery** maturity,
+- **operational governance**,
+- **organizational scalability** thinking,
+- **platform architecture** discipline,
+- **staff-level** systems reasoning,
+- **long-term survivability** thinking.
+
+#### Strongest overall achievement
+
+The strongest outcome is **not** Redis, queues, or Kafka per se. It is that the system is **designed to stay understandable, repairable, and operable as it grows**. The gap between a narrowly **advanced backend** and **true systems architecture** comes down to whether **restraint**, **ownership**, **recovery**, **principles**, and **human-scale** operability are first-class. This document is written to stay close to that line—**implementation** must carry the same discipline.
+
+---
+
+### The real long-term question
+
+**Can humans safely evolve this system for five or more years?** The **core principles** table, **anti-goals**, **PRL**, **degradation matrix**, **drift and complexity budgets**, **runbooks**, **admin safety**, and **documentation freshness** exist to make that answer **yes** more often than **no**.
 

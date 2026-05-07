@@ -1,7 +1,6 @@
 import type Stripe from 'stripe';
 import mongoose from 'mongoose';
 import { PaymentLedgerModel, type LedgerInvoiceStatus } from '../../models/PaymentLedger.js';
-import { UserModel } from '../../models/User.js';
 import { invalidateSubscriptionSummary } from './billingSummaryCache.js';
 
 function mapInvoiceStatus(s: Stripe.Invoice.Status): LedgerInvoiceStatus {
