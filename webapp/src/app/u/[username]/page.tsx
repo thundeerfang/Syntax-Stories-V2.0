@@ -201,6 +201,7 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
   useEffect(() => {
     if (!username) {
       setLoading(false);
+      router.replace('/');
       return;
     }
     setLoading(true);

@@ -20,6 +20,8 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       feedbackButtonVisible: true,
       setFeedbackButtonVisible: (visible) => set({ feedbackButtonVisible: visible }),
+      presenceIndicatorEnabled: true,
+      setPresenceIndicatorEnabled: (enabled) => set({ presenceIndicatorEnabled: enabled }),
       feedbackDialogOpen: false,
       setFeedbackDialogOpen: (open) => set({ feedbackDialogOpen: open }),
     }),

@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
+    "postinstall": "node scripts/install-shared-package.cjs",
     "build": "tsc && mkdir -p dist/streak/lua && cp src/streak/lua/*.lua dist/streak/lua/",
     "start": "node dist/index.js",
     "predev": "npm run build --prefix ../webapp/packages/shared",

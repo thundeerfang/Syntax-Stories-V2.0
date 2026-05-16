@@ -43,10 +43,9 @@ import {
 import {
   FOLLOWED_CATEGORIES_CHANGED_EVENT,
   isCategorySlugFollowed,
-  readFollowedCategorySlugs,
-  writeFollowedCategorySlugs,
-} from '@/lib/feeds/followedCategoriesStorage';
-import { toggleCategoryFollowWithSync } from '@/lib/feeds/categoryFollowActions';
+  refreshFollowedCategoriesFromServer,
+  toggleCategoryFollowWithSync,
+} from '@/lib/feeds/categoryFollowActions';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
@@ -1084,12 +1083,7 @@ export function ExplorePage() {
 
       if (activeToken && activeUserId) {
         try {
-          const localSlugs = readFollowedCategorySlugs(activeUserId);
-          if (localSlugs.length > 0) {
-            await blogApi.syncFollowedCategories(localSlugs, activeToken);
-          }
-          const { slugs: serverSlugs } = await blogApi.listFollowedCategories(activeToken);
-          writeFollowedCategorySlugs(serverSlugs, activeUserId);
+          await refreshFollowedCategoriesFromServer(activeUserId, activeToken);
         } catch {
           /* keep local list */
         }

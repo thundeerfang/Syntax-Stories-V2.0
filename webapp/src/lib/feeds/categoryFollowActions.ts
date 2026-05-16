@@ -5,6 +5,14 @@ import {
   readFollowedCategorySlugs,
 } from '@/lib/feeds/followedCategoriesStorage';
 
+export {
+  FOLLOWED_CATEGORIES_CHANGED_EVENT,
+  isCategorySlugFollowed,
+  readFollowedCategorySlugs,
+  writeFollowedCategorySlugs,
+  toggleFollowedCategorySlug,
+} from '@/lib/feeds/followedCategoriesStorage';
+
 /** Toggle category follow — persists to localStorage and server when signed in. */
 export async function toggleCategoryFollowWithSync(
   slug: string,
