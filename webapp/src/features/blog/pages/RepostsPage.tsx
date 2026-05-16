@@ -146,7 +146,7 @@ export default function RepostsPage() {
               <RailFeedErrorState
                 title="Could not load reposts"
                 description={errorMsg}
-                onRetry={() => void load()}
+                onRetry={() => void loadPosts()}
               />
             ) : null}
 

@@ -516,8 +516,8 @@ export function WorkExperiencesContent() {
                                 promotions: f.promotions.map((p, i) => {
                                   if (i !== pIdx) return p;
                                   const nextStartYear = v;
-                                  const sy = parseInt(nextStartYear || 10);
-                                  const ey = parseInt(p.endYear || 10);
+                                  const sy = parseInt(nextStartYear || '', 10);
+                                  const ey = parseInt(p.endYear || '', 10);
                                   const nextEndYear = Number.isFinite(sy) && Number.isFinite(ey) && ey < sy ? nextStartYear : p.endYear;
                                   return { ...p, startYear: nextStartYear, endYear: nextEndYear };
                                 }),
@@ -720,8 +720,8 @@ export function WorkExperiencesContent() {
                   value={form.startYear}
                   onChange={(v) => {
                     setForm((f) => {
-                      const sy = parseInt(v || 10);
-                      const ey = parseInt(f.endYear || 10);
+                      const sy = parseInt(v || '', 10);
+                      const ey = parseInt(f.endYear || '', 10);
                       const nextEndYear = Number.isFinite(sy) && Number.isFinite(ey) && ey < sy ? v : f.endYear;
                       return { ...f, startYear: v, endYear: nextEndYear };
                     });

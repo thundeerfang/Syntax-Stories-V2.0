@@ -178,6 +178,14 @@ export interface BlogPostResponse {
   tags?: string[];
   language?: string;
   readTimeMinutes?: number;
+  respectCount?: number;
+  repostCount?: number;
+  bookmarkCount?: number;
+  commentCount?: number;
+  viewerHasRespected?: boolean;
+  viewerHasReposted?: boolean;
+  viewerHasBookmarked?: boolean;
+  squad?: PublicFeedSquad;
 }
 
 /** Public home feed item (`GET /api/blog/feed`). */
