@@ -94,4 +94,13 @@ export const redisKeys = {
 
   /** Resolved permission set for staff user (JSON string[]); invalidate on role assignment change. */
   adminPerms: (staffUserId: string) => `admin:perms:${staffUserId}`,
+
+  /**
+   * Blog post stats: Pub/Sub channel per post (`blog:stats:<postId>`) + Redis list outbox for workers.
+   * Payload shape: `docs/BLOG_REALTIME_STATS.md`.
+   */
+  blog: {
+    statsChannel: (postId: string) => `blog:stats:${postId}`,
+    statsOutbox: 'blog:stats:outbox',
+  },
 } as const;

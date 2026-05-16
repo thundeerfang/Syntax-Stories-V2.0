@@ -7,3 +7,13 @@ export function summaryToPlainText(htmlish: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+/** Remove empty paragraphs / stray breaks so the public post briefing does not show blank lines. */
+export function sanitizePublicSummaryHtml(html: string): string {
+  if (!html?.trim()) return '';
+  return html
+    .replace(/<p>\s*(?:&nbsp;|\u00a0|\s|<br\s*\/?>)*<\/p>/gi, '')
+    .replace(/<div>\s*(?:&nbsp;|\u00a0|\s|<br\s*\/?>)*<\/div>/gi, '')
+    .replace(/(?:<br\s*\/?>\s*){3,}/gi, '<br /><br />')
+    .trim();
+}

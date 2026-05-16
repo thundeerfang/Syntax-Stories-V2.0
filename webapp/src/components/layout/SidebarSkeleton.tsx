@@ -6,7 +6,7 @@ export function SidebarSkeleton() {
   return (
     <aside
       className="fixed left-0 z-20 flex w-60 flex-col border-r-2 border-border bg-background bottom-0 overflow-hidden"
-      style={{ top: 'var(--header-height)' }}
+      style={{ top: 'calc(var(--header-height) - 1px)' }}
       aria-hidden
     >
       <div className="p-4 border-b-2 border-border">

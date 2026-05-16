@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ExternalLink, FolderGit2, Link2, Monitor, Users, Wrench, Share2, Play, UserPlus, Terminal, Activity, ChevronRight, Globe } from 'lucide-react';
+import { Monitor, Users, Wrench, Terminal, Activity, ChevronRight, Globe, Copy, Check, ExternalLink, Link2 } from 'lucide-react';
 import { followApi, type ReadStreakPayload, type PublicProfileUser } from '@/api/follow';
 import { analyticsApi } from '@/api/analytics';
 import { useAuthStore } from '@/store/auth';
@@ -18,14 +18,17 @@ import { EducationCard } from '@/app/settings/settings-list/EducationCard';
 import { CertificationCard } from '@/app/settings/settings-list/CertificationCard';
 import { ProjectCard } from '@/app/settings/settings-list/ProjectCard';
 import { OpenSourceCard } from '@/app/settings/settings-list/OpenSourceCard';
-import { SparkLottie, StreakFireLottie, WalletLottie } from '@/components/ui';
+import { SparkLottie, StreakFireLottie, WalletLottie, TestAccountLottie } from '@/components/ui';
 import { AreaChart } from '@/components/retroui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
+import { PROFILE_PUBLIC_SOCIAL_BTN } from '@/lib/profilePublicCard';
 import { ProfileActivityBlogList } from '@/components/blog/ProfileActivityBlogList';
 import { ProfilePageSkeletonInner } from '@/components/skeletons';
+import { formatJoinedDate, markdownBioToHtml } from '@/lib/profileDisplay';
+import { GithubIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from '@/components/icons/SocialProviderIcons';
 
 function formatMonthYear(val: string): string {
   if (!val || val.length < 7) return '';
@@ -75,20 +78,6 @@ function reposCountSubtitle(count: number): string | undefined {
 function minVisibleAfterOpen(variant: ProfileSectionVariant, prior: number | undefined): number {
   const floor = variant === 'openSource' || variant === 'mySetup' ? 2 : 1;
   return Math.max(prior ?? floor, floor);
-}
-
-function markdownToHtml(raw: string): string {
-  const escapeHtml = (s: string) =>
-    s
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;');
-  let s = escapeHtml(raw || '');
-  s = s.replaceAll(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-  s = s.replaceAll(/__([^_\n]+)__/g, '<u>$1</u>');
-  s = s.replaceAll(/\*([^*\n]+)\*/g, '<em>$1</em>');
-  return s.replaceAll('\n', '<br>');
 }
 
 const PROFILE_CARD_SKELETON_KEYS = ['sk-a', 'sk-b', 'sk-c', 'sk-d', 'sk-e', 'sk-f'] as const;
@@ -215,6 +204,7 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [profileUrlCopied, setProfileUrlCopied] = useState(false);
   const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
   const [activityTab, setActivityTab] = useState<'posts' | 'repost'>('posts');
   const [readStreak, setReadStreak] = useState<ReadStreakPayload | null>(null);
@@ -366,55 +356,36 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
     }, 420);
   };
 
-  const publicLinks = useMemo(() => {
-    const items: Array<{
-      key: string;
-      label: string;
-      url: string;
-      Icon: React.ComponentType<{ className?: string }>;
-      iconBg: string;
-      iconColor: string;
-    }> = [];
-    const add = (
-      key: string,
-      label: string,
-      urlRaw: unknown,
-      Icon: React.ComponentType<{ className?: string }>,
-      iconBg: string,
-      iconColor: string
-    ) => {
-      const url = typeof urlRaw === 'string' ? urlRaw.trim() : '';
-      if (!url) return;
-      const withProto = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-      items.push({ key, label, url: withProto, Icon, iconBg, iconColor });
-    };
-    add('linkedin', 'LinkedIn', profile?.linkedin, Link2, 'bg-[#0A66C2]/10', 'text-[#0A66C2]');
-    add('github', 'GitHub', profile?.github, FolderGit2, 'bg-foreground/10', 'text-foreground');
-    add('instagram', 'Instagram', profile?.instagram, Share2, 'bg-[#E4405F]/10', 'text-[#E4405F]');
-    add('youtube', 'YouTube', profile?.youtube, Play, 'bg-[#FF0000]/10', 'text-[#FF0000]');
-    return items;
-  }, [profile?.github, profile?.instagram, profile?.linkedin, profile?.youtube]);
+  const joinedLabel = useMemo(() => {
+    const str = formatJoinedDate(profile?.createdAt);
+    return str ? `Joined ${str}` : '';
+  }, [profile?.createdAt]);
+
+  const profileShareUrl = useMemo(() => {
+    if (globalThis.window === undefined || !profile?.username) return '';
+    return `${globalThis.window.location.origin}/u/${profile.username}`;
+  }, [profile?.username]);
+
+  const copyProfileUrl = async () => {
+    if (!profileShareUrl) return;
+    try {
+      await navigator.clipboard.writeText(profileShareUrl);
+      setProfileUrlCopied(true);
+      toast.success('Link copied to clipboard');
+      globalThis.setTimeout(() => setProfileUrlCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
 
   if (loading || !profile) {
     return <ProfilePageSkeletonInner variant="public" />;
   }
 
   const isSelf = currentUser?.username?.toLowerCase() === username;
-  const stats = [
-    { key: 'respect', label: 'Respect', value: 10, iconNode: <SparkLottie play size={24} /> },
-    { key: 'wallet', label: 'Wallet', value: 0, iconNode: <WalletLottie play size={24} /> },
-    {
-      key: 'streak',
-      label: 'Read streak',
-      value: readStreak?.current ?? 0,
-      iconNode: <StreakFireLottie play size={24} />,
-    },
-    { key: 'followers', label: 'Followers', value: followersCount, iconNode: <Users className="size-4 text-primary" /> },
-    { key: 'following', label: 'Following', value: followingCount, iconNode: <UserPlus className="size-4 text-primary" /> },
-  ] as const;
 
   return (
-    <div className="min-h-screen w-full py-6 font-sans text-foreground md:py-8">
+    <div className="min-h-screen w-full font-sans text-foreground">
       <div className={SHELL_CONTENT_RAIL_CLASS}>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <div className="lg:col-span-8 space-y-8">
@@ -442,85 +413,118 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
                 />
               </div>
 
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                  <h1 className="text-4xl font-black uppercase tracking-tighter italic">{profile.fullName || profile.username}</h1>
-                  <div className="text-primary font-bold flex items-center gap-2 mt-1 uppercase text-xs tracking-widest">
-                    <span>@{profile.username}</span>
-                    {profile?.portfolioUrl?.trim() ? (
-                      <HoverCard
-                        content={<LinkPreviewCardContent domain={profile.portfolioUrl} title="Portfolio" />}
-                        side="top"
-                        align="start"
-                        contentClassName="w-[280px] p-0"
-                      >
-                        <a
-                          href={profile.portfolioUrl.trim().startsWith('http') ? profile.portfolioUrl.trim() : `https://${profile.portfolioUrl.trim()}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label="Open portfolio"
-                          className="inline-flex items-center justify-center size-7 border-2 border-border bg-card text-foreground hover:bg-muted shadow-[2px_2px_0px_0px_var(--border)]"
-                          onClick={(e) => e.stopPropagation()}
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div>
+                    <h1 className="text-4xl font-black uppercase tracking-tighter italic">{profile.fullName || profile.username}</h1>
+                    <div className="text-primary font-bold flex items-center gap-2 mt-1 uppercase text-xs tracking-widest">
+                      <span>@{profile.username}</span>
+                      {profile?.portfolioUrl?.trim() ? (
+                        <HoverCard
+                          content={<LinkPreviewCardContent domain={profile.portfolioUrl} title="Portfolio" />}
+                          side="top"
+                          align="start"
+                          contentClassName="w-[280px] p-0"
                         >
-                          <Globe className="size-4 text-primary" />
-                        </a>
-                      </HoverCard>
+                          <a
+                            href={profile.portfolioUrl.trim().startsWith('http') ? profile.portfolioUrl.trim() : `https://${profile.portfolioUrl.trim()}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label="Open portfolio"
+                            className="inline-flex items-center justify-center size-7 border-2 border-border bg-card text-foreground hover:bg-muted shadow-[2px_2px_0px_0px_var(--border)]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Globe className="size-4 text-primary" />
+                          </a>
+                        </HoverCard>
+                      ) : null}
+                      {joinedLabel ? (
+                        <>
+                          <span className="size-1.5 bg-border rounded-full" /> {joinedLabel}
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex gap-3 md:pt-1">
+                    <PublicProfileFollowCta
+                      isSelf={isSelf}
+                      token={token}
+                      username={username}
+                      paramsUsername={typeof params?.username === 'string' ? params.username : undefined}
+                      followLoading={followLoading}
+                      following={following}
+                      onFollowClick={handleFollowClick}
+                    />
+                  </div>
+                </div>
+
+                {profile.bio?.trim() ? (
+                  <div className="relative border-2 border-primary bg-muted/5 p-6 pt-8 group">
+                    <div className="absolute -top-3 left-6 inline-flex items-center bg-background px-2">
+                      <div className="flex items-center bg-primary px-2 py-1 ">
+                        <Terminal className="size-3 text-primary-foreground" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
+                          Summary_Report
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="absolute top-2 right-4 text-[8px] font-mono text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
+                      REF_NO: {String(profile.id ?? '').slice(-8) || '0000X-SYS'}
+                    </div>
+
+                    <div
+                      className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none
+                        [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
+                      dangerouslySetInnerHTML={{ __html: markdownBioToHtml(profile.bio) }}
+                    />
+
+                    <div className="absolute bottom-1 right-1 size-3 border-r-2 border-b-2 border-border/50" />
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-border p-10 flex flex-col items-center justify-center text-center bg-muted/5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">
+                      &gt; Biography_Data_Missing
+                    </p>
+                    {isSelf ? (
+                      <Link
+                        href="/settings"
+                        className="px-4 py-2 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
+                      >
+                        Initialize Summary
+                      </Link>
                     ) : null}
                   </div>
-                </div>
-                <PublicProfileFollowCta
-                  isSelf={isSelf}
-                  token={token}
-                  username={username}
-                  paramsUsername={typeof params?.username === 'string' ? params.username : undefined}
-                  followLoading={followLoading}
-                  following={following}
-                  onFollowClick={handleFollowClick}
-                />
+                )}
               </div>
 
-              {profile.bio?.trim() ? (
-                <div className="mt-6 relative border-2 border-border bg-muted/5 p-6 pt-8 group">
-                  <div className="absolute -top-3 left-6 inline-flex items-center bg-background px-2">
-                    <div className="flex items-center gap-2 bg-primary px-2 py-1 rounded-sm">
-                      <Terminal className="size-3 text-primary-foreground" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
-                        Summary_Report
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="absolute top-2 right-4 text-[8px] font-mono text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
-                    REF_NO: {String(profile?.id ?? '').slice(-8) || '0000X-SYS'}
-                  </div>
-
-                  <div
-                    className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none
-                      [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
-                    dangerouslySetInnerHTML={{ __html: markdownToHtml(profile.bio) }}
-                  />
-
-                  <div className="absolute bottom-1 right-1 size-3 border-r-2 border-b-2 border-border/50" />
+              {/* Stats bar — matches /profile */}
+              <div className="flex flex-wrap gap-6 mt-8 p-4 border-4 border-gray-300 dark:border-border border-dashed bg-muted/5">
+                <div className="flex items-center gap-2">
+                  <SparkLottie play size={24} />
+                  <span className="font-black text-sm uppercase">10</span>
+                  <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">Respect</span>
                 </div>
-              ) : (
-                <div className="mt-6 border-2 border-dashed border-border p-8 flex flex-col items-center justify-center text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Biography_Data_Missing
-                  </p>
+                <div className="flex items-center gap-2">
+                  <WalletLottie play size={24} />
+                  <span className="font-black text-sm uppercase">0</span>
+                  <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">Wallet</span>
                 </div>
-              )}
-
-              {/* Stats bar (same placement as profile preview) */}
-              <div className="flex flex-wrap gap-3 mt-8 p-4 border-4 border-border border-dashed bg-muted/5">
-                {stats.map((s) => {
-                  return (
-                    <div key={s.key} className="flex items-center gap-2 pr-4 border-r-2 border-border/50 last:border-r-0 last:pr-0">
-                      {s.iconNode}
-                      <span className="font-black text-sm uppercase">{s.value}</span>
-                      <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">{s.label}</span>
-                    </div>
-                  );
-                })}
+                <div className="flex items-center gap-2">
+                  <StreakFireLottie play size={24} />
+                  <span className="font-black text-sm uppercase">{readStreak?.current ?? 0}</span>
+                  <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">Read streak</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="size-4 text-primary" />
+                  <span className="font-black text-sm uppercase">{followersCount}</span>
+                  <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">Followers</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="size-4 text-primary" />
+                  <span className="font-black text-sm uppercase">{followingCount}</span>
+                  <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">Following</span>
+                </div>
               </div>
             </div>
           </section>
@@ -549,7 +553,7 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
                 </button>
               ))}
             </div>
-            <div className="border-4 border-border border-dashed bg-muted/5 p-4 sm:p-6">
+            <div>
               {activityTab === 'posts' ? (
                 <ProfileActivityBlogList username={username} />
               ) : (
@@ -892,16 +896,22 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
 
         <div className="lg:col-span-4 space-y-6">
           <div className="border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center">
                   <Users className="size-4 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-black uppercase">Followers & Following</p>
-                  <p className="text-[9px] font-bold text-muted-foreground uppercase mt-0.5">
-                    {followersCount} followers · {followingCount} following
-                  </p>
+                  {followersCount === 0 && followingCount === 0 ? (
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase mt-0.5">
+                      No followers yet
+                    </p>
+                  ) : (
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase">
+                      {followersCount} followers · {followingCount} following
+                    </p>
+                  )}
                 </div>
               </div>
               <button
@@ -912,6 +922,83 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
               >
                 <ChevronRight className="size-4 text-foreground" />
               </button>
+            </div>
+          </div>
+
+          {/* Public profile URL + social — same card as /profile */}
+          <div className="border-4 border-border bg-card p-5 shadow-[4px_4px_0px_0px_var(--border)] space-y-4">
+            <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+              <TestAccountLottie size={24} />
+              Public Profile
+            </h3>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void copyProfileUrl()}
+                className="group flex min-w-0 flex-1 items-center justify-between gap-3 border-2 border-border bg-muted/20 p-2.5 pl-3 text-left shadow-[2px_2px_0px_0px_var(--border)] transition-colors hover:bg-muted/40 active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+              >
+                <Link2 className="size-4 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
+                <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-bold text-foreground">
+                  {profileShareUrl || '—'}
+                </span>
+                <span
+                  className={cn(
+                    'flex shrink-0 items-center gap-1.5 border-2 border-border px-2.5 py-1.5 text-[9px] font-black uppercase',
+                    profileUrlCopied
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'bg-card group-hover:border-primary',
+                  )}
+                >
+                  {profileUrlCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  {profileUrlCopied ? 'Copied' : 'Copy'}
+                </span>
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+              {profile.linkedin && (
+                <a
+                  href={profile.linkedin.startsWith('http') ? profile.linkedin : `https://${profile.linkedin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LinkedIn"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <LinkedinIcon className="size-5 text-[#0A66C2]" />
+                </a>
+              )}
+              {profile.github && (
+                <a
+                  href={profile.github.startsWith('http') ? profile.github : `https://${profile.github}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="GitHub"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <GithubIcon className="size-5 text-[#24292f] dark:text-[#f0f6fc]" />
+                </a>
+              )}
+              {profile.instagram && (
+                <a
+                  href={profile.instagram.startsWith('http') ? profile.instagram : `https://${profile.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <InstagramIcon className="size-5 text-[#E4405F]" />
+                </a>
+              )}
+              {profile.youtube && (
+                <a
+                  href={profile.youtube.startsWith('http') ? profile.youtube : `https://${profile.youtube}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="YouTube"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <YoutubeIcon className="size-5 text-[#FF0000]" />
+                </a>
+              )}
             </div>
           </div>
 
@@ -946,53 +1033,6 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
               </div>
             </div>
           </div>
-
-          {publicLinks.length > 0 ? (
-            <div className="border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="flex h-8 w-8 items-center justify-center border-2 border-border bg-muted/30">
-                  <ExternalLink className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Public Links</h3>
-                  <p className="text-[9px] font-medium text-muted-foreground/80">
-                    Explore this creator&apos;s social profiles.
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {publicLinks.map((l) => {
-                  const Icon = l.Icon;
-
-                  return (
-                    <HoverCard
-                      key={l.key}
-                      content={<LinkPreviewCardContent domain={l.url} title={l.label} />}
-                      side="top"
-                      align="start"
-                      contentClassName="w-[280px] p-0"
-                    >
-                      <a
-                        href={l.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={l.label}
-                        className={cn(
-                          'size-11 border-2 border-border flex items-center justify-center shadow-[2px_2px_0px_0px_var(--border)]',
-                          'bg-card hover:bg-muted/30 transition-colors'
-                        )}
-                        title={l.label}
-                      >
-                        <span className={cn('size-9 border-2 border-border flex items-center justify-center', l.iconBg, l.iconColor)}>
-                          <Icon className="size-4" />
-                        </span>
-                      </a>
-                    </HoverCard>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
 
           {/* PERFORMANCE-LIKE CARD (public) moved to end */}
           <div className="border-4 border-border bg-card p-5 shadow-[8px_8px_0px_0px_var(--border)] space-y-6">

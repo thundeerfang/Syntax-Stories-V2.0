@@ -15,12 +15,14 @@ const DEBOUNCE_MS = 280;
  * Helper to resolve avatar source using semantic fallback and API base URL
  */
 function getAvatarSrc(profileImg: string | undefined, username: string): string {
-  if (!profileImg?.trim()) {
+  const trimmed = profileImg?.trim();
+  if (!trimmed) {
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
   }
-  return profileImg.startsWith('http') 
-    ? profileImg 
-    : `${process.env.NEXT_PUBLIC_API_BASE_URL}${profileImg}`;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+  return `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${trimmed}`;
 }
 
 function SearchUserResultsListbox({ children }: Readonly<{ children: ReactNode }>) {

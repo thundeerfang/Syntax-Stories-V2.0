@@ -1,3 +1,5 @@
+import type { PublicFeedSquad } from './blog';
+
 export interface User {
   id: string;
   email?: string;
@@ -18,10 +20,25 @@ export interface Post {
   publishedAt: string;
   /** When mapped from owner API; feeds omit this. */
   blogStatus?: 'draft' | 'published';
+  /** Curated category slug from API (feed / detail). */
+  category?: string;
   tags?: string[];
-  /** ISO time of last substantive edit (from API). */
+  /** From public blog API when wired. */
+  respectCount?: number;
+  repostCount?: number;
+  bookmarkCount?: number;
+  /** From public feed when provided. */
+  commentCount?: number;
+  viewerHasRespected?: boolean;
+  viewerHasReposted?: boolean;
+  viewerHasBookmarked?: boolean;
+  /** ISO time of last substantive edit (from the API). */
   lastEditedAt?: string;
   lastEditedBy?: { username: string; fullName: string };
+  /** From API when provided; otherwise derived from excerpt in the card. */
+  readTimeMinutes?: number;
+  /** Present when the post is linked to a squad feed. */
+  squad?: PublicFeedSquad;
 }
 
 export type {
@@ -35,4 +52,5 @@ export type {
   PublicFeedPostAuthor,
   PublicBlogPostDetail,
   PublicBlogComment,
+  PublicFeedSquad,
 } from './blog';

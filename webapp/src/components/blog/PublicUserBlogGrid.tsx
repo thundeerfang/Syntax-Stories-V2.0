@@ -5,11 +5,9 @@ import { FileText } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { BlogCard } from '@/components/blog/BlogCard';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
-import { useAuthStore } from '@/store/auth';
 import type { Post } from '@/types';
 
 export function PublicUserBlogGrid({ username }: Readonly<{ username: string }>) {
-  const viewerUsername = useAuthStore((s) => s.user?.username ?? null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +63,7 @@ export function PublicUserBlogGrid({ username }: Readonly<{ username: string }>)
         <ul className="grid list-none grid-cols-1 gap-4 p-0">
           {posts.map((post) => (
             <li key={post.id} className="flex min-h-0">
-              <BlogCard post={post} showSocialActions={false} viewerUsername={viewerUsername} density="compact" />
+              <BlogCard post={post} showSocialActions={false} />
             </li>
           ))}
         </ul>

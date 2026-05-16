@@ -31,6 +31,28 @@ function isMutationExempt(p: string, method: string): boolean {
   if (p.startsWith('/api/contact')) return true;
   if (p.startsWith('/api/invites')) return true;
   if (p.startsWith('/api/billing')) return true;
+  if (p.startsWith('/api/bookmarks')) return true;
+  if (p.startsWith('/api/reposts')) return true;
+  /**
+   * Authenticated readers on published posts: Respect / Repost / Bookmark, comment like, batch viewer-state.
+   * Same class as billing exemptions: strict LEGAL_RECONSENT_REQUIRED blocks normal signed-in use otherwise.
+   * Creating/editing/deleting comment bodies and author-only blog writes stay gated.
+   */
+  if (
+    method === 'POST' &&
+    /^\/api\/blog\/p\/[^/]+\/[^/]+\/(respect|repost|bookmark)$/.test(p)
+  ) {
+    return true;
+  }
+  if (method === 'POST' && /^\/api\/blog\/p\/[^/]+\/[^/]+\/comments\/[^/]+\/like$/.test(p)) {
+    return true;
+  }
+  if (
+    method === 'POST' &&
+    (p === '/api/blog/engagement/viewer-state' || p === '/api/blog/respect/viewer-state')
+  ) {
+    return true;
+  }
   return false;
 }
 

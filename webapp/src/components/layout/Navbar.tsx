@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,7 @@ import { Button, FireLottie, RocketLottie, blockShadowButtonClassNames } from '@
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { AccountDropdown } from './AccountDropdown';
 import { cn } from '@/lib/utils';
+import { SHELL_NAV_INNER_CLASS, SHELL_RAIL_FROST_CLASS, SHELL_RAIL_FROST_STYLE } from '@/lib/shellContentRail';
 import { setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
 import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
 import { NavbarSkeleton } from '@/components/layout/NavbarSkeleton';
@@ -37,23 +38,54 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [exploreHovered, setExploreHovered] = useState(false);
   const [trendingHovered, setTrendingHovered] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  /** Scrolled state: primary bottom border (height + frost stay fixed). */
+  const [isPastViewport, setIsPastViewport] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setMounted(true);
     const dismissed = localStorage.getItem(BANNER_DISMISSED_KEY) === 'true';
     setBannerDismissed(dismissed);
 
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const syncScroll = () => {
+      const y = Math.max(
+        0,
+        window.scrollY,
+        document.documentElement.scrollTop,
+        document.body.scrollTop,
+      );
+      /** Same pixel threshold on every route (long pages no longer require a full viewport of scroll). */
+      const enterY = 56;
+      const exitY = 24;
+
+      setIsPastViewport((prev) => {
+        if (prev) return y > exitY;
+        return y >= enterY;
+      });
+    };
+    syncScroll();
+    window.addEventListener('scroll', syncScroll, { passive: true });
+    window.addEventListener('resize', syncScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', syncScroll);
+      window.removeEventListener('resize', syncScroll);
+    };
   }, []);
 
-  useEffect(() => {
-    const showBanner = mounted && !bannerDismissed;
-    /** Match outer `<header>` height: inner row (+ optional banner) + `border-b-2` so fixed sidebar starts below the navbar line. */
-    const headerHeight = showBanner ? 'calc(6.5rem + 2px)' : 'calc(4rem + 2px)';
-    document.documentElement.style.setProperty('--header-height', headerHeight);
+  useLayoutEffect(() => {
+    if (!mounted) return;
+    const el = headerRef.current;
+    if (!el) return;
+
+    const sync = () => {
+      const h = el.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--header-height', `${Math.round(h * 1000) / 1000}px`);
+    };
+
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [mounted, bannerDismissed]);
 
   const dismissBanner = () => {
@@ -64,10 +96,11 @@ export function Navbar() {
   if (!mounted) return <NavbarSkeleton />;
 
   return (
-    <header 
+    <header
+      ref={headerRef}
       className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-300",
-        isScrolled ? "border-b-2 border-primary shadow-[4px_4px_0px_0px_rgba(var(--primary),0.1)]" : "border-b-2 border-border"
+        'w-full shrink-0 border-b-2 pt-[env(safe-area-inset-top,0px)] transition-[border-color] duration-300',
+        isPastViewport ? 'border-primary' : 'border-border',
       )}
     >
       {/* Membership Banner */}
@@ -87,10 +120,12 @@ export function Navbar() {
         </div>
       )}
 
-      {/* Main Navbar */}
-      <div className="bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 w-full max-w-[90rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
-          
+      {/* Frost: explicit webkit + backdrop so blur shows over the main column */}
+      <div
+        className={cn('relative isolate overflow-visible', SHELL_RAIL_FROST_CLASS)}
+        style={SHELL_RAIL_FROST_STYLE}
+      >
+        <div className={cn('relative z-[1] flex h-16 items-center gap-4', SHELL_NAV_INNER_CLASS)}>
           {/* Left: Menu + Logo */}
           <div className="flex flex-1 items-center gap-3">
             <button
@@ -179,7 +214,7 @@ export function Navbar() {
                   href="/blogs/write"
                   onClick={() => setWriteEditorSessionPostId(null)}
                   className={cn(
-                    blockShadowButtonClassNames({ variant: 'secondary', size: 'sm', shadow: 'sm' }),
+                    blockShadowButtonClassNames({ variant: 'primary', size: 'sm', shadow: 'sm' }),
                     'px-2 py-1.5 sm:px-3 sm:py-2 no-underline',
                   )}
                   title="Write a blog post"
@@ -189,7 +224,7 @@ export function Navbar() {
                 </Link>
               )}
               <NotificationsDropdown />
-              
+
               <button
                 type="button"
                 onClick={toggleTheme}

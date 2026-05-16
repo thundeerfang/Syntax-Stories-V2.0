@@ -36,7 +36,7 @@ export function BlogCodeBlockDisplay({
   return (
     <div
       className={cn(
-        'mx-auto my-5 w-full max-w-4xl overflow-hidden border-2 border-border shadow-[6px_6px_0px_0px_var(--border)]',
+        'mx-auto my-5 w-full max-w-4xl overflow-hidden border-2 border-border',
         className,
       )}
     >
@@ -53,9 +53,9 @@ export function BlogCodeBlockDisplay({
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
-      <pre className="m-0 overflow-x-auto whitespace-pre-wrap break-words bg-zinc-950 p-4 text-sm leading-relaxed sm:p-6">
+      <pre className="m-0 overflow-x-auto whitespace-pre-wrap break-words bg-zinc-950 p-3 text-[13px] leading-relaxed sm:p-5">
         <code
-          className="hljs !bg-transparent whitespace-pre-wrap font-mono text-sm"
+          className="hljs !bg-transparent whitespace-pre-wrap font-mono text-[13px]"
           // highlight.js output is escaped; safe for innerHTML
           dangerouslySetInnerHTML={{ __html: html }}
         />

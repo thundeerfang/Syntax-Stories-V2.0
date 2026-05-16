@@ -20,6 +20,8 @@ export interface VerifyOtpPayload {
   otpVersion?: number;
   /** Optional; also read from signed `ss_ref` cookie when present. */
   referralCode?: string;
+  /** Must be true when creating a new account via email OTP (signup flow). */
+  acceptPolicies?: boolean;
 }
 
 export interface SendOtpResponse {

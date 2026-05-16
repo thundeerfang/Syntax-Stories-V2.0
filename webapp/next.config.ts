@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   async redirects() {
     return [
+      { source: '/tag/:slug', destination: '/topics/:slug', permanent: true },
+      { source: '/squads/discover/:category', destination: '/squads/:category', permanent: true },
+      { source: '/squads/discover', destination: '/squads/featured', permanent: true },
       { source: '/upgrade', destination: '/pricing', permanent: true },
       { source: '/documentation', destination: '/docs', permanent: false },
     ];

@@ -157,6 +157,8 @@ export interface BlogTaxonomyRow {
   slug: string;
   name: string;
   postCount: number;
+  /** Short blurb when curated in DB; optional on aggregated-only rows. */
+  description?: string;
 }
 
 /** Server response for a single blog post or draft */
@@ -175,6 +177,7 @@ export interface BlogPostResponse {
   category?: string;
   tags?: string[];
   language?: string;
+  readTimeMinutes?: number;
 }
 
 /** Public home feed item (`GET /api/blog/feed`). */
@@ -182,6 +185,16 @@ export interface PublicFeedPostAuthor {
   username: string;
   fullName: string;
   profileImg: string;
+}
+
+/** Squad summary embedded on feed/detail posts when `squadId` is set. */
+export interface PublicFeedSquad {
+  slug: string;
+  name: string;
+  iconUrl?: string;
+  coverBannerUrl?: string;
+  visibility: 'public' | 'private';
+  memberCount?: number;
 }
 
 export interface PublicFeedPost {
@@ -198,6 +211,16 @@ export interface PublicFeedPost {
   category?: string;
   tags?: string[];
   language?: string;
+  respectCount?: number;
+  repostCount?: number;
+  bookmarkCount?: number;
+  commentCount?: number;
+  viewCount?: number;
+  viewerHasRespected?: boolean;
+  viewerHasReposted?: boolean;
+  viewerHasBookmarked?: boolean;
+  readTimeMinutes?: number;
+  squad?: PublicFeedSquad;
 }
 
 /** Public single post (`GET /api/blog/p/:username/:slug`). */
@@ -216,13 +239,33 @@ export interface PublicBlogPostDetail {
   category?: string;
   tags?: string[];
   language?: string;
+  /** Denormalized respect count from the API (`GET /api/blog/p/:user/:slug`). */
+  respectCount?: number;
+  repostCount?: number;
+  bookmarkCount?: number;
+  commentCount?: number;
+  viewCount?: number;
+  viewerHasRespected?: boolean;
+  viewerHasReposted?: boolean;
+  viewerHasBookmarked?: boolean;
+  squad?: PublicFeedSquad;
 }
 
 /** Public comment on a blog post (`GET/POST /api/blog/p/:username/:slug/comments`). */
 export interface PublicBlogComment {
   _id: string;
+  /** Reply thread; `null` for top-level. */
+  parentId: string | null;
+  /** Plain or rich-text JSON string (`{ "type":"doc", ... }`) persisted in `text` on the server. */
   text: string;
   createdAt: string;
+  updatedAt: string;
+  /** Present after the author edits the comment body. */
+  editedAt: string | null;
+  authorUserId: string;
+  likeCount: number;
+  /** Present when the request was authenticated (`optionalVerifyToken` on GET). */
+  likedByViewer?: boolean;
   author: PublicFeedPostAuthor;
 }
 

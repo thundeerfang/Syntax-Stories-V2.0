@@ -1,30 +1,26 @@
 'use client';
 
 import { useSidebar } from '@/hooks/useSidebar';
-import { SidebarDrawer } from '@/components/layout/SidebarDrawer';
-import { GridBackground } from '@/components/ui/grid-background';
 import { cn } from '@/lib/utils';
 
-export function MainLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export function MainLayout({
+  children,
+  className,
+}: Readonly<{ children: React.ReactNode; className?: string }>) {
   const { isOpen } = useSidebar();
 
   return (
-    <main className="flex flex-1 min-h-0 bg-background">
-      {/* Fixed left sidebar drawer */}
-      <SidebarDrawer />
-
-      {/* Main Content Area — shifts right when sidebar opens */}
-      <div className={cn(
-        "relative flex-1 min-h-0 overflow-hidden transition-all duration-300 ease-in-out",
-        "border-l-2 border-border",
-        "p-4 sm:p-6",
-        isOpen ? "ml-60" : "ml-0"
-      )}>
-        {/* The Grid Effect */}
-        <GridBackground />
-
-        {/* The Actual Page Content */}
-        <div className="relative z-[1] h-full overflow-y-auto">
+    <main className={cn('relative flex w-full min-h-0 min-w-0 flex-1 flex-col items-stretch', className)}>
+      <div
+        className={cn(
+          'relative flex min-h-0 max-w-none flex-1 flex-col items-stretch overflow-x-hidden',
+          /* `w-full` + horizontal margin overflows the viewport; width must subtract the sidebar offset. */
+          isOpen ? 'ml-60 w-[calc(100%-15rem)]' : 'ml-[52px] w-[calc(100%-52px)]',
+          'px-0 pb-4  sm:pb-5  lg:pb-6',
+          'transition-[margin-left,width] duration-300 ease-in-out',
+        )}
+      >
+        <div className="relative z-[1] flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col items-stretch overflow-x-hidden">
           {children}
         </div>
       </div>

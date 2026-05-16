@@ -9,6 +9,7 @@ import { SonnerToaster } from '@/components/retroui';
 import { UiProcessingShield } from '@/components/ui';
 import { Providers } from './providers';
 import { AppwritePing } from '@/components/appwrite/AppwritePing';
+import { ConnectivityGate } from '@/components/connectivity/ConnectivityGate';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -49,6 +50,7 @@ export default function RootLayout({
           <SearchDialogWrapper />
           <SonnerToaster />
           <LayoutShell>{children}</LayoutShell>
+          <ConnectivityGate />
         </Providers>
       </body>
     </html>

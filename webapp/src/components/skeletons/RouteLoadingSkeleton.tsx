@@ -7,11 +7,16 @@ import {
   HomePageSkeletonInner,
   ProfilePageSkeletonInner,
 } from './page-skeletons';
+import { FollowingPageContentSkeleton } from './FollowingPageSkeleton';
+import { BlogPostPageSkeletonInner } from './BlogPostPageSkeleton';
 import { SettingsPageSkeletonInner } from './settings-page-skeleton';
 import { DocsPageSkeletonInner } from './DocsPageSkeleton';
 import { ContactPageSkeletonInner } from './ContactPageSkeleton';
 
 function pickInner(path: string) {
+  if (path === '/following' || path === '/bookmarks' || path === '/reposts') {
+    return <FollowingPageContentSkeleton showIntro />;
+  }
   if (path === '/docs' || path.startsWith('/docs/')) {
     return <DocsPageSkeletonInner />;
   }
@@ -29,6 +34,12 @@ function pickInner(path: string) {
   }
   if (path.startsWith('/blogs/write') || path === '/write' || path.startsWith('/write?')) {
     return <BlogWritePageSkeletonInner />;
+  }
+  if (path.startsWith('/blogs/')) {
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length >= 3 && segments[0] === 'blogs' && segments[1] !== 'write') {
+      return <BlogPostPageSkeletonInner />;
+    }
   }
   if (path.startsWith('/u/')) {
     return <ProfilePageSkeletonInner variant="public" />;

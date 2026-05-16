@@ -3,13 +3,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { blogApi } from '@/api/blog';
-import { ActivityBlogCard } from '@/components/blog/ActivityBlogCard';
+import { BlogCard } from '@/components/blog/BlogCard';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
-import { useAuthStore } from '@/store/auth';
 import type { Post } from '@/types';
 
 export function ProfileActivityBlogList({ username }: Readonly<{ username: string }>) {
-  const viewerUsername = useAuthStore((s) => s.user?.username ?? null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,10 +61,10 @@ export function ProfileActivityBlogList({ username }: Readonly<{ username: strin
   }
 
   return (
-    <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
+    <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 md:gap-4">
       {posts.map((post) => (
-        <li key={post.id} className="min-h-0">
-          <ActivityBlogCard post={post} viewerUsername={viewerUsername} />
+        <li key={post.id} className="flex min-h-0 w-full min-w-0">
+          <BlogCard post={post} className="w-full" />
         </li>
       ))}
     </ul>

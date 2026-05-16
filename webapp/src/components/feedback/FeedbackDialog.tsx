@@ -33,6 +33,9 @@ const FEEDBACK_FORM_ID = 'syntax-feedback-form';
 
 const FEEDBACK_SUBTITLE = "What's working, what isn't, or what you'd like next.";
 
+/** During tab/window capture, hide modal pixels so `getDisplayMedia` screenshots show the page behind. */
+const FEEDBACK_CAPTURE_HIDE_UI_CLASS = 'invisible pointer-events-none';
+
 /** Busy overlay: mirrors success step layout (icon, copy, full-width close). */
 function FeedbackSuccessSubmitSkeleton() {
   return (
@@ -208,6 +211,9 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
 
   const handleScreenCapture = useCallback(async () => {
     setCapturing(true);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
     try {
       const file = await captureScreenToFeedbackFile();
       const v = await validateFeedbackAttachmentFile(file);
@@ -362,7 +368,11 @@ export function FeedbackDialog({ open, onClose }: Readonly<Props>) {
       titleIcon={<MessageSquare className="size-5" strokeWidth={2.5} aria-hidden />}
       subtitle={FEEDBACK_SUBTITLE}
       subtitleClassName="min-w-0 max-w-full text-[10px] sm:text-[11px] font-medium leading-snug tracking-wide text-muted-foreground sm:line-clamp-2 normal-case"
-      panelClassName="max-w-[min(56rem,calc(100vw-1.25rem))] sm:max-w-[56rem]"
+      panelClassName={cn(
+        'max-w-[min(56rem,calc(100vw-1.25rem))] sm:max-w-[56rem]',
+        capturing && FEEDBACK_CAPTURE_HIDE_UI_CLASS,
+      )}
+      backdropClassName={capturing ? FEEDBACK_CAPTURE_HIDE_UI_CLASS : undefined}
       footer={formFooter}
       footerClassName="flex flex-row flex-wrap items-center justify-end gap-2"
       interactionLock={submitting}

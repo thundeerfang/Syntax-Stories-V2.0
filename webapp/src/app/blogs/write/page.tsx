@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSidebar } from '@/hooks/useSidebar';
 import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
-import { uploadCover, type CropArea } from '@/api/upload';
+import { squadsApi, type SquadSummary } from '@/api/squads';
+import { uploadCover } from '@/api/upload';
 import { BlogWritePageSkeletonInner } from '@/components/skeletons';
 import { Dialog } from '@/components/ui/Dialog';
-import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
+import { ImageUploadCropDialog } from '@/components/upload';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { BlogWriteDeployOverlay } from '@/components/blog/BlogWriteDeployOverlay';
 import type { BlogPublishTaxonomy } from '@/lib/blogPublishTaxonomy';
@@ -16,14 +18,18 @@ import type { BlogTaxonomyRow } from '@/types/blog';
 import {
   Save, Send, ChevronRight,
   Activity, Cpu, History, ListTree, Wrench,
-  Globe, ShieldCheck, Image as ImageIcon, Trash2,
+  Globe, ShieldCheck, Image as ImageIcon, Trash2, Pencil,
   Bold, Italic, Underline as UnderlineIcon,
   Link2, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight,
-  FileText,
+  FileText, UsersRound,
 } from 'lucide-react';
-import Cropper, { Area } from 'react-easy-crop';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { resolveSameOriginRequestUrl } from '@/lib/publicApiBase';
+import {
+  BLOG_POST_THUMBNAIL_ASPECT,
+  BLOG_POST_THUMBNAIL_ASPECT_CLASS,
+} from '@/lib/blogPostThumbnailAspect';
 import { getWriteEditorSessionPostId, setWriteEditorSessionPostId } from '@/lib/writeBlogSession';
 import {
   blockTypeDisplayName,
@@ -38,6 +44,16 @@ import {
 } from '@/components/ui/BlogWriteEditor';
 import { DEFAULT_ITEMS } from '@/components/ui/BottomToolbar';
 import { motion, AnimatePresence } from 'framer-motion';
+
+/** Sidebar / editor preview — absolute API URLs or root-relative `/uploads/…`. */
+function thumbnailPreviewFromApi(raw: string | undefined | null): string | null {
+  if (raw == null || typeof raw !== 'string') return null;
+  const t = raw.trim();
+  if (!t) return null;
+  if (t.startsWith('http://') || t.startsWith('https://')) return t;
+  if (t.startsWith('/')) return resolveSameOriginRequestUrl(t);
+  return null;
+}
 
 const TITLE_MAX = 150;
 const SUMMARY_MAX_WORDS = 300;
@@ -280,15 +296,8 @@ function revisionKindBadgeClass(kind: RevisionKind): string {
   }
 }
 const PRIMARY_SECTION_ID = 's-1';
-const THUMB_ACCEPT = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
 const THUMB_MAX_MB = 10;
 const REVISIONS_SIDEBAR_VISIBLE = 10;
-
-function formatThumbFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-}
 
 function SummaryEditor({
   value,
@@ -623,196 +632,6 @@ function SummaryEditor({
   );
 }
 
-function ThumbnailCropDialog({
-  open,
-  onClose,
-  onConfirm,
-}: Readonly<{
-  open: boolean;
-  onClose: () => void;
-  onConfirm: (file: File, cropArea: CropArea) => void;
-}>) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-
-  useEffect(() => {
-    if (!imageUrl) {
-      setNaturalSize(null);
-      return;
-    }
-    setNaturalSize(null);
-    const img = new Image();
-    const url = imageUrl;
-    img.onload = () => setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = url;
-    return () => {
-      img.onload = null;
-    };
-  }, [imageUrl]);
-
-  const handleFile = (f: File | null) => {
-    if (!f) return;
-    if (!f.type.startsWith('image/')) {
-      toast.error('Please select an image (JPEG, PNG, GIF, WebP).');
-      return;
-    }
-    if (f.size > THUMB_MAX_MB * 1024 * 1024) {
-      toast.error(`Image must be under ${THUMB_MAX_MB}MB.`);
-      return;
-    }
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setFile(f);
-    setImageUrl(URL.createObjectURL(f));
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-  };
-
-  const onCropComplete = useCallback((_area: Area, croppedPixels: Area) => {
-    setCroppedAreaPixels(croppedPixels);
-  }, []);
-
-  const handleConfirm = () => {
-    if (!file || !croppedAreaPixels) {
-      toast.error('Select an area to crop.');
-      return;
-    }
-    onConfirm(file, {
-      x: croppedAreaPixels.x,
-      y: croppedAreaPixels.y,
-      width: croppedAreaPixels.width,
-      height: croppedAreaPixels.height,
-    });
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setFile(null);
-    setImageUrl(null);
-    onClose();
-  };
-
-  const handleCancel = () => {
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setFile(null);
-    setImageUrl(null);
-    onClose();
-  };
-
-  const thumbDescription = `JPEG, PNG, GIF, or WebP · max ${THUMB_MAX_MB} MB`;
-
-  return (
-    <Dialog
-      open={open}
-      onClose={handleCancel}
-      titleId="thumbnail-crop-title"
-      title="Upload thumbnail"
-      titleIcon={<ImageIcon className="size-5" strokeWidth={2} aria-hidden />}
-      description={thumbDescription}
-      panelClassName={cn(
-        'pointer-events-auto w-full max-w-md max-h-[90vh]',
-        'border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]',
-      )}
-      contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 sm:p-8"
-      backdropClassName="fixed inset-0 bg-black/40 backdrop-blur-[2px]"
-    >
-      <label htmlFor="thumbnail-crop-file-input" className="sr-only">
-        Choose thumbnail image file
-      </label>
-      <input
-        id="thumbnail-crop-file-input"
-        ref={inputRef}
-        type="file"
-        accept={THUMB_ACCEPT}
-        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-        className="hidden"
-      />
-      {!imageUrl && (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className={cn(
-            'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
-            'border-border bg-muted/20 hover:bg-muted/30 cursor-pointer'
-          )}
-        >
-          <p className="text-sm font-bold text-foreground">Drop an image or click to browse</p>
-          <p className="text-[10px] text-muted-foreground mt-1 placeholder:text-muted-foreground">Thumbnail will be uploaded when you publish</p>
-        </button>
-      )}
-      {imageUrl && (
-        <div className="space-y-4">
-          {file ? (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md border border-border/60 bg-muted/25 px-3 py-2.5 text-[10px]">
-              <dt className="font-bold uppercase tracking-wide text-muted-foreground">File</dt>
-              <dd className="min-w-0 truncate font-mono text-foreground" title={file.name}>
-                {file.name}
-              </dd>
-              <dt className="font-bold uppercase tracking-wide text-muted-foreground">Size</dt>
-              <dd className="font-mono text-foreground">{formatThumbFileSize(file.size)}</dd>
-              <dt className="font-bold uppercase tracking-wide text-muted-foreground">Type</dt>
-              <dd className="font-mono text-foreground">{file.type || '—'}</dd>
-              {naturalSize ? (
-                <>
-                  <dt className="font-bold uppercase tracking-wide text-muted-foreground">Dimensions</dt>
-                  <dd className="font-mono text-foreground">
-                    {naturalSize.w}×{naturalSize.h}px
-                  </dd>
-                </>
-              ) : null}
-              <dt className="font-bold uppercase tracking-wide text-muted-foreground">Aspect</dt>
-              <dd className="text-foreground">16:9 (thumbnail frame)</dd>
-            </dl>
-          ) : null}
-          <CropperKeyboardWrapper imageReady={!!imageUrl} className="w-full h-56 rounded-lg overflow-hidden bg-muted border border-border">
-            <Cropper
-              image={imageUrl}
-              crop={crop}
-              zoom={zoom}
-              aspect={16 / 9}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
-            />
-          </CropperKeyboardWrapper>
-          <div className="flex items-center justify-between gap-4">
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={0.1}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="flex-1"
-            />
-            <span className="text-[10px] font-bold text-muted-foreground w-16 text-right">{zoom.toFixed(1)}x</span>
-          </div>
-          <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-            Tip: focus the crop frame (click it), then arrow keys to pan. Hold Shift for smaller steps.
-          </p>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-3 py-1.5 text-[10px] font-bold uppercase rounded border border-border text-muted-foreground hover:bg-muted/40"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="px-4 py-1.5 text-[10px] font-bold uppercase rounded border-2 border-border bg-primary text-primary-foreground shadow-[2px_2px_0px_0px_var(--border)] hover:brightness-110"
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      )}
-    </Dialog>
-  );
-}
-
 function resolveCentreMaxWidthClass(leftSidebarOpen: boolean, rightSidebarOpen: boolean): string {
   if (leftSidebarOpen && rightSidebarOpen) return 'max-w-3xl';
   if (leftSidebarOpen || rightSidebarOpen) return 'max-w-5xl';
@@ -969,7 +788,6 @@ async function runBlogWriteSubmit(args: Readonly<{
   summary: string;
   blocks: Block[];
   thumbnailFile: File | null;
-  thumbnailCropArea: CropArea | null;
   thumbnailPreviewUrl: string | null;
   clearThumbnail: () => void;
   activePostId: string | null;
@@ -981,6 +799,8 @@ async function runBlogWriteSubmit(args: Readonly<{
   setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
   /** When set on draft saves, persists category/tags/language. Omit on autosync paths. */
   taxonomy?: BlogPublishTaxonomy | null;
+  /** When set, attaches the draft / publish to this squad (Mongo id). */
+  squadMongoId?: string | null;
 }>): Promise<void> {
   const {
     status,
@@ -989,7 +809,6 @@ async function runBlogWriteSubmit(args: Readonly<{
     summary,
     blocks,
     thumbnailFile,
-    thumbnailCropArea,
     thumbnailPreviewUrl,
     clearThumbnail,
     activePostId,
@@ -1000,7 +819,10 @@ async function runBlogWriteSubmit(args: Readonly<{
     setSummary,
     setBlocks,
     taxonomy,
+    squadMongoId,
   } = args;
+  const squadBody =
+    typeof squadMongoId === 'string' && squadMongoId.trim() ? { squadId: squadMongoId.trim() } : {};
   const content = JSON.stringify(stripLegacyGifBlocks(blocks));
   const summaryToSend =
     summary && summary !== '<br>' && summaryWordCount(summary) > 0 ? summary.trim() : undefined;
@@ -1018,6 +840,7 @@ async function runBlogWriteSubmit(args: Readonly<{
           thumbnailUrl: thumbRemote,
           status: 'draft',
           ...taxBody,
+          ...squadBody,
         },
         token,
       );
@@ -1037,6 +860,7 @@ async function runBlogWriteSubmit(args: Readonly<{
           content,
           thumbnailUrl: thumbRemote,
           ...taxBody,
+          ...squadBody,
         },
         token,
       );
@@ -1050,8 +874,8 @@ async function runBlogWriteSubmit(args: Readonly<{
   }
 
   let thumbnailUrl: string | undefined;
-  if (thumbnailFile && thumbnailCropArea) {
-    const data = await uploadCover(token, thumbnailFile, thumbnailCropArea, () => {});
+  if (thumbnailFile) {
+    const data = await uploadCover(token, thumbnailFile, undefined, () => {});
     thumbnailUrl = data.url;
     clearThumbnail();
   } else {
@@ -1070,6 +894,7 @@ async function runBlogWriteSubmit(args: Readonly<{
         thumbnailUrl,
         status: 'published',
         ...publishTax,
+        ...squadBody,
       },
       token,
     );
@@ -1082,6 +907,7 @@ async function runBlogWriteSubmit(args: Readonly<{
         thumbnailUrl,
         status: 'published',
         ...publishTax,
+        ...squadBody,
       },
       token,
     );
@@ -1104,6 +930,7 @@ type BlogWriteDraftRefs = Readonly<{
     thumbnailPreviewUrl: string | null;
   } };
   tokenRef: { current: string | null | undefined };
+  squadMongoIdRef: { current: string | null };
 }>;
 
 type BlogWriteDraftHandlersInput = Readonly<{
@@ -1122,7 +949,7 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
     setLoadedPostStatus,
     activePostId,
     loadedPostStatus,
-    refs: { latestForSyncRef, tokenRef },
+    refs: { latestForSyncRef, tokenRef, squadMongoIdRef },
   } = input;
 
   const activePostIdRef = useRef(activePostId);
@@ -1145,6 +972,8 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
     const thumbUrl = pickRemoteThumbnailForApi(thumb ?? null);
     const pid = activePostIdRef.current;
     const st = loadedPostStatusRef.current;
+    const sq = squadMongoIdRef.current?.trim();
+    const squadPayload = sq ? { squadId: sq } : {};
 
     const onErr = () => {
       setDraftSyncStatus('local');
@@ -1162,6 +991,7 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
             thumbnailUrl: thumbUrl,
             status: statusForApi,
             silent: true,
+            ...squadPayload,
           },
           currentToken,
         )
@@ -1180,6 +1010,7 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
           summary: summaryToSend,
           content,
           thumbnailUrl: thumbUrl,
+          ...squadPayload,
         },
         currentToken,
       )
@@ -1191,7 +1022,7 @@ function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { sync
       .catch(() => {
         onErr();
       });
-  }, [latestForSyncRef, tokenRef, setDraftSyncStatus, setActivePostId, setLoadedPostStatus]);
+  }, [latestForSyncRef, tokenRef, squadMongoIdRef, setDraftSyncStatus, setActivePostId, setLoadedPostStatus]);
 
   return { syncDraftToServer };
 }
@@ -1323,7 +1154,6 @@ export default function WriteBlogPage() {
   const { isOpen } = useSidebar();
   const [title, setTitle] = useState('');
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailCropArea, setThumbnailCropArea] = useState<CropArea | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [thumbnailDialogOpen, setThumbnailDialogOpen] = useState(false);
   const [postCategory, setPostCategory] = useState('');
@@ -1332,6 +1162,11 @@ export default function WriteBlogPage() {
   const [taxonomyCategories, setTaxonomyCategories] = useState<BlogTaxonomyRow[]>([]);
   const [taxonomyTags, setTaxonomyTags] = useState<BlogTaxonomyRow[]>([]);
   const [deployOverlayOpen, setDeployOverlayOpen] = useState(false);
+  /** Snapshot for deploy overlay squad dropdown seed when it opens. */
+  const [deployOverlayInitialSquadId, setDeployOverlayInitialSquadId] = useState<string | null>(null);
+  const [mySquadsForPublish, setMySquadsForPublish] = useState<
+    Pick<SquadSummary, '_id' | 'name' | 'slug'>[]
+  >([]);
   const [publishDialogSnapshot, setPublishDialogSnapshot] = useState<BlogPublishTaxonomy>({
     category: '',
     tags: [],
@@ -1362,6 +1197,7 @@ export default function WriteBlogPage() {
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const latestForSyncRef = useRef({ title: '', summary: '', blocks: [] as Block[], thumbnailPreviewUrl: null as string | null });
   const tokenRef = useRef<string | undefined>(token);
+  const squadMongoIdRef = useRef<string | null>(null);
   const skipNextPopStateRef = useRef(false);
   const autosyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRevisionSessionKeyRef = useRef<string | null>(null);
@@ -1388,6 +1224,26 @@ export default function WriteBlogPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!token) {
+      setMySquadsForPublish([]);
+      return;
+    }
+    let cancelled = false;
+    void squadsApi
+      .listMine(token)
+      .then((r) => {
+        if (cancelled) return;
+        setMySquadsForPublish(r.squads.map((s) => ({ _id: s._id, name: s.name, slug: s.slug })));
+      })
+      .catch(() => {
+        if (!cancelled) setMySquadsForPublish([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (!revisionHistoryOpen) return;
@@ -1445,13 +1301,40 @@ export default function WriteBlogPage() {
 
   const saveDisabledNoEdits = activePostId !== null && !isDirty;
 
+  const [squadWriteCtx, setSquadWriteCtx] = useState<{ slug: string; name: string } | null>(null);
+
+  useEffect(() => {
+    const slug = searchParams.get('squad')?.trim();
+    if (!slug || !token) {
+      squadMongoIdRef.current = null;
+      setSquadWriteCtx(null);
+      return;
+    }
+    let cancelled = false;
+    void squadsApi
+      .getBySlug(slug, token)
+      .then((r) => {
+        if (cancelled) return;
+        squadMongoIdRef.current = r.squad._id;
+        setSquadWriteCtx({ slug: r.squad.slug, name: r.squad.name });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        squadMongoIdRef.current = null;
+        setSquadWriteCtx(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, token]);
+
   const { syncDraftToServer } = useBlogWriteServerDraftSync({
     setDraftSyncStatus,
     setActivePostId,
     setLoadedPostStatus,
     activePostId,
     loadedPostStatus,
-    refs: { latestForSyncRef, tokenRef },
+    refs: { latestForSyncRef, tokenRef, squadMongoIdRef },
   });
 
   useEffect(() => {
@@ -1542,13 +1425,12 @@ export default function WriteBlogPage() {
           }
           const nextTitle = post.title || '';
           const nextSummary = post.summary || '';
-          const nextThumb = post.thumbnailUrl?.startsWith('http') ? post.thumbnailUrl : null;
+          const nextThumb = thumbnailPreviewFromApi(post.thumbnailUrl);
           setTitle(nextTitle);
           setSummary(nextSummary);
           setBlocks(nextBlocks);
           setThumbnailPreviewUrl(nextThumb);
           setThumbnailFile(null);
-          setThumbnailCropArea(null);
           setPostCategory(post.category ?? '');
           setPostTags(Array.isArray(post.tags) ? post.tags : []);
           setPostLanguage(post.language ?? 'en');
@@ -1579,13 +1461,12 @@ export default function WriteBlogPage() {
             }
             const nextTitle = draft.title || '';
             const nextSummary = draft.summary || '';
-            const nextThumb = draft.thumbnailUrl?.startsWith('http') ? draft.thumbnailUrl : null;
+            const nextThumb = thumbnailPreviewFromApi(draft.thumbnailUrl);
             setTitle(nextTitle);
             setSummary(nextSummary);
             setBlocks(nextBlocks);
             setThumbnailPreviewUrl(nextThumb);
             setThumbnailFile(null);
-            setThumbnailCropArea(null);
             setPostCategory(draft.category ?? '');
             setPostTags(Array.isArray(draft.tags) ? draft.tags : []);
             setPostLanguage(draft.language ?? 'en');
@@ -1610,7 +1491,6 @@ export default function WriteBlogPage() {
             setPostLanguage('en');
             setThumbnailPreviewUrl(null);
             setThumbnailFile(null);
-            setThumbnailCropArea(null);
             setDraftSyncStatus('idle');
             setWriteEditorSessionPostId(null);
             setContentBaseline(
@@ -1665,17 +1545,30 @@ export default function WriteBlogPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleThumbnailConfirm = useCallback((file: File, cropArea: CropArea) => {
-    if (thumbnailPreviewUrl) URL.revokeObjectURL(thumbnailPreviewUrl);
-    setThumbnailFile(file);
-    setThumbnailCropArea(cropArea);
-    setThumbnailPreviewUrl(URL.createObjectURL(file));
-  }, [thumbnailPreviewUrl]);
+  const handleThumbnailConfirm = useCallback(
+    async (file: File) => {
+      if (thumbnailPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreviewUrl);
+      if (token) {
+        try {
+          const data = await uploadCover(token, file, undefined, () => {});
+          if (data.url) {
+            setThumbnailFile(null);
+            setThumbnailPreviewUrl(data.url);
+            return;
+          }
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : 'Thumbnail upload failed');
+        }
+      }
+      setThumbnailFile(file);
+      setThumbnailPreviewUrl(URL.createObjectURL(file));
+    },
+    [thumbnailPreviewUrl, token],
+  );
 
   const clearThumbnail = useCallback(() => {
-    if (thumbnailPreviewUrl) URL.revokeObjectURL(thumbnailPreviewUrl);
+    if (thumbnailPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreviewUrl);
     setThumbnailFile(null);
-    setThumbnailCropArea(null);
     setThumbnailPreviewUrl(null);
   }, [thumbnailPreviewUrl]);
 
@@ -1735,6 +1628,7 @@ export default function WriteBlogPage() {
       toast.error('ERROR: TITLE_REQUIRED');
       return;
     }
+    setDeployOverlayInitialSquadId(squadMongoIdRef.current);
     setPublishDialogSnapshot({
       category: postCategory,
       tags: [...postTags],
@@ -1744,12 +1638,13 @@ export default function WriteBlogPage() {
   }, [title, postCategory, postTags, postLanguage]);
 
   const executePublish = useCallback(
-    async (taxonomy: BlogPublishTaxonomy) => {
+    async (taxonomy: BlogPublishTaxonomy, squadMongoId: string | null) => {
       if (!title.trim()) {
         toast.error('ERROR: TITLE_REQUIRED');
         return;
       }
       if (!token) return;
+      squadMongoIdRef.current = squadMongoId;
       setDeployOverlayOpen(false);
       setSubmitting(true);
       setSubmitAction('published');
@@ -1761,7 +1656,6 @@ export default function WriteBlogPage() {
           summary,
           blocks,
           thumbnailFile,
-          thumbnailCropArea,
           thumbnailPreviewUrl,
           clearThumbnail,
           activePostId,
@@ -1772,6 +1666,7 @@ export default function WriteBlogPage() {
           setSummary,
           setBlocks,
           taxonomy,
+          squadMongoId: squadMongoIdRef.current,
         });
         appendRevision({ kind: 'published', label: 'Post published', at: Date.now() });
         setContentBaseline(null);
@@ -1792,7 +1687,6 @@ export default function WriteBlogPage() {
       summary,
       blocks,
       thumbnailFile,
-      thumbnailCropArea,
       thumbnailPreviewUrl,
       clearThumbnail,
       activePostId,
@@ -1819,6 +1713,8 @@ export default function WriteBlogPage() {
           summary && summary !== '<br>' && summaryWordCount(summary) > 0 ? summary.trim() : undefined;
         const tr = taxonomyPayload(tax);
         const thumbUrl = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
+        const sq = squadMongoIdRef.current?.trim();
+        const squadPayload = sq ? { squadId: sq } : {};
         if (activePostId) {
           const st = loadedPostStatus === 'published' ? 'published' : 'draft';
           await blogApi.updatePost(
@@ -1832,6 +1728,7 @@ export default function WriteBlogPage() {
               category: tr.category || '',
               tags: tr.tags,
               language: tr.language,
+              ...squadPayload,
             },
             token,
           );
@@ -1845,6 +1742,7 @@ export default function WriteBlogPage() {
               category: tr.category || '',
               tags: tr.tags,
               language: tr.language,
+              ...squadPayload,
             },
             token,
           );
@@ -1893,7 +1791,6 @@ export default function WriteBlogPage() {
           summary,
           blocks,
           thumbnailFile,
-          thumbnailCropArea,
           thumbnailPreviewUrl,
           clearThumbnail,
           activePostId,
@@ -1904,6 +1801,7 @@ export default function WriteBlogPage() {
           setSummary,
           setBlocks,
           taxonomy: { category: postCategory, tags: postTags, language: postLanguage },
+          squadMongoId: squadMongoIdRef.current,
         });
         appendRevision({ kind: 'draft_saved', label: 'Draft saved', at: Date.now() });
         captureBaseline();
@@ -1921,7 +1819,6 @@ export default function WriteBlogPage() {
       summary,
       blocks,
       thumbnailFile,
-      thumbnailCropArea,
       thumbnailPreviewUrl,
       clearThumbnail,
       setDraftSyncStatus,
@@ -1959,10 +1856,22 @@ export default function WriteBlogPage() {
         draftSyncStatus={draftSyncStatus}
         currentTime={currentTime}
       />
+      {squadWriteCtx ? (
+        <div className="flex flex-wrap items-center justify-center gap-2 border-b-2 border-border bg-primary/10 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-foreground">
+          <UsersRound className="size-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+          <span className="text-muted-foreground">Squad post</span>
+          <Link
+            href={`/squads/${encodeURIComponent(squadWriteCtx.slug)}`}
+            className="text-primary underline decoration-2 underline-offset-2"
+          >
+            {squadWriteCtx.name}
+          </Link>
+        </div>
+      ) : null}
 
       {/* 2. MAIN WORKBENCH - flex so centre expands when sidebars collapse */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        
+
         {/* LEFT SIDEBAR: animated width, icon strip when collapsed */}
         <motion.div
           initial={false}
@@ -2211,26 +2120,37 @@ export default function WriteBlogPage() {
                     <Globe className="h-4 w-4 text-primary" /> Asset_Configuration
                   </h3>
                   <div>
-                   
+
                     {thumbnailPreviewUrl ? (
-                      <div className="space-y-2">
-                        <div className="aspect-video overflow-hidden bg-muted ring-1 ring-border/40">
-                          <img src={thumbnailPreviewUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex gap-2">
+                      <div
+                        className={cn(
+                          'group/thumb relative overflow-hidden bg-muted border-2 border-dashed border-neutral-300 dark:border-neutral-600',
+                          BLOG_POST_THUMBNAIL_ASPECT_CLASS,
+                        )}
+                      >
+                        <img src={thumbnailPreviewUrl} alt="Thumbnail preview" className="h-full w-full object-cover" />
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover/thumb:opacity-100 md:group-focus-within/thumb:opacity-100">
                           <button
                             type="button"
                             onClick={() => setThumbnailDialogOpen(true)}
-                            className="flex-1 px-2 py-1.5 text-[10px] font-bold uppercase border-0 bg-muted/50 ring-1 ring-border/40 hover:bg-muted/70"
+                            aria-label="Change thumbnail"
+                            className={cn(
+                              'pointer-events-auto inline-flex h-10 w-10 items-center justify-center border-2 border-border bg-card text-foreground shadow-[3px_3px_0_0_var(--border)]',
+                              'transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                            )}
                           >
-                            Change
+                            <Pencil className="h-4 w-4 shrink-0" aria-hidden />
                           </button>
                           <button
                             type="button"
                             onClick={clearThumbnail}
-                            className="px-2 py-1.5 text-[10px] font-bold uppercase rounded-md border-0 bg-destructive/10 text-destructive ring-1 ring-destructive/30 hover:bg-destructive/15 flex items-center gap-1"
+                            aria-label="Remove thumbnail"
+                            className={cn(
+                              'pointer-events-auto inline-flex h-10 w-10 items-center justify-center border-2 border-destructive/40 bg-destructive/15 text-destructive shadow-[3px_3px_0_0_var(--border)]',
+                              'transition-colors hover:bg-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive',
+                            )}
                           >
-                            <Trash2 className="h-3 w-3" /> Remove
+                            <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
                           </button>
                         </div>
                       </div>
@@ -2240,8 +2160,9 @@ export default function WriteBlogPage() {
                         id="write-blog-thumbnail-trigger"
                         onClick={() => setThumbnailDialogOpen(true)}
                         className={cn(
-                          'w-full aspect-video flex flex-col items-center justify-center gap-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]  border border-dashed border-border ',
+                          'w-full flex flex-col items-center justify-center gap-2 cursor-pointer shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]  border border-dashed border-border ',
                           'hover:bg-muted/35 transition-colors text-left',
+                          BLOG_POST_THUMBNAIL_ASPECT_CLASS,
                         )}
                       >
                         <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
@@ -2342,9 +2263,20 @@ export default function WriteBlogPage() {
         </motion.div>
       </div>
 
-      <ThumbnailCropDialog
+      <ImageUploadCropDialog
         open={thumbnailDialogOpen}
         onClose={() => setThumbnailDialogOpen(false)}
+        titleId="thumbnail-crop-title"
+        title="Upload thumbnail"
+        titleIcon={<ImageIcon className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />}
+        subtitle={`16∶10 · Same frame as feed cards · JPEG, PNG, GIF or WebP · max ${THUMB_MAX_MB} MB · uploads when you publish`}
+        subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
+        maxSizeBytes={THUMB_MAX_MB * 1024 * 1024}
+        aspect={BLOG_POST_THUMBNAIL_ASPECT}
+        cropMinHeightClass="min-h-[15rem] h-56"
+        secondaryDropzoneHint="Crop matches blog card thumbnail — 16∶10 frame"
+        confirmLabel="Use thumbnail"
+        chooseAnotherLabel="Choose another"
         onConfirm={handleThumbnailConfirm}
       />
 
@@ -2354,13 +2286,18 @@ export default function WriteBlogPage() {
         snapshot={publishDialogSnapshot}
         taxonomyCategories={taxonomyCategories}
         taxonomyTags={taxonomyTags}
+        mySquads={mySquadsForPublish}
+        initialSquadMongoId={deployOverlayInitialSquadId}
         title={title}
         summaryHtml={summary}
         thumbnailPreviewUrl={thumbnailPreviewUrl}
         deploying={submitting && submitAction === 'published'}
         savingClassification={submitting && submitAction === 'metadata'}
-        onSaveClassification={(t) => void handleSavePostDetailsFromDialog(t)}
-        onDeploy={(t) => void executePublish(t)}
+        onSaveClassification={(t, squadId) => {
+          squadMongoIdRef.current = squadId;
+          void handleSavePostDetailsFromDialog(t);
+        }}
+        onDeploy={(t, squadId) => void executePublish(t, squadId)}
       />
 
       <Dialog

@@ -4,6 +4,7 @@ import React from 'react';
 import {
   Briefcase,
   FolderGit2,
+  Github,
   GraduationCap,
   Plus,
   RefreshCw,
@@ -121,7 +122,7 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
     return (
       <HeaderWrapper>
         <SettingsSectionHeading
-          icon={<FolderGit2 />}
+          icon={<Github />}
           title="Open Source Sync"
           description="Live synchronization with GitHub repositories."
         />

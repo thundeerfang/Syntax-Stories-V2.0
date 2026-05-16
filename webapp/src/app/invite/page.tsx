@@ -169,7 +169,7 @@ export default function InviteDashboardPage() {
 
   if (!isHydrated) {
     return (
-      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-16 md:py-24')}>
+      <div className={SHELL_CONTENT_RAIL_CLASS}>
         <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow-[8px_8px_0_0_var(--border)]">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Invite desk</p>
           <p className="mt-3 text-sm font-black uppercase tracking-wide text-foreground">Loading…</p>
@@ -180,7 +180,7 @@ export default function InviteDashboardPage() {
 
   if (!token) {
     return (
-      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-16 md:py-24')}>
+      <div className={SHELL_CONTENT_RAIL_CLASS}>
         <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow-[8px_8px_0_0_var(--border)]">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Invite desk</p>
           <p className="mt-3 text-sm font-black uppercase tracking-wide text-foreground">Redirecting to sign in…</p>
@@ -193,7 +193,7 @@ export default function InviteDashboardPage() {
   const hasMore = referred.length < referredTotal;
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 pb-24 md:py-12')}>
+    <div className={SHELL_CONTENT_RAIL_CLASS}>
       <div className="w-full space-y-6 md:space-y-8">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(0,480px)] xl:gap-10">
           <div className="min-w-0 space-y-6 md:space-y-8">

@@ -1,27 +1,83 @@
 import crypto from 'node:crypto';
+import mongoose from 'mongoose';
 import { UserModel } from '../../models/User.js';
 import { SYNTAX_ADMIN_EMAIL } from '../../bootstrap/ensureSyntaxAdminSeed.js';
 import { LegalPolicyModel, LegalPolicyRevisionModel } from './models/legal.models.js';
 import { computeLegalContentHash } from './legalContentHash.js';
 import { slugForKind, type LegalKind } from './legalKinds.js';
+import { recordBootstrapLegalAcceptances } from './recordLegalAcceptances.js';
 
 const SEED_KINDS: LegalKind[] = ['terms', 'privacy', 'udd'];
 
 const SEED_BODIES: Record<LegalKind, { title: string; summary: string; body: string }> = {
   terms: {
     title: 'Terms of Service',
-    summary: 'Initial seeded Terms of Service.',
-    body: '# Terms of Service\n\nThis is a placeholder. Replace via Admin Legal before production.',
+    summary: 'Rules for using Syntax Stories after you create an account.',
+    body: `# Terms of Service
+
+These Terms govern your use of Syntax Stories. Administrators may publish updated versions; continued use after updates may require a new acceptance where the product asks for it.
+
+## 1. Agreement
+By creating an account or using Syntax Stories, you agree to these Terms and our Privacy Policy.
+
+## 2. Accounts
+You are responsible for activity under your account. Keep your login secure.
+
+## 3. Content
+You retain rights to content you post. You grant us a licence to host, display, and distribute your content to operate the service.
+
+## 4. Acceptable use
+No unlawful, harmful, or abusive behaviour. We may suspend or terminate accounts that violate these rules.
+
+## 5. Changes
+We may update these Terms. We will publish new versions and may require you to accept them before certain actions.
+
+## 6. Contact
+Questions: use the contact options shown in the product or your region’s policy addendum.`,
   },
   privacy: {
     title: 'Privacy Policy',
-    summary: 'Initial seeded Privacy Policy.',
-    body: '# Privacy Policy\n\nThis is a placeholder. Replace via Admin Legal before production.',
+    summary: 'What we collect, why we use it, and your choices.',
+    body: `# Privacy Policy
+
+This policy describes how Syntax Stories handles personal data when you use the service. It is provided as a starting point for development; tailor it for your entity and jurisdiction before production.
+
+## 1. Who we are
+Syntax Stories provides reading and writing features for technical stories and blogs.
+
+## 2. Data we collect
+- **Account:** email, name, username, profile details you provide.
+- **Usage:** interactions with posts and the app to improve reliability and safety.
+- **Technical:** device, logs, and similar data needed to run the service.
+
+## 3. Why we use data
+To provide accounts, publish content, secure the platform, and comply with law.
+
+## 4. Sharing
+We do not sell your personal data. We may use processors (e.g. hosting, email) under contracts.
+
+## 5. Retention
+We keep data as long as needed for the purposes above or as required by law.
+
+## 6. Your rights
+Depending on your region you may have rights to access, correct, delete, or object. Use in-app tools or contact us.
+
+## 7. Children
+The service is not directed at children under the age required in your jurisdiction.`,
   },
   udd: {
     title: 'User Data Deletion',
     summary: 'How to request deletion of your account data.',
-    body: '# User Data Deletion\n\nSubmit a deletion request from account settings.',
+    body: `# User Data Deletion
+
+## Request deletion
+You can request deletion of your personal data from **account settings** or the **data deletion** flow linked from Privacy.
+
+## What happens
+We verify your request, remove or anonymise data where permitted, and retain only what we must keep for legal or security reasons.
+
+## Timing
+We aim to complete requests within the timeframe required in your region.`,
   },
 };
 
@@ -109,4 +165,13 @@ export async function assertLegalBootstrapHealth(): Promise<{ ok: boolean; missi
     if (!p?.publishedRevisionId) missing.push(kind);
   }
   return { ok: missing.length === 0, missing };
+}
+
+/** After published policies exist: bind bootstrap admin to current Terms + Privacy so API writes work. */
+export async function ensureSeedAdminLegalAcceptance(): Promise<void> {
+  const health = await assertLegalBootstrapHealth();
+  if (!health.ok) return;
+  const admin = await UserModel.findOne({ email: SYNTAX_ADMIN_EMAIL.toLowerCase() }).select('_id').lean();
+  if (!admin?._id) return;
+  await recordBootstrapLegalAcceptances(new mongoose.Types.ObjectId(String(admin._id)));
 }

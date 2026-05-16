@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { createCheckoutSession } from '@/api/billing';
 import { useAuthStore } from '@/store/auth';
 import { BlockShadowButton } from '@/components/ui';
@@ -99,15 +100,24 @@ function PlanCheckoutButton({ planKey }: { planKey: PlanKey }) {
 
 export default function PricingPage() {
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-10 md:py-16 lg:py-20')}>
-      <div className="mx-auto max-w-6xl space-y-8 md:space-y-10">
-        <header className="max-w-3xl">
-          <div className="mb-6 inline-block border-2 border-border bg-primary px-3 py-1 text-xs font-black uppercase text-primary-foreground shadow-[4px_4px_0px_0px_var(--border)]">
-            Pricing
-          </div>
-          <h1 className="text-5xl font-black uppercase italic tracking-tighter text-foreground sm:text-7xl">
+    <div className={SHELL_CONTENT_RAIL_CLASS}>
+      <div className="w-full space-y-6 md:space-y-8">
+        <header className="w-full">
+          <nav
+            className="mb-3 flex flex-wrap items-center gap-1.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground"
+            aria-label="Breadcrumb"
+          >
+            <Link href="/" className="transition-colors hover:text-foreground">
+              Home
+            </Link>
+            <ChevronRight className="size-3 shrink-0 opacity-35" strokeWidth={2.5} aria-hidden />
+            <span className="text-foreground">Pricing</span>
+          </nav>
+          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
             Plans for every{' '}
-            <span className="text-primary underline decoration-8 underline-offset-8">builder.</span>
+            <span className="text-primary underline decoration-4 underline-offset-4 sm:decoration-6 sm:underline-offset-6">
+              builder.
+            </span>
           </h1>
         </header>
 

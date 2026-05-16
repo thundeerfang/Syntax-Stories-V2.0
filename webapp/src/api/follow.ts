@@ -7,6 +7,8 @@ export interface FollowUser {
   username: string;
   fullName: string;
   profileImg?: string;
+  /** When present (following list), ISO time you followed this user */
+  followedAt?: string;
 }
 
 export interface FollowCounts {
@@ -64,9 +66,10 @@ export const followApi = {
       if (!r.ok) throw new Error(r.statusText);
       return r.json() as Promise<{
         success: boolean;
-        user: PublicProfileUser;
+        user: PublicProfileUser & { blogRespectReceivedCount?: number };
         followersCount: number;
         followingCount: number;
+        blogRespectReceivedCount?: number;
         readStreak?: ReadStreakPayload;
         /** UTC days (YYYY-MM-DD) with a recorded blog read in the heatmap window */
         readHeatmapDays?: string[];
@@ -92,10 +95,17 @@ export const followApi = {
     });
   },
 
-  getFollowing: (username: string, cursor?: string | null, limit = 20) => {
+  getFollowing: (
+    username: string,
+    cursor?: string | null,
+    limit = 20,
+    opts?: Readonly<{ order?: 'asc' | 'desc'; shuffle?: boolean }>,
+  ) => {
     const params = new URLSearchParams();
     if (cursor) params.set('cursor', cursor);
     params.set('limit', String(Math.min(limit, 50)));
+    if (opts?.order === 'asc') params.set('order', 'asc');
+    if (opts?.shuffle) params.set('shuffle', '1');
     const qs = params.toString();
     const querySuffix = qs.length > 0 ? `?${qs}` : '';
     const path = `/api/follow/following/${encodeURIComponent(username)}${querySuffix}`;

@@ -34,8 +34,12 @@ export interface FormDialogProps {
   footerClassName?: string;
   /** Extra class for the panel. Merged with default. */
   panelClassName?: string;
+  /** Extra class for the backdrop/scrim (passed through to `Dialog`). */
+  backdropClassName?: string;
   /** Extra class for the content wrapper. */
   contentClassName?: string;
+  /** Merged onto the scrollable body region (default `px-6 py-5`). Use `p-0` for edge-to-edge layouts. */
+  bodyClassName?: string;
   /**
    * When true, covers the full panel (header, body, footer) with a dimming layer. The header close button
    * stays above the overlay so the dialog can still be dismissed.
@@ -82,7 +86,9 @@ export function FormDialog({
   footer,
   footerClassName,
   panelClassName,
+  backdropClassName,
   contentClassName,
+  bodyClassName,
   interactionLock = false,
   interactionLockContent,
 }: Readonly<FormDialogProps>) {
@@ -92,6 +98,7 @@ export function FormDialog({
       onClose={onClose}
       titleId={titleId}
       showCloseButton={false}
+      backdropClassName={backdropClassName}
       panelClassName={cn('max-w-lg overflow-hidden flex flex-col max-h-[90vh]', panelClassName)}
       contentClassName={cn('p-0 flex flex-col min-h-0 max-h-[90vh]', contentClassName)}
     >
@@ -142,7 +149,7 @@ export function FormDialog({
             )}
           </div>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className={cn('min-h-0 flex-1 overflow-y-auto px-6 py-5', bodyClassName)}>{children}</div>
         {footer != null && (
           <footer
             className={cn('flex-shrink-0 bg-muted/20 px-6 py-4', DIALOG_FOOTER_TOP_BORDER, footerClassName)}

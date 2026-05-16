@@ -3,7 +3,10 @@ import { env } from './env.js';
 import { ensureFeedbackCategorySeeds } from '../modules/feedback/ensureFeedbackCategorySeeds.js';
 import { ensureSyntaxAdminSeed } from '../bootstrap/ensureSyntaxAdminSeed.js';
 import { ensureAdminAccessCatalogSeed } from '../modules/admin/bootstrap/ensureAdminAccessCatalogSeed.js';
-import { ensureLegalPoliciesSeed } from '../modules/legal/ensureLegalPoliciesSeed.js';
+import {
+  ensureLegalPoliciesSeed,
+  ensureSeedAdminLegalAcceptance,
+} from '../modules/legal/ensureLegalPoliciesSeed.js';
 
 export async function connectDatabase(): Promise<void> {
   const uri = env.MONGODB_URI;
@@ -15,6 +18,7 @@ export async function connectDatabase(): Promise<void> {
     await ensureSyntaxAdminSeed();
     await ensureAdminAccessCatalogSeed();
     await ensureLegalPoliciesSeed();
+    await ensureSeedAdminLegalAcceptance();
   } catch (err) {
     console.error('[MongoDB] Connection error:', err);
     throw err;

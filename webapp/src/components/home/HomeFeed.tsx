@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, WifiOff } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { BlogCard } from '@/components/blog/BlogCard';
+import { BlogApiConnectionError } from '@/lib/blogAuthFetch';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
-import { useAuthStore } from '@/store/auth';
 import type { Post } from '@/types';
 
 export function HomeFeed() {
-  const viewerUsername = useAuthStore((s) => s.user?.username ?? null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -20,7 +20,7 @@ export function HomeFeed() {
       const { posts: raw } = await blogApi.getPublishedFeed(24);
       setPosts(raw.map(mapPublicFeedPostToPost));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load blogs');
+      setError(e);
       setPosts([]);
     } finally {
       setLoading(false);
@@ -44,17 +44,34 @@ export function HomeFeed() {
     );
   }
 
-  if (error) {
+  if (error != null) {
+    const isConn = error instanceof BlogApiConnectionError;
     return (
-      <div className="mt-10 space-y-4 border-2 border-border bg-destructive/5 p-6 shadow-[8px_8px_0_0_var(--border)]">
-        <p className="font-mono text-sm font-bold uppercase text-destructive">{error}</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Check that the API is running and{' '}
-          <code className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-            NEXT_PUBLIC_API_BASE_URL
-          </code>{' '}
-          points to it.
-        </p>
+      <div className="mt-10 space-y-5 border-2 border-border bg-card p-6 shadow-[8px_8px_0_0_var(--border)]">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
+          <div
+            className="flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-border bg-muted"
+            aria-hidden
+          >
+            {isConn ? (
+              <WifiOff className="size-7 text-muted-foreground" strokeWidth={2.25} />
+            ) : (
+              <AlertCircle className="size-7 text-destructive" strokeWidth={2.25} />
+            )}
+          </div>
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="font-sans text-base font-bold text-foreground">
+              {isConn ? 'Cannot connect to the server' : 'Could not load the feed'}
+            </p>
+            {isConn ? (
+              <p className="text-sm text-muted-foreground leading-relaxed">Check your connection and try again.</p>
+            ) : error instanceof Error && error.message ? (
+              <p className="text-sm text-muted-foreground leading-relaxed">{error.message}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground leading-relaxed">Something went wrong. Please try again.</p>
+            )}
+          </div>
+        </div>
         <button
           type="button"
           onClick={() => void load()}
@@ -92,10 +109,10 @@ export function HomeFeed() {
         <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">Newest first</p>
       </div>
 
-      <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 sm:gap-4 lg:grid-cols-2 lg:gap-5 2xl:grid-cols-3">
+      <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 sm:gap-3 md:gap-4 lg:grid-cols-3 lg:gap-4">
         {posts.map((post) => (
           <li key={post.id} className="flex min-h-0">
-            <BlogCard post={post} viewerUsername={viewerUsername} density="compact" />
+            <BlogCard post={post} />
           </li>
         ))}
       </ul>

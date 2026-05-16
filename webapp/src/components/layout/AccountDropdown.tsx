@@ -23,12 +23,28 @@ import {
 import { Switch } from '@/components/retroui/Switch';
 import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
 import { useUIStore } from '@/store/ui';
+import { SyntaxCardDialog } from '@/components/profile/dialog';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+/** Same rules as profile/u pages: absolute http(s), `data:` SVG defaults from API, or API-relative uploads. */
+function resolveAccountAvatarSrc(
+  profileImg: string | undefined,
+  image: string | undefined,
+  username: string | undefined,
+): string {
+  const raw = (profileImg || image)?.trim();
+  const seed = username?.trim() || 'user';
+  const dicebear = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+  if (!raw) return dicebear;
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:')) return raw;
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+  const path = raw.startsWith('/') ? raw : `/${raw}`;
+  return `${base}${path}`;
+}
 
 export function AccountDropdown() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [syntaxCardOpen, setSyntaxCardOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const feedbackVisible = useUIStore((s) => s.feedbackButtonVisible);
   const setFeedbackVisible = useUIStore((s) => s.setFeedbackButtonVisible);
@@ -51,8 +67,7 @@ export function AccountDropdown() {
 
   const displayName = user.name ?? user.fullName ?? user.username ?? user.email ?? 'Account';
   const username = user.username ? `@${user.username}` : user.email ?? '';
-  const avatarUrl = user.profileImg ?? user.image;
-  const fullAvatarUrl = avatarUrl?.startsWith('http') ? avatarUrl : `${API_BASE}${avatarUrl}`;
+  const fullAvatarUrl = resolveAccountAvatarSrc(user.profileImg, user.image, user.username);
 
   const handleCopyUsername = () => {
     navigator.clipboard.writeText(username);
@@ -60,14 +75,18 @@ export function AccountDropdown() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const menuSections = [
+  type MenuLink = { href: string; label: string; icon: typeof User };
+  type MenuAction = { action: 'syntax-card'; label: string; icon: typeof CreditCard };
+  type MenuItem = MenuLink | MenuAction;
+
+  const menuSections: Array<{ id: string; items: MenuItem[] }> = [
     {
       id: 'account-profile-stack',
       items: [
         { href: '/profile', label: 'Your profile', icon: User },
         { href: '/wallet', label: 'Wallet', icon: Wallet },
         { href: '/achievements', label: 'Achievements', icon: Award },
-        { href: '/syntax-card', label: 'Syntax card', icon: CreditCard },
+        { action: 'syntax-card', label: 'Syntax card', icon: CreditCard },
       ],
     },
     {
@@ -90,13 +109,7 @@ export function AccountDropdown() {
         }`}
       >
         <div className="relative w-full h-full overflow-hidden">
-            {avatarUrl ? (
-            <img src={fullAvatarUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-            <div className="w-full h-full flex items-center justify-center">
-                <User className="h-5 w-5 text-foreground" strokeWidth={2.5} />
-            </div>
-            )}
+          <img src={fullAvatarUrl} alt="" className="w-full h-full object-cover" />
         </div>
         {/* Status indicator on trigger */}
         <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border border-border rounded-full" />
@@ -109,32 +122,26 @@ export function AccountDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-[calc(100%+8px)] w-64 bg-card border-2 border-border shadow-[6px_6px_0px_0px_var(--border)] z-[100] flex flex-col overflow-hidden"
+            className="absolute right-0 top-[calc(100%+8px)] z-[200] flex w-64 flex-col overflow-hidden border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]"
           >
             {/* Header Section */}
             <div className="p-3 border-b-2 border-border bg-muted/20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 border-2 border-border bg-card shadow-[2px_2px_0px_0px_var(--border)] overflow-hidden shrink-0">
-                    {avatarUrl ? (
-                        <img src={fullAvatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                            <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                    )}
+                  <img src={fullAvatarUrl} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-[12px] font-black uppercase italic truncate text-foreground leading-none">{displayName}</h3>
-                  <button 
+                  <button
                     onClick={handleCopyUsername}
-                    className="flex items-center gap-1 mt-1 text-[9px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase group/copy"
+                    className="flex items-center gap-1 mt-1 text-[9px] font-bold text-muted-foreground hover:text-primary transition-colors  group/copy"
                   >
                     <span className="truncate max-w-[90px]">{username}</span>
                     {copied ? <Check className="h-2.5 w-2.5 text-green-500" /> : <Copy className="h-2.5 w-2.5 opacity-40 group-hover/copy:opacity-100" />}
                   </button>
                 </div>
               </div>
-              
+
               <Link
                 href="/pricing"
                 onClick={() => setOpen(false)}
@@ -192,15 +199,30 @@ export function AccountDropdown() {
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ delay: (sectionIdx * 0.1) + (itemIdx * 0.03) }}
                     >
-                        <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className="group flex items-center gap-3 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide text-foreground hover:bg-muted transition-all active:bg-primary active:text-primary-foreground"
-                        >
-                        <item.icon className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all" strokeWidth={2.5} />
-                        <span className="flex-1">{item.label}</span>
-                        <ChevronRight className="h-3 w-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                        </Link>
+                        {'action' in item ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpen(false);
+                              setSyntaxCardOpen(true);
+                            }}
+                            className="group flex w-full items-center gap-3 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide text-foreground hover:bg-muted transition-all active:bg-primary active:text-primary-foreground"
+                          >
+                            <item.icon className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all" strokeWidth={2.5} />
+                            <span className="flex-1 text-left">{item.label}</span>
+                            <ChevronRight className="h-3 w-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                          </button>
+                        ) : (
+                          <Link
+                            href={'href' in item ? item.href : '#'}
+                            onClick={() => setOpen(false)}
+                            className="group flex items-center gap-3 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide text-foreground hover:bg-muted transition-all active:bg-primary active:text-primary-foreground"
+                          >
+                            <item.icon className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all" strokeWidth={2.5} />
+                            <span className="flex-1">{item.label}</span>
+                            <ChevronRight className="h-3 w-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                          </Link>
+                        )}
                     </motion.div>
                   ))}
                 </div>
@@ -238,7 +260,7 @@ export function AccountDropdown() {
                 <LogOut className="h-3.5 w-3.5" strokeWidth={3} />
                 Sign Out
               </button>
-              
+
               <div className="mt-2.5 flex flex-wrap justify-center items-center gap-2">
                 <Link href="/terms" onClick={() => setOpen(false)} className="text-[8px] font-bold uppercase text-muted-foreground hover:text-primary transition-colors">Terms</Link>
                 <div className="w-1 h-1 bg-border rounded-full" />
@@ -250,6 +272,15 @@ export function AccountDropdown() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <SyntaxCardDialog
+        open={syntaxCardOpen}
+        onClose={() => setSyntaxCardOpen(false)}
+        username={user.username ?? ''}
+        fullName={user.fullName ?? user.name ?? user.username ?? 'Developer'}
+        profileImg={user.profileImg ?? user.image}
+        coverBanner={user.coverBanner}
+      />
     </div>
   );
 }

@@ -18,15 +18,20 @@ function SearchableSelectListboxShell({
   children,
   panelPos,
   listboxRef,
+  className,
 }: Readonly<{
   children: React.ReactNode;
   panelPos: { top: number; left: number; width: number };
   listboxRef: React.RefObject<HTMLDivElement | null>;
+  className?: string;
 }>) {
   return (
     <div
       ref={listboxRef}
-      className="fixed rounded-md border-2 border-border bg-card shadow-lg overflow-hidden flex flex-col"
+      className={cn(
+        'fixed rounded-md border-2 border-border bg-card shadow-lg overflow-hidden flex flex-col',
+        className,
+      )}
       style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width, zIndex: LISTBOX_Z }}
       role="listbox"
     >
@@ -62,6 +67,12 @@ export interface SearchableSelectProps {
   widthClass?: string;
   /** Max height of dropdown list (default 220px) */
   listMaxHeight?: number;
+  /** When false, list is options-only (no search field). Default true. */
+  searchable?: boolean;
+  /** Extra classes on the trigger button. */
+  triggerClassName?: string;
+  /** Extra classes on the portaled listbox panel. */
+  listboxClassName?: string;
 }
 
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined | null>) {
@@ -88,6 +99,9 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
       className,
       widthClass,
       listMaxHeight = 220,
+      searchable = true,
+      triggerClassName,
+      listboxClassName,
     },
     ref
   ) => {
@@ -118,14 +132,14 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
       const w = Math.max(r.width, 200);
       const top = r.bottom + 4;
       const margin = 8;
-      const searchChrome = 72;
+      const searchChrome = searchable ? 72 : 0;
       const scrollMax = Math.min(
         listMaxHeight,
         Math.max(80, globalThis.innerHeight - top - margin - searchChrome)
       );
       setPanelPos({ top, left: r.left, width: w });
       setScrollableMax(scrollMax);
-    }, [open, listMaxHeight]);
+    }, [open, listMaxHeight, searchable]);
 
     React.useLayoutEffect(() => {
       updateListPosition();
@@ -177,14 +191,15 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
             onClick={() => {
               if (disabled) return;
               setOpen((o) => !o);
-              if (!open) setTimeout(() => inputRef.current?.focus(), 50);
+              if (!open && searchable) setTimeout(() => inputRef.current?.focus(), 50);
             }}
             className={cn(
               'w-full min-w-0 rounded-md border-2 border-border bg-background px-3 py-2.5 text-sm font-medium text-left flex items-center justify-between gap-2',
               'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors',
               'disabled:cursor-not-allowed disabled:opacity-50',
               error && 'border-destructive',
-              open && 'border-primary ring-2 ring-primary/20'
+              open && 'border-primary ring-2 ring-primary/20',
+              triggerClassName,
             )}
             aria-haspopup="listbox"
             aria-expanded={open}
@@ -200,23 +215,29 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
           {open &&
             typeof document !== 'undefined' &&
             createPortal(
-              <SearchableSelectListboxShell panelPos={panelPos} listboxRef={listboxRef}>
-                <div className="p-2 border-b-2 border-border bg-muted/20 shrink-0">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') setOpen(false);
-                      }}
-                      placeholder="Search..."
-                      className="w-full rounded border-2 border-border bg-background py-2 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-primary"
-                    />
+              <SearchableSelectListboxShell
+                panelPos={panelPos}
+                listboxRef={listboxRef}
+                className={listboxClassName}
+              >
+                {searchable ? (
+                  <div className="p-2 border-b-2 border-border bg-muted/20 shrink-0">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') setOpen(false);
+                        }}
+                        placeholder="Search..."
+                        className="w-full rounded border-2 border-border bg-background py-2 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-primary"
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : null}
                 <div className="overflow-y-auto min-h-0" style={{ maxHeight: scrollableMax }}>
                   {filtered.length === 0 ? (
                     <p className="py-4 text-center text-[10px] font-bold text-muted-foreground uppercase">

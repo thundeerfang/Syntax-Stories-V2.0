@@ -12,7 +12,8 @@ export const profileBasicPatchSchema = z
     fullName: z.string().min(1).max(100).optional(),
     username: z.string().min(2).max(30).regex(/^\w+$/).optional(),
     bio: z.string().max(500).optional(),
-    profileImg: z.string().max(2000).optional(),
+    /** Server may store DiceBear SVG data URIs (~15k+). */
+    profileImg: z.string().max(131072).optional(),
     profileImgAlt: z.string().max(120).optional(),
     coverBanner: z.string().max(2000).optional(),
     coverBannerAlt: z.string().max(120).optional(),

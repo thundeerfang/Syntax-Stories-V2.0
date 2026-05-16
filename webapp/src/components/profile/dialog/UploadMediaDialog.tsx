@@ -227,9 +227,7 @@ export function UploadMediaDialog({
               />
               <span className="w-14 text-right text-[10px] font-bold text-muted-foreground">{zoom.toFixed(1)}×</span>
             </div>
-            <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-              Tip: click the crop frame, then arrow keys to pan. Hold Shift for smaller steps.
-            </p>
+           
 
             {uploading && (
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">

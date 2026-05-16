@@ -1,12 +1,14 @@
 'use client';
 
 import { Skeleton } from '@/components/ui/Skeleton';
+import { SHELL_NAV_INNER_CLASS } from '@/lib/shellContentRail';
+import { cn } from '@/lib/utils';
 
 /** Structural placeholder for `Navbar` before client mount (matches h-16 row + borders). */
 export function NavbarSkeleton() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b-2 border-border bg-background/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 w-full max-w-[90rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <header className="w-full border-b-2 border-border bg-background/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
+      <div className={cn('flex h-16 items-center gap-4', SHELL_NAV_INNER_CLASS)}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Skeleton className="size-10 shrink-0 rounded-none border-2 border-border/60 bg-muted/50" />
           <Skeleton className="h-7 w-28 shrink-0 rounded-none sm:h-9 sm:w-36" />

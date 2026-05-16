@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FolderTree, ImageIcon, Languages, Rocket, Tags, X } from 'lucide-react';
+import { FolderTree, ImageIcon, Languages, Rocket, Tags, UsersRound, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BlogTaxonomyRow } from '@/types/blog';
 import {
@@ -12,19 +12,29 @@ import {
   type BlogPublishTaxonomy,
 } from '@/lib/blogPublishTaxonomy';
 
+export type BlogWriteDeploySquadOption = Readonly<{
+  _id: string;
+  name: string;
+  slug: string;
+}>;
+
 export interface BlogWriteDeployOverlayProps {
   open: boolean;
   onClose: () => void;
   snapshot: BlogPublishTaxonomy;
   taxonomyCategories: BlogTaxonomyRow[];
   taxonomyTags: BlogTaxonomyRow[];
+  /** Squads the signed-in user belongs to; optional squad attachment for this post. */
+  mySquads?: readonly BlogWriteDeploySquadOption[];
+  /** Seed when the overlay opens (e.g. from `?squad=`). */
+  initialSquadMongoId?: string | null;
   title: string;
   summaryHtml: string;
   thumbnailPreviewUrl: string | null;
   deploying: boolean;
   savingClassification: boolean;
-  onSaveClassification: (tax: BlogPublishTaxonomy) => void;
-  onDeploy: (tax: BlogPublishTaxonomy) => void;
+  onSaveClassification: (tax: BlogPublishTaxonomy, squadMongoId: string | null) => void;
+  onDeploy: (tax: BlogPublishTaxonomy, squadMongoId: string | null) => void;
 }
 
 const fieldClass =
@@ -36,6 +46,8 @@ export function BlogWriteDeployOverlay({
   snapshot,
   taxonomyCategories,
   taxonomyTags,
+  mySquads = [],
+  initialSquadMongoId = null,
   title,
   summaryHtml,
   thumbnailPreviewUrl,
@@ -49,6 +61,7 @@ export function BlogWriteDeployOverlay({
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>(snapshot.tags);
   const [language, setLanguage] = useState(snapshot.language || 'en');
+  const [squadMongoId, setSquadMongoId] = useState<string | null>(initialSquadMongoId ?? null);
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +69,11 @@ export function BlogWriteDeployOverlay({
     setTags([...snapshot.tags]);
     setLanguage(snapshot.language || 'en');
     setTagInput('');
-  }, [open, snapshot.category, snapshot.tags, snapshot.language]);
+    const allowed = new Set(mySquads.map((s) => s._id));
+    const seed =
+      initialSquadMongoId && allowed.has(initialSquadMongoId) ? initialSquadMongoId : null;
+    setSquadMongoId(seed);
+  }, [open, snapshot.category, snapshot.tags, snapshot.language, initialSquadMongoId, mySquads]);
 
   const summaryLine = useMemo(() => blogPublishSummaryPreviewPlain(summaryHtml), [summaryHtml]);
   const displayTitle = title.trim() || 'Untitled';
@@ -92,13 +109,19 @@ export function BlogWriteDeployOverlay({
 
   const handleDeploy = () => {
     const tax = buildTax();
-    onDeploy({ ...tax, category: tax.category || '' });
+    onDeploy({ ...tax, category: tax.category || '' }, squadMongoId);
   };
 
   const handleSaveClassification = () => {
     const tax = buildTax();
-    onSaveClassification({ ...tax, category: tax.category || '' });
+    onSaveClassification({ ...tax, category: tax.category || '' }, squadMongoId);
   };
+
+  const squadSelectValue = useMemo(() => {
+    const allowed = new Set(mySquads.map((s) => s._id));
+    if (squadMongoId && allowed.has(squadMongoId)) return squadMongoId;
+    return '';
+  }, [mySquads, squadMongoId]);
 
   useEffect(() => {
     if (!open || typeof document === 'undefined') return;
@@ -266,6 +289,40 @@ export function BlogWriteDeployOverlay({
                       ))}
                     </select>
                   </div>
+
+                  {mySquads.length > 0 ? (
+                    <div className="min-w-0 sm:col-span-2">
+                      <label
+                        htmlFor="blog-deploy-squad"
+                        className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground"
+                      >
+                        <UsersRound className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                        Squad
+                        <span className="text-[10px] font-normal text-muted-foreground">(optional)</span>
+                      </label>
+                      <select
+                        id="blog-deploy-squad"
+                        value={squadSelectValue}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setSquadMongoId(v ? v : null);
+                        }}
+                        disabled={busy}
+                        className={cn(fieldClass, 'disabled:opacity-50')}
+                      >
+                        <option value="">— Not attached to a squad —</option>
+                        {mySquads.map((s) => (
+                          <option key={s._id} value={s._id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
+                        Publish or save this draft as a squad post for the feed you pick. Leave unset for a personal
+                        post only.
+                      </p>
+                    </div>
+                  ) : null}
 
                   <div className="min-w-0 sm:col-span-2">
                     <label

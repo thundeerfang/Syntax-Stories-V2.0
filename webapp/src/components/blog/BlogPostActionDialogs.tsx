@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DeleteConfirmDialog } from '@/components/ui/delete';
 import type { BlogPostResponse } from '@/api/blog';
 
 type BlogPostDeleteDialogProps = Readonly<{
@@ -20,24 +21,25 @@ export function BlogPostDeleteDialog({
   onConfirm,
 }: BlogPostDeleteDialogProps) {
   return (
-    <ConfirmDialog
+    <DeleteConfirmDialog
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        if (!loading) onClose();
+      }}
+      titleId="blog-post-delete-dialog-title"
       title="Delete post"
-      message={
+      description={
         post ? (
           <>
             Move “{post.title.trim() || 'Untitled'}” to trash? It leaves the site immediately, but you can restore it
             from the Deleted tab for 7 days.
           </>
-        ) : null
+        ) : undefined
       }
       confirmLabel="Delete"
-      cancelLabel="Cancel"
-      variant="danger"
-      loading={loading}
+      confirming={loading}
       onConfirm={() => {
-        if (post) onConfirm(post);
+        if (post) void onConfirm(post);
       }}
     />
   );
@@ -61,17 +63,20 @@ export function BlogPostEditNavigationDialog({
       open={open}
       onClose={onClose}
       title="Open editor"
+      variant="default"
+      confirmLabel="Continue"
+      cancelLabel="Cancel"
+      defaultFocusConfirm
       message={
         post ? (
           <>
-            Open “{post.title.trim() || 'Untitled'}” in the write workspace? Your session will load this post without
-            showing its id in the URL.
+            Open “{post.title.trim() || 'Untitled'}” in the write workspace? Your draft loads in this session while the
+            address bar stays on{' '}
+            <span className="font-mono font-bold text-foreground/90">/blogs/write</span>
+            —the post id is not shown in the URL.
           </>
         ) : null
       }
-      confirmLabel="Continue"
-      cancelLabel="Cancel"
-      variant="default"
       onConfirm={() => {
         if (post) onConfirm(post);
       }}
@@ -95,24 +100,25 @@ export function BlogPostPurgePermanentDialog({
   onConfirm,
 }: BlogPostPurgePermanentDialogProps) {
   return (
-    <ConfirmDialog
+    <DeleteConfirmDialog
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        if (!loading) onClose();
+      }}
+      titleId="blog-post-purge-dialog-title"
       title="Delete forever"
-      message={
+      description={
         post ? (
           <>
             Permanently erase “{post.title.trim() || 'Untitled'}”? This cannot be undone. Only use this for posts
             already in trash.
           </>
-        ) : null
+        ) : undefined
       }
       confirmLabel="Delete forever"
-      cancelLabel="Cancel"
-      variant="danger"
-      loading={loading}
+      confirming={loading}
       onConfirm={() => {
-        if (post) onConfirm(post);
+        if (post) void onConfirm(post);
       }}
     />
   );

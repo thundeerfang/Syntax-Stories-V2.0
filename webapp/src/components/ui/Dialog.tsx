@@ -72,6 +72,12 @@ export interface DialogProps {
   panelClassName?: string;
   /** Optional class for the inner content wrapper (padding). */
   contentClassName?: string;
+  /** Merged onto the title-mode header strip (e.g. reduce right padding when `showCloseButton` is false). */
+  titleHeaderClassName?: string;
+  /** Rendered at the end of the title row (e.g. toolbar buttons). Still inside `<header>`. */
+  titleHeaderEnd?: ReactNode;
+  /** Rendered below the title row, still inside `<header>` (e.g. preview strip). */
+  titleHeaderAccessory?: ReactNode;
   /** Show the floating close (X). Set false when the panel lays out its own header (e.g. legacy FormDialog pattern). */
   showCloseButton?: boolean;
   /** Close when backdrop is clicked. Default true. */
@@ -143,6 +149,9 @@ export function Dialog({
   backdropClassName,
   panelClassName,
   contentClassName = 'relative p-6 sm:p-8',
+  titleHeaderClassName,
+  titleHeaderEnd,
+  titleHeaderAccessory,
   showCloseButton = true,
   closeOnBackdropClick = true,
   closeOnEscape = true,
@@ -213,13 +222,27 @@ export function Dialog({
             >
               {useTitleHeader ? (
                 <>
-                  <header className={DIALOG_TITLE_HEADER_CLASS}>
-                    <DialogTitleHeaderBody
-                      headingId={headingId}
-                      title={title}
-                      titleIcon={titleIcon}
-                      description={description}
-                    />
+                  <header className={cn(DIALOG_TITLE_HEADER_CLASS, titleHeaderClassName)}>
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+                      <div className="min-w-0 flex-1">
+                        <DialogTitleHeaderBody
+                          headingId={headingId}
+                          title={title}
+                          titleIcon={titleIcon}
+                          description={description}
+                        />
+                      </div>
+                      {titleHeaderEnd ? (
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pb-px sm:pb-0">
+                          {titleHeaderEnd}
+                        </div>
+                      ) : null}
+                    </div>
+                    {titleHeaderAccessory ? (
+                      <div className="mt-3 border-t-2 border-border/60 pt-3 dark:border-border/80">
+                        {titleHeaderAccessory}
+                      </div>
+                    ) : null}
                   </header>
                   {showCloseButton ? (
                     <button

@@ -19,6 +19,8 @@ export interface VerifyOtpPayload {
   code: string;
   otpVersion?: number;
   referralCode?: string;
+  /** Required for new-account email signup; must match Terms + Privacy checkbox. */
+  acceptPolicies?: boolean;
 }
 
 export interface SendOtpResponse {

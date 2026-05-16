@@ -36,6 +36,16 @@ export interface IBlogPost extends Document {
   deletedById?: mongoose.Types.ObjectId;
   /** Denormalized: distinct accounts currently Respecting this post while it is published and not deleted. */
   respectCount: number;
+  /** Denormalized repost edges (see `blogreposts`). */
+  repostCount: number;
+  /** Denormalized saved edges (see `blogbookmarks`). */
+  bookmarkCount: number;
+  /** Top-level + reply comments on this post. */
+  commentCount: number;
+  /** Incremented on successful authenticated read commits (see read view flow). */
+  viewCount: number;
+  /** When set, this post is authored into a squad feed (see `squads`). */
+  squadId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +77,11 @@ const BlogPostSchema = new Schema<IBlogPost>(
     deletedAt: { type: Date, default: null, index: true },
     deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     respectCount: { type: Number, default: 0, min: 0, index: true },
+    repostCount: { type: Number, default: 0, min: 0, index: true },
+    bookmarkCount: { type: Number, default: 0, min: 0 },
+    commentCount: { type: Number, default: 0, min: 0 },
+    viewCount: { type: Number, default: 0, min: 0 },
+    squadId: { type: Schema.Types.ObjectId, ref: 'squads', default: null, index: true },
   },
   { timestamps: true }
 );
@@ -74,6 +89,7 @@ const BlogPostSchema = new Schema<IBlogPost>(
 // Unique slug per author (same author cannot have two posts with same slug)
 BlogPostSchema.index({ authorId: 1, slug: 1 }, { unique: true });
 BlogPostSchema.index({ status: 1, createdAt: -1 });
+BlogPostSchema.index({ squadId: 1, status: 1, publishedAt: -1 });
 
 export const BlogPostModel: Model<IBlogPost> =
   mongoose.models?.blogposts ?? mongoose.model<IBlogPost>('blogposts', BlogPostSchema);

@@ -24,6 +24,7 @@ import {
   Wrench,
   ExternalLink,
   Globe,
+  Link2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -41,7 +42,7 @@ import {
 import type { CompleteItemDialogSection } from '@/components/profile/dialog';
 import { ProfileCardSkeleton } from '@/components/profile/ProfileCardSkeleton';
 import { ProfileSectionHeader } from '@/components/profile/ProfileSectionHeader';
-import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
+import { WalletLottie, SparkLottie, StreakFireLottie, TestAccountLottie, ProfileActivityIconLottie } from '@/components/ui';
 import { ProfileHeatmap } from '@/components/profile/ProfileHeatmap';
 import { ProfileBlogPanel } from '@/components/profile/ProfileBlogPanel';
 import { ProfileActivityBlogList } from '@/components/blog/ProfileActivityBlogList';
@@ -58,6 +59,7 @@ import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { GithubIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from '@/components/icons/SocialProviderIcons';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
+import { PROFILE_PUBLIC_SOCIAL_BTN } from '@/lib/profilePublicCard';
 import {
   certificationListKey,
   domainFromUrl,
@@ -388,7 +390,7 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
   };
 
   return (
-    <div className="min-h-screen w-full py-6 font-sans text-foreground ss-profile-readonly md:py-8">
+    <div className="min-h-screen w-full font-sans text-foreground ss-profile-readonly">
       <div className={SHELL_CONTENT_RAIL_CLASS}>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         
@@ -568,21 +570,19 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                 </button>
               ))}
             </div>
-            <div className="border-4 border-border border-dashed bg-muted/5 p-4 sm:p-6">
-              {activityTab === 'posts' && user?.username ? (
-                <ProfileActivityBlogList username={user.username} />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {activityTab === 'replies'
-                      ? 'No replies yet.'
-                      : activityTab === 'repost'
-                        ? 'No reposts yet.'
-                        : 'Nothing here yet.'}
-                  </p>
-                </div>
-              )}
-            </div>
+            {activityTab === 'posts' && user?.username ? (
+              <ProfileActivityBlogList username={user.username} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {activityTab === 'replies'
+                    ? 'No replies yet.'
+                    : activityTab === 'repost'
+                      ? 'No reposts yet.'
+                      : 'Nothing here yet.'}
+                </p>
+              </div>
+            )}
           </section>
 
           {/* AUTOFILL (owner-only) */}
@@ -1179,7 +1179,7 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
                   <p className="text-[10px] font-black uppercase">Followers & Following</p>
                   {followCounts.followersCount === 0 && followCounts.followingCount === 0 ? (
                     <p className="text-[9px] font-bold text-muted-foreground uppercase mt-0.5">
-                      No followers yet — share your profile to grow your network
+                      No followers yet
                     </p>
                   ) : (
                     <p className="text-[9px] font-bold text-muted-foreground uppercase">
@@ -1201,45 +1201,76 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
 
           {/* 2. PUBLIC PROFILE URL + SOCIAL LINKS — from backend */}
           <div className="border-4 border-border bg-card p-5 shadow-[4px_4px_0px_0px_var(--border)] space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-widest">Public Profile</h3>
-            <p className="text-[9px] font-bold text-muted-foreground uppercase">Your profile link. Copy or share.</p>
+            <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+              <TestAccountLottie size={24} />
+              Public Profile
+            </h3>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={copyProfileUrl}
-                className="flex-1 min-w-0 flex items-center justify-between gap-2 bg-muted/30 border-2 border-border p-3 hover:bg-muted/50 transition-colors text-left group"
+                className="group flex min-w-0 flex-1 items-center justify-between gap-3 border-2 border-border bg-muted/20 p-2.5 pl-3 text-left shadow-[2px_2px_0px_0px_var(--border)] transition-colors hover:bg-muted/40 active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
               >
-                <span className="text-[10px] font-bold truncate text-foreground">
+                <Link2 className="size-4 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
+                <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-bold text-foreground">
                   {profileShareUrl}
                 </span>
-                <span className={cn(
-                  'shrink-0 flex items-center gap-1.5 px-2 py-1 border-2 border-border text-[9px] font-black uppercase',
-                  profileUrlCopied ? 'bg-primary text-primary-foreground border-primary' : 'bg-card group-hover:border-primary'
-                )}>
+                <span
+                  className={cn(
+                    'flex shrink-0 items-center gap-1.5 border-2 border-border px-2.5 py-1.5 text-[9px] font-black uppercase',
+                    profileUrlCopied
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'bg-card group-hover:border-primary',
+                  )}
+                >
                   {profileUrlCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                   {profileUrlCopied ? 'Copied' : 'Copy'}
                 </span>
               </button>
             </div>
-            <div className="flex gap-3 items-center justify-center pt-1 flex-wrap">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
               {user?.linkedin && (
-                <a href={user.linkedin.startsWith('http') ? user.linkedin : `https://${user.linkedin}`} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <LinkedinIcon className="size-4 text-foreground" />
+                <a
+                  href={user.linkedin.startsWith('http') ? user.linkedin : `https://${user.linkedin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LinkedIn"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <LinkedinIcon className="size-5 text-[#0A66C2]" />
                 </a>
               )}
               {user?.github && (
-                <a href={user.github.startsWith('http') ? user.github : `https://${user.github}`} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <GithubIcon className="size-4 text-foreground" />
+                <a
+                  href={user.github.startsWith('http') ? user.github : `https://${user.github}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="GitHub"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <GithubIcon className="size-5 text-[#24292f] dark:text-[#f0f6fc]" />
                 </a>
               )}
               {user?.instagram && (
-                <a href={user.instagram.startsWith('http') ? user.instagram : `https://${user.instagram}`} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <InstagramIcon className="size-4 text-foreground" />
+                <a
+                  href={user.instagram.startsWith('http') ? user.instagram : `https://${user.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <InstagramIcon className="size-5 text-[#E4405F]" />
                 </a>
               )}
               {user?.youtube && (
-                <a href={user.youtube.startsWith('http') ? user.youtube : `https://${user.youtube}`} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="p-2 border-2 border-border bg-muted/30 hover:bg-muted/60 hover:border-primary transition-colors">
-                  <YoutubeIcon className="size-4 text-foreground" />
+                <a
+                  href={user.youtube.startsWith('http') ? user.youtube : `https://${user.youtube}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="YouTube"
+                  className={PROFILE_PUBLIC_SOCIAL_BTN}
+                >
+                  <YoutubeIcon className="size-5 text-[#FF0000]" />
                 </a>
               )}
             </div>
@@ -1265,8 +1296,9 @@ export default function ProfilePage() { // NOSONAR S3776 — large owner dashboa
           {/* 3. PROFILE ACTIVITY - Text left, graph right, reduced height */}
           <div className="border-4 border-border bg-card p-5 shadow-[4px_4px_0px_0px_var(--border)]">
             <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                Profile Activity <span className="size-4 bg-muted text-[8px] flex items-center justify-center border-2 border-border">?</span>
+              <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                <ProfileActivityIconLottie size={24} />
+                Profile Activity
               </h3>
               <Link
                 href="/profile/analytics"

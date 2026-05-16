@@ -62,17 +62,9 @@ export function MermaidBlockDisplay({
   if (!source.trim()) return null;
 
   return (
-    <figure
-      className={cn(
-        'mx-auto my-6 w-full max-w-4xl overflow-x-auto rounded-none border-2 border-border bg-card p-4 shadow-[6px_6px_0_0_var(--border)]',
-        className,
-      )}
-    >
-      <figcaption className="mb-3 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        Diagram
-      </figcaption>
+    <div className={cn('w-full overflow-x-auto', className)}>
       {err ? (
-        <div className="space-y-2">
+        <div className="space-y-2 py-2">
           <p className="font-mono text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Unable to render Mermaid
           </p>
@@ -82,8 +74,8 @@ export function MermaidBlockDisplay({
           </details>
         </div>
       ) : (
-        <div ref={ref} className="mermaid-render flex justify-center [&_svg]:max-h-[min(70vh,480px)]" />
+        <div ref={ref} className="mermaid-render flex justify-center py-1 [&_svg]:max-h-[min(70vh,480px)]" />
       )}
-    </figure>
+    </div>
   );
 }

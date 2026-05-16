@@ -52,7 +52,7 @@ export function NotificationsDropdown() {
       </button>
       {isOpen && (
         <div
-          className="absolute right-0 top-full z-50 mt-3 w-80 sm:w-96 border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]"
+          className="absolute right-0 top-full z-[200] mt-3 w-80 sm:w-96 border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]"
           role="menu"
         >
           <div className="border-b-2 border-border px-4 py-3 flex items-center justify-between bg-muted/30">

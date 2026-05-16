@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { ErrorIllustrationLottie } from '@/components/ui/ErrorIllustrationLottie';
 
 export default function NotFound() {
   return (
     <div className="min-h-[calc(100vh-var(--header-height)-8rem)] bg-background text-foreground">
-      <div className="mx-auto flex max-w-[90rem] flex-col items-center justify-center px-4 py-20 text-center sm:px-8">
+      <div className="mx-auto flex max-w-[90rem] flex-col items-center justify-center py-16 text-center sm:py-20">
+        <ErrorIllustrationLottie variant="404" widthPx={260} className="mb-6" />
         <p className="font-mono text-[10px] font-black uppercase tracking-[0.35em] text-muted-foreground">
           Error_404
         </p>

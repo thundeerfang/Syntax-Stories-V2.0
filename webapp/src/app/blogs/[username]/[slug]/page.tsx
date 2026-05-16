@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -11,7 +11,6 @@ import {
   Clock,
   ExternalLink,
   Hash,
-  Loader2,
   Terminal,
 } from 'lucide-react';
 import { blogApi } from '@/api/blog';
@@ -19,7 +18,7 @@ import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { RichParagraphEditor } from '@/components/ui/RichParagraphEditor';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/utils';
-import { summaryToPlainText } from '@/lib/summaryPlain';
+import { sanitizePublicSummaryHtml, summaryToPlainText } from '@/lib/summaryPlain';
 import { coerceImageLayout } from '@/lib/blogImageLayout';
 import type {
   Block,
@@ -27,68 +26,66 @@ import type {
   MermaidDiagramPayload,
   ParagraphPayload,
   PublicBlogPostDetail,
+  PublicFeedPost,
   TablePayload,
   VideoEmbedDisplaySize,
   VideoEmbedLayoutDirection,
   VideoEmbedPayload,
 } from '@/types/blog';
 import { coerceParagraphDoc } from '@/types/blog';
-import { BlogPostAuthor } from '@/components/blog/BlogPostAuthor';
+import { BlogPostDetailSideRail } from '@/components/blog/BlogPostDetailSideRail';
+import { BlogPostSidebarStats } from '@/components/blog/BlogPostSidebarStats';
+import { BlogImagePreviewProvider, useBlogImagePreview } from '@/components/blog/BlogImagePreviewDialog';
+import { BlogPostTableOfContents } from '@/components/blog/BlogPostTableOfContents';
 import { BlogCommentsSection } from '@/components/blog/BlogCommentsSection';
+import { BlogPostCommentsDock, type BlogDockEngagement } from '@/components/blog/BlogPostCommentsDock';
 import { BlogCodeBlockDisplay } from '@/components/blog/BlogCodeBlockDisplay';
 import { MermaidBlockDisplay } from '@/components/blog/MermaidBlockDisplay';
-import { blockShadowButtonClassNames } from '@/components/ui/BlockShadowButton';
-import { Dialog } from '@/components/ui/Dialog';
+import { Button } from '@/components/ui';
 import { useAuthStore } from '@/store/auth';
+import { extractBlogHeadingToc } from '@/lib/extractBlogHeadingToc';
+import { resolvePublicApiBase } from '@/lib/publicApiBase';
 import { SHELL_CONTENT_MEASURE_CLASS, SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
+import { BlogPostPageSkeletonInner } from '@/components/skeletons';
 
-type BlogImagePreviewOpen = (url: string, alt: string) => void;
-const BlogImagePreviewContext = createContext<BlogImagePreviewOpen | null>(null);
+/** Cancels article body horizontal padding (`px-3 sm:px-4 lg:px-5`) so full-width media meets the article edges. */
+const BLOG_ARTICLE_FULL_BLEED_CLASS =
+  '-mx-3 w-[calc(100%+1.5rem)] max-w-none sm:-mx-4 sm:w-[calc(100%+2rem)] lg:-mx-5 lg:w-[calc(100%+2.5rem)]';
 
-function useBlogImagePreview(): BlogImagePreviewOpen | null {
-  return useContext(BlogImagePreviewContext);
-}
+/** Centered square embed (raster / Unsplash). */
+const BLOG_SQUARE_EMBED_MAX_CLASS = 'w-full max-w-xl shrink-0';
 
-const CARD_SHADOW = 'shadow-[8px_8px_0px_0px_var(--border)]';
+/** Centered landscape embed — narrower than full content measure. */
+const BLOG_LANDSCAPE_EMBED_MAX_CLASS = 'w-full max-w-2xl shrink-0';
 
-function BlogImagePreviewProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [preview, setPreview] = useState<{ url: string; alt: string } | null>(null);
-  const open = useCallback((url: string, alt: string) => {
-    setPreview({ url, alt: alt || 'Image' });
-  }, []);
-  const close = useCallback(() => setPreview(null), []);
-  const value = useMemo(() => open, [open]);
+/** Layout-only; transform/transition live in `globals.css` (`.ss-blog-raster-hover*`) for reliable easing. */
+const BLOG_RASTER_IMG_CLASS = 'ss-blog-raster-hover absolute inset-0 h-full w-full object-cover';
+const BLOG_RASTER_HOVER_GROUP_CLASS = 'ss-blog-raster-hover-group';
 
+function BlogHeroThumbnailPreview({
+  src,
+  alt,
+}: Readonly<{
+  src: string;
+  alt: string;
+}>) {
+  const openPreview = useBlogImagePreview();
   return (
-    <BlogImagePreviewContext.Provider value={value}>
-      {children}
-      <Dialog
-        open={preview != null}
-        onClose={close}
-        titleId="blog-image-preview-title"
-        panelClassName={cn(
-          'pointer-events-auto w-full max-w-6xl max-h-[92vh] overflow-hidden border-4 border-border bg-card',
-          'shadow-[12px_12px_0_0_var(--border)]',
-        )}
-        contentClassName="relative bg-background p-2 sm:p-3"
-      >
-        <h2 id="blog-image-preview-title" className="sr-only">
-          Image preview
-        </h2>
-        {preview ? (
-          <div>
-            <img
-              src={preview.url}
-              alt={preview.alt}
-              className="mx-auto max-h-[85vh] w-full object-contain"
-            />
-            <div className="mt-2 text-center font-mono text-[10px] font-bold uppercase text-muted-foreground">
-              [ ESC_TO_CLOSE ] • {preview.alt}
-            </div>
-          </div>
-        ) : null}
-      </Dialog>
-    </BlogImagePreviewContext.Provider>
+    <div className="relative mb-8 overflow-hidden border border-dashed border-muted-foreground/40 bg-muted/10">
+      {openPreview ? (
+        <button
+          type="button"
+          className="absolute inset-0 z-10 cursor-zoom-in bg-transparent"
+          aria-label="Open image preview"
+          onClick={() => openPreview(src, alt)}
+        />
+      ) : null}
+      <img
+        src={src}
+        alt={alt}
+        className="pointer-events-none h-auto w-full max-h-[min(60vh,32rem)] object-cover"
+      />
+    </div>
   );
 }
 
@@ -137,20 +134,32 @@ function ContentEmbedFrame({
   subtitle,
   children,
   className,
+  showEmbedBadge = true,
+  noShadow = false,
 }: Readonly<{
   module: string;
   subtitle?: string;
   children: React.ReactNode;
   className?: string;
+  showEmbedBadge?: boolean;
+  noShadow?: boolean;
 }>) {
   return (
     <div
       className={cn(
-        'overflow-hidden border-2 border-border bg-card shadow-[6px_6px_0_0_var(--border)] transition-shadow duration-200 hover:shadow-[8px_8px_0_0_var(--border)]',
+        'overflow-hidden border-2 border-border bg-card',
+        noShadow
+          ? 'shadow-none'
+          : 'shadow-[6px_6px_0_0_var(--border)] transition-shadow duration-200 hover:shadow-[8px_8px_0_0_var(--border)]',
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-muted/40 px-3 py-2 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-foreground">
+      <div
+        className={cn(
+          'flex items-center gap-2 border-b-2 border-border bg-muted/40 px-3 py-2 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-foreground',
+          showEmbedBadge ? 'justify-between' : 'justify-start',
+        )}
+      >
         <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
           <span className="shrink-0 text-primary" aria-hidden>
             ▣
@@ -165,24 +174,33 @@ function ContentEmbedFrame({
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-muted-foreground">
-          EMBED
-        </span>
+        {showEmbedBadge ? (
+          <span className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-muted-foreground">
+            EMBED
+          </span>
+        ) : null}
       </div>
       <div className="bg-background">{children}</div>
     </div>
   );
 }
 
-function embeddedFigureInnerClass(layout: ImageBlockLayout): string {
+function embeddedFigureInnerClass(
+  layout: ImageBlockLayout,
+  opts?: Readonly<{ squareInNarrowEmbed?: boolean }>,
+): string {
   switch (layout) {
     case 'square':
-      return 'mx-auto aspect-square w-full max-w-xl';
+      /* Parent width caps the square (see BLOG_SQUARE_EMBED_MAX_CLASS on the embed). */
+      if (opts?.squareInNarrowEmbed) {
+        return 'relative aspect-square w-full min-h-0 min-w-0 rounded-none';
+      }
+      return 'mx-auto aspect-square w-full min-h-0 min-w-0 max-w-xl rounded-none';
     case 'fullWidth':
-      return 'w-full min-h-[20rem] max-h-[min(42rem,88vh)] sm:min-h-[22rem] lg:min-h-[26rem]';
+      return 'w-full min-h-[20rem] max-h-[min(42rem,88vh)] rounded-none sm:min-h-[22rem] lg:min-h-[26rem]';
     case 'landscape':
     default:
-      return 'aspect-video w-full';
+      return 'aspect-video w-full rounded-none';
   }
 }
 
@@ -223,37 +241,42 @@ function ParagraphBlock({ payload }: Readonly<{ payload?: Record<string, unknown
   const p = (payload ?? {}) as ParagraphPayload;
   const doc = p.doc ?? coerceParagraphDoc(p);
   return (
-    <div className={cn('group relative mx-auto mb-8', SHELL_CONTENT_MEASURE_CLASS)}>
-      <div className="absolute -left-4 top-0 bottom-0 w-1 bg-primary/10 transition-colors group-hover:bg-primary/30" />
+    <div className={cn('relative mx-auto mb-6', SHELL_CONTENT_MEASURE_CLASS)}>
       <RichParagraphEditor
         initialDoc={doc}
         legacyText={p.text}
         readOnly
-        className="!border-none !bg-transparent !p-0 !shadow-none text-[17px] leading-[1.7] text-foreground/90 selection:bg-primary/30"
+        className="!border-none !bg-transparent !p-0 !shadow-none text-[15px] leading-[1.65] text-foreground/90 selection:bg-primary/30"
         readOnlyLinkPreview={paragraphPreviewCard}
       />
     </div>
   );
 }
 
-function HeadingBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
+function HeadingBlock({
+  blockId,
+  payload,
+}: Readonly<{ blockId: string; payload?: Record<string, unknown> }>) {
   const text = (payload?.text as string) ?? '';
   const level = payload?.level === 3 ? 3 : 2;
   const Tag = level === 3 ? 'h3' : 'h2';
+  const anchorId = `blog-heading-${blockId}`;
   return (
     <div
+      id={anchorId}
       className={cn(
-        'group mx-auto mb-6 w-full',
+        /* Match sticky rail offset (`top-24`) so TOC scroll targets clear the navbar */
+        'mx-auto mb-6 w-full scroll-mt-24',
         SHELL_CONTENT_MEASURE_CLASS,
-        level === 3 ? 'mt-10' : 'mt-16',
+        level === 3 ? 'mt-8' : 'mt-12',
       )}
     >
       <Tag
         className={cn(
           'flex items-center gap-3 font-mono font-black tracking-tight text-foreground',
           level === 3
-            ? 'border-l-4 border-primary/50 pl-4 text-lg normal-case sm:text-xl'
-            : 'text-3xl uppercase sm:text-4xl',
+            ? 'border-l-4 border-primary/50 pl-4 text-base normal-case sm:text-lg'
+            : 'text-2xl uppercase sm:text-3xl',
         )}
       >
         {level === 3 ? (
@@ -267,12 +290,6 @@ function HeadingBlock({ payload }: Readonly<{ payload?: Record<string, unknown> 
         )}
         <span className="relative min-w-0 flex-1">
           <span className={level === 3 ? 'font-black text-foreground' : 'uppercase'}>{text}</span>
-          {level === 2 ? (
-            <span
-              className="absolute -bottom-1 left-0 h-1 w-full origin-left scale-x-0 bg-primary/10 transition-transform group-hover:scale-x-100"
-              aria-hidden
-            />
-          ) : null}
         </span>
       </Tag>
     </div>
@@ -300,30 +317,66 @@ function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>
   const title = ((payload?.title || payload?.caption) as string)?.trim() ?? '';
   const layout = coerceImageLayout(payload?.layout);
   const alt = title || 'Content image';
-  return (
-    <figure className={cn('my-12 w-full space-y-0', SHELL_CONTENT_MEASURE_CLASS)}>
-      <ContentEmbedFrame module="IMAGE_RASTER" subtitle={title || 'Figure'}>
-        <div className={cn('relative overflow-hidden bg-muted', embeddedFigureInnerClass(layout), 'group')}>
-        <img
-          src={url}
-          alt={alt}
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+  const fullBleed = layout === 'fullWidth';
+  const squareCard = layout === 'square' && !fullBleed;
+  const landscapeCard = layout === 'landscape' && !fullBleed;
+  const narrowEmbedClass = squareCard
+    ? BLOG_SQUARE_EMBED_MAX_CLASS
+    : landscapeCard
+      ? BLOG_LANDSCAPE_EMBED_MAX_CLASS
+      : undefined;
+  const inner = (
+    <div
+      className={cn(
+        'relative overflow-hidden bg-muted',
+        embeddedFigureInnerClass(layout, { squareInNarrowEmbed: squareCard }),
+        BLOG_RASTER_HOVER_GROUP_CLASS,
+      )}
+    >
+      <img src={url} alt={alt} className={BLOG_RASTER_IMG_CLASS} />
+      {openPreview ? (
+        <button
+          type="button"
+          className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
+          aria-label="Preview image"
+          onClick={() => openPreview(url, alt)}
         />
-        {openPreview ? (
-          <button
-            type="button"
-            className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
-            aria-label="Preview image"
-            onClick={() => openPreview(url, alt)}
-          />
-        ) : null}
-        {title ? (
-          <div className="pointer-events-none absolute bottom-3 left-3 z-20">
-            <span className={RETRO_MEDIA_BADGE}>{title}</span>
-          </div>
-        ) : null}
+      ) : null}
+      {title ? (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-20 max-w-[min(92%,20rem)] min-w-0">
+          <span
+            className={cn(
+              RETRO_MEDIA_BADGE,
+              'min-w-0 max-w-full justify-start overflow-hidden text-ellipsis whitespace-nowrap',
+            )}
+          >
+            {title}
+          </span>
         </div>
-      </ContentEmbedFrame>
+      ) : null}
+    </div>
+  );
+  return (
+    <figure
+      className={cn(
+        'my-12 w-full space-y-0',
+        fullBleed ? BLOG_ARTICLE_FULL_BLEED_CLASS : SHELL_CONTENT_MEASURE_CLASS,
+        (squareCard || landscapeCard) && 'flex justify-center',
+      )}
+    >
+      {fullBleed ? (
+        inner
+      ) : (
+        <ContentEmbedFrame
+          module="IMAGE_RASTER"
+          subtitle={title || 'Figure'}
+          showEmbedBadge={false}
+          noShadow={squareCard}
+          className={narrowEmbedClass}
+        >
+          {inner}
+        </ContentEmbedFrame>
+      )}
     </figure>
   );
 }
@@ -348,43 +401,84 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
   const alt = caption || creditLine || 'Photo';
   const embedSubtitle = caption || creditLine || 'Photo';
 
-  return (
-    <figure className={cn('my-12 w-full space-y-0', SHELL_CONTENT_MEASURE_CLASS)}>
-      <ContentEmbedFrame module="UNSPLASH_NODE" subtitle={embedSubtitle}>
-        <div className={cn('relative overflow-hidden bg-muted', embeddedFigureInnerClass(layout), 'group')}>
-        <img
-          src={url}
-          alt={alt}
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+  const fullBleed = layout === 'fullWidth';
+  const squareCard = layout === 'square' && !fullBleed;
+  const landscapeCard = layout === 'landscape' && !fullBleed;
+  const narrowEmbedClass = squareCard
+    ? BLOG_SQUARE_EMBED_MAX_CLASS
+    : landscapeCard
+      ? BLOG_LANDSCAPE_EMBED_MAX_CLASS
+      : undefined;
+  const inner = (
+    <div
+      className={cn(
+        'relative overflow-hidden bg-muted',
+        embeddedFigureInnerClass(layout, { squareInNarrowEmbed: squareCard }),
+        BLOG_RASTER_HOVER_GROUP_CLASS,
+      )}
+    >
+      <img src={url} alt={alt} className={BLOG_RASTER_IMG_CLASS} />
+      {openPreview ? (
+        <button
+          type="button"
+          className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
+          aria-label="Preview image"
+          onClick={() => openPreview(url, alt)}
         />
-        {openPreview ? (
-          <button
-            type="button"
-            className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
-            aria-label="Preview image"
-            onClick={() => openPreview(url, alt)}
-          />
-        ) : null}
-        {caption ? (
-          <div className="pointer-events-none absolute bottom-3 left-3 z-20">
-            <span className={RETRO_MEDIA_BADGE}>{caption}</span>
-          </div>
-        ) : null}
-        {creditLine ? (
-          <div className="absolute bottom-3 right-3 z-30 max-w-[min(88%,16rem)]">
-            <a
-              href={unsplashPhotoHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="View on Unsplash"
-              className={cn(RETRO_MEDIA_BADGE, 'pointer-events-auto hover:bg-white hover:text-black transition-colors')}
-            >
-              {creditLine}
-            </a>
-          </div>
-        ) : null}
+      ) : null}
+      {caption ? (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-20 max-w-[min(92%,20rem)] min-w-0">
+          <span
+            className={cn(
+              RETRO_MEDIA_BADGE,
+              'min-w-0 max-w-full justify-start overflow-hidden text-ellipsis whitespace-nowrap',
+            )}
+          >
+            {caption}
+          </span>
         </div>
-      </ContentEmbedFrame>
+      ) : null}
+      {creditLine ? (
+        <div className="absolute bottom-3 right-3 z-30 max-w-[min(92%,18rem)] min-w-0">
+          <a
+            href={unsplashPhotoHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View on Unsplash"
+            className={cn(
+              RETRO_MEDIA_BADGE,
+              'blog-figure-credit-link pointer-events-auto block min-w-0 truncate whitespace-nowrap !text-white',
+              'shadow-none hover:bg-black/90 hover:!text-white',
+              'transition-colors duration-300',
+            )}
+          >
+            {creditLine}
+          </a>
+        </div>
+      ) : null}
+    </div>
+  );
+  return (
+    <figure
+      className={cn(
+        'my-12 w-full space-y-0',
+        fullBleed ? BLOG_ARTICLE_FULL_BLEED_CLASS : SHELL_CONTENT_MEASURE_CLASS,
+        (squareCard || landscapeCard) && 'flex justify-center',
+      )}
+    >
+      {fullBleed ? (
+        inner
+      ) : (
+        <ContentEmbedFrame
+          module="UNSPLASH_NODE"
+          subtitle={embedSubtitle}
+          showEmbedBadge={false}
+          noShadow
+          className={narrowEmbedClass}
+        >
+          {inner}
+        </ContentEmbedFrame>
+      )}
     </figure>
   );
 }
@@ -402,6 +496,7 @@ function VideoEmbedBlock({ payload }: Readonly<{ payload?: Record<string, unknow
       <ContentEmbedFrame
         module="MEDIA_EMBED"
         subtitle={urls.length > 1 ? `${urls.length} sources` : 'Video'}
+        showEmbedBadge={false}
       >
         <div
           className={cn(
@@ -454,10 +549,8 @@ function CodeBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>)
       : null;
   if (!code) return null;
   return (
-    <div className={cn('my-10 w-full', SHELL_CONTENT_MEASURE_CLASS)}>
-      <ContentEmbedFrame module="CODE_BLOCK" subtitle={languageHint ?? 'Snippet'}>
-        <BlogCodeBlockDisplay code={code} languageHint={languageHint} />
-      </ContentEmbedFrame>
+    <div className={cn('my-8 w-full', SHELL_CONTENT_MEASURE_CLASS)}>
+      <BlogCodeBlockDisplay code={code} languageHint={languageHint} className="my-0 max-w-none" />
     </div>
   );
 }
@@ -467,9 +560,22 @@ function TableBlock({ payload }: Readonly<{ payload?: TablePayload }>) {
   if (!rows.length) return null;
   const cap = (payload?.caption ?? '').trim();
   return (
-    <figure className={cn('my-10 w-full', SHELL_CONTENT_MEASURE_CLASS)}>
-      <ContentEmbedFrame module="TABLE_MODULE" subtitle={cap || 'Structured rows'}>
-        <div className="overflow-x-auto">
+    <figure className={cn('my-8 w-full overflow-hidden border-2 border-border bg-background', SHELL_CONTENT_MEASURE_CLASS)}>
+      <div className="flex items-center gap-2 border-b-2 border-border bg-muted/30 px-3 py-1.5 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-foreground">
+        <span className="shrink-0 text-primary" aria-hidden>
+          ▣
+        </span>
+        <span className="shrink-0">TABLE_MODULE</span>
+        {cap ? (
+          <span className="min-w-0 truncate text-[8px] font-bold normal-case tracking-normal text-muted-foreground sm:text-[9px]">
+            <span className="mx-1 text-border" aria-hidden>
+              ·
+            </span>
+            {cap}
+          </span>
+        ) : null}
+      </div>
+      <div className="overflow-x-auto bg-background">
         <table className="w-full min-w-[280px] border-collapse font-mono text-left text-sm">
           <tbody>
             {rows.map((row, ri) => (
@@ -480,7 +586,7 @@ function TableBlock({ payload }: Readonly<{ payload?: TablePayload }>) {
                 {row.map((cell, ci) => (
                   <td
                     key={`td-${ri}-${ci}`}
-                    className="border-r border-border p-3 align-top text-foreground last:border-r-0"
+                    className="border-r border-border p-2.5 align-top text-foreground last:border-r-0 sm:p-3"
                   >
                     {cell}
                   </td>
@@ -489,8 +595,7 @@ function TableBlock({ payload }: Readonly<{ payload?: TablePayload }>) {
             ))}
           </tbody>
         </table>
-        </div>
-      </ContentEmbedFrame>
+      </div>
     </figure>
   );
 }
@@ -499,9 +604,14 @@ function MermaidBlock({ payload }: Readonly<{ payload?: MermaidDiagramPayload }>
   const src = typeof payload?.source === 'string' ? payload.source : '';
   if (!src.trim()) return null;
   return (
-    <div className={cn('my-10 w-full', SHELL_CONTENT_MEASURE_CLASS)}>
-      <ContentEmbedFrame module="DIAGRAM_RENDER" subtitle={mermaidEmbedSubtitle(src)}>
-        <div className="p-3 sm:p-4">
+    <div className={cn('my-8 w-full', SHELL_CONTENT_MEASURE_CLASS)}>
+      <ContentEmbedFrame
+        module="DIAGRAM_RENDER"
+        subtitle={mermaidEmbedSubtitle(src)}
+        showEmbedBadge={false}
+        noShadow
+      >
+        <div className="bg-background p-3 sm:p-4">
           <MermaidBlockDisplay source={src} />
         </div>
       </ContentEmbedFrame>
@@ -519,17 +629,22 @@ function GithubRepoBlock({ payload }: Readonly<{ payload?: Record<string, unknow
 
   return (
     <div className={cn('my-10 w-full', SHELL_CONTENT_MEASURE_CLASS)}>
-      <ContentEmbedFrame module="REPO_OBJECT" subtitle={owner && name ? `${owner}/${name}` : 'Repository'}>
+      <ContentEmbedFrame
+        module="REPO_OBJECT"
+        subtitle={owner && name ? `${owner}/${name}` : 'Repository'}
+        showEmbedBadge={false}
+        noShadow
+      >
         <div className="flex flex-col gap-4 p-5 transition-all sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 items-start gap-4">
         {avatarUrl ? (
           <img
             src={avatarUrl}
             alt=""
-            className="h-14 w-14 shrink-0 border-2 border-border object-cover shadow-[4px_4px_0_0_var(--border)]"
+            className="h-14 w-14 shrink-0 rounded-none border-2 border-border object-cover"
           />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-border bg-muted shadow-[4px_4px_0_0_var(--border)]">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none border-2 border-border bg-muted">
             <GithubIcon className="h-7 w-7" />
           </div>
         )}
@@ -544,19 +659,17 @@ function GithubRepoBlock({ payload }: Readonly<{ payload?: Record<string, unknow
           )}
         </div>
       </div>
-      <a
+      <Button
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className={blockShadowButtonClassNames({
-          variant: 'primary',
-          size: 'sm',
-          className: 'shrink-0 font-mono normal-case tracking-normal',
-        })}
+        variant="primary"
+        size="sm"
+        className="shrink-0 font-mono normal-case tracking-normal"
       >
-        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
         Open on GitHub
-      </a>
+      </Button>
         </div>
       </ContentEmbedFrame>
     </div>
@@ -572,7 +685,7 @@ function PublicBlogBlock({ block }: Readonly<{ block: Block }>) {
     case 'paragraph':
       return <ParagraphBlock payload={payload} />;
     case 'heading':
-      return <HeadingBlock payload={payload} />;
+      return <HeadingBlock blockId={block.id} payload={payload} />;
     case 'partition':
       return <PartitionBlock />;
     case 'image':
@@ -618,24 +731,70 @@ export default function PublicBlogPostPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [rail, setRail] = useState<{ more: PublicFeedPost[] } | null>(null);
+  const [dockCommentStats, setDockCommentStats] = useState<{ total: number; loading: boolean }>({
+    total: 0,
+    loading: true,
+  });
+  const [dockEngagement, setDockEngagement] = useState<BlogDockEngagement>({
+    respectCount: 0,
+    repostCount: 0,
+    bookmarkCount: 0,
+    viewCount: 0,
+    viewerHasRespected: false,
+    viewerHasReposted: false,
+    viewerHasBookmarked: false,
+  });
+
+  /** Keeps `post` in sync when the dock mutates Respect / Repost / Bookmark so reload isn’t needed and stats stream state stays coherent. */
+  const applyDockEngagementFromApi = useCallback((next: BlogDockEngagement) => {
+    setPost((p) => {
+      if (!p) return p;
+      return {
+        ...p,
+        respectCount: next.respectCount,
+        repostCount: next.repostCount,
+        bookmarkCount: next.bookmarkCount,
+        viewCount: next.viewCount,
+        viewerHasRespected: next.viewerHasRespected,
+        viewerHasReposted: next.viewerHasReposted,
+        viewerHasBookmarked: next.viewerHasBookmarked,
+      };
+    });
+  }, []);
+
+  const tocItems = useMemo(
+    () => (post ? extractBlogHeadingToc(parseBlocks(post.content)) : []),
+    [post],
+  );
+  const hasToc = tocItems.length > 0;
+
+  const summaryHtmlSafe = useMemo(
+    () => sanitizePublicSummaryHtml(post?.summary ?? ''),
+    [post?.summary],
+  );
 
   useEffect(() => {
-    const onScroll = () => {
+    const updateProgress = () => {
       const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
       const y = window.scrollY;
       const pct = totalScroll <= 0 ? 0 : (y / totalScroll) * 100;
       setScrollProgress(Math.min(100, Math.max(0, pct)));
     };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    updateProgress();
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    window.addEventListener('resize', updateProgress);
+    return () => {
+      window.removeEventListener('scroll', updateProgress);
+      window.removeEventListener('resize', updateProgress);
+    };
+  }, [post?._id]);
 
   useEffect(() => {
     const load = async () => {
       if (!username || !slug) return;
       try {
-        const { post: p } = await blogApi.getPublishedPost(username, slug);
+        const { post: p } = await blogApi.getPublishedPost(username, slug, token);
         setPost(p);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Post not found');
@@ -644,6 +803,77 @@ export default function PublicBlogPostPage() {
       }
     };
     void load();
+  }, [username, slug, token]);
+
+  useEffect(() => {
+    if (!post) return;
+    setDockEngagement({
+      respectCount: post.respectCount ?? 0,
+      repostCount: post.repostCount ?? 0,
+      bookmarkCount: post.bookmarkCount ?? 0,
+      viewCount: post.viewCount ?? 0,
+      viewerHasRespected: post.viewerHasRespected ?? false,
+      viewerHasReposted: post.viewerHasReposted ?? false,
+      viewerHasBookmarked: post.viewerHasBookmarked ?? false,
+    });
+  }, [post]);
+
+  useEffect(() => {
+    if (!username || !slug || !post) return;
+    const base = resolvePublicApiBase();
+    if (!base) return;
+    const url = `${base}/api/blog/p/${encodeURIComponent(username)}/${encodeURIComponent(slug)}/stats/stream`;
+    const es = new EventSource(url);
+    es.onmessage = (ev) => {
+      try {
+        const d = JSON.parse(ev.data) as {
+          type?: string;
+          stats?: {
+            respectCount?: number;
+            repostCount?: number;
+            bookmarkCount?: number;
+            commentCount?: number;
+            viewCount?: number;
+          };
+        };
+        if ((d.type === 'snapshot' || d.type === 'update') && d.stats) {
+          setDockEngagement((prev) => ({
+            ...prev,
+            respectCount:
+              typeof d.stats!.respectCount === 'number' ? d.stats!.respectCount! : prev.respectCount,
+            repostCount: typeof d.stats!.repostCount === 'number' ? d.stats!.repostCount! : prev.repostCount,
+            bookmarkCount:
+              typeof d.stats!.bookmarkCount === 'number' ? d.stats!.bookmarkCount! : prev.bookmarkCount,
+            viewCount: typeof d.stats!.viewCount === 'number' ? d.stats!.viewCount! : prev.viewCount,
+          }));
+          if (typeof d.stats!.commentCount === 'number') {
+            setDockCommentStats({ total: d.stats!.commentCount!, loading: false });
+          }
+        }
+      } catch {
+        /* ignore malformed */
+      }
+    };
+    return () => es.close();
+  }, [username, slug, post?._id]);
+
+  useEffect(() => {
+    if (!username || !slug) return;
+    let cancelled = false;
+    setRail(null);
+    (async () => {
+      try {
+        const authorRes = await blogApi.getUserPublishedPosts(username, 12);
+        if (cancelled) return;
+        const more = authorRes.posts.filter((p) => p.slug !== slug).slice(0, 5);
+        setRail({ more });
+      } catch {
+        if (!cancelled) setRail({ more: [] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [username, slug]);
 
   useEffect(() => {
@@ -695,54 +925,12 @@ export default function PublicBlogPostPage() {
   }, [post, token, username, slug, viewerUsername]);
 
   if (loading) {
-    return (
-      <div className="public-blog-post-page min-h-screen bg-background text-foreground">
-        <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-16')}>
-          <div className="w-full border-4 border-border bg-card shadow-[8px_8px_0px_0px_var(--border)]">
-            <div className="border-b-4 border-border px-4 py-10 sm:px-6 lg:px-8 md:py-16">
-              <div className="mb-8 flex flex-wrap gap-3">
-                <div className="h-8 w-40 animate-pulse bg-muted sm:h-9" aria-hidden />
-                <div className="h-8 w-32 animate-pulse bg-muted/70 sm:h-9" aria-hidden />
-              </div>
-              <div className="mb-10 space-y-3 md:space-y-4">
-                <div className="h-10 w-full max-w-4xl animate-pulse bg-muted md:h-14" aria-hidden />
-                <div className="h-10 w-[92%] max-w-3xl animate-pulse bg-muted md:h-14" aria-hidden />
-                <div className="h-10 w-[64%] max-w-2xl animate-pulse bg-muted md:h-14" aria-hidden />
-              </div>
-              <div className="border-l-4 border-primary/25 bg-muted/10 p-6 md:p-8">
-                <div className="mb-4 h-3 w-36 animate-pulse bg-muted/80" aria-hidden />
-                <div className="space-y-2">
-                  <div className="h-2.5 w-full animate-pulse bg-muted" aria-hidden />
-                  <div className="h-2.5 w-full animate-pulse bg-muted" aria-hidden />
-                  <div className="h-2.5 w-[78%] animate-pulse bg-muted" aria-hidden />
-                </div>
-              </div>
-              <div className="mt-8 flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase text-muted-foreground">
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
-                Initializing_Stream…
-              </div>
-            </div>
-            <div className="px-4 py-10 sm:px-6 lg:px-8 md:py-14">
-              <div className={cn('space-y-3', SHELL_CONTENT_MEASURE_CLASS)}>
-                {Array.from({ length: 10 }, (_, i) => (
-                  <div
-                    key={`blog-post-sk-${i}`}
-                    className="h-2.5 animate-pulse bg-muted"
-                    style={{ width: i % 4 === 0 ? '100%' : i % 4 === 1 ? '96%' : i % 4 === 2 ? '88%' : '72%' }}
-                    aria-hidden
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <BlogPostPageSkeletonInner />;
   }
 
   if (error || !post) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="flex min-h-screen w-full items-center justify-center bg-background p-6">
         <div className="max-w-md border-4 border-destructive bg-destructive/5 p-10 shadow-[8px_8px_0px_0px_var(--destructive)]">
           <AlertTriangle className="mb-4 h-12 w-12 text-destructive" aria-hidden />
           <h1 className="mb-4 font-mono text-2xl font-black uppercase text-destructive">Access_Denied</h1>
@@ -776,14 +964,6 @@ export default function PublicBlogPostPage() {
           year: 'numeric',
         })
       : '—';
-  const dateStrShort =
-    dateValid
-      ? publishedDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })
-      : '—';
 
   const showEditedForAuthorOnly = Boolean(
     viewerUsername &&
@@ -792,112 +972,146 @@ export default function PublicBlogPostPage() {
       post.lastEditedAt?.trim(),
   );
 
-  const postId = post._id;
-  const indexId = postId.length >= 8 ? postId.slice(0, 8) : postId;
+  const heroThumbnail = post.thumbnailUrl?.trim() ?? '';
 
   return (
     <BlogImagePreviewProvider>
-      <div className="public-blog-post-page min-h-screen  text-foreground selection:bg-primary selection:text-primary-foreground">
+      <div className="public-blog-post-page relative flex min-h-screen w-full flex-col bg-transparent text-foreground selection:bg-primary selection:text-primary-foreground">
         <div
-          className="fixed top-0 left-0 z-50 h-1.5 bg-primary transition-[width] duration-75"
+          className="fixed top-0 left-0 z-[100] h-1.5 bg-primary transition-[width] duration-75"
           style={{ width: `${scrollProgress}%` }}
           aria-hidden
         />
 
-        <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-16')}>
-          <article className={cn('w-full border-4 border-border bg-card', CARD_SHADOW)}>
-            <header className="relative overflow-hidden border-b-4 border-border px-4 py-10 sm:px-6 lg:px-8 md:py-16">
-              <div className="pointer-events-none absolute top-0 right-0 origin-top-right rotate-90 p-4 font-mono text-[10px] whitespace-nowrap text-muted-foreground/20">
-                {'SECURE_CONNECTION_STABLE // BUILT_WITH_MODERN_WEB'}
-              </div>
-
-              <div className="mb-8 flex flex-wrap items-center gap-4">
-                <time
-                  dateTime={dateRaw || undefined}
-                  className="flex items-center gap-2 border-2 border-border bg-muted/50 px-3 py-1 font-mono text-xs font-bold uppercase"
-                >
-                  <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
-                  {dateStrLong}
-                </time>
-                {showEditedForAuthorOnly ? (
-                  <div className="flex items-center gap-2 border-2 border-amber-500/30 bg-amber-500/5 px-3 py-1 font-mono text-xs font-bold uppercase text-amber-600 dark:text-amber-400">
-                    <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Edited{' '}
-                    {new Date(post.lastEditedAt!).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                    {post.lastEditedBy?.fullName || post.lastEditedBy?.username
-                      ? ` · ${post.lastEditedBy.fullName ?? post.lastEditedBy.username}`
-                      : ''}
+        <div
+          className={cn(
+            SHELL_CONTENT_RAIL_CLASS,
+            'relative flex-1 !overflow-visible',
+          )}
+        >
+          <div className="flex flex-col gap-6 !overflow-visible bg-transparent xl:flex-row xl:items-start xl:gap-6">
+            <aside className="sticky top-24 z-20 hidden w-[11.5rem] max-w-[11.5rem] shrink-0 self-start xl:block">
+              <div className="flex max-h-[calc(100vh-8rem)] min-h-0 flex-col gap-4 pr-2">
+                <div className="shrink-0">
+                  <BlogPostSidebarStats
+                    respectCount={dockEngagement.respectCount}
+                    repostCount={dockEngagement.repostCount}
+                    bookmarkCount={dockEngagement.bookmarkCount}
+                    viewCount={dockEngagement.viewCount}
+                    commentTotal={dockCommentStats.total}
+                    commentLoading={dockCommentStats.loading}
+                  />
+                </div>
+                {hasToc ? (
+                  <div className="min-h-0 flex-1">
+                    <BlogPostTableOfContents items={tocItems} />
                   </div>
                 ) : null}
               </div>
+            </aside>
 
-              <h1 className="mb-10 text-balance font-mono text-4xl font-black uppercase leading-[0.95] tracking-tighter sm:text-5xl md:text-7xl lg:text-8xl">
-                {post.title}
-              </h1>
-
-              {hasSummary ? (
-                <div className="group relative mb-10">
-                  <div className="absolute -left-12 top-0 bottom-0 hidden w-1 bg-primary/20 md:block" aria-hidden />
-                  <div className="border-l-4 border-primary bg-primary/5 p-6 md:p-8">
-                    <div className="mb-4 flex items-center gap-2">
-                      <Terminal className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
-                      <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary">
-                        Briefing_Field
-                      </span>
-                    </div>
-                    <div className="text-lg font-medium leading-relaxed text-foreground/80 italic [&_a]:not-[class]:text-primary">
-                      {summaryLooksHtml ? (
-                        <div
-                          className="max-w-none [&_a]:underline [&_br]:block [&_em]:not-italic [&_strong]:font-semibold"
-                          dangerouslySetInnerHTML={{ __html: post.summary }}
-                        />
-                      ) : (
-                        <div className="whitespace-pre-wrap">{plainSummary}</div>
-                      )}
-                    </div>
+            <main className="min-w-0 flex-1 bg-background">
+              <article className="w-full border-2 border-border bg-transparent">
+                <header className="relative overflow-hidden border-0 px-3 py-6 sm:px-4 lg:px-5 md:py-10">
+                  <div className="pointer-events-none absolute top-0 right-0 origin-top-right rotate-90 p-4 font-mono text-[10px] whitespace-nowrap text-muted-foreground/20">
+                    {'SECURE_CONNECTION_STABLE // BUILT_WITH_MODERN_WEB'}
                   </div>
-                </div>
-              ) : null}
 
-              <div className="flex items-center justify-between border-t-2 border-dashed border-border/30 pt-8">
-                <BlogPostAuthor author={post.author} />
-                <div className="hidden text-right font-mono text-[10px] uppercase text-muted-foreground sm:block">
-                  Index_ID: {indexId}
-                  <br />
-                  Status: Published · {dateStrShort}
-                </div>
-              </div>
-            </header>
+                  <div className={cn(SHELL_CONTENT_MEASURE_CLASS, 'min-w-0')}>
+                    <div className="mb-8 flex flex-wrap items-center gap-4">
+                      <time
+                        dateTime={dateRaw || undefined}
+                        className="flex items-center gap-2 border-2 border-border bg-muted/50 px-3 py-1 font-mono text-xs font-bold uppercase"
+                      >
+                        <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                        {dateStrLong}
+                      </time>
+                      {showEditedForAuthorOnly ? (
+                        <div className="flex items-center gap-2 border-2 border-amber-500/30 bg-amber-500/5 px-3 py-1 font-mono text-xs font-bold uppercase text-amber-600 dark:text-amber-400">
+                          <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          Edited{' '}
+                          {new Date(post.lastEditedAt!).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                          {post.lastEditedBy?.fullName || post.lastEditedBy?.username
+                            ? ` · ${post.lastEditedBy.fullName ?? post.lastEditedBy.username}`
+                            : ''}
+                        </div>
+                      ) : null}
+                    </div>
 
-            <div className="px-4 py-10 sm:px-6 lg:px-8 md:py-16">
-              <div className="prose-retro">
+                    <h1 className="mb-8 w-full min-w-0 max-w-none text-pretty font-mono text-3xl font-black uppercase leading-[0.95] tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
+                      {post.title}
+                    </h1>
+
+                    {heroThumbnail ? (
+                      <BlogHeroThumbnailPreview src={heroThumbnail} alt={post.title} />
+                    ) : null}
+
+                    {hasSummary ? (
+                      <div className="group relative border-b border-dashed border-muted-foreground/40 pb-0">
+                        <div className="absolute -left-12 top-0 bottom-0 hidden w-1 bg-primary/20 md:block" aria-hidden />
+                        <div className="border-l-4 border-primary bg-primary/5 p-4 pb-3 md:p-5 md:pb-4">
+                          <div className="mb-2 flex items-center gap-2">
+                            <Terminal className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                            <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary">
+                              Briefing_Field
+                            </span>
+                          </div>
+                          <div className="text-base font-medium leading-relaxed text-foreground/80 italic [&_a]:not-[class]:text-primary">
+                            {summaryLooksHtml ? (
+                              summaryHtmlSafe.trim() ? (
+                                <div
+                                  className="max-w-none [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_p:empty]:hidden [&_a]:underline [&_br]:block [&_em]:not-italic [&_strong]:font-semibold"
+                                  dangerouslySetInnerHTML={{ __html: summaryHtmlSafe }}
+                                />
+                              ) : (
+                                <div>{plainSummary}</div>
+                              )
+                            ) : (
+                              <div>{plainSummary}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </header>
+
+            <div className="px-3 pt-2 pb-6 sm:px-4 lg:px-5 md:pt-3 md:pb-10">
+              <div className="prose-retro [&_.public-blog-body>div:first-child]:mt-0">
                 <BlogPublicBody content={post.content} />
               </div>
 
-              <div className="mt-20 border-t-4 border-border pt-12">
-                <div className="mb-8 flex flex-wrap items-center gap-3">
-                  <div className="h-8 w-1 bg-primary" aria-hidden />
-                  <h2 className="font-mono text-xl font-black uppercase tracking-tight">Signal_Channel</h2>
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    · comments
-                  </span>
-                </div>
-                <BlogCommentsSection username={username} slug={slug} />
-              </div>
+              <section
+                id="blog-comments-section"
+                className={cn(
+                  'mt-12 border-t border-dashed border-muted-foreground/40 pt-8',
+                  'pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]',
+                )}
+                aria-labelledby="blog-comments-heading"
+              >
+                <BlogCommentsSection
+                  username={username}
+                  slug={slug}
+                  hideTitle
+                  onCommentStatsChange={setDockCommentStats}
+                />
+              </section>
             </div>
 
-            <footer className="flex flex-col items-center justify-between gap-6 border-t-4 border-border bg-muted/30 p-8 md:flex-row md:px-8 lg:px-10">
+            <footer className="flex flex-col items-center justify-between gap-3 border-t border-dashed border-muted-foreground/35 bg-muted/20 px-5 py-3 md:flex-row md:px-5 lg:px-6">
               <div className="flex items-center gap-3 font-mono text-xs font-bold uppercase text-muted-foreground">
                 <span className="size-2 animate-pulse rounded-full bg-primary" aria-hidden />
                 END_OF_TRANSMISSION {' // '}{new Date().getFullYear()}
               </div>
               <button
                 type="button"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                onClick={() => {
+                  globalThis.window?.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className={cn(
                   'flex items-center gap-2 border-2 border-border bg-card px-6 py-2 font-mono text-xs font-black uppercase shadow-[4px_4px_0_0_var(--border)] transition-all',
                   'hover:bg-primary hover:text-primary-foreground hover:shadow-none active:translate-y-1',
@@ -907,11 +1121,32 @@ export default function PublicBlogPostPage() {
                 Top
               </button>
             </footer>
-          </article>
+              </article>
+            </main>
 
-      
+            <aside className="sticky top-24 z-20 hidden w-[17.5rem] max-w-[17.5rem] shrink-0 self-start xl:block">
+              <div className="max-h-[calc(100vh-8rem)] overflow-y-auto pl-1 pr-2 ss-scrollbar-hide">
+                <BlogPostDetailSideRail
+                  username={username}
+                  slug={slug}
+                  author={post.author}
+                  postTitle={post.title}
+                  moreByAuthor={rail?.more ?? []}
+                  loading={rail === null}
+                />
+              </div>
+            </aside>
+          </div>
         </div>
       </div>
+      <BlogPostCommentsDock
+        username={username}
+        slug={slug}
+        commentCount={dockCommentStats.total}
+        commentCountLoading={dockCommentStats.loading}
+        engagement={dockEngagement}
+        onEngagementChange={applyDockEngagementFromApi}
+      />
     </BlogImagePreviewProvider>
   );
 }

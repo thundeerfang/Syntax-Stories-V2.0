@@ -25,7 +25,10 @@ export function mapBlogPostResponseToPost(
     },
     publishedAt,
     blogStatus: p.status,
+    category: p.category,
+    tags: p.tags,
     lastEditedAt: p.lastEditedAt,
     lastEditedBy: p.lastEditedBy,
+    readTimeMinutes: typeof p.readTimeMinutes === 'number' ? p.readTimeMinutes : undefined,
   };
 }

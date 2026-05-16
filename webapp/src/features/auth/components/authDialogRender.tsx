@@ -3,6 +3,8 @@
 import type { RefObject, ReactNode } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/retroui/Checkbox';
+import { Text } from '@/components/retroui/Text';
 import { Mail, ArrowLeft, HelpCircle } from 'lucide-react';
 import {
   GoogleIcon,
@@ -13,6 +15,7 @@ import {
 } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/utils';
 import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
+import { clearLegalSignupAckCookie, setLegalSignupAckCookie } from '@/lib/legalSignupAckCookie';
 import { AltchaField } from './AltchaField';
 import type { AuthDialogStep } from './authDialogStep';
 
@@ -43,6 +46,7 @@ function SocialButton({
   label,
   href,
   onBeforeNavigate,
+  disabled = false,
 }: Readonly<{
   icon?: React.ComponentType<{ className?: string }>;
   iconSrc?: string;
@@ -50,6 +54,7 @@ function SocialButton({
   label: string;
   href?: string;
   onBeforeNavigate?: () => void;
+  disabled?: boolean;
 }>) {
   let iconEl: React.ReactNode = null;
   if (iconSrc != null) {
@@ -60,7 +65,12 @@ function SocialButton({
     iconEl = <Icon className="h-5 w-5 shrink-0" />;
   }
 
-  if (href) {
+  const enabledClass =
+    'relative flex w-full items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-card-foreground hover:border-primary hover:bg-muted/50 transition-all active:scale-[0.98]';
+  const disabledClass =
+    'relative flex w-full cursor-not-allowed items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-45';
+
+  if (href && !disabled) {
     const oauthStart = href.includes('/auth/');
     return (
       <a
@@ -73,13 +83,23 @@ function SocialButton({
               }
             : undefined
         }
-        className="relative flex w-full items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-card-foreground hover:border-primary hover:bg-muted/50 transition-all active:scale-[0.98]"
+        className={enabledClass}
       >
         <span className="pointer-events-none absolute left-4 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
           {iconEl}
         </span>
         <span className="text-center">{label}</span>
       </a>
+    );
+  }
+  if (href && disabled) {
+    return (
+      <span role="presentation" className={disabledClass}>
+        <span className="pointer-events-none absolute left-4 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
+          {iconEl}
+        </span>
+        <span className="text-center">{label}</span>
+      </span>
     );
   }
   return (
@@ -101,12 +121,15 @@ function AuthFooter({
   showHelp = false,
   closeDialog,
   compact = false,
+  showLegalBlurb = true,
 }: Readonly<{
   children: React.ReactNode;
   showHelp?: boolean;
   closeDialog?: () => void;
   /** Tighter top spacing so tall steps (e.g. signup + back link) stay inside the dialog without a sliver of scroll. */
   compact?: boolean;
+  /** When false, hide the default Terms/Privacy line (e.g. signup steps use an explicit consent checkbox). */
+  showLegalBlurb?: boolean;
 }>) {
   return (
     <div
@@ -128,23 +151,89 @@ function AuthFooter({
           </Link>
         )}
       </div>
-      <p className="text-[9px] leading-relaxed font-medium uppercase tracking-[0.05em] text-muted-foreground/60 px-4">
-        By continuing, you agree to our{' '}
-        <Link
-          href={TERMS_LINK}
-          className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all"
-        >
-          Terms
-        </Link>
-        {' '}&{' '}
-        <Link
-          href={PRIVACY_LINK}
-          className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all"
-        >
-          Privacy Policy
-        </Link>
-        .
-      </p>
+      {showLegalBlurb ? (
+        <p className="text-[9px] leading-relaxed font-medium uppercase tracking-[0.05em] text-muted-foreground/60 px-4">
+          By continuing, you agree to our{' '}
+          <Link
+            href={TERMS_LINK}
+            className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all"
+          >
+            Terms
+          </Link>
+          {' '}&{' '}
+          <Link
+            href={PRIVACY_LINK}
+            className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AuthSignupLegalConsent(
+  p: Readonly<{
+    termsAccepted: boolean;
+    privacyAccepted: boolean;
+    onTermsChange: (next: boolean) => void;
+    onPrivacyChange: (next: boolean) => void;
+    closeDialog: () => void;
+  }>,
+): ReactNode {
+  const syncOAuthCookie = (terms: boolean, privacy: boolean) => {
+    if (terms && privacy) setLegalSignupAckCookie();
+    else clearLegalSignupAckCookie();
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border-2 border-border bg-muted/20 px-3 py-3">
+      <div className="flex gap-2 items-center">
+        <Checkbox
+          checked={p.termsAccepted}
+          onCheckedChange={(next) => {
+            p.onTermsChange(next);
+            syncOAuthCookie(next, p.privacyAccepted);
+          }}
+          className="shrink-0"
+          aria-label="Accept Terms of Service"
+        />
+        <Text className="text-left font-medium normal-case leading-snug tracking-wide text-muted-foreground">
+          I have read and accept the{' '}
+          <Link
+            href={TERMS_LINK}
+            className="text-card-foreground underline decoration-primary/40 underline-offset-2 hover:text-primary"
+            onClick={() => p.closeDialog()}
+          >
+            Terms of Service
+          </Link>
+          .
+        </Text>
+      </div>
+      <div className="flex gap-2 items-center">
+        <Checkbox
+          checked={p.privacyAccepted}
+          onCheckedChange={(next) => {
+            p.onPrivacyChange(next);
+            syncOAuthCookie(p.termsAccepted, next);
+          }}
+          className="shrink-0"
+          aria-label="Accept Privacy Policy"
+        />
+        <Text className="text-left font-medium normal-case leading-snug tracking-wide text-muted-foreground">
+          I have read and accept the{' '}
+          <Link
+            href={PRIVACY_LINK}
+            className="text-card-foreground underline decoration-primary/40 underline-offset-2 hover:text-primary"
+            onClick={() => p.closeDialog()}
+          >
+            Privacy Policy
+          </Link>
+          .
+        </Text>
+      </div>
     </div>
   );
 }
@@ -177,6 +266,10 @@ export type AuthDialogRenderProps = Readonly<{
   resendCooldownSec: number;
   onResendCodeClick: () => void;
   sanitizeOtpInput: (raw: string) => string;
+  legalTermsAccepted: boolean;
+  setLegalTermsAccepted: (v: boolean) => void;
+  legalPrivacyAccepted: boolean;
+  setLegalPrivacyAccepted: (v: boolean) => void;
 }>;
 
 function renderAuthWelcomeStep(p: AuthDialogRenderProps): ReactNode {
@@ -329,7 +422,12 @@ function renderAuthLoginEmailStep(p: AuthDialogRenderProps): ReactNode {
       );
 }
 
+function signupLegalReady(p: AuthDialogRenderProps): boolean {
+  return p.legalTermsAccepted && p.legalPrivacyAccepted;
+}
+
 function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
+  const ok = signupLegalReady(p);
   return (
         <>
           <button
@@ -352,30 +450,35 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
               label="Sign up with Google"
               href={oauthSignupHref('/auth/google/signup')}
               onBeforeNavigate={p.close}
+              disabled={!ok}
             />
             <SocialButton
               icon={FacebookIcon}
               label="Sign up with Facebook"
               href={oauthSignupHref('/auth/facebook/signup')}
               onBeforeNavigate={p.close}
+              disabled={!ok}
             />
             <SocialButton
               icon={GithubIcon}
               label="Sign up with GitHub"
               href={oauthSignupHref('/auth/github/signup')}
               onBeforeNavigate={p.close}
+              disabled={!ok}
             />
             <SocialButton
               iconSrc={ICON_DISCORD}
               label="Sign up with Discord"
               href={oauthSignupHref('/auth/discord/signup')}
               onBeforeNavigate={p.close}
+              disabled={!ok}
             />
             <SocialButton
               icon={XIcon}
               label="Sign up with X"
               href={oauthSignupHref('/auth/x/signup')}
               onBeforeNavigate={p.close}
+              disabled={!ok}
             />
           </div>
           <div className="relative my-5">
@@ -392,6 +495,7 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
             type="button"
             variant="outline"
             className="relative w-full justify-center py-6 pl-12 pr-4 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
+            disabled={!ok}
             onClick={() => p.goToStep('signup-email')}
           >
             <Mail
@@ -400,7 +504,16 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
             />
             <span>Sign up with email</span>
           </Button>
-          <AuthFooter compact>
+          <div className="mt-5">
+            <AuthSignupLegalConsent
+              termsAccepted={p.legalTermsAccepted}
+              privacyAccepted={p.legalPrivacyAccepted}
+              onTermsChange={p.setLegalTermsAccepted}
+              onPrivacyChange={p.setLegalPrivacyAccepted}
+              closeDialog={p.close}
+            />
+          </div>
+          <AuthFooter compact showLegalBlurb={false}>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Already joined?{' '}
               <button
@@ -417,6 +530,7 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
 }
 
 function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
+  const ok = signupLegalReady(p);
   return (
         <>
           <button
@@ -479,13 +593,22 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
                 id="auth-signup-create"
                 type="submit"
                 className="w-full py-6 text-xs font-black uppercase tracking-widest"
-                disabled={p.isLoading}
+                disabled={p.isLoading || !ok}
               >
                 {p.isLoading ? 'Creating...' : 'Create account'}
               </Button>
             </div>
           </form>
-          <AuthFooter compact>
+          <div className="mt-5">
+            <AuthSignupLegalConsent
+              termsAccepted={p.legalTermsAccepted}
+              privacyAccepted={p.legalPrivacyAccepted}
+              onTermsChange={p.setLegalTermsAccepted}
+              onPrivacyChange={p.setLegalPrivacyAccepted}
+              closeDialog={p.close}
+            />
+          </div>
+          <AuthFooter compact showLegalBlurb={false}>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Already joined?{' '}
               <button
@@ -595,11 +718,16 @@ function renderAuthVerifyEmailStep(p: AuthDialogRenderProps): ReactNode {
               <Link
                 href={PRIVACY_LINK}
                 className="underline hover:text-card-foreground transition-colors"
+                onClick={() => p.close()}
               >
                 Privacy
               </Link>
               {' & '}
-              <Link href={TERMS_LINK} className="underline hover:text-card-foreground transition-colors">
+              <Link
+                href={TERMS_LINK}
+                className="underline hover:text-card-foreground transition-colors"
+                onClick={() => p.close()}
+              >
                 Terms
               </Link>
               .

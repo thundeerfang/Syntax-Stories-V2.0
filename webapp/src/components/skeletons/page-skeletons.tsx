@@ -1,8 +1,11 @@
 'use client';
 
+import type { ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { SkBar, SkBlock } from './primitives';
 import { cn } from '@/lib/utils';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
+import { SHELL_CONTENT_MEASURE_CLASS, SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
 
 /** Home feed area (inside `MainLayout` content slot). */
 export function HomePageSkeletonInner() {

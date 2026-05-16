@@ -5,6 +5,7 @@ import {
   setRespectDesiredState,
   viewerRespectStatesForPosts,
 } from '../services/blogRespect.service.js';
+import { publishBlogPostStatsSnapshot } from '../services/blogStatsPublish.service.js';
 
 function paramString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
@@ -49,6 +50,8 @@ export async function setBlogRespect(req: Request, res: Response): Promise<void>
       res.status(404).json({ success: false, message: 'Post not found' });
       return;
     }
+
+    void publishBlogPostStatsSnapshot(found.postId);
 
     res.status(200).json({
       success: true,

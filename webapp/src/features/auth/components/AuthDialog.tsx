@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
 import { Button, Dialog, DIALOG_Z_INDEX_STACKED, useGlobalAltchaBusy } from '@/components/ui';
+import { clearLegalSignupAckCookie } from '@/lib/legalSignupAckCookie';
 import { AltchaField } from './AltchaField';
 import { readAltchaPayload, useOtpFlow } from '../hooks/useOtpFlow';
 import type { AuthDialogView } from '@/store/authDialog';
@@ -85,7 +86,10 @@ export function AuthDialog() {
   const [code, setCode] = useState('');
   const [verifyEmail, setVerifyEmail] = useState('');
   const [stepBeforeVerify, setStepBeforeVerify] = useState<Step>('login-email');
+  const [legalTermsAccepted, setLegalTermsAccepted] = useState(false);
+  const [legalPrivacyAccepted, setLegalPrivacyAccepted] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const signupPoliciesReady = legalTermsAccepted && legalPrivacyAccepted;
 
   const {
     altchaOn,
@@ -130,6 +134,13 @@ export function AuthDialog() {
     });
   }, [isOpen, initialView, storeTwoFactor, setResendCooldownSec, setOtpAttemptsLeft]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setLegalTermsAccepted(false);
+    setLegalPrivacyAccepted(false);
+    clearLegalSignupAckCookie();
+  }, [isOpen]);
+
   const handleSendLoginOtp = async (e: FormSubmit) => {
     e.preventDefault();
     const altcha = altchaOn ? readAltchaPayload(e.currentTarget) : undefined;
@@ -152,6 +163,13 @@ export function AuthDialog() {
 
   const handleSignUp = async (e: FormSubmit) => {
     e.preventDefault();
+    if (!legalTermsAccepted || !legalPrivacyAccepted) {
+      const missing: string[] = [];
+      if (!legalTermsAccepted) missing.push('Terms of Service');
+      if (!legalPrivacyAccepted) missing.push('Privacy Policy');
+      toast.error(`Please accept the ${missing.join(' and ')} before continuing.`);
+      return;
+    }
     const altcha = altchaOn ? readAltchaPayload(e.currentTarget) : undefined;
     if (altchaOn && !altcha) {
       toast.error('Complete the verification check below.');
@@ -173,7 +191,16 @@ export function AuthDialog() {
   const handleVerifyCode = async (e: FormSubmit) => {
     e.preventDefault();
     try {
-      await verifyCode(verifyEmail, code);
+      const isSignupEmailFlow = twoFactor == null && stepBeforeVerify === 'signup-email';
+      if (isSignupEmailFlow && (!legalTermsAccepted || !legalPrivacyAccepted)) {
+        toast.error('Please go back and accept both the Terms of Service and the Privacy Policy.');
+        return;
+      }
+      await verifyCode(
+        verifyEmail,
+        code,
+        isSignupEmailFlow ? { acceptPolicies: true } : undefined,
+      );
       setOtpAttemptsLeft(null);
       const tf = useAuthStore.getState().twoFactor;
       if (!tf) {
@@ -272,6 +299,10 @@ export function AuthDialog() {
                 resendCooldownSec,
                 onResendCodeClick,
                 sanitizeOtpInput,
+                legalTermsAccepted,
+                setLegalTermsAccepted,
+                legalPrivacyAccepted,
+                setLegalPrivacyAccepted,
               })}
             </motion.div>
           </AnimatePresence>

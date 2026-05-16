@@ -20,7 +20,6 @@ import {
   Wallet,
   LogOut,
   Camera,
-  Code2,
   FolderGit2,
   Settings,
   ChevronDown,
@@ -49,7 +48,6 @@ import {
   Search,
   Building2,
   Globe,
-  Lock,
   Loader2,
   Image as LucideImage,
   Flame,
@@ -73,18 +71,20 @@ import {
   settingsBtnBlockPrimarySm,
   settingsBtnIconFab,
 } from './buttonStyles';
+import { GithubNotConnectedDialog } from './GithubNotConnectedDialog';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { authApi } from '@/api/auth';
 import { projectMatchesGithubRepo } from '@/lib/githubProjectIdentity';
 import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
-import { UploadLogoDialog, MediaFullViewDialog } from '@/components/profile/dialog';
+import { UploadLogoDialog, MediaFullViewDialog, SyntaxCardDialog } from '@/components/profile/dialog';
 import { ImageUploadCropDialog } from '@/components/upload';
 import { uploadAvatar, uploadCover, uploadMedia } from '@/api/upload';
 import { FormDialog } from '@/components/ui/FormDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { GhostOutlineButton } from '@/components/ui';
+import { GithubConnectLottie } from '@/components/ui/GithubConnectLottie';
 import { HoverCard } from '@/components/ui/HoverCard';
 import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
 import { Dialog } from '@/components/ui/Dialog';
@@ -148,7 +148,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: 'education', label: 'Education', icon: GraduationCap },
       { id: 'certifications', label: 'License & Certifications', icon: Award },
       { id: 'projects', label: 'Projects & Publications', icon: FolderGit2 },
-      { id: 'open-source', label: 'Open Source', icon: Code2 },
+      { id: 'open-source', label: 'Open Source', icon: Github },
       { id: 'blog-streak', label: 'Blog read streak', icon: Flame },
     ],
   },
@@ -184,56 +184,42 @@ function FormSection({ title, children }: { title?: string; children: React.Reac
 }
 
 function SyntaxCardContent() {
+  const { user } = useSettingsAuthSlice();
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   return (
     <div className="space-y-8">
       <SettingsSectionHeading
         icon={<CreditCard />}
         title="Syntax DevCard"
-        description="Your developer identity card. This is how you appear across the platform."
+        description="Your square developer identity card — export as PNG and share on X, Instagram, or Facebook."
       />
 
-      <div className="max-w-md mx-auto lg:mx-0">
-        <div className="relative group">
-          {/* Decorative Background Shadow */}
-          <div className="absolute inset-0 translate-x-2 translate-y-2 bg-primary border-2 border-black" />
-          
-          {/* Main Card */}
-          <div className="relative border-2 border-black bg-white p-6 transition-transform group-hover:-translate-y-1">
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center gap-4">
-                <div className="size-16 border-2 border-black bg-muted overflow-hidden">
-                  <img
-                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Harshit"
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black uppercase">Harshit Kushwah</h3>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">@harshitkushwah</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="border-2 border-black bg-muted/30 py-3">
-                  <p className="text-xl font-black italic leading-none">10</p>
-                  <p className="mt-1 text-[8px] font-black uppercase text-muted-foreground">Rep</p>
-                </div>
-                <div className="border-2 border-black bg-muted/30 py-3">
-                  <p className="text-xl font-black italic leading-none">2</p>
-                  <p className="mt-1 text-[8px] font-black uppercase text-muted-foreground">Streak</p>
-                </div>
-                <div className="border-2 border-black bg-muted/30 py-3">
-                  <p className="text-xl font-black italic leading-none">7</p>
-                  <p className="mt-1 text-[8px] font-black uppercase text-muted-foreground">Reads</p>
-                </div>
-              </div>
-
-           
-            </div>
-          </div>
-        </div>
+      <div className="max-w-md space-y-4">
+        <p className="text-xs font-medium text-muted-foreground leading-relaxed">
+          Pulls your cover, avatar, posts, respects, followers, achievements, blog contribution map, and read streak into one retro card.
+        </p>
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          className={cn(
+            settingsBtnBlockPrimaryMd,
+            'inline-flex items-center gap-2 border-2 border-border font-black text-[11px] uppercase tracking-widest shadow-[4px_4px_0px_0px_var(--border)]',
+          )}
+        >
+          <CreditCard className="size-4" />
+          Open Syntax Card
+        </button>
       </div>
+
+      <SyntaxCardDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        username={user?.username ?? ''}
+        fullName={user?.fullName ?? user?.username ?? 'Developer'}
+        profileImg={user?.profileImg}
+        coverBanner={user?.coverBanner}
+      />
     </div>
   );
 }
@@ -640,10 +626,11 @@ function EditProfileContent() {
         titleId="settings-cover-crop"
         title="Upload cover image"
         titleIcon={<LucideImage className="size-4 shrink-0 text-primary" aria-hidden />}
-        subtitle="JPEG, PNG, GIF or WebP. Max 10 MB. Recommended width 1200px+."
+        subtitle="JPEG, PNG, GIF or WebP. Max 10 MB."
         subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
         maxSizeBytes={10 * 1024 * 1024}
         aspect={4}
+        cropMinHeightClass="min-h-[20rem] h-80"
         imageTitleField
         imageTitleLabel="Cover title (optional)"
         imageTitlePlaceholder="e.g. Team offsite banner"
@@ -916,6 +903,7 @@ function SecurityEmailContent() {
   const [verifying, setVerifying] = useState(false);
 
   const handleSendCode = async () => {
+    if (sending) return;
     const email = newEmail.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast.error('Enter a valid new email address.');
@@ -1017,8 +1005,11 @@ function SecurityEmailContent() {
             <button
               type="button"
               onClick={handleSendCode}
-              disabled={sending || !newEmail}
-              className={cn(settingsBtnBlockPrimaryMd, 'px-6 py-3 text-xs tracking-widest')}
+              disabled={sending || !newEmail.trim()}
+              className={cn(
+                settingsBtnBlockPrimaryMd,
+                'px-6 py-3 text-xs tracking-widest disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60',
+              )}
             >
               {sending ? 'Processing...' : 'Request Verification Codes'}
               <ChevronDown className="-rotate-90 size-4" />
@@ -1180,11 +1171,16 @@ function ConnectedAccountsContent() {
               </div>
 
               <div className="flex items-center gap-4 mb-6">
-                <div className={cn(
-                  "size-12 flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
-                  p.linked ? "bg-primary text-primary-foreground" : "bg-muted/20 text-muted-foreground"
-                )}>
-                  {p.id === 'google' ? (
+                <div
+                  className={cn(
+                    'flex shrink-0 items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]',
+                    p.id === 'github' && !p.linked ? 'size-16 overflow-hidden' : 'size-12',
+                    p.linked ? 'bg-primary text-primary-foreground' : 'bg-muted/20 text-muted-foreground',
+                  )}
+                >
+                  {p.id === 'github' && !p.linked ? (
+                    <GithubConnectLottie size={56} />
+                  ) : p.id === 'google' ? (
                     <span className="flex items-center justify-center rounded-full bg-white p-1.5">
                       <Icon className="size-6" />
                     </span>
@@ -1729,7 +1725,6 @@ function MySetupContent() {
         cropMinHeightClass="min-h-[12rem] h-48"
         imageTitleField
         imageTitleLabel="Title (optional)"
-        imageTitlePlaceholder="Shown as title and alt for this photo"
         confirmLabel="Use image"
         onConfirm={async (file, meta) => {
           if (!token) throw new Error('Not signed in.');
@@ -4484,6 +4479,7 @@ function OpenSourceContent() {
   const imported = (user?.projects ?? []).filter((p) => (p as { source?: string }).source === 'github');
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [githubConnectPromptOpen, setGithubConnectPromptOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -4511,8 +4507,12 @@ function OpenSourceContent() {
   };
 
   const openImportDialog = () => {
+    if (!user?.isGitAccount) {
+      setGithubConnectPromptOpen(true);
+      return;
+    }
     setDialogOpen(true);
-    if (user?.isGitAccount) void fetchRepos();
+    void fetchRepos();
   };
 
   const addRepo = async (fullName: string) => {
@@ -4567,52 +4567,7 @@ function OpenSourceContent() {
     return repos.filter((r) => (r.full_name || '').toLowerCase().includes(q) || (r.name || '').toLowerCase().includes(q));
   }, [repos, query]);
 
-  const openSourceDialogLocked = !user?.isGitAccount || loading || saving;
-
-  const openSourceLockOverlayContent =
-    !user?.isGitAccount ? (
-      <div className="w-full max-w-md border-2 border-border bg-card p-6 shadow-[4px_4px_0px_0px_var(--border)]">
-        <div className="flex items-center justify-center gap-4">
-          <span
-            className="flex size-14 shrink-0 items-center justify-center border-2 border-border bg-muted/40 text-muted-foreground shadow-[3px_3px_0px_0px_var(--border)]"
-            aria-hidden
-          >
-            <Lock className="size-7" strokeWidth={2} />
-          </span>
-          <span
-            className="flex size-14 shrink-0 items-center justify-center border-2 border-primary/35 bg-primary/10 text-primary shadow-[3px_3px_0px_0px_var(--border)]"
-            aria-hidden
-          >
-            <Github className="size-7" strokeWidth={2} />
-          </span>
-        </div>
-        <p className="mt-5 text-center text-[10px] font-black uppercase tracking-[0.2em] text-primary">GitHub not connected</p>
-        <p className="mt-3 text-center text-sm font-black uppercase leading-snug tracking-tight text-foreground">
-          GitHub is not linked. This dialog is locked until you connect your account.
-        </p>
-        <div className="mt-5 border-t-2 border-border pt-5">
-          <div className="flex gap-3">
-            <span
-              className="mt-0.5 flex size-9 shrink-0 items-center justify-center border-2 border-border bg-muted/30 text-primary"
-              aria-hidden
-            >
-              <Plug className="size-4" strokeWidth={2} />
-            </span>
-            <p className="text-left text-xs font-medium leading-relaxed text-muted-foreground">
-              Go to <span className="font-black text-foreground">Security → Connected accounts</span>, link GitHub, then return here and open{' '}
-              <span className="font-black text-foreground">Add open source</span> again.
-            </p>
-          </div>
-        </div>
-      </div>
-    ) : (
-      <div className="flex flex-col items-center gap-4 rounded-none border-2 border-border bg-muted/25 px-10 py-12 text-center dark:bg-black/55 dark:border-border">
-        <Loader2 className="size-10 shrink-0 animate-spin text-primary" aria-hidden />
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-          {saving ? 'Saving…' : 'Loading repositories…'}
-        </p>
-      </div>
-    );
+  const repoBusy = loading || saving;
 
   return (
     <div className="space-y-8">
@@ -4626,7 +4581,7 @@ function OpenSourceContent() {
         {imported.length === 0 ? (
           <div className="col-span-2">
             <SettingsSectionEmptyState
-              icon={Code2}
+              icon={Github}
               title="No Repositories Linked"
               tagline="Sync your GitHub projects to display your coding activity."
             />
@@ -4651,12 +4606,10 @@ function OpenSourceContent() {
         titleIcon={<Github aria-hidden />}
         title="Add open source"
         titleId="open-source-import"
-        subtitle={
-          user?.isGitAccount && !openSourceDialogLocked ? 'Pick a repo to add to Projects.' : undefined
-        }
+        subtitle="Pick a repo to add to Projects."
         panelClassName="max-w-2xl"
         footer={
-          user?.isGitAccount && !openSourceDialogLocked ? (
+          !repoBusy ? (
             <div className="flex flex-wrap items-center justify-between gap-4">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Uses your linked GitHub token</p>
               <button
@@ -4670,12 +4623,21 @@ function OpenSourceContent() {
             </div>
           ) : undefined
         }
-        interactionLock={openSourceDialogLocked}
-        interactionLockContent={openSourceLockOverlayContent}
+        interactionLock={repoBusy}
+        interactionLockContent={
+          repoBusy ? (
+            <div className="flex flex-col items-center gap-4 rounded-none border-2 border-border bg-muted/25 px-10 py-12 text-center dark:border-border dark:bg-black/55">
+              <Loader2 className="size-10 shrink-0 animate-spin text-primary" aria-hidden />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                {saving ? 'Saving…' : 'Loading repositories…'}
+              </p>
+            </div>
+          ) : undefined
+        }
       >
         <div className="space-y-4">
           {error && (
-            <div className="border-2 border-destructive/60 bg-destructive/5 px-3 py-2 text-xs text-destructive font-medium">
+            <div className="border-2 border-destructive/60 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive">
               {error}
             </div>
           )}
@@ -4688,31 +4650,45 @@ function OpenSourceContent() {
             onChange={(e) => setQuery(e.target.value)}
           />
           <div className="border-2 border-border bg-muted/10">
-            <div className="flex items-center justify-between gap-3 border-b-2 border-border px-3 py-2 bg-muted/20">
+            <div className="flex items-center justify-between gap-3 border-b-2 border-border bg-muted/20 px-3 py-2">
               <p className="text-[10px] font-black uppercase text-muted-foreground">Repositories</p>
               <p className="text-[10px] font-bold uppercase text-muted-foreground">{filtered.length}</p>
             </div>
             <div className="max-h-[55vh] overflow-y-auto">
-              {!user?.isGitAccount ? (
-                <div className="min-h-[120px]" aria-hidden />
-              ) : loading ? (
+              {loading ? (
                 <div className="p-4 text-xs text-muted-foreground">Loading…</div>
               ) : filtered.length === 0 ? (
                 <div className="p-4 text-xs text-muted-foreground">No repos found.</div>
               ) : (
                 <div className="divide-y divide-border">
                   {filtered.map((r) => {
-                    const already = (user?.projects ?? []).some((p) => (p.publicationUrl || '').trim() === (r.html_url || '').trim());
+                    const already = (user?.projects ?? []).some(
+                      (p) => (p.publicationUrl || '').trim() === (r.html_url || '').trim(),
+                    );
                     return (
-                      <div key={r.id} className="p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div key={r.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                          <p className="text-sm font-black uppercase truncate">{r.name}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground truncate">{r.full_name}</p>
-                          {r.description && <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{r.description}</p>}
+                          <p className="truncate text-sm font-black uppercase">{r.name}</p>
+                          <p className="truncate text-[10px] font-bold text-muted-foreground">{r.full_name}</p>
+                          {r.description && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{r.description}</p>}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <a href={r.html_url} target="_blank" rel="noopener noreferrer" className="px-3 py-2 border-2 border-border bg-card text-[10px] font-black uppercase tracking-widest hover:bg-muted/30">View</a>
-                          <button type="button" onClick={() => void addRepo(r.full_name)} disabled={saving || already} className={cn(settingsBtnBlockPrimarySm, 'px-3 py-2 text-[10px] tracking-widest')}>{already ? 'Added' : 'Add'}</button>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <a
+                            href={r.html_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="border-2 border-border bg-card px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted/30"
+                          >
+                            View
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => void addRepo(r.full_name)}
+                            disabled={saving || already}
+                            className={cn(settingsBtnBlockPrimarySm, 'px-3 py-2 text-[10px] tracking-widest')}
+                          >
+                            {already ? 'Added' : 'Add'}
+                          </button>
                         </div>
                       </div>
                     );
@@ -4723,6 +4699,8 @@ function OpenSourceContent() {
           </div>
         </div>
       </FormDialog>
+
+      <GithubNotConnectedDialog open={githubConnectPromptOpen} onClose={() => setGithubConnectPromptOpen(false)} />
     </div>
   );
 }
@@ -4826,7 +4804,7 @@ export default function SettingsPage() {
   if (!isHydrated || shouldBlock) {
     return (
       <div className="min-h-screen text-foreground font-sans">
-        <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-12')}>
+        <div className={SHELL_CONTENT_RAIL_CLASS}>
           <div className="grid items-start gap-6 grid-cols-1 lg:grid-cols-[256px_1fr]">
             <aside className="overflow-hidden w-64">
               <SettingsSidebarSkeleton itemCount={totalItems + 1} />
@@ -4844,7 +4822,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen text-foreground font-sans">
-      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-12')}>
+      <div className={SHELL_CONTENT_RAIL_CLASS}>
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-[256px_1fr]">
 
           {/* SIDEBAR */}
@@ -4856,7 +4834,7 @@ export default function SettingsPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase truncate">{user?.fullName || user?.name || 'Account'}</p>
-                <p className="text-[9px] font-bold text-muted-foreground uppercase">@{user?.username || 'user'}</p>
+                <p className="text-[9px] font-bold text-muted-foreground ">@{user?.username || 'user'}</p>
               </div>
             </div>
 

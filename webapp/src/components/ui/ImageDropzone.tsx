@@ -56,7 +56,7 @@ export function ImageDropzone({
 
   return (
     <div {...getRootProps()} className={cn(className, isDragActive && dragActiveClassName)}>
-      <input {...getInputProps()} />
+      <input {...getInputProps({ className: 'sr-only' })} />
       {children}
     </div>
   );

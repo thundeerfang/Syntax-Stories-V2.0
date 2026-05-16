@@ -5,6 +5,15 @@ function apiBase(): string {
   return resolvePublicApiBase();
 }
 
+/** Thrown when the browser cannot reach the API (offline, wrong host, CORS, etc.). User-safe message only. */
+export class BlogApiConnectionError extends Error {
+  constructor() {
+    super('Cannot connect to the server.');
+    this.name = 'BlogApiConnectionError';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /**
  * Authenticated blog API fetch with one 401 retry after silent refresh (same pattern as authFetch).
  * Surfaces clearer errors when the API host is unreachable (avoids opaque "NetworkError").
@@ -28,9 +37,7 @@ export async function blogAuthFetch(
         headers: { ...baseHeaders, Authorization: `Bearer ${token}` },
       });
     } catch {
-      throw new Error(
-        `Network error while calling ${url}. Check that the API server is running and NEXT_PUBLIC_API_BASE_URL is correct.`,
-      );
+      throw new BlogApiConnectionError();
     }
   };
 
@@ -46,9 +53,7 @@ export async function blogPublicFetch(url: string, init?: RequestInit): Promise<
   try {
     return await fetch(url, init);
   } catch {
-    throw new Error(
-      `Network error while calling ${url}. Check that the API server is running and NEXT_PUBLIC_API_BASE_URL is correct.`,
-    );
+    throw new BlogApiConnectionError();
   }
 }
 

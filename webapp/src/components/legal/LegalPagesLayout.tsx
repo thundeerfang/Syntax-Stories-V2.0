@@ -17,7 +17,7 @@ export function LegalPagesLayout({ children }: LegalPagesLayoutProps) {
     <LegalPolicyHeaderProvider>
       <div className={`flex w-full flex-col ${LEGAL_MIN_BELOW_HEADER}`}>
         <div
-          className={`mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 p-4 sm:p-6 lg:gap-5 ${LEGAL_MIN_BELOW_HEADER}`}
+          className={`mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-4 py-4 sm:py-6 lg:gap-5 ${LEGAL_MIN_BELOW_HEADER}`}
         >
         {/*
           DOM order: aside (desktop) → header → mobile ToC → main.

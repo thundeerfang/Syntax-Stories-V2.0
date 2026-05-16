@@ -319,7 +319,8 @@ const profilePatchFields = {
   fullName: z.string().min(1).max(100).trim().optional(),
   username: usernameSchema.optional(),
   bio: z.string().max(500).trim().optional(),
-  profileImg: z.string().max(2000).trim().optional(),
+  /** Data URIs (DiceBear SVG) can be ~15k+; HTTPS URLs stay well under this cap. */
+  profileImg: z.string().max(131072).trim().optional(),
   profileImgAlt: z.string().max(120).trim().optional(),
   coverBanner: z.string().max(2000).trim().optional(),
   coverBannerAlt: z.string().max(120).trim().optional(),

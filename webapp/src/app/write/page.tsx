@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
 import { BlogWriteEditor, Block, createBlockInSection, stripLegacyGifBlocks } from '@/components/ui/BlogWriteEditor';
 
 const TITLE_MAX = 300;
@@ -71,6 +72,7 @@ export default function WriteBlogPage() {
         isOpen ? 'lg:ml-64' : 'ml-0',
       )}
     >
+      <div className={SHELL_CONTENT_RAIL_CLASS}>
       <div className="w-full">
       {/* 1. TOP SYSTEM NAV */}
       <div className="border-b-2 border-border bg-card py-2 flex items-center justify-between shadow-[0_2px_0_0_rgba(0,0,0,1)] sticky top-0 z-50">
@@ -213,6 +215,7 @@ export default function WriteBlogPage() {
           </div>
 
         </div>
+      </div>
       </div>
       </div>
 

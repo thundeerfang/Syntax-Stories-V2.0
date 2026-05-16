@@ -13,5 +13,12 @@ export {
 } from './settings-page-skeleton';
 export { DialogPanelSkeleton } from './DialogPanelSkeleton';
 export { RouteLoadingSkeleton } from './RouteLoadingSkeleton';
+export {
+  FollowingToolbarSkeleton,
+  FollowingPostsGridSkeleton,
+  FollowingIntroSkeleton,
+  FollowingPageContentSkeleton,
+} from './FollowingPageSkeleton';
+export { BlogPostPageSkeletonInner } from './BlogPostPageSkeleton';
 export { DocsPageSkeletonInner } from './DocsPageSkeleton';
 export { ContactPageSkeletonInner } from './ContactPageSkeleton';

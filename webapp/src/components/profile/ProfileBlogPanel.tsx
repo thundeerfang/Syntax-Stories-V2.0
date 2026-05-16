@@ -231,31 +231,36 @@ export function ProfileBlogPanel({
             {published.map((p) => (
               <li
                 key={p._id}
-                className="group/card relative list-none overflow-hidden border-2 border-border bg-card shadow-[6px_6px_0_0_var(--border)]"
+                className="group/card relative list-none border-2 border-border bg-card shadow-[6px_6px_0_0_var(--border)]"
               >
                 <BlogCard
                   post={mapBlogPostResponseToPost(p, author)}
                   showSocialActions={false}
-                  viewerUsername={username}
-                  density="compact"
                   suppressChromeHover
                   className="relative z-0 border-0 shadow-none"
                 />
                 <div
                   className={cn(
                     'pointer-events-none absolute inset-0 z-10 flex flex-col justify-end',
-                    'translate-y-2.5 opacity-0',
-                    'transform-gpu transition-[opacity,transform] duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
-                    'motion-reduce:translate-y-0 motion-reduce:duration-0 motion-reduce:transition-none',
-                    'group-hover/card:pointer-events-auto group-hover/card:translate-y-0 group-hover/card:opacity-100',
-                    'group-focus-within/card:pointer-events-auto group-focus-within/card:translate-y-0 group-focus-within/card:opacity-100',
+                    'opacity-0',
+                    'transform-gpu transition-opacity duration-300 ease-out',
+                    'motion-reduce:transition-none motion-reduce:duration-0',
+                    'group-hover/card:pointer-events-auto group-hover/card:opacity-100',
+                    'group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100',
                   )}
                 >
                   <div
                     className="min-h-0 flex-1 bg-gradient-to-t from-muted/75 via-muted/30 to-transparent dark:from-black/55 dark:via-black/25 dark:to-transparent"
                     aria-hidden
                   />
-                  <div className="flex gap-2 border-t-2 border-border bg-card/95 p-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-md dark:border-border/40 dark:bg-black/88 dark:shadow-none">
+                  <div
+                    className={cn(
+                      'flex translate-y-2 gap-2 border-t-2 border-border bg-card/95 p-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-md dark:border-border/40 dark:bg-black/88 dark:shadow-none',
+                      'transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]',
+                      'motion-reduce:translate-y-0 motion-reduce:transition-none',
+                      'group-hover/card:translate-y-0 group-focus-within/card:translate-y-0',
+                    )}
+                  >
                     <Link
                       href={publicHref(p.slug)}
                       className="flex-1 flex items-center justify-center gap-1 py-2.5 border-2 border-border bg-muted/40 font-mono text-[9px] font-black uppercase tracking-wide text-foreground transition-[background-color,transform,border-color] duration-300 ease-out hover:bg-muted/70 dark:border-border/50 dark:bg-white/10 dark:hover:bg-white/18"
@@ -385,3 +390,4 @@ export function ProfileBlogPanel({
     </section>
   );
 }
+

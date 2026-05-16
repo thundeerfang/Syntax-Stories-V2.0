@@ -30,6 +30,11 @@
 
 /* Settings: primary actions use `BlockShadowButton` styles via `settings/buttonStyles.ts`. */
 
+html {
+  /* Sticky navbar + in-page anchors: keep focused targets out from under the chrome. */
+  scroll-padding-top: var(--header-height, calc(4rem + 2px));
+}
+
 :root {
   /* Default until Navbar sets exact value; includes `border-b-2` under the bar. */
   --header-height: calc(4rem + 2px);
@@ -50,6 +55,8 @@
   --destructive: #ef4444;
   --destructive-foreground: #fff;
   --border: #3a3a3a;
+  --rail-frost-bg: rgba(255, 255, 255, 0.78);
+  --dock-frost-bg: rgba(255, 255, 255, 0.28);
   /** Block shadow buttons: subtle gray hover wash (inset spread + outer block shadow). */
   --block-btn-hover-inset: color-mix(in srgb, var(--foreground) 14%, transparent);
   /** Ghost outline buttons: hover wash only (no outer block shadow). */
@@ -84,6 +91,8 @@ altcha-widget {
   --destructive: #ef4444;
   --destructive-foreground: #fff;
   --border: #2e2e32;
+  --rail-frost-bg: rgba(12, 12, 16, 0.72);
+  --dock-frost-bg: rgba(12, 12, 16, 0.3);
   --scrollbar-track: #0a0a0b;
   --scrollbar-thumb-border: #0a0a0b;
 }
@@ -363,8 +372,68 @@ html * {
   cursor: pointer;
 }
 
-.ss-read-only-rich [data-inline-gif="true"] {
-  cursor: pointer;
+.ss-rich-paragraph-editor [data-inline-gif="true"] {
+  cursor: default;
+}
+
+/* Rich paragraph GIFs: keep tiny default size consistently in read + input editors. */
+.ss-rich-paragraph-editor .ProseMirror p [data-inline-gif='true'] {
+  margin-top: 0.35rem;
+  vertical-align: middle;
+}
+.ss-rich-paragraph-editor .ProseMirror p [data-inline-gif='true']:first-child {
+  margin-top: 0;
+}
+
+/* Inline Giphy/GIF thumbs stay tiny across public post, comments, and write/edit inputs. */
+.ss-rich-paragraph-editor [data-inline-gif='true'] img,
+.ss-rich-paragraph-editor [data-inline-gif='true'] img.inline-block {
+  height: 2rem !important;
+  width: 2rem !important;
+  max-height: 2rem;
+  max-width: 2rem;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+/* Figure credits / badges: prose-retro link underline must not run under Unsplash (or other) embed links */
+.public-blog-post-page .prose-retro .public-blog-body figure a.blog-figure-credit-link,
+.public-blog-post-page .prose-retro .public-blog-body figure a.blog-figure-credit-link:hover {
+  text-decoration: none !important;
+}
+/* Keep Unsplash credit chip white on hover (override generic `.prose-retro a:hover` invert) */
+.public-blog-post-page .prose-retro .public-blog-body figure a.blog-figure-credit-link:hover {
+  background: rgba(0, 0, 0, 0.9) !important;
+  color: #fff !important;
+}
+
+/* IMAGE_RASTER / UNSPLASH_NODE: zoom uses real transition + easing (Tailwind group-hover was not applying reliably). */
+.public-blog-post-page .public-blog-body figure img.ss-blog-raster-hover {
+  transform: scale(1);
+  transform-origin: center center;
+  transition: transform 1.05s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.public-blog-post-page .public-blog-body figure .ss-blog-raster-hover-group:hover img.ss-blog-raster-hover {
+  transform: scale(1.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-blog-post-page .public-blog-body figure img.ss-blog-raster-hover {
+    transition: none;
+    will-change: auto;
+  }
+
+  .public-blog-post-page .public-blog-body figure .ss-blog-raster-hover-group:hover img.ss-blog-raster-hover {
+    transform: scale(1);
+  }
+}
+
+/* Prose: `Button` as link must not pick up article link underline */
+.public-blog-post-page .prose-retro a[data-ss-button-link],
+.public-blog-post-page .prose-retro a[data-ss-button-link]:hover {
+  text-decoration: none !important;
 }
 
 /* Public blog post: loading bar shimmer + prose link hover */
@@ -415,18 +484,34 @@ html * {
   display: none;
 }
 
-/* Grid background — same as navbar (bg-background) with visible grid lines */
+/* Layout grid — softer/lighter grid lines */
 .grid-bg {
   background-color: var(--background);
-  background-image: linear-gradient(to right, rgba(128, 128, 128, 0.15) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(128, 128, 128, 0.15) 1px, transparent 1px);
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .dark .grid-bg {
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
 }
+
+
+
+/**
+ * Sidebar + footer: same frost recipe as `Navbar.tsx` (inline there), defined here with `html.dark`
+ * so SSR matches hydration. Stronger than color-mix so the rail isn’t effectively transparent over the grid.
+ */
+.shell-rail-frost {
+  background-color: var(--rail-frost-bg);
+  backdrop-filter: saturate(1.2) blur(40px);
+  -webkit-backdrop-filter: saturate(1.2) blur(40px);
+  transform: translateZ(0);
+}
+
 /* Animations */
 
 /* Work experience timeline (react-vertical-timeline-component) overrides */
@@ -594,4 +679,46 @@ html * {
 .terminal-loader-pacman-refined div[class*='loader-inner'],
 .terminal-loader-pacman-refined .pacman > div {
   background-color: transparent !important;
+}
+
+/* Blog feed card: read-time dot — green glow blink on card hover (see BlogCard). */
+@keyframes blog-read-dot-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.45);
+  }
+  50% {
+    opacity: 0.48;
+    transform: scale(1.14);
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.85);
+  }
+}
+
+/* Blog comments: like tap — short radial rays (CSS only). */
+@keyframes ss-comment-like-ray {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--ray-deg, 0deg)) translateY(0) scaleY(0.35);
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--ray-deg, 0deg)) translateY(-13px) scaleY(1.2);
+  }
+}
+
+.ss-comment-like-ray {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  width: 2px;
+  height: 9px;
+  margin-left: -1px;
+  transform-origin: bottom center;
+  border-radius: 1px;
+  animation: ss-comment-like-ray 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

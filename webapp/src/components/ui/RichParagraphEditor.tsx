@@ -440,7 +440,7 @@ function ReadOnlyGifHoverLayer({
   const [isClosing, setIsClosing] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [resolvedSide, setResolvedSide] = useState<HoverCardSide>('bottom');
-  const [gif, setGif] = useState<{ url: string } | null>(null);
+  const [gif, setGif] = useState<{ url: string; sourceUrl: string | null } | null>(null);
   const portalRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement | null>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -496,6 +496,7 @@ function ReadOnlyGifHoverLayer({
         const rect = el.getBoundingClientRect();
         const img = el.querySelector('img');
         const url = img?.getAttribute('src')?.trim() ?? '';
+        const sourceUrl = el.getAttribute('data-gif-source')?.trim() || null;
         if (!url) {
           openTimerRef.current = null;
           return;
@@ -512,7 +513,7 @@ function ReadOnlyGifHoverLayer({
         );
         setPosition({ top, left });
         setResolvedSide(side);
-        setGif({ url });
+        setGif({ url, sourceUrl });
         setOpen(true);
         setIsClosing(false);
         openTimerRef.current = null;
@@ -620,11 +621,17 @@ function ReadOnlyGifHoverLayer({
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed w-fit max-w-[min(340px,92vw)] overflow-hidden border-2 border-border bg-muted leading-none shadow-md pointer-events-auto p-0"
+            className="fixed w-fit max-w-[min(340px,92vw)] cursor-pointer overflow-hidden border-2 border-border bg-muted leading-none shadow-md pointer-events-auto p-0"
             style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
             role="tooltip"
             onMouseEnter={cancelClose}
             onMouseLeave={handlePortalLeave}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (gif.sourceUrl) safeOpenLinkHref(gif.sourceUrl);
+            }}
+            title={gif.sourceUrl ? 'Open on Giphy' : undefined}
           >
             <GifPopoverCard url={gif.url} onLoad={measureGifPopoverPosition} />
           </motion.div>
@@ -1374,7 +1381,7 @@ const InlineGif = TipTapNode.create({
         {
           src: url ?? '',
           alt: 'GIF',
-          class: 'inline-block h-24 w-24 object-cover rounded-md align-middle',
+          class: 'inline-block h-24 w-24 shrink-0 object-cover align-middle rounded-none',
         },
       ],
     ];
@@ -1854,15 +1861,8 @@ export function RichParagraphEditor({
       }
       const gifEl = (e.target as HTMLElement | null)?.closest(READONLY_GIF_SEL) as HTMLElement | null;
       if (gifEl) {
-        const source = gifEl.getAttribute('data-gif-source')?.trim();
-        const img = gifEl.querySelector('img');
-        const src = img?.getAttribute('src')?.trim();
-        const openHref = source || src;
-        if (openHref) {
-          e.preventDefault();
-          globalThis.window.open(openHref, '_blank', 'noopener,noreferrer');
-          return;
-        }
+        e.preventDefault();
+        return;
       }
       onEditorLinkClickCapture(e);
     },
@@ -1908,7 +1908,12 @@ export function RichParagraphEditor({
   }
 
   return (
-    <div className="ss-rich-paragraph-editor relative overflow-visible border-0 bg-transparent">
+    <div
+      className={cn(
+        'ss-rich-paragraph-editor relative overflow-visible border-0 bg-transparent',
+        className,
+      )}
+    >
       <div ref={toolbarPopoverRef} className="relative z-30 overflow-visible px-2 pt-2">
         <AnimatePresence mode="wait">
           {anyPanelOpen && popoverCoords && (

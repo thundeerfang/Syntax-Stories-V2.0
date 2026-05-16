@@ -1,5 +1,6 @@
 import type { Request } from 'express';
-import { UserModel, DEFAULT_AVATAR_URL, type IUser } from '../models/User.js';
+import { UserModel, type IUser } from '../models/User.js';
+import { newRandomDiceBearAvatarSvgUrl } from '../utils/diceBearAvatarUrl.js';
 import { SubscriptionModel } from '../models/Subscription.js';
 import { getRedis } from '../config/redis.js';
 import { writeAuditLog } from '../shared/audit/auditLog.js';
@@ -8,6 +9,8 @@ import { redisKeys } from '../shared/redis/keys.js';
 import type { HandleOAuthInput, NormalizedOAuthProfile, OAuthPassportUser, OAuthProviderKey } from './oauth.types.js';
 import { sealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
 import { resolveReferralInput, applyReferralOnNewUser } from '../services/referral.service.js';
+import { LEGAL_SIGNUP_ACK_COOKIE } from '../modules/legal/legalSignupCookie.js';
+import { recordSignupLegalAcceptances } from '../modules/legal/recordLegalAcceptances.js';
 
 const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
   google: 'Google',
@@ -73,7 +76,7 @@ function newUserBaseDoc(
     fullName: n.fullName,
     username,
     email,
-    profileImg: n.profileImg?.startsWith('http') ? n.profileImg : DEFAULT_AVATAR_URL,
+    profileImg: n.profileImg?.startsWith('http') ? n.profileImg : newRandomDiceBearAvatarSvgUrl(),
     bio: 'Welcome to Syntax Stories 🧑🏻‍💻',
     isGoogleAccount: false,
     isGitAccount: false,
@@ -353,6 +356,13 @@ async function handleSignup(
     );
   }
 
+  const ack = req.cookies?.[LEGAL_SIGNUP_ACK_COOKIE];
+  if (ack !== '1') {
+    throw new Error(
+      'Please open Sign up again, check the box to agree to the Terms and Privacy Policy, then continue with this provider.'
+    );
+  }
+
   const doc = newUserBaseDoc(provider, n, accessToken);
   const newUser = new UserModel(doc);
   await newUser.save();
@@ -363,6 +373,7 @@ async function handleSignup(
   } catch (e) {
     console.error(e);
   }
+  await recordSignupLegalAcceptances(newUser._id, req);
   return passportShape(provider, newUser);
 }
 
