@@ -1,16 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Bookmark, Compass, FileStack, FolderOpen, Repeat2 } from 'lucide-react';
+import {
+  Bookmark,
+  Compass,
+  FileStack,
+  FolderOpen,
+  Repeat2,
+} from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { BlogCard } from '@/features/blog';
-import {
-  FollowingPostsGridSkeleton,
-  HomeHeroSkeleton,
-  HomePageSkeletonInner,
-} from '@/components/skeletons';
+import { FollowingPostsGridSkeleton, HomeHeroSkeleton, HomePageSkeletonInner } from '@/components/skeletons';
 import { useAuthStore } from '@/store/auth';
 import { BLOG_FEED_GRID_CLASS, BLOG_FEED_GRID_ITEM_CLASS } from '@/lib/blog/blogFeedGrid';
 import { RailFeedEmptyState, RailFeedErrorState } from '@/components/layout';
@@ -21,6 +29,7 @@ import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 import type { BlogTaxonomyRow } from '@/types/blog';
 import { defaultRules, useCustomFeedsStore, type CustomFeedRow } from '@/store/customFeeds';
+
 
 const CATALOG_LIMIT = 50;
 const HERO_FETCH_LIMIT = 12;

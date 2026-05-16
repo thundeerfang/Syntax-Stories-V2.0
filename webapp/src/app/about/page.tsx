@@ -9,7 +9,8 @@ import { marketingIcon } from '@/lib/marketing/marketingIcons';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
+
 
 function AboutPageSkeleton() {
   return (

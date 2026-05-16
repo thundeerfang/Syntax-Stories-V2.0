@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/api/publicHelp';
 
+
 export const metadata: Metadata = {
   title: 'Documentation — Syntax Stories',
   description: 'Product documentation and guides for Syntax Stories.',

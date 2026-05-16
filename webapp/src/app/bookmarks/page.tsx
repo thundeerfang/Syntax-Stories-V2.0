@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Bookmark, Compass, FolderPlus, Search } from 'lucide-react';
 import { RetroSortDropdown } from '@/components/ui/retro';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
+
 
 const LOGIN_NEXT = '/bookmarks';
 

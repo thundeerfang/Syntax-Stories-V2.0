@@ -1,17 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { CalendarDays, Pin, PinOff } from 'lucide-react';
 import { BlogCardEngagementRail } from './_blogCardEngagement';
-import {
-  BlogCardOwnerActionsOverlay,
-  type BlogCardOwnerActions,
-} from './_blogCardOwnerActions';
+import { BlogCardOwnerActionsOverlay, type BlogCardOwnerActions } from './_blogCardOwnerActions';
 import { BlogPostAuthor } from './BlogPostAuthor';
 import { PrimaryCoverFallback } from '@/lib/shell/primaryCoverFallback';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
+
 
 function formatCalendarDate(iso: string): string {
   const d = new Date(iso);

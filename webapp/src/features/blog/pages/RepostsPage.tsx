@@ -12,15 +12,13 @@ import {
   ShellPageIntroHeader,
   type RailSectionSubheaderSortProps,
 } from '@/components/layout';
-import {
-  FollowingPostsGridSkeleton,
-  FollowingToolbarSkeleton,
-} from '@/components/skeletons';
+import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
 import { useAuthStore } from '@/store/auth';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
+
 
 const LOGIN_NEXT = '/reposts';
 

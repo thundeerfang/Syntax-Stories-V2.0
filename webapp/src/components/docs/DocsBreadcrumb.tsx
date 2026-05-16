@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
+
 type ArticleCrumb = { slug: string; title: string; canonicalPath?: string };
 
 function articleHref(a: ArticleCrumb): string {

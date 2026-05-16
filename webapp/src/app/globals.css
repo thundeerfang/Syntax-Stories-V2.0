@@ -785,6 +785,16 @@ html * {
   animation: ss-comment-like-ray 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* Modal scroll lock — applied via scrollLock.ts when dialogs open */
+html.ss-scroll-locked {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html.ss-scroll-locked body {
+  overscroll-behavior: none;
+}
+
 @keyframes presence-dot-blink {
   0%,
   100% {

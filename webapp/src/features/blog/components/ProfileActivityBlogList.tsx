@@ -6,6 +6,7 @@ import { CompactBlogPostsSwiper } from './CompactBlogPostsSwiper';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import type { Post } from '@/types';
 
+
 export const PROFILE_ACTIVITY_PREVIEW_LIMIT = 12;
 
 export function profileBlogsPageHref(username: string): string {

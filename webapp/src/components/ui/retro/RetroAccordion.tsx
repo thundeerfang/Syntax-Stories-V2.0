@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
+
 interface RetroAccordionProps {
   label: React.ReactNode;
   subtitle?: React.ReactNode;

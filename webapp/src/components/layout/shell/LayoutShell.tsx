@@ -10,6 +10,7 @@ import { GridBackground } from '@/components/ui/media/grid-background';
 import { RouteLoadingSkeleton } from '@/components/skeletons';
 import { isOAuthBrowserCallbackPath } from '@/lib/auth/oauthNavigation';
 
+
 function MainRouteFallback() {
   const pathname = usePathname() ?? '';
   if (isOAuthBrowserCallbackPath(pathname)) return null;

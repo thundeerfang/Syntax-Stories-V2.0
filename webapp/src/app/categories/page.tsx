@@ -12,6 +12,7 @@ import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
 import type { BlogTaxonomyRow } from '@/types/blog';
 
+
 function toastApiError(e: unknown, fallback: string) {
   if (e instanceof BlogApiConnectionError) {
     toast.error(e.message);

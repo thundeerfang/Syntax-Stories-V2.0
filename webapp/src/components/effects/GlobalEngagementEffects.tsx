@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEngagementEffectsStore } from '@/store/engagementEffects';
 
+
 const DotLottieReact = dynamic(
   () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
   { ssr: false },

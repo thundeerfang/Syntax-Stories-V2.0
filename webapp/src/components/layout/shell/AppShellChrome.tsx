@@ -3,6 +3,7 @@
 import { Navbar } from '../nav/Navbar';
 import { SidebarDrawer } from '../nav/SidebarDrawer';
 
+
 /** Navbar + sidebar share one sticky context so the rail never detaches from the header. */
 export function AppShellChrome() {
   return (

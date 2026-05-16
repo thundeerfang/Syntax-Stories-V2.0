@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -9,6 +15,8 @@ import { BlockShadowButton } from '@/components/ui/button';
 import { fetchBackendHealth } from '@/lib/api/fetchBackendHealth';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { cn } from '@/lib/core/utils';
+import { useScrollLock } from '@/hooks/useScrollLock';
+
 
 /** Above {@link UiProcessingShield} (110) and {@link DIALOG_Z_INDEX} (100). */
 const CONNECTIVITY_Z = 130;
@@ -128,18 +136,8 @@ export function ConnectivityGate() {
     return () => document.removeEventListener('keydown', onKey, true);
   }, [gate]);
 
-  useEffect(() => {
-    if (gate === 'offline' || gate === 'backend_down') {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev ?? '';
-      };
-    }
-    document.body.style.overflow = '';
-  }, [gate]);
-
   const blocked = gate === 'offline' || gate === 'backend_down';
+  useScrollLock(blocked);
 
   const title = gate === 'offline' ? 'No internet connection' : "Can't reach the server";
   const subtitle =

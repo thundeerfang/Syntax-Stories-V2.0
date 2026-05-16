@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import { LegalPolicyHeaderPublisher } from './LegalPolicyHeaderContext';
 import { LEGAL_MARKDOWN_ROOT } from './legalUi';
 
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')

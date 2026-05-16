@@ -4,6 +4,7 @@ import { SkBar, SkBlock } from '@/components/skeletons/primitives';
 import { SQUAD_DISCOVER_CARD_GRID_CLASS } from '@/lib/squads/squadDiscoverCardLayout';
 import { cn } from '@/lib/core/utils';
 
+
 function SquadCardSkeletonTile() {
   return (
     <div

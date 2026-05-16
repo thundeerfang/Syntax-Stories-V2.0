@@ -14,6 +14,7 @@ import { BlockShadowButton } from '@/components/ui';
 import { cn } from '@/lib/core/utils';
 import { SettingsSectionHeading } from './SettingsSectionHeading';
 
+
 type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';
 
 type SettingsSectionHeaderProps = Readonly<{

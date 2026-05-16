@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Compass, Users } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { followApi, type FollowUser } from '@/api/follow';
 import { BlogCard } from '@/features/blog';
-import {
-  RailFeedEmptyState,
-  RailFeedErrorState,
-  RailSectionSubheader,
-  ShellPageIntroHeader,
-} from '@/components/layout';
+import { RailFeedEmptyState, RailFeedErrorState, RailSectionSubheader, ShellPageIntroHeader } from '@/components/layout';
 import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
 import { useAuthStore } from '@/store/auth';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
@@ -19,6 +20,7 @@ import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 import type { PublicFeedPost } from '@/types/blog';
+
 
 const LOGIN_NEXT = '/following';
 

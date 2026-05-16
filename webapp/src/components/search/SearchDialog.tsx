@@ -1,13 +1,29 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchDialogStore } from '@/store/searchDialog';
 import { Dialog } from '@/components/ui';
 import { followApi, type FollowUser } from '@/api/follow';
-import { Search, X, User, Loader2, Command, ArrowDown, ArrowUp, CornerDownLeft } from 'lucide-react';
+import {
+  Search,
+  X,
+  User,
+  Loader2,
+  Command,
+  ArrowDown,
+  ArrowUp,
+  CornerDownLeft,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/core/utils';
+
 
 const DEBOUNCE_MS = 280;
 

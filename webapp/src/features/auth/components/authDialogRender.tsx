@@ -19,6 +19,7 @@ import { clearLegalSignupAckCookie, setLegalSignupAckCookie } from '@/lib/auth/l
 import { AltchaField } from './AltchaField';
 import type { AuthDialogStep } from './authDialogStep';
 
+
 const TERMS_LINK = '/terms';
 const PRIVACY_LINK = '/privacy';
 const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';

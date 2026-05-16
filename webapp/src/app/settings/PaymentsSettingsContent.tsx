@@ -13,14 +13,11 @@ import {
   type BillingTransactionRow,
 } from '@/api/billing';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
-import {
-  SettingsSectionHeading,
-  SettingsTabPanel,
-  SettingsTabRoot,
-} from './settings-list/SettingsSectionHeading';
+import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from './settings-list/SettingsSectionHeading';
 import { ghostOutlineButtonClassNames } from '@/components/ui/button';
 import { settingsBtnBlockPrimaryMd } from './buttonStyles';
 import Link from 'next/link';
+
 
 function formatInrMinorUnits(amount: number, currency: string): string {
   const cur = currency.toLowerCase();

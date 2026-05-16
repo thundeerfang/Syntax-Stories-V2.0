@@ -14,6 +14,7 @@ import { FOLLOWED_CATEGORIES_CHANGED_EVENT } from '@/lib/feeds/followedCategorie
 import type { FollowedCategoryRow } from '@/features/profile/hooks/useProfileSquadsAndCategories';
 import { toast } from 'sonner';
 
+
 type Tab = 'squads' | 'categories';
 
 export type SquadsCategoriesFollowDialogProps = Readonly<{

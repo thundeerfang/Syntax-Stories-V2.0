@@ -4,6 +4,7 @@ import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/api/p
 import { DocsBreadcrumb } from '@/components/docs/DocsBreadcrumb';
 import { DocsSidebarNav } from '@/components/docs/DocsSidebarNav';
 
+
 const MIN_BELOW_HEADER = 'min-h-[calc(100vh-var(--header-height))]';
 
 export default async function DocsLayout({ children }: { children: React.ReactNode }) {

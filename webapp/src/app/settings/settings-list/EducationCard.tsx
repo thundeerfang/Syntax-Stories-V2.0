@@ -1,8 +1,17 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Calendar, GraduationCap, Pencil, Sigma, Tag, Trash2, Cpu } from 'lucide-react';
+import {
+  Calendar,
+  GraduationCap,
+  Pencil,
+  Sigma,
+  Tag,
+  Trash2,
+  Cpu,
+} from 'lucide-react';
 import { cn } from '@/lib/core/utils';
+
 
 const EDU_CARD_FOOTER_MARKS = ['e0', 'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7'] as const;
 

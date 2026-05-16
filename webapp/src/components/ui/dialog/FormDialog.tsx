@@ -3,13 +3,9 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Skeleton } from '../feedback/Skeleton';
-import {
-  Dialog,
-  DIALOG_FOOTER_TOP_BORDER,
-  DIALOG_TITLE_HEADER_CLASS,
-  DIALOG_TITLE_ICON_BOX_CLASS,
-} from './dialogs';
+import { Dialog, DIALOG_FOOTER_TOP_BORDER, DIALOG_TITLE_HEADER_CLASS, DIALOG_TITLE_ICON_BOX_CLASS } from './dialogs';
 import { cn } from '@/lib/core/utils';
+
 
 export interface FormDialogProps {
   open: boolean;

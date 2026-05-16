@@ -6,17 +6,11 @@ import { Flame, Loader2 } from 'lucide-react';
 import { followApi, type ReadStreakPayload } from '@/api/follow';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
-import {
-  SettingsSectionHeading,
-  SettingsTabPanel,
-  SettingsTabRoot,
-} from './settings-list/SettingsSectionHeading';
-import {
-  SettingsFullWidthSegmentedControl,
-  SettingsMetricCard,
-} from './settings-list/SettingsFullWidthSegmentedControl';
+import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from './settings-list/SettingsSectionHeading';
+import { SettingsFullWidthSegmentedControl, SettingsMetricCard } from './settings-list/SettingsFullWidthSegmentedControl';
 import { settingsBtnBlockPrimaryMd } from './buttonStyles';
 import { cn } from '@/lib/core/utils';
+
 
 type Mode = 'daily' | 'weekly' | 'monthly';
 

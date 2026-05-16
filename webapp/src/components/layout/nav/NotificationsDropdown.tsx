@@ -6,11 +6,8 @@ import { Bell, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
-import {
-  fetchNotifications,
-  markAllNotificationsRead,
-  type AppNotification,
-} from '@/api/notifications';
+import { fetchNotifications, markAllNotificationsRead, type AppNotification } from '@/api/notifications';
+
 
 export function NotificationsDropdown() {
   const token = useAuthStore((s) => s.token);

@@ -3,18 +3,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FileText, Loader2, NotebookPen, Trash2 } from 'lucide-react';
+import { FileText, NotebookPen, Trash2 } from 'lucide-react';
+import { FollowingPostsGridSkeleton } from '@/components/skeletons';
 import { toast } from 'sonner';
 import { followApi, type PublicProfileUser } from '@/api/follow';
 import { blogApi, type BlogPostResponse } from '@/api/blog';
 import { BlogCard, type BlogCardOwnerActions } from '@/features/blog';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import {
-  RailFeedEmptyState,
-  RailSectionSubheader,
-  RectangleAppBreadcrumb,
-  type RailSectionSubheaderSortProps,
-} from '@/components/layout';
+import { RailFeedEmptyState, RailSectionSubheader, RectangleAppBreadcrumb, type RailSectionSubheaderSortProps } from '@/components/layout';
 import { blockShadowButtonClassNames } from '@/components/ui/button';
 import { mapBlogPostResponseToPost } from '@/lib/blog/mapBlogPostResponseToPost';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
@@ -27,6 +23,7 @@ import { cn } from '@/lib/core/utils';
 import { useAuthStore } from '@/store/auth';
 import type { BlogTaxonomyRow } from '@/types/blog';
 import type { Post } from '@/types';
+
 
 const TRASH_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -499,10 +496,9 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
   let listBody: React.ReactNode;
   if (loading) {
     listBody = (
-      <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
-        <span className="font-mono text-[10px] uppercase tracking-widest">Loading posts…</span>
-      </div>
+      <section aria-busy="true" aria-label="Loading posts">
+        <FollowingPostsGridSkeleton count={6} />
+      </section>
     );
   } else if (tab === 'drafts' && isOwner) {
     listBody = renderDrafts();

@@ -7,12 +7,9 @@ import { SkBar, SkBlock, SkGradientFill } from './primitives';
 import { profileCardSkeletonKeys } from './constants';
 import { cn } from '@/lib/core/utils';
 import { BLOG_FEED_GRID_CLASS, BLOG_FEED_GRID_ITEM_CLASS } from '@/lib/blog/blogFeedGrid';
-import {
-  SHELL_CONTENT_MEASURE_CLASS,
-  SHELL_CONTENT_RAIL_CLASS,
-  SHELL_NAV_INNER_CLASS,
-} from '@/lib/shell/shellContentRail';
+import { SHELL_CONTENT_MEASURE_CLASS, SHELL_CONTENT_RAIL_CLASS, SHELL_NAV_INNER_CLASS } from '@/lib/shell/shellContentRail';
 import { SQUAD_DISCOVER_CARD_SLIDE_CLASS } from '@/lib/squads/squadDiscoverCardLayout';
+
 
 /** Profile accordion entry placeholder (work, education, certs, etc.). */
 export function ProfileCardSkeleton(props: Readonly<{ lines?: number }>) {

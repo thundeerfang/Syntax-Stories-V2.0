@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, Globe } from 'lucide-react';
 
+
 function normalizeDomain(domain: string | undefined): string {
   if (!domain?.trim()) return '';
   const t = domain.trim();

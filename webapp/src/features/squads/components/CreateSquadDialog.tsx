@@ -20,6 +20,7 @@ import { uploadCover, uploadMedia } from '@/api/upload';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 
+
 const NAME_MAX = 100;
 const HANDLE_MAX = 40;
 const DESC_MAX = 500;

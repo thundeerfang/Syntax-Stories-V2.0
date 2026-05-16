@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 
 /** GIF-only hover preview: image only (border/background live on the read-only shell). */
 export function GifPopoverCard({

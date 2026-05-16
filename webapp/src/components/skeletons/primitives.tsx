@@ -4,6 +4,7 @@ import type { ComponentProps, CSSProperties } from 'react';
 import { SPOTLIGHT_PRIMARY_GRADIENT } from '@/lib/shell/spotlightPrimaryGradient';
 import { cn } from '@/lib/core/utils';
 
+
 /** Flat retro block — structural placeholder, not a spinner. */
 export function SkBlock({ className, ...props }: ComponentProps<'div'>) {
   return (

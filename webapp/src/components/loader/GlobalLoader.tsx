@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import Loader from 'react-loaders';
 import 'loaders.css/loaders.min.css';
 import { consumeOAuthNavigationPending, OAUTH_LEAVING_EVENT } from '@/lib/auth/oauthNavigation';
+import { useScrollLock } from '@/hooks/useScrollLock';
+
 
 const TITLE = 'SYSTEM SYNTAX STORIES — BASH';
 const MIN_SHOW_MS = 5000;
@@ -184,16 +186,7 @@ export function GlobalLoaderOverlay() {
     };
   }, [pathname]);
 
-  useEffect(() => {
-    if (show) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev ?? '';
-      };
-    }
-    document.body.style.overflow = '';
-  }, [show]);
+  useScrollLock(show);
 
   if (!show) return null;
   return (

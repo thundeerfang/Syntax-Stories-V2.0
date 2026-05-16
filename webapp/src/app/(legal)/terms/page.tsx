@@ -3,6 +3,7 @@ import { fetchPublishedLegalPolicy } from '@/lib/api/publicLegal';
 import { LegalPolicyDocument } from '@/features/legal';
 import { LegalPolicyUnavailable } from '@/features/legal';
 
+
 export async function generateMetadata(): Promise<Metadata> {
   const data = await fetchPublishedLegalPolicy('terms');
   if (!data) return { title: 'Terms of Service — Syntax Stories' };

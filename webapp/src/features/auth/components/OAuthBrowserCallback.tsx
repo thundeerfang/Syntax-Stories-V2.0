@@ -8,6 +8,7 @@ import { consumePostAuthRedirect } from '@/lib/auth/postAuthRedirect';
 import { DialogPanelSkeleton } from '@/components/skeletons';
 import { toast } from 'sonner';
 
+
 type FormSubmit = { preventDefault(): void };
 
 export type OAuthBrowserCallbackProps = {

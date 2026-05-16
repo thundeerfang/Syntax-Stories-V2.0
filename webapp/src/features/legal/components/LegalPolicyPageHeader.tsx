@@ -15,6 +15,7 @@ import {
   LEGAL_VERSION_BADGE_LINE_PRIMARY,
 } from './legalUi';
 
+
 const PATH_KICKER: Record<string, string> = {
   '/terms': 'Legal · Terms',
   '/privacy': 'Legal · Privacy',

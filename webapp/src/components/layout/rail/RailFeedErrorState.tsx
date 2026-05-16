@@ -4,6 +4,7 @@ import { AlertCircle, WifiOff } from 'lucide-react';
 import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
 import { cn } from '@/lib/core/utils';
 
+
 export function resolveFeedErrorPresentation(
   error: unknown,
   defaults: Readonly<{

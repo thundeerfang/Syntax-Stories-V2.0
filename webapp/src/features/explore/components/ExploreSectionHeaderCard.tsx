@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+
 const EXPLORE_SECTION_HEADER_CARD =
   'w-full border-2 border-border bg-card p-4 shadow sm:p-5';
 

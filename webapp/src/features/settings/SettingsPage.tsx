@@ -13,11 +13,7 @@ import { SettingsContentSkeleton, SettingsSidebarSkeleton, StackToolsSettingsSke
 import { PaymentsSettingsContent } from '@/app/settings/PaymentsSettingsContent';
 import { BlogStreakSettingsContent } from '@/app/settings/BlogStreakSettingsContent';
 import { SettingsComingSoonPlaceholder } from './components/SettingsComingSoonPlaceholder';
-import {
-  SETTINGS_ACCORDION_VARIANTS,
-  SETTINGS_IMPLEMENTED_SECTION_IDS,
-  SETTINGS_NAV_GROUPS,
-} from './config/nav';
+import { SETTINGS_ACCORDION_VARIANTS, SETTINGS_IMPLEMENTED_SECTION_IDS, SETTINGS_NAV_GROUPS } from './config/nav';
 import { SyntaxCardContent } from './sections/SyntaxCardSection';
 import { EditProfileContent } from './sections/EditProfileSection';
 import { SecurityEmailContent } from './sections/SecurityEmailSection';
@@ -29,6 +25,7 @@ import { EducationContent } from './sections/EducationSection';
 import { CertificationsContent } from './sections/CertificationsSection';
 import { ProjectsContent } from './sections/ProjectsSection';
 import { OpenSourceContent } from './sections/OpenSourceSection';
+
 
 export default function SettingsPage() {
   const router = useRouter();

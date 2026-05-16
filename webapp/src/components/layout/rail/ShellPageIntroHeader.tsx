@@ -2,10 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
-import {
-  RectangleAppBreadcrumb,
-  type RectangleAppBreadcrumbItem,
-} from './RectangleAppBreadcrumb';
+import { RectangleAppBreadcrumb, type RectangleAppBreadcrumbItem } from './RectangleAppBreadcrumb';
+
 
 type ShellPageIntroHeaderProps = Readonly<{
   breadcrumbItems: RectangleAppBreadcrumbItem[];

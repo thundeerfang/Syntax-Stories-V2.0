@@ -1,9 +1,16 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { createContext, useContext, useLayoutEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { PublishedPolicyResponse } from '@contracts/legalApi';
 import { formatLegalPolicyVersionMeta, getLegalPolicyVersionBadgeLines } from './legalPolicyFormat';
+
 
 export type LegalPolicyHeaderSnapshot = {
   title: string;

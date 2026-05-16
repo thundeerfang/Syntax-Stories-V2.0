@@ -12,6 +12,7 @@ import {
   type TooltipContentProps,
 } from 'recharts';
 
+
 export interface AreaChartProps<T extends Record<string, unknown>> {
   data: T[];
   index: keyof T;

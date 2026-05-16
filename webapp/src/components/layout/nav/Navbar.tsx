@@ -14,8 +14,17 @@ import { AccountDropdown } from './AccountDropdown';
 import { cn } from '@/lib/core/utils';
 import { SHELL_NAV_INNER_CLASS, SHELL_RAIL_FROST_CLASS, SHELL_RAIL_FROST_STYLE } from '@/lib/shell/shellContentRail';
 import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
-import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
+import {
+  Sun,
+  Moon,
+  Menu,
+  X,
+  Search,
+  Command,
+  PenLine,
+} from 'lucide-react';
 import { NavbarSkeleton } from '@/components/skeletons';
+
 
 const navLinks = [
   { href: '/', label: 'HOME' },

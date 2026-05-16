@@ -5,6 +5,7 @@ import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { MAX_TABLE_CELL_CHARS, truncateCell } from '@/lib/blog/tableBlockLimits';
 
+
 export const MAX_COLS = 12;
 export const MAX_ROWS = 24;
 export const MIN_COLS = 1;

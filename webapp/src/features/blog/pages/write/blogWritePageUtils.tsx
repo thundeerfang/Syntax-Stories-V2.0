@@ -2,48 +2,30 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { useSidebar } from '@/hooks/useSidebar';
 import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
-import { squadsApi, type SquadSummary } from '@/api/squads';
 import { uploadCover } from '@/api/upload';
-import { BlogWritePageSkeletonInner } from '@/components/skeletons';
-import { Dialog } from '@/components/ui/dialog';
-import { ImageUploadCropDialog } from '@/components/upload';
-import { ConfirmDialog } from '@/components/ui/dialog';
-import { BlogWriteDeployOverlay } from '@/features/blog';
 import type { BlogPublishTaxonomy } from '@/lib/blog/blogPublishTaxonomy';
-import type { BlogTaxonomyRow } from '@/types/blog';
 import {
-  Save, Send, ChevronRight,
-  Activity, Cpu, History, ListTree, Wrench,
-  Globe, ShieldCheck, Image as ImageIcon, Trash2, Pencil,
-  Bold, Italic, Underline as UnderlineIcon,
-  Link2, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight,
-  FileText, UsersRound,
+  ChevronRight,
+  Activity,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Link2,
+  PanelLeftClose,
+  PanelLeft,
+  PanelRightClose,
+  PanelRight,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { resolveSameOriginRequestUrl } from '@/lib/api/publicApiBase';
-import {
-  BLOG_POST_THUMBNAIL_ASPECT,
-  BLOG_POST_THUMBNAIL_ASPECT_CLASS,
-} from '@/lib/blog/blogPostThumbnailAspect';
-import { getWriteEditorSessionPostId, setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
-import {
-  blockTypeDisplayName,
-  totalWorkspaceWordCount,
-} from '@/lib/blog/writeWorkspaceStats';
-import {
-  BlogWriteEditor,
-  Block,
-  createBlockInSection,
-  stripLegacyGifBlocks,
-  type BlockType,
-} from '@/components/ui/editor';
-import { DEFAULT_ITEMS } from '@/components/ui/editor';
+import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
+import { blockTypeDisplayName } from '@/lib/blog/writeWorkspaceStats';
+import { Block, stripLegacyGifBlocks } from '@/components/ui/editor';
 import { motion, AnimatePresence } from 'framer-motion';
+
 
 
 export function thumbnailPreviewFromApi(raw: string | undefined | null): string | null {

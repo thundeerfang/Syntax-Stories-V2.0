@@ -6,6 +6,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
+import { useScrollLock } from '@/hooks/useScrollLock';
+
 
 /** z-index for dialog overlay so it appears above navbar (z-40) and other layout. */
 export const DIALOG_Z_INDEX = 100;
@@ -97,7 +99,7 @@ export interface DialogProps {
 }
 
 const defaultBackdropClass =
-  'fixed inset-0 min-h-full min-w-full h-screen w-screen bg-black/60 backdrop-blur-[2px] pointer-events-auto';
+  'fixed inset-0 min-h-full min-w-full h-screen w-screen touch-none overscroll-none bg-black/60 backdrop-blur-[2px] pointer-events-auto';
 const defaultPanelClass =
   'pointer-events-auto w-full max-w-md max-h-[90vh] overflow-y-auto border-2 border-border bg-card text-card-foreground shadow';
 
@@ -179,16 +181,7 @@ export function Dialog({
     return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose, closeOnEscape]);
 
-  useEffect(() => {
-    if (open) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev ?? '';
-      };
-    }
-    document.body.style.overflow = '';
-  }, [open]);
+  useScrollLock(open);
 
   const overlay = (
     <AnimatePresence>
@@ -206,7 +199,7 @@ export function Dialog({
             aria-hidden
           />
           <div
-            className="fixed inset-0 min-h-screen min-w-full flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 min-h-screen min-w-full flex touch-none items-center justify-center overscroll-none p-4 pointer-events-none"
             style={{ zIndex }}
           >
             <motion.div

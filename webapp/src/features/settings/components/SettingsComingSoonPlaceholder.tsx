@@ -1,11 +1,8 @@
 'use client';
 
 import { Settings } from 'lucide-react';
-import {
-  SettingsSectionHeading,
-  SettingsTabPanel,
-  SettingsTabRoot,
-} from '@/app/settings/settings-list/SettingsSectionHeading';
+import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+
 
 export function SettingsComingSoonPlaceholder({
   title,

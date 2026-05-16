@@ -4,6 +4,7 @@ import React from 'react';
 import { ExternalLink, Pencil, Trash2, Wrench } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
+
 export type SetupItem = { label: string; imageUrl: string; productUrl?: string; imageAlt?: string };
 
 type MySetupCardProps = Readonly<{

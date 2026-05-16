@@ -4,15 +4,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import {
-  computeHoverCardPositionAuto,
-  HOVER_CARD_Z_INDEX,
-  motionAxisOffset,
-  type HoverCardSide,
-} from '@/components/ui/popover';
+import { computeHoverCardPositionAuto, HOVER_CARD_Z_INDEX, motionAxisOffset, type HoverCardSide } from '@/components/ui/popover';
 import { MentionPopoverCard } from '@/components/ui/popover';
 import { cn } from '@/lib/core/utils';
 import type { PublicFeedPostAuthor } from '@/types/blog';
+
 
 const EXIT_MS = 180;
 

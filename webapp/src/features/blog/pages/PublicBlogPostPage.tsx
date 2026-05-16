@@ -52,6 +52,7 @@ import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { SHELL_CONTENT_MEASURE_CLASS, SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { BlogPostPageSkeletonInner } from '@/components/skeletons';
 
+
 /** Cancels article body horizontal padding (`px-3 sm:px-4 lg:px-5`) so full-width media meets the article edges. */
 const BLOG_ARTICLE_FULL_BLEED_CLASS =
   '-mx-3 w-[calc(100%+1.5rem)] max-w-none sm:-mx-4 sm:w-[calc(100%+2rem)] lg:-mx-5 lg:w-[calc(100%+2.5rem)]';

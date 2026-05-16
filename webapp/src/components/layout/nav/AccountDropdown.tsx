@@ -27,6 +27,7 @@ import { useUserPresenceStatus } from '@/lib/presence/useUserPresenceStatus';
 import { useUIStore } from '@/store/ui';
 import { SyntaxCardDialog } from '@/components/profile';
 
+
 /** Same rules as profile/u pages: absolute http(s), `data:` SVG defaults from API, or API-relative uploads. */
 function resolveAccountAvatarSrc(
   profileImg: string | undefined,
@@ -50,6 +51,9 @@ export function AccountDropdown() {
   const [copied, setCopied] = useState(false);
   const feedbackVisible = useUIStore((s) => s.feedbackButtonVisible);
   const setFeedbackVisible = useUIStore((s) => s.setFeedbackButtonVisible);
+  const presenceIndicatorEnabled = useUIStore((s) => s.presenceIndicatorEnabled);
+  const setPresenceIndicatorEnabled = useUIStore((s) => s.setPresenceIndicatorEnabled);
+  const presenceStatus = useUserPresenceStatus();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,11 +114,10 @@ export function AccountDropdown() {
           open ? 'shadow-none translate-x-[2px] translate-y-[2px]' : 'shadow'
         }`}
       >
-        <div className="relative w-full h-full overflow-hidden">
-          <img src={fullAvatarUrl} alt="" className="w-full h-full object-cover" />
+        <div className="h-full w-full overflow-hidden">
+          <img src={fullAvatarUrl} alt="" className="h-full w-full object-cover" />
         </div>
-        {/* Status indicator on trigger */}
-        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border border-border" />
+        <UserPresenceDot />
       </button>
 
       <AnimatePresence>
@@ -129,8 +132,11 @@ export function AccountDropdown() {
             {/* Header Section */}
             <div className="p-3 border-b-2 border-border bg-muted/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 border-2 border-border bg-card shadow overflow-hidden shrink-0">
-                  <img src={fullAvatarUrl} alt="" className="w-full h-full object-cover" />
+                <div className="relative h-10 w-10 shrink-0 border-2 border-border bg-card shadow">
+                  <div className="h-full w-full overflow-hidden">
+                    <img src={fullAvatarUrl} alt="" className="h-full w-full object-cover" />
+                  </div>
+                  <UserPresenceDot />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-[12px] font-black uppercase italic truncate text-foreground leading-none">{displayName}</h3>
@@ -240,6 +246,40 @@ export function AccountDropdown() {
                     <div className="scale-75 origin-right">
                         <Switch checked={feedbackVisible} onCheckedChange={setFeedbackVisible} />
                     </div>
+                </div>
+
+                <div className="flex items-center justify-between border-b-2 border-border px-4 py-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className={`size-2.5 shrink-0 border-2 border-border ${
+                        presenceIndicatorEnabled && presenceStatus === 'online'
+                          ? 'bg-green-500 presence-dot-blink'
+                          : presenceIndicatorEnabled
+                            ? 'bg-muted-foreground/75'
+                            : 'bg-transparent'
+                      }`}
+                      aria-hidden
+                    />
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold uppercase text-foreground">Online status</span>
+                      <p className="text-[8px] font-medium text-muted-foreground">
+                        {presenceIndicatorEnabled
+                          ? presenceStatus === 'online'
+                            ? 'Green — active on this device'
+                            : presenceStatus === 'away'
+                              ? 'Gray — tab in background'
+                              : 'Gray — offline'
+                          : 'Hidden on your avatar'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="origin-right scale-75">
+                    <Switch
+                      checked={presenceIndicatorEnabled}
+                      onCheckedChange={setPresenceIndicatorEnabled}
+                      aria-label="Show online status indicator"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 bg-card">

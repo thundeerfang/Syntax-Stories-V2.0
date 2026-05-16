@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { fetchPublishedArticleBySlug } from '@/lib/api/publicHelp';
 
+
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

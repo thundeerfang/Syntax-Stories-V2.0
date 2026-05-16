@@ -6,6 +6,7 @@ import { Users, UserPlus } from 'lucide-react';
 import { followApi, type PublicProfileUser } from '@/api/follow';
 import { SparkLottie, StreakFireLottie } from '@/components/ui/lottie';
 
+
 const profileCache = new Map<string, PublicProfileUser>();
 
 /** Fixed width for profile hover surfaces (matches squad popover). */

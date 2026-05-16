@@ -20,6 +20,7 @@ import { HoverCard } from '@/components/ui/popover';
 import { LinkPreviewCardContent } from '@/components/ui/popover';
 import type { WorkExperience } from '@/api/auth';
 
+
 type MediaItem = { url: string; title?: string };
 
 /** Work card uses backend fields beyond the base `WorkExperience` type. */

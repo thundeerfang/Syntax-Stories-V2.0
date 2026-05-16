@@ -5,6 +5,7 @@ import { setAuthRetryHandler } from '@/api/auth';
 import { sessionPing } from '@/api/sessionPing';
 import { useAuthStore } from '@/store/auth';
 
+
 /**
  * Ensures auth store is hydrated from localStorage before rendering auth-dependent UI.
  * Registers global 401 retry so expired access tokens are refreshed and the request is retried.

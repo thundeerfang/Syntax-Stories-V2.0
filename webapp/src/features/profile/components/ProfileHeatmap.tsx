@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { READ_HEATMAP_WINDOW_DAYS } from '@/lib/profile/readHeatmapConstants';
 import { MONTH_NAMES_SHORT } from '@/lib/profile/dateLabels';
 
+
 const ActivityCalendar = dynamic(
   () => import('react-activity-calendar').then((m) => m.ActivityCalendar),
   { ssr: false }

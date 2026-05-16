@@ -3,6 +3,7 @@
 import { useRef, useEffect, type ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
 
+
 /** Matches react-easy-crop's focusable crop frame (`data-testid="cropper"`). */
 const CROP_AREA_SELECTOR = '[data-testid="cropper"]';
 

@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 
+
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
 export interface TestAccountLottieProps {

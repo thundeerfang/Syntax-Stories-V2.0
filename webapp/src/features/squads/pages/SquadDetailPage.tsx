@@ -1,7 +1,13 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { SquadFeedPinChrome } from '@/features/blog';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -27,11 +33,7 @@ import { CreateSquadDialog } from '@/features/squads';
 import { BlogCard } from '@/features/blog';
 import { InfoSwiperDialog } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import {
-  SquadMembersDialog,
-  SquadsDiscoverCategoryView,
-  type SquadMembersDialogRow,
-} from '../components/SquadSlugSections';
+import { SquadMembersDialog, SquadsDiscoverCategoryView, type SquadMembersDialogRow } from '../components/SquadSlugSections';
 import { SQUADS_INTRO_SLIDES } from '@/features/squads';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { isSquadCategory, squadCategoryLabel } from '@/lib/squads/squadCategory';
@@ -41,6 +43,7 @@ import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
+
 
 type MemberRow = SquadMembersDialogRow;
 

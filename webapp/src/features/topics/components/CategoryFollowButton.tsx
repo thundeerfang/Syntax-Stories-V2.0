@@ -9,6 +9,7 @@ import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 
+
 export type CategoryFollowButtonProps = Readonly<{
   slug: string;
   name: string;

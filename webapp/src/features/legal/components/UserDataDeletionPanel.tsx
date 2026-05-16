@@ -18,6 +18,7 @@ import {
   LEGAL_RETRO_ICON_TILE_TOC,
 } from './legalUi';
 
+
 export function UserDataDeletionPanel() {
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);

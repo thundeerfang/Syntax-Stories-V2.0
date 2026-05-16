@@ -2,8 +2,17 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, GraduationCap, Award, FolderGit2, Code2, ChevronRight, Wrench } from 'lucide-react';
+import {
+  Briefcase,
+  GraduationCap,
+  Award,
+  FolderGit2,
+  Code2,
+  ChevronRight,
+  Wrench,
+} from 'lucide-react';
 import { cn } from '@/lib/core/utils';
+
 
 export type ProfileSectionVariant = 'workExperience' | 'education' | 'certification' | 'project' | 'openSource' | 'mySetup';
 

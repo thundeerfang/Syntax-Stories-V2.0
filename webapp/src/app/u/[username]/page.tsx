@@ -3,7 +3,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Monitor, Users, Wrench, Terminal, Activity, ChevronRight, Globe, Copy, Check, ExternalLink, Link2 } from 'lucide-react';
+import {
+  Monitor,
+  Users,
+  Wrench,
+  Terminal,
+  Activity,
+  ChevronRight,
+  Globe,
+  Copy,
+  Check,
+  ExternalLink,
+  Link2,
+} from 'lucide-react';
 import { followApi, type ReadStreakPayload, type PublicProfileUser } from '@/api/follow';
 import { analyticsApi } from '@/api/analytics';
 import { useAuthStore } from '@/store/auth';
@@ -31,6 +43,7 @@ import { formatJoinedDate, markdownBioToHtml } from '@/lib/profile/profileDispla
 import { formatMonthYearShort } from '@/lib/profile/dateLabels';
 import { GithubIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from '@/components/icons/SocialProviderIcons';
 import { ProfileCardSkeleton } from '@/components/skeletons';
+
 
 function isImageUrl(url: string): boolean {
   return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url);

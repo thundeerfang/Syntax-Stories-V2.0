@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
 import { Terminal } from 'lucide-react';
 
+
 export type HeaderProps = {
   /** Route / module id in the shell bar (e.g. `System.Contact_Active`) */
   systemLabel: string;

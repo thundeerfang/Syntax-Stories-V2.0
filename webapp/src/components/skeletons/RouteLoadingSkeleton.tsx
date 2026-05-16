@@ -15,6 +15,7 @@ import {
   SettingsPageSkeletonInner,
 } from './PageSkeletons';
 
+
 function pickInner(path: string) {
   if (path === '/following' || path === '/bookmarks' || path === '/reposts') {
     return <FollowingPageContentSkeleton showIntro />;

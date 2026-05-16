@@ -14,6 +14,7 @@ import type { AuthDialogView } from '@/store/authDialog';
 import type { AuthDialogStep as Step } from './authDialogStep';
 import { authDialogRenderStep } from './authDialogRender';
 
+
 /** Avoid deprecated `React.FormEvent` (Sonar S1874); matches what submit handlers use. */
 type FormSubmit = { preventDefault(): void; currentTarget: HTMLFormElement };
 

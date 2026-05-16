@@ -1,5 +1,6 @@
 import { LEGAL_INLINE_CODE, LEGAL_UNAVAILABLE_BODY, LEGAL_UNAVAILABLE_TITLE } from './legalUi';
 
+
 type Props = {
   title: string;
 };

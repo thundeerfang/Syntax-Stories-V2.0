@@ -1,7 +1,18 @@
 import * as React from 'react';
-import { AlignLeft, Braces, Camera, Film, Image as ImageIcon, Minus, Network, Table2, Type } from 'lucide-react';
+import {
+  AlignLeft,
+  Braces,
+  Camera,
+  Film,
+  Image as ImageIcon,
+  Minus,
+  Network,
+  Table2,
+  Type,
+} from 'lucide-react';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/core/utils';
+
 
 export interface BottomToolbarItem {
   id: string;

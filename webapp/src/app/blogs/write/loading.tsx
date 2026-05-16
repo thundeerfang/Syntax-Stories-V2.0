@@ -2,6 +2,7 @@
 
 import { BlogWritePageSkeletonInner } from '@/components/skeletons';
 
+
 export default function BlogWriteLoading() {
   return <BlogWritePageSkeletonInner />;
 }

@@ -7,6 +7,7 @@ import { SHELL_RAIL_FROST_CLASS, SHELL_RAIL_FROST_STYLE } from '@/lib/shell/shel
 import { LEGAL_FOOTER_LINKS } from '@/lib/shell/siteLinks';
 import { cn } from '@/lib/core/utils';
 
+
 const OPERATIONAL_POLL_MS = 12_000;
 const OPERATIONAL_FETCH_TIMEOUT_MS = 8000;
 

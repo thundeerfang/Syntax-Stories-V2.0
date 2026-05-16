@@ -1,5 +1,6 @@
 import { redirectLegacyOAuthCallback } from '@/lib/auth/legacyOAuthCallbackRedirect';
 
+
 export default async function GoogleCallbackRedirectPage({
   searchParams,
 }: {

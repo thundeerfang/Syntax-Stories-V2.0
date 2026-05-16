@@ -9,6 +9,7 @@ import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { useAuthStore } from '@/store/auth';
 import type { Post } from '@/types';
 
+
 export function PublicUserBlogGrid({ username }: Readonly<{ username: string }>) {
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);

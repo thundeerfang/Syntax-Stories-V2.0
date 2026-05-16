@@ -39,12 +39,8 @@ import type {
 import { coerceParagraphDoc } from '@/types/blog';
 import { normalizeVideoEmbedUrl, youtubeThumbnailUrl } from '@/lib/blog/videoEmbed';
 import { RichParagraphEditor } from './RichParagraphEditor';
-import {
-  CodeBlockEditor,
-  MermaidBlockEditor,
-  ParagraphBlockHelpDialog,
-  TableBlockEditor,
-} from './_blogWriteEditorBlocks';
+import { CodeBlockEditor, MermaidBlockEditor, ParagraphBlockHelpDialog, TableBlockEditor } from './_blogWriteEditorBlocks';
+
 
 export type BlockType =
   | 'paragraph'

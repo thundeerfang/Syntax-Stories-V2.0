@@ -5,6 +5,7 @@ import { Tag } from 'lucide-react';
 import { SkillIconSkeleton } from '../feedback/Skeleton';
 import { cn } from '@/lib/core/utils';
 
+
 export type SkillIconImageProps = Readonly<{
   src: string;
   alt?: string;

@@ -4,6 +4,7 @@ import { forwardRef, type ComponentPropsWithoutRef } from 'react';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
+
 export type SearchFieldProps = Readonly<
   Omit<ComponentPropsWithoutRef<'input'>, 'type'> & {
     /** Classes on the outer wrapper (e.g. width caps). */

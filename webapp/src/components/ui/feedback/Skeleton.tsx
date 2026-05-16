@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/core/utils';
 
+
 interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Optional class name for the skeleton bar */
   className?: string;

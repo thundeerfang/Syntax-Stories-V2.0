@@ -16,6 +16,7 @@ import { CompactBlogPostsSwiperSkeleton } from '@/components/skeletons';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 
+
 export type CompactBlogPostsSwiperHandle = Readonly<{
   scrollPrev: () => void;
   scrollNext: () => void;

@@ -16,25 +16,24 @@ import { BlogWriteDeployOverlay } from '@/features/blog';
 import type { BlogPublishTaxonomy } from '@/lib/blog/blogPublishTaxonomy';
 import type { BlogTaxonomyRow } from '@/types/blog';
 import {
-  Save, Send, ChevronRight,
-  Activity, Cpu, History, ListTree, Wrench,
-  Globe, ShieldCheck, Image as ImageIcon, Trash2, Pencil,
-  Bold, Italic, Underline as UnderlineIcon,
-  Link2, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight,
-  FileText, UsersRound,
+  Save,
+  Send,
+  Cpu,
+  History,
+  ListTree,
+  Wrench,
+  Globe,
+  ShieldCheck,
+  Image as ImageIcon,
+  Trash2,
+  Pencil,
+  UsersRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
-import { resolveSameOriginRequestUrl } from '@/lib/api/publicApiBase';
-import {
-  BLOG_POST_THUMBNAIL_ASPECT,
-  BLOG_POST_THUMBNAIL_ASPECT_CLASS,
-} from '@/lib/blog/blogPostThumbnailAspect';
+import { BLOG_POST_THUMBNAIL_ASPECT, BLOG_POST_THUMBNAIL_ASPECT_CLASS } from '@/lib/blog/blogPostThumbnailAspect';
 import { getWriteEditorSessionPostId, setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
-import {
-  blockTypeDisplayName,
-  totalWorkspaceWordCount,
-} from '@/lib/blog/writeWorkspaceStats';
+import { totalWorkspaceWordCount } from '@/lib/blog/writeWorkspaceStats';
 import {
   BlogWriteEditor,
   Block,
@@ -44,6 +43,7 @@ import {
 } from '@/components/ui/editor';
 import { DEFAULT_ITEMS } from '@/components/ui/editor';
 import { motion, AnimatePresence } from 'framer-motion';
+
 
 
 import {

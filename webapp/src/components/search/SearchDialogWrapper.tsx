@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useSearchDialogStore } from '@/store/searchDialog';
 import { SearchDialog } from './SearchDialog';
 
+
 export function SearchDialogWrapper() {
   const open = useSearchDialogStore((s) => s.open);
 

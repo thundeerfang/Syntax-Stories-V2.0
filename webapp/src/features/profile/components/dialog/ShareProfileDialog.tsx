@@ -1,11 +1,18 @@
 'use client';
 
 import React from 'react';
-import { Share2, Copy, Globe, Check, Code2 } from 'lucide-react';
+import {
+  Share2,
+  Copy,
+  Globe,
+  Check,
+  Code2,
+} from 'lucide-react';
 import { XIcon } from '@/components/icons/SocialProviderIcons';
 import { Dialog } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
+
 
 export interface ShareProfileDialogProps {
   open: boolean;

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import type { SquadSummary } from '@/api/squads';
 import { SquadDiscoverCard } from './SquadDiscoverCard';
 
+
 export type SquadDirectoryCardProps = Readonly<{
   squad: SquadSummary;
   isMember: boolean;

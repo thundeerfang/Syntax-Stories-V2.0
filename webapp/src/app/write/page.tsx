@@ -5,15 +5,24 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useSidebar } from '@/hooks/useSidebar';
 import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
 import { BlogWritePageSkeletonInner } from '@/components/skeletons';
-import { 
-  Save, Send, ChevronRight, FileCode, 
-  Activity, Cpu, History, Terminal as TerminalIcon,
-  Globe, ShieldCheck, Box
+import {
+  Save,
+  Send,
+  ChevronRight,
+  FileCode,
+  Activity,
+  Cpu,
+  History,
+  Terminal as TerminalIcon,
+  Globe,
+  ShieldCheck,
+  Box,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { BlogWriteEditor, Block, createBlockInSection, stripLegacyGifBlocks } from '@/components/ui/editor';
+
 
 const TITLE_MAX = 300;
 /** Single section for /write (no section UI); must match how editor filters blocks. */

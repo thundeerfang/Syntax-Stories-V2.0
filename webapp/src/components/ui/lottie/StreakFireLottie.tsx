@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
+
 const DotLottieReact = dynamic(
   () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
   { ssr: false }

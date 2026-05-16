@@ -5,6 +5,7 @@ import { cn } from '@/lib/core/utils';
 import { Footer } from '../footer/Footer';
 import { MAIN_COLUMN_OFFSET_TRANSITION, mainColumnOffsetClass } from '../shared';
 
+
 export function MainLayout({
   children,
   className,

@@ -7,6 +7,7 @@ import { cn } from '@/lib/core/utils';
 import type { EntityOption } from '@/lib/core/entityOption';
 import { getLogoUrl } from '@/lib/core/entityOption';
 
+
 const DEBOUNCE_MS = 300;
 
 const ENTITY_SEARCH_LISTBOX_CLASS =

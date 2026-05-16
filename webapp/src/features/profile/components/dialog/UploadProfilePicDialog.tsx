@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { uploadAvatar, type CropArea } from '@/api/upload';
 
+
 export interface UploadProfilePicDialogProps {
   open: boolean;
   onClose: () => void;

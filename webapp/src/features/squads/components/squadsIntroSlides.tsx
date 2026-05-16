@@ -1,5 +1,6 @@
 import type { InfoSwiperSlide } from '@/components/ui/dialog';
 
+
 /** Three-step Squads onboarding for {@link InfoSwiperDialog}. */
 export const SQUADS_INTRO_SLIDES: InfoSwiperSlide[] = [
   {

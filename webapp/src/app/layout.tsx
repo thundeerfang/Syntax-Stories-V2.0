@@ -12,6 +12,7 @@ import { AppwritePing } from '@/components/appwrite/AppwritePing';
 import { ConnectivityGate } from '@/features/connectivity';
 import { GlobalEngagementEffects } from '@/components/effects/GlobalEngagementEffects';
 
+
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 /** Inline in <head> so it runs before paint; avoids next/script in <body> (React 19 + RSC warnings). */

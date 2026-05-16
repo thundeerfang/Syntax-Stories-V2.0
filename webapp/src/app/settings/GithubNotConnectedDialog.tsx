@@ -6,6 +6,7 @@ import { GithubConnectLottie } from '@/components/ui/lottie';
 import { cn } from '@/lib/core/utils';
 import { settingsBtnBlockPrimarySm } from '@/app/settings/buttonStyles';
 
+
 export function GithubNotConnectedDialog({
   open,
   onClose,

@@ -4,16 +4,13 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { RankCountPill } from '@/features/topics';
-import {
-  FOLLOWED_CATEGORIES_CHANGED_EVENT,
-  isCategorySlugFollowed,
-  toggleFollowedCategorySlug,
-} from '@/lib/feeds/followedCategoriesStorage';
+import { FOLLOWED_CATEGORIES_CHANGED_EVENT, isCategorySlugFollowed, toggleFollowedCategorySlug } from '@/lib/feeds/followedCategoriesStorage';
 import { cn } from '@/lib/core/utils';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
 import { triggerFollowConfetti } from '@/store/engagementEffects';
 import { toast } from 'sonner';
+
 
 const CARD_FRAME = 'retro-card flex h-full min-h-[12rem] flex-col p-4 sm:p-5';
 

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
+
 const OPEN_SOURCE_FOOTER_MARKS = ['o0', 'o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9'] as const;
 
 type OpenSourceCardProps = Readonly<{

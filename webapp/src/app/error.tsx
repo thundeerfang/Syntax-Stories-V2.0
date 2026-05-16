@@ -6,6 +6,7 @@ import { ErrorIllustrationLottie } from '@/components/ui/lottie';
 import { BlockShadowButton, blockShadowButtonClassNames } from '@/components/ui/button';
 import { cn } from '@/lib/core/utils';
 
+
 export default function ErrorPage({
   error,
   reset,

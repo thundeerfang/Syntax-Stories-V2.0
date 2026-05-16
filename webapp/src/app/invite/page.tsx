@@ -3,12 +3,22 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserPlus, Copy, Check, Users, Link2, Sparkles, ChevronRight, Radio } from 'lucide-react';
+import {
+  UserPlus,
+  Copy,
+  Check,
+  Users,
+  Link2,
+  Sparkles,
+  ChevronRight,
+  Radio,
+} from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { setPostAuthRedirect } from '@/lib/auth/postAuthRedirect';
 import { cn } from '@/lib/core/utils';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+
 
 type InviteMeResponse = {
   success: boolean;

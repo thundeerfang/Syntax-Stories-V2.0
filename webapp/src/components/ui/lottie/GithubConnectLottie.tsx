@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/core/utils';
 
+
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
 const GITHUB_LOTTIE_SRC = '/lottie/icons8-github.json';

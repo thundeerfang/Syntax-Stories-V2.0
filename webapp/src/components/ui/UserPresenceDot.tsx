@@ -4,6 +4,7 @@ import { cn } from '@/lib/core/utils';
 import { useUserPresenceStatus, type UserPresenceStatus } from '@/lib/presence/useUserPresenceStatus';
 import { useUIStore } from '@/store/ui';
 
+
 export type UserPresenceDotProps = Readonly<{
   /** Override auto-detected status (e.g. previews in settings). */
   status?: UserPresenceStatus;
@@ -31,7 +32,7 @@ export function UserPresenceDot({ status: statusProp, className, title }: UserPr
   return (
     <span
       className={cn(
-        'pointer-events-none absolute -bottom-0.5 -right-0.5 z-10 size-2.5 border-2 border-border',
+        'pointer-events-none absolute -bottom-px -right-px z-20 size-2.5 border-2 border-border bg-card',
         isOnline ? 'bg-green-500 presence-dot-blink' : 'bg-muted-foreground/75',
         className,
       )}

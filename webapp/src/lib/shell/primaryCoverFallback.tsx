@@ -4,6 +4,7 @@ import { Newspaper, UsersRound } from 'lucide-react';
 import { SPOTLIGHT_PRIMARY_GRADIENT } from '@/lib/shell/spotlightPrimaryGradient';
 import { cn } from '@/lib/core/utils';
 
+
 export type PrimaryCoverFallbackProps = Readonly<{
   variant?: 'blog' | 'squad';
   showLabel?: boolean;

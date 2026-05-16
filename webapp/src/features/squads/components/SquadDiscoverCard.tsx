@@ -11,6 +11,7 @@ import { PrimaryCoverFallback } from '@/lib/shell/primaryCoverFallback';
 import { cn } from '@/lib/core/utils';
 import { triggerFollowConfetti } from '@/store/engagementEffects';
 
+
 const SQUAD_CORNER_BTN =
   '!size-9 !min-h-9 !min-w-9 shrink-0 !p-0 active:translate-x-0 active:translate-y-0 active:shadow-none';
 const SQUAD_CORNER_JOIN_CLASS = cn(

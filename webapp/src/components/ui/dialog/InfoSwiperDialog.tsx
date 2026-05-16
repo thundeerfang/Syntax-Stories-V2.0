@@ -7,6 +7,7 @@ import { X, UsersRound } from 'lucide-react';
 import { Dialog } from './dialogs';
 import { cn } from '@/lib/core/utils';
 
+
 export type InfoSwiperSlide = {
   id: string;
   title: string;

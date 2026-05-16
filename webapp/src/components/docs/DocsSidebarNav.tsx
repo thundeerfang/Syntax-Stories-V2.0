@@ -2,8 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ChevronRight, FileText, Layout, Library, Search, Command } from 'lucide-react';
+import {
+  BookOpen,
+  ChevronRight,
+  FileText,
+  Layout,
+  Library,
+  Search,
+  Command,
+} from 'lucide-react';
 import { cn } from '@/lib/core/utils';
+
 
 export type DocsSidebarArticle = { slug: string; title: string; canonicalPath?: string };
 

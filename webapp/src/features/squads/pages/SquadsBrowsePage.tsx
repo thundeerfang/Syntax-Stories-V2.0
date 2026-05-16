@@ -3,12 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Compass, Sparkles, UserPlus, UsersRound } from 'lucide-react';
-import {
-  RailFeedEmptyState,
-  RailSectionSubheader,
-  ShellPageIntroHeader,
-  type RailSectionSubheaderSortProps,
-} from '@/components/layout';
+import { RailFeedEmptyState, RailSectionSubheader, ShellPageIntroHeader, type RailSectionSubheaderSortProps } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { CreateSquadDialog } from '../components/CreateSquadDialog';
 import { SquadDirectoryCard } from '../components/SquadDirectoryCard';
@@ -23,6 +18,7 @@ import { squadsApi, type SquadSummary } from '@/api/squads';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
+
 
 /** Horizontal tabs: directory + visibility + memberships. */
 type SquadBrowseTab = 'all' | 'public' | 'private' | 'yours';

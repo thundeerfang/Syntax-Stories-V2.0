@@ -13,7 +13,6 @@ import {
   Users,
   Award,
   Terminal,
-
   TrendingUp,
   Copy,
   Check,
@@ -33,24 +32,20 @@ import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
 import { AreaChart } from '@/components/retroui';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
-import {
-  authApi,
-  type IncompleteItemHints,
-  type ParseCvMissingFieldKey,
-  type ProfileUpdateSection,
-} from '@/api/auth';
+import { authApi, type IncompleteItemHints, type ParseCvMissingFieldKey } from '@/api/auth';
 import type { CompleteItemDialogSection } from '@/features/profile';
 import { ProfileCardSkeleton } from '@/components/skeletons';
 import { ProfileSectionHeader } from '@/features/profile';
-import { WalletLottie, SparkLottie, StreakFireLottie, TestAccountLottie, ProfileActivityIconLottie } from '@/components/ui';
+import {
+  WalletLottie,
+  SparkLottie,
+  StreakFireLottie,
+  TestAccountLottie,
+  ProfileActivityIconLottie,
+} from '@/components/ui';
 import { ProfileHeatmap } from '@/features/profile';
 import { ProfileActivityBlogList, profileBlogsPageHref } from '@/features/blog';
-import {
-  FollowersFollowingDialog,
-  MissingFieldsDialog,
-  MediaFullViewDialog,
-  ProfileSquadsCategoriesCard,
-} from '@/features/profile';
+import { FollowersFollowingDialog, MissingFieldsDialog, MediaFullViewDialog, ProfileSquadsCategoriesCard } from '@/features/profile';
 import { getSkillIconUrl } from '@/lib/profile/skillIcons';
 import { ProfilePageSkeletonInner } from '@/components/skeletons';
 import { WorkExperienceCard } from '@/app/settings/settings-list/WorkExperienceCard';
@@ -89,6 +84,7 @@ import {
   completeItemSectionToSettingsId,
   COMPLETE_ITEM_PROFILE_SECTION,
 } from '../lib/profilePageHelpers';
+
 
 export default function ProfilePage() {
   const router = useRouter();

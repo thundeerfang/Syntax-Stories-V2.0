@@ -7,6 +7,7 @@ import { Textarea } from '../Textarea';
 import { Checkbox } from '../Checkbox';
 import { cn } from '@/lib/core/utils';
 
+
 export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   id: string;
   label: string;
