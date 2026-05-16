@@ -85,6 +85,8 @@
   },
   "overrides": {
     "@tootallnate/once": "^3.0.1",
-    "postcss": "^8.5.14"
+    "postcss": "^8.5.14",
+    "glob": "^13.0.6",
+    "test-exclude": "^8.0.0"
   }
 }
