@@ -1,3 +1,4 @@
+import { createElement, type ReactElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   Box,
@@ -26,4 +27,12 @@ const MARKETING_ICONS: Record<string, LucideIcon> = {
 export function marketingIcon(key: string | undefined): LucideIcon {
   if (!key) return Globe;
   return MARKETING_ICONS[key] ?? Globe;
+}
+
+/** Renders a marketing icon by key without creating component types during parent render. */
+export function MarketingIcon({
+  name,
+  className,
+}: Readonly<{ name?: string; className?: string }>): ReactElement {
+  return createElement(marketingIcon(name), { className });
 }

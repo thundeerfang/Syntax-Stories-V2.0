@@ -24,7 +24,10 @@ export interface SparkLottieProps {
 export function SparkLottie({ play = false, size = 28 }: Readonly<SparkLottieProps>) {
   const instRef = useRef<DotLottieHandle | null>(null);
   const playRef = useRef(play);
-  playRef.current = play;
+
+  useEffect(() => {
+    playRef.current = play;
+  }, [play]);
 
   const syncInstance = useCallback(() => {
     const inst = instRef.current;

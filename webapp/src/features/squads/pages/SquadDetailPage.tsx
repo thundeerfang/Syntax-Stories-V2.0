@@ -332,21 +332,6 @@ export default function SquadDetailPage() {
     setMenuOpen(false);
   };
 
-  if (!slug) {
-    return null;
-  }
-
-  const viewerRole = squad?.viewerRole;
-  const isMember = viewerRole != null;
-  const isAdmin = viewerRole === 'admin';
-
-  const feedVisible =
-    squad &&
-    !(squad.viewerNeedsInvite === true || (squad.visibility === 'private' && squad.viewerRole == null));
-
-  const createdLabel = formatSquadCreated(squad?.createdAt);
-  const bannerSrc = squad ? resolveSquadBannerSrc(squad.coverBannerUrl) : undefined;
-
   const displayedFeed = useMemo(() => {
     if (!showPinnedOnly) return feed;
     return feed.filter((r) => r.pinned === true);
@@ -373,6 +358,21 @@ export default function SquadDetailPage() {
       setPinBusy(false);
     }
   }, [pinConfirm, token, slug]);
+
+  if (!slug) {
+    return null;
+  }
+
+  const viewerRole = squad?.viewerRole;
+  const isMember = viewerRole != null;
+  const isAdmin = viewerRole === 'admin';
+
+  const feedVisible =
+    squad &&
+    !(squad.viewerNeedsInvite === true || (squad.visibility === 'private' && squad.viewerRole == null));
+
+  const createdLabel = formatSquadCreated(squad?.createdAt);
+  const bannerSrc = squad ? resolveSquadBannerSrc(squad.coverBannerUrl) : undefined;
 
   const gridPattern =
     "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L30 60M0 30L60 30' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E\")";

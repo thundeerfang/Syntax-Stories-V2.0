@@ -32,7 +32,7 @@ import {
   SearchableSelect,
   Textarea,
 } from '@/components/retroui';
-import { ProjectCard } from '@/app/settings/settings-list/ProjectCard';
+import { ProjectCard } from '@/components/settings-list/ProjectCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
 import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
 import {

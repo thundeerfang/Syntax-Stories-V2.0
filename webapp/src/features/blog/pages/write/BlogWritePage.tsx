@@ -128,8 +128,10 @@ export default function WriteBlogPage() {
   const lastAutosyncRevisionAtRef = useRef(0);
   const idleEditRevisionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastEditedRevisionAtRef = useRef(0);
-  latestForSyncRef.current = { title, summary, blocks, thumbnailPreviewUrl };
-  tokenRef.current = token;
+  useEffect(() => {
+    latestForSyncRef.current = { title, summary, blocks, thumbnailPreviewUrl };
+    tokenRef.current = token;
+  }, [title, summary, blocks, thumbnailPreviewUrl, token]);
 
   useEffect(() => {
     let cancelled = false;

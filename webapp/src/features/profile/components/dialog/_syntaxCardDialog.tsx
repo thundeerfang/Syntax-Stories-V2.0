@@ -260,6 +260,18 @@ function formatPostsCount(count: number, capped: boolean): string {
   return String(count);
 }
 
+function FacebookShareGlyph() {
+  return <span className="text-[11px] font-black uppercase text-[#1877F2]">f</span>;
+}
+
+function InstagramShareGlyph() {
+  return (
+    <span className="text-[10px] font-black uppercase bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af] bg-clip-text text-transparent">
+      IG
+    </span>
+  );
+}
+
 export function SyntaxCardDialog({
   open,
   onClose,
@@ -337,7 +349,7 @@ export function SyntaxCardDialog({
     }
   }, []);
 
-  const downloadCard = async () => {
+  const downloadCard = useCallback(async () => {
     const dataUrl = await exportCardPng();
     if (!dataUrl) return;
     const link = document.createElement('a');
@@ -345,9 +357,9 @@ export function SyntaxCardDialog({
     link.href = dataUrl;
     link.click();
     toast.success('Syntax Card saved — share it on social');
-  };
+  }, [exportCardPng, username]);
 
-  const shareToX = async () => {
+  const shareToX = useCallback(async () => {
     const dataUrl = await exportCardPng();
     if (!dataUrl) return;
     const link = document.createElement('a');
@@ -356,46 +368,21 @@ export function SyntaxCardDialog({
     link.click();
     const text = encodeURIComponent(`My Syntax Stories dev card 🔥\n${profileUrl}`);
     globalThis.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank', 'noopener,noreferrer');
-  };
+  }, [exportCardPng, profileUrl, username]);
 
-  const shareToFacebook = () => {
+  const shareToFacebook = useCallback(() => {
     const url = encodeURIComponent(profileUrl);
     globalThis.open(
       `https://www.facebook.com/sharer/sharer.php?u=${url}`,
       '_blank',
       'noopener,noreferrer',
     );
-  };
+  }, [profileUrl]);
 
-  const shareActions = [
-    {
-      key: 'x',
-      label: 'X / Twitter',
-      icon: XIcon,
-      onClick: () => void shareToX(),
-    },
-    {
-      key: 'facebook',
-      label: 'Facebook',
-      icon: () => (
-        <span className="text-[11px] font-black uppercase text-[#1877F2]">f</span>
-      ),
-      onClick: shareToFacebook,
-    },
-    {
-      key: 'instagram',
-      label: 'Instagram',
-      icon: () => (
-        <span className="text-[10px] font-black uppercase bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af] bg-clip-text text-transparent">
-          IG
-        </span>
-      ),
-      onClick: () => {
-        void downloadCard();
-        toast.message('Download the PNG, then upload it in the Instagram app');
-      },
-    },
-  ] as const;
+  const handleShareInstagram = useCallback(() => {
+    void downloadCard();
+    toast.message('Download the PNG, then upload it in the Instagram app');
+  }, [downloadCard]);
 
   return (
     <Dialog
@@ -448,23 +435,48 @@ export function SyntaxCardDialog({
           <Share2 className="size-3.5" /> Share your card
         </p>
         <div className="flex flex-wrap gap-2">
-          {shareActions.map(({ key, label, icon: Icon, onClick }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={onClick}
-              disabled={loading || exporting}
-              className={cn(
-                'flex min-w-[88px] flex-col items-center gap-1.5 border-2 border-border bg-card px-4 py-3',
-                'text-[8px] font-black uppercase tracking-widest transition-all',
-                'hover:border-primary hover:bg-muted/40 active:translate-x-0.5 active:translate-y-0.5',
-                'disabled:pointer-events-none disabled:opacity-50',
-              )}
-            >
-              <Icon className="size-5 text-foreground" />
-              {label}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => void shareToX()}
+            disabled={loading || exporting}
+            className={cn(
+              'flex min-w-[88px] flex-col items-center gap-1.5 border-2 border-border bg-card px-4 py-3',
+              'text-[8px] font-black uppercase tracking-widest transition-all',
+              'hover:border-primary hover:bg-muted/40 active:translate-x-0.5 active:translate-y-0.5',
+              'disabled:pointer-events-none disabled:opacity-50',
+            )}
+          >
+            <XIcon className="size-5 text-foreground" />
+            X / Twitter
+          </button>
+          <button
+            type="button"
+            onClick={shareToFacebook}
+            disabled={loading || exporting}
+            className={cn(
+              'flex min-w-[88px] flex-col items-center gap-1.5 border-2 border-border bg-card px-4 py-3',
+              'text-[8px] font-black uppercase tracking-widest transition-all',
+              'hover:border-primary hover:bg-muted/40 active:translate-x-0.5 active:translate-y-0.5',
+              'disabled:pointer-events-none disabled:opacity-50',
+            )}
+          >
+            <FacebookShareGlyph />
+            Facebook
+          </button>
+          <button
+            type="button"
+            onClick={handleShareInstagram}
+            disabled={loading || exporting}
+            className={cn(
+              'flex min-w-[88px] flex-col items-center gap-1.5 border-2 border-border bg-card px-4 py-3',
+              'text-[8px] font-black uppercase tracking-widest transition-all',
+              'hover:border-primary hover:bg-muted/40 active:translate-x-0.5 active:translate-y-0.5',
+              'disabled:pointer-events-none disabled:opacity-50',
+            )}
+          >
+            <InstagramShareGlyph />
+            Instagram
+          </button>
         </div>
       </div>
 

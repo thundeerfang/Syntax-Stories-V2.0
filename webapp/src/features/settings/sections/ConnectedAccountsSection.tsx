@@ -40,7 +40,7 @@ export function ConnectedAccountsContent() {
       const data = await authApi.getLinkRedirectUrl(token, id as 'google' | 'github' | 'facebook' | 'x' | 'discord');
       if (data.redirectUrl) {
         markOAuthNavigationPending();
-        window.location.href = data.redirectUrl;
+        globalThis.location.assign(data.redirectUrl);
         return;
       }
       toast.error(data.message ?? 'Could not start linking');

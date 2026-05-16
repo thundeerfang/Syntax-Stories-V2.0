@@ -113,11 +113,11 @@ function SidebarAccordion({
   onToggle: (accordionId: SidebarAccordionId) => void;
   children: ReactNode;
 }>) {
-  const hasEnteredRef = useRef(false);
-  const skipInitialEnter = open && !hasEnteredRef.current;
+  const [hasEntered, setHasEntered] = useState(false);
+  const skipInitialEnter = open && !hasEntered;
 
   useEffect(() => {
-    if (open) hasEnteredRef.current = true;
+    if (open) setHasEntered(true);
   }, [open]);
 
   return (

@@ -273,19 +273,19 @@ export function ConfirmDialog({
             titleId={titleId}
             title={title}
             body={body}
-            children={children}
             confirmLabel={confirmLabel}
             busy={busy}
             confirmRef={confirmRef}
             onConfirm={handleConfirm}
-          />
+          >
+            {children}
+          </CenteredConfirmLayout>
         </div>
       ) : (
         <StandardConfirmLayout
           titleId={titleId}
           title={title}
           body={body}
-          children={children}
           hideCancel={hideCancel}
           cancelLabel={cancelLabel}
           confirmLabel={confirmLabel}
@@ -294,7 +294,9 @@ export function ConfirmDialog({
           confirmRef={confirmRef}
           onClose={onClose}
           onConfirm={handleConfirm}
-        />
+        >
+          {children}
+        </StandardConfirmLayout>
       )}
     </Dialog>
   );

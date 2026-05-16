@@ -34,7 +34,7 @@ import {
 } from '@/components/retroui';
 import { getCountryOptions, getStateOptions, getCityOptions, parseLocationString } from '@/lib/profile/profileLocation';
 import { searchCompaniesWithApi } from '@/lib/blog/referenceSearch';
-import { WorkExperienceCard } from '@/app/settings/settings-list/WorkExperienceCard';
+import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
 import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
 import { EMPLOYMENT_TYPE_OPTIONS, LOCATION_TYPE_SELECT_OPTIONS } from '@syntax-stories/shared';

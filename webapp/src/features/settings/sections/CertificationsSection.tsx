@@ -30,7 +30,7 @@ import {
   Textarea,
 } from '@/components/retroui';
 import { searchOrganizations } from '@/lib/blog/referenceSearch';
-import { CertificationCard } from '@/app/settings/settings-list/CertificationCard';
+import { CertificationCard } from '@/components/settings-list/CertificationCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
 import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
 import {

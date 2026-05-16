@@ -11,7 +11,7 @@ import { authApi } from '@/api/auth';
 import { projectMatchesGithubRepo } from '@/lib/profile/githubProjectIdentity';
 import { FormDialog } from '@/components/ui/dialog';
 import { FormInput } from '@/components/retroui';
-import { OpenSourceCard } from '@/app/settings/settings-list/OpenSourceCard';
+import { OpenSourceCard } from '@/components/settings-list/OpenSourceCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
 import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
 import { SettingsSectionEmptyState } from '../components/SettingsSectionEmptyState';

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { GithubIcon, XIcon } from '@/components/icons/SocialProviderIcons';
 import { getAboutMarketingPage, type AboutMarketingPage } from '@/api/marketing';
-import { marketingIcon } from '@/lib/marketing/marketingIcons';
+import { MarketingIcon } from '@/lib/marketing/marketingIcons';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
@@ -78,10 +78,7 @@ export default function AboutPage() {
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="border-2 border-border bg-card p-8 shadow lg:col-span-7">
             <h2 className="mb-8 flex items-center gap-3 text-2xl font-black uppercase italic">
-              {(() => {
-                const Icon = marketingIcon('Workflow');
-                return <Icon className="text-primary" />;
-              })()}
+              <MarketingIcon name="Workflow" className="text-primary" />
               The Journey
             </h2>
             <div className="relative space-y-8 before:absolute before:bottom-2 before:left-3 before:top-2 before:w-1 before:bg-border">
@@ -99,25 +96,19 @@ export default function AboutPage() {
 
           <div className="border-2 border-border bg-card p-8 shadow lg:col-span-5">
             <h2 className="mb-8 flex items-center gap-3 text-2xl font-black uppercase italic">
-              {(() => {
-                const Icon = marketingIcon('Cpu');
-                return <Icon className="text-primary" />;
-              })()}
+              <MarketingIcon name="Cpu" className="text-primary" />
               Built With
             </h2>
             <div className="grid grid-cols-2 gap-4">
-              {page.techStack.map((tech) => {
-                const Icon = marketingIcon(tech.icon);
-                return (
-                  <div
-                    key={tech.name}
-                    className="flex cursor-default items-center gap-3 border-2 border-border bg-muted/20 p-3 transition-transform hover:-translate-y-1 hover:translate-x-1"
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-[11px] font-black uppercase">{tech.name}</span>
-                  </div>
-                );
-              })}
+              {page.techStack.map((tech) => (
+                <div
+                  key={tech.name}
+                  className="flex cursor-default items-center gap-3 border-2 border-border bg-muted/20 p-3 transition-transform hover:-translate-y-1 hover:translate-x-1"
+                >
+                  <MarketingIcon name={tech.icon} className="h-5 w-5" />
+                  <span className="text-[11px] font-black uppercase">{tech.name}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -129,19 +120,16 @@ export default function AboutPage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {page.features.map((f) => {
-              const Icon = marketingIcon(f.icon);
-              return (
-                <div
-                  key={f.title}
-                  className="border-2 border-border bg-card p-6 shadow transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
-                >
-                  <Icon className="mb-4 h-8 w-8 text-primary" strokeWidth={2.5} />
-                  <h3 className="mb-2 text-lg font-black uppercase">{f.title}</h3>
-                  <p className="text-sm font-medium text-muted-foreground">{f.description}</p>
-                </div>
-              );
-            })}
+            {page.features.map((f) => (
+              <div
+                key={f.title}
+                className="border-2 border-border bg-card p-6 shadow transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+              >
+                <MarketingIcon name={f.icon} className="mb-4 h-8 w-8 text-primary" />
+                <h3 className="mb-2 text-lg font-black uppercase">{f.title}</h3>
+                <p className="text-sm font-medium text-muted-foreground">{f.description}</p>
+              </div>
+            ))}
           </div>
         </section>
 

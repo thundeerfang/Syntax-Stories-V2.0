@@ -25,11 +25,11 @@ import { STACK_AND_TOOLS_MAX } from '@/lib/profile/stackAndToolsLimits';
 import { toast } from 'sonner';
 import { getSkillIconUrl } from '@/lib/profile/skillIcons';
 import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/components/ui/editor';
-import { WorkExperienceCard } from '@/app/settings/settings-list/WorkExperienceCard';
-import { EducationCard } from '@/app/settings/settings-list/EducationCard';
-import { CertificationCard } from '@/app/settings/settings-list/CertificationCard';
-import { ProjectCard } from '@/app/settings/settings-list/ProjectCard';
-import { OpenSourceCard } from '@/app/settings/settings-list/OpenSourceCard';
+import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
+import { EducationCard } from '@/components/settings-list/EducationCard';
+import { CertificationCard } from '@/components/settings-list/CertificationCard';
+import { ProjectCard } from '@/components/settings-list/ProjectCard';
+import { OpenSourceCard } from '@/components/settings-list/OpenSourceCard';
 import { SparkLottie, StreakFireLottie, WalletLottie, TestAccountLottie } from '@/components/ui';
 import { AreaChart } from '@/components/retroui';
 import { ProfileHeatmap } from '@/features/profile';
@@ -353,7 +353,7 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
   const profileShareUrl = useMemo(() => {
     if (globalThis.window === undefined || !profile?.username) return '';
     return `${globalThis.window.location.origin}/u/${profile.username}`;
-  }, [profile?.username]);
+  }, [profile]);
 
   const copyProfileUrl = async () => {
     if (!profileShareUrl) return;

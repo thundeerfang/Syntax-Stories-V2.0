@@ -20,7 +20,7 @@ import {
   EntitySearchInput,
 } from '@/components/retroui';
 import { searchSchools } from '@/lib/blog/referenceSearch';
-import { EducationCard } from '@/app/settings/settings-list/EducationCard';
+import { EducationCard } from '@/components/settings-list/EducationCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
 import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
 import {

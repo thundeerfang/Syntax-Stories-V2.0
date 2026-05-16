@@ -25,7 +25,10 @@ const BOOKMARK_OVERSCAN = 1.52;
 export function BookmarkLottie({ play = false, size = 22 }: Readonly<BookmarkLottieProps>) {
   const instRef = useRef<DotLottieHandle | null>(null);
   const playRef = useRef(play);
-  playRef.current = play;
+
+  useEffect(() => {
+    playRef.current = play;
+  }, [play]);
 
   const innerPx = size * BOOKMARK_OVERSCAN;
 
