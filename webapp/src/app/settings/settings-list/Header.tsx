@@ -4,14 +4,16 @@ import React from 'react';
 import {
   Briefcase,
   FolderGit2,
+  Github,
   GraduationCap,
   Plus,
   RefreshCw,
   Award,
 } from 'lucide-react';
 import { BlockShadowButton } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 import { SettingsSectionHeading } from './SettingsSectionHeading';
+
 
 type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';
 
@@ -121,7 +123,7 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
     return (
       <HeaderWrapper>
         <SettingsSectionHeading
-          icon={<FolderGit2 />}
+          icon={<Github />}
           title="Open Source Sync"
           description="Live synchronization with GitHub repositories."
         />

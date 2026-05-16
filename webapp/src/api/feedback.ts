@@ -1,35 +1,20 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
-import { getOrCreateDeviceFingerprint } from '@/lib/deviceFingerprint';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
+import { getOrCreateDeviceFingerprint } from '@/lib/auth/deviceFingerprint';
 
-/** Must match server `IMAGE_MASTER_PROFILES.feedback.maxInputBytes`. */
-export const FEEDBACK_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export {
+  FEEDBACK_MAX_IMAGE_BYTES,
+  type FeedbackClientMeta,
+  type FeedbackCategoryDto,
+  type SubmitFeedbackResponse,
+  type SubmitFeedbackMultipartParams,
+} from '@contracts/feedbackApi';
 
-export type FeedbackClientMeta = {
-  pageUrl?: string;
-  referrer?: string;
-  language?: string;
-  languages?: string;
-  platform?: string;
-  userAgent?: string;
-  screen?: string;
-  timezone?: string;
-  deviceMemory?: number;
-  hardwareConcurrency?: number;
-  connection?: string;
-};
-
-export type FeedbackCategoryDto = {
-  id: string;
-  slug: string;
-  label: string;
-  sortOrder: number;
-  active: boolean;
-  isSystemSeed: boolean;
-  createdByLabel: string;
-  updatedByLabel: string;
-  createdAtIst: string;
-  updatedAtIst: string;
-};
+import type {
+  FeedbackCategoryDto,
+  FeedbackClientMeta,
+  SubmitFeedbackMultipartParams,
+  SubmitFeedbackResponse,
+} from '@contracts/feedbackApi';
 
 export function collectFeedbackClientMeta(): FeedbackClientMeta | undefined {
   if (typeof window === 'undefined') return undefined;
@@ -56,12 +41,6 @@ export function collectFeedbackClientMeta(): FeedbackClientMeta | undefined {
     connection: typeof conn === 'string' ? conn.slice(0, 40) : undefined,
   };
 }
-
-export type SubmitFeedbackResponse = {
-  success: boolean;
-  message?: string;
-  emailSent?: boolean;
-};
 
 function apiBase(): string {
   return resolvePublicApiBase().replace(/\/$/, '');
@@ -93,20 +72,6 @@ export async function fetchFeedbackCategories(): Promise<FeedbackCategoryDto[]> 
   }
   return Array.isArray(data.categories) ? data.categories : [];
 }
-
-export type SubmitFeedbackMultipartParams = {
-  categoryId: string;
-  subject: string;
-  description: string;
-  clientMeta?: FeedbackClientMeta;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  altcha?: string;
-  attachment?: File | null;
-  /** Shown as title + alt for the attachment when saved (max 120 chars). */
-  attachmentTitle?: string | null;
-};
 
 export async function submitFeedbackMultipart(
   params: SubmitFeedbackMultipartParams,

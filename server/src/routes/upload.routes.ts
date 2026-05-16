@@ -301,7 +301,7 @@ router.post('/cover', verifyToken, uploadCover.single('cover'), async (req: Requ
     image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
 
     await image
-      .resize(1600, 400, { fit: 'cover' })
+      .resize(1600, 1600, { fit: 'inside', withoutEnlargement: false })
       .jpeg({ quality: 82 })
       .toFile(outputPath);
 

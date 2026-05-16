@@ -1,0 +1,51 @@
+/**
+ * Billing / Stripe JSON API — `/api/billing/*`.
+ * Keep in sync with `server/src/routes/billing.routes.ts`.
+ */
+
+export type BillingPlanKey = 'free' | 'pro' | 'proplus' | 'ultra' | 'premium';
+
+export type BillingSubscriptionDto = {
+  planKey: BillingPlanKey;
+  planDisplayName: string;
+  status: string;
+  stripeSubscriptionId: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  isGraceActive: boolean;
+  graceUntil: string | null;
+  lastSyncedAt: string | null;
+  stale: boolean;
+};
+
+export type BillingTransactionRow = {
+  id: string;
+  stripeInvoiceId: string;
+  amountPaid: number;
+  currency: string;
+  status: string;
+  paidAt: string | null;
+  description: string;
+  hostedInvoiceUrl: string | null;
+  invoicePdfUrl: string | null;
+};
+
+export interface BillingSubscriptionResponse {
+  success: boolean;
+  subscription: BillingSubscriptionDto;
+}
+
+export interface BillingCheckoutSessionBody {
+  planKey: BillingPlanKey;
+}
+
+export interface BillingVerifyCheckoutBody {
+  sessionId: string;
+}
+
+export interface BillingTransactionsResponse {
+  success: boolean;
+  transactions: BillingTransactionRow[];
+  page: number;
+  totalPages: number;
+}

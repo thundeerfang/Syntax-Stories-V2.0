@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
 
+
 export default function SignupPage() {
   const router = useRouter();
   const open = useAuthDialogStore((s) => s.open);

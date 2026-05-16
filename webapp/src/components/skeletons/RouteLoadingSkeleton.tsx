@@ -3,15 +3,29 @@
 import { usePathname } from 'next/navigation';
 import {
   AnalyticsPageSkeletonInner,
+  BlogPostPageSkeletonInner,
   BlogWritePageSkeletonInner,
+  ContactPageSkeletonInner,
+  DocsPageSkeletonInner,
+  FollowingPageContentSkeleton,
+  ExplorePageSkeletonInner,
+  TrendingPageSkeletonInner,
   HomePageSkeletonInner,
   ProfilePageSkeletonInner,
-} from './page-skeletons';
-import { SettingsPageSkeletonInner } from './settings-page-skeleton';
-import { DocsPageSkeletonInner } from './DocsPageSkeleton';
-import { ContactPageSkeletonInner } from './ContactPageSkeleton';
+  SettingsPageSkeletonInner,
+} from './PageSkeletons';
+
 
 function pickInner(path: string) {
+  if (path === '/following' || path === '/bookmarks' || path === '/reposts') {
+    return <FollowingPageContentSkeleton showIntro />;
+  }
+  if (path === '/explore') {
+    return <ExplorePageSkeletonInner />;
+  }
+  if (path === '/trending') {
+    return <TrendingPageSkeletonInner />;
+  }
   if (path === '/docs' || path.startsWith('/docs/')) {
     return <DocsPageSkeletonInner />;
   }
@@ -30,13 +44,19 @@ function pickInner(path: string) {
   if (path.startsWith('/blogs/write') || path === '/write' || path.startsWith('/write?')) {
     return <BlogWritePageSkeletonInner />;
   }
+  if (path.startsWith('/blogs/')) {
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length >= 3 && segments[0] === 'blogs' && segments[1] !== 'write') {
+      return <BlogPostPageSkeletonInner />;
+    }
+  }
   if (path.startsWith('/u/')) {
     return <ProfilePageSkeletonInner variant="public" />;
   }
   return <HomePageSkeletonInner />;
 }
 
-/** Next.js `loading.tsx` fallback: structural placeholder for the active route. */
+/** Route transition skeleton — used by `LayoutShell` Suspense fallback (and nested `loading.tsx` where kept). */
 export function RouteLoadingSkeleton() {
   const pathname = usePathname() ?? '';
   return <div className="relative min-h-[50vh] w-full">{pickInner(pathname)}</div>;

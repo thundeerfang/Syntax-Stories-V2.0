@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
+
 
 export interface ToggleProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onChange'> {
   /** Controlled pressed state */
@@ -42,9 +43,9 @@ export const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
           'disabled:pointer-events-none disabled:opacity-50',
           // Neomorphism: unpressed = soft raised, pressed = inset / filled
           !pressed &&
-            'bg-muted/40 text-muted-foreground shadow-[3px_3px_6px_var(--shadow)] hover:bg-muted/60',
+            'bg-muted/40 text-muted-foreground shadow hover:bg-muted/60',
           pressed &&
-            'bg-primary text-primary-foreground border-primary shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]',
+            'bg-primary text-primary-foreground border-primary shadow',
           className
         )}
         {...props}

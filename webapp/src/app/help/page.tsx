@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { publicApiAbortSignal } from '@/lib/publicApiFetchTimeout';
+import { publicApiAbortSignal } from '@/lib/api/publicApiFetchTimeout';
+
 
 type Item = {
   slug: string;

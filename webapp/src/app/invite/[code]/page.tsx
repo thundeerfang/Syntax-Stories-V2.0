@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
+
 
 /**
  * Sets `pendingReferralCode` in sessionStorage (backup for verify body) and redirects to the API

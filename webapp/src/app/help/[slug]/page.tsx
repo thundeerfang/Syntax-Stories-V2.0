@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { publicApiAbortSignal } from '@/lib/publicApiFetchTimeout';
+import { publicApiAbortSignal } from '@/lib/api/publicApiFetchTimeout';
+
 
 type ApiArticle = {
   slug: string;

@@ -242,35 +242,68 @@ async function followUserNonTransactionalFallback(
   return { done: false, created: true };
 }
 
-/** Parses limit + optional cursor; sends 400 on bad cursor and returns null. */
-function parseFollowListQuery(req: Request, res: Response): { limit: number; cursor?: Date } | null {
+/** Parses limit + optional cursor + sort order + shuffle; sends 400 on bad cursor and returns null. */
+function parseFollowListQuery(req: Request, res: Response): {
+  limit: number;
+  cursor?: Date;
+  sortDir: 1 | -1;
+  shuffle: boolean;
+} | null {
   const limit = Math.min(Number(req.query?.limit) || DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  const orderRaw = (req.query?.order as string)?.trim()?.toLowerCase();
+  const sortDir: 1 | -1 = orderRaw === 'asc' ? 1 : -1;
+  const shuffle = req.query?.shuffle === '1' || req.query?.shuffle === 'true';
   const cursorRaw = (req.query?.cursor as string)?.trim();
-  if (!cursorRaw) return { limit };
+  if (!cursorRaw) return { limit, sortDir, shuffle };
   const cursor = new Date(cursorRaw);
   if (Number.isNaN(cursor.getTime())) {
     res.status(400).json({ success: false, message: 'Invalid cursor' });
     return null;
   }
-  return { limit, cursor };
+  return { limit, cursor, sortDir, shuffle };
 }
 
-type FollowListItem = { id: string; username: string; fullName: string; profileImg: string | undefined };
+/** Deterministic shuffle (Fisher–Yates) for stable “random” chip order per viewer. */
+function seededShuffleFollowList<T extends { id: string }>(items: T[], seedStr: string): T[] {
+  let seed = 2166136261;
+  for (let i = 0; i < seedStr.length; i++) {
+    seed ^= seedStr.charCodeAt(i);
+    seed = Math.imul(seed, 16777619);
+  }
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+    const j = seed % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+type FollowListItem = {
+  id: string;
+  username: string;
+  fullName: string;
+  profileImg: string | undefined;
+  followedAt?: string;
+};
 
 async function paginatedFollowEdges(
   userId: mongoose.Types.ObjectId,
   limit: number,
   cursor: Date | undefined,
-  mode: 'followers' | 'following'
+  mode: 'followers' | 'following',
+  sortDir: 1 | -1 = -1
 ): Promise<{ list: FollowListItem[]; nextCursor: string | null }> {
   const peerKey = mode === 'followers' ? 'follower' : 'following';
   const filterKey = mode === 'followers' ? 'following' : 'follower';
   const filter: Record<string, unknown> = { [filterKey]: userId };
-  if (cursor) filter.createdAt = { $lt: cursor };
+  if (cursor) {
+    filter.createdAt = sortDir === -1 ? { $lt: cursor } : { $gt: cursor };
+  }
 
   const follows = await FollowModel.find(filter as mongoose.FilterQuery<{ createdAt: Date }>)
     .select(`${peerKey} createdAt`)
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: sortDir })
     .limit(limit + 1)
     .populate(peerKey, FOLLOWED_FIELDS)
     .lean();
@@ -284,11 +317,13 @@ async function paginatedFollowEdges(
       fullName: string;
       profileImg?: string;
     };
+    const edge = f as { createdAt?: Date };
     return {
       id: String(u._id),
       username: u.username,
       fullName: u.fullName,
       profileImg: normalizeProfileImg(u.profileImg),
+      followedAt: edge.createdAt?.toISOString(),
     };
   });
   const last = slice.at(-1) as { createdAt?: Date } | undefined;
@@ -313,7 +348,13 @@ export async function getFollowers(req: Request, res: Response): Promise<void> {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    const { list, nextCursor } = await paginatedFollowEdges(user._id, parsed.limit, parsed.cursor, 'followers');
+    const { list, nextCursor } = await paginatedFollowEdges(
+      user._id,
+      parsed.limit,
+      parsed.cursor,
+      'followers',
+      parsed.sortDir
+    );
     res.status(200).json({ success: true, list, nextCursor });
   } catch (err) {
     console.error(err);
@@ -335,7 +376,16 @@ export async function getFollowing(req: Request, res: Response): Promise<void> {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    const { list, nextCursor } = await paginatedFollowEdges(user._id, parsed.limit, parsed.cursor, 'following');
+    let { list, nextCursor } = await paginatedFollowEdges(
+      user._id,
+      parsed.limit,
+      parsed.cursor,
+      'following',
+      parsed.sortDir
+    );
+    if (parsed.shuffle && list.length > 1) {
+      list = seededShuffleFollowList(list, username);
+    }
     res.status(200).json({ success: true, list, nextCursor });
   } catch (err) {
     console.error(err);

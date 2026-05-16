@@ -1,13 +1,14 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { diceBearAvatarSvgUrl } from '../utils/diceBearAvatarUrl.js';
 
-/** Default avatar URL stored in DB when user has no profile image (e.g. OAuth signup without photo). */
-export const DEFAULT_AVATAR_URL =
-  'https://res.cloudinary.com/dr2bxpjjz/image/upload/v1737041910/uploads/waumti9zvnnmgayfxbmv.png';
+/** Fallback when `profileImg` is empty or invalid (DiceBear Adventurer SVG data URI, deterministic). */
+export const DEFAULT_AVATAR_URL = diceBearAvatarSvgUrl('syntax-stories-default');
 
 /** Returns DEFAULT_AVATAR_URL when profileImg is missing or a relative/broken path (e.g. old OAuth placeholder). */
 export function normalizeProfileImg(profileImg: string | undefined): string {
   if (!profileImg?.trim()) return DEFAULT_AVATAR_URL;
   if (profileImg.startsWith('http://') || profileImg.startsWith('https://')) return profileImg;
+  if (profileImg.startsWith('data:image/')) return profileImg;
   return DEFAULT_AVATAR_URL;
 }
 
@@ -352,6 +353,7 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     profileImg: {
       type: String,
+      maxlength: 131072,
       default: DEFAULT_AVATAR_URL,
     },
     profileImgAlt: { type: String, trim: true, maxlength: 120 },

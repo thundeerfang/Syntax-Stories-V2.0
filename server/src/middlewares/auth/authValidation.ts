@@ -25,6 +25,8 @@ const verifyOtpSchema = z.object({
     .transform((val) => String(val).replaceAll(/\D/g, '').slice(0, 6))
     .pipe(z.string().length(6, { message: 'Code must be exactly 6 digits.' })),
   otpVersion: z.number().int().min(1).optional(),
+  /** Required when verifying a new account (no existing user); records Terms + Privacy acceptance. */
+  acceptPolicies: z.boolean().optional(),
 });
 
 const staffLoginSchema = z.object({

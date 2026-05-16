@@ -29,6 +29,15 @@ import { streakUtcDayBucket } from '../services/readStreak.service.js';
 import { readDayZsetScoreMs, readDaysTrimMinRetainMsUtc } from '../services/readStreakZset.js';
 import { syncReadStreakRedisAfterMongoUpsert } from '../services/readStreakRedis.js';
 import { evalReadViewCommitMerged } from '../services/readViewCommitRedis.js';
+import { assertCanPostOrShareToSquad } from '../services/squad.service.js';
+import {
+  deleteAllBookmarksForPost,
+  deleteAllRepostsForPost,
+  resumeRepostBookmarkContributionsForPost,
+  suspendRepostBookmarkContributionsForPost,
+  viewerBookmarkStatesForPosts,
+  viewerRepostStatesForPosts,
+} from '../services/blogEngagement.service.js';
 import {
   deleteAllRespectsForPost,
   normalizeRespectCount,
@@ -36,6 +45,8 @@ import {
   suspendRespectContributionsForPost,
   viewerRespectStatesForPosts,
 } from '../services/blogRespect.service.js';
+import { publishBlogPostStatsSnapshot } from '../services/blogStatsPublish.service.js';
+import { estimateReadMinutesFromBlogFields } from '../modules/blog/readTimeEstimate.js';
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -45,6 +56,11 @@ function paramString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
   if (Array.isArray(v)) return v[0];
   return v;
+}
+
+function normalizeBlogCounter(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return Math.max(0, Math.floor(raw));
+  return 0;
 }
 
 const SLUG_MAX_LEN = 320;
@@ -103,6 +119,162 @@ function mapTaxonomyFromDoc(p: TaxonomyFields): { category?: string; tags?: stri
   return { category, tags, language };
 }
 
+type FeedListItem = {
+  _id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  thumbnailUrl?: string;
+  updatedAt: Date;
+  createdAt: Date;
+  lastEditedAt?: string;
+  lastEditedBy?: { username: string; fullName: string };
+  respectCount: number;
+  repostCount: number;
+  bookmarkCount: number;
+  commentCount: number;
+  viewCount: number;
+  readTimeMinutes: number;
+  author: { username: string; fullName: string; profileImg: string };
+  category?: string;
+  tags?: string[];
+  language?: string;
+  viewerHasRespected?: boolean;
+  viewerHasReposted?: boolean;
+  viewerHasBookmarked?: boolean;
+  squad?: {
+    slug: string;
+    name: string;
+    iconUrl?: string;
+    coverBannerUrl?: string;
+    visibility: 'public' | 'private';
+    memberCount?: number;
+  };
+};
+
+function mapLeanSquadForFeed(squadRaw: unknown): NonNullable<FeedListItem['squad']> | undefined {
+  if (!squadRaw || typeof squadRaw !== 'object' || Array.isArray(squadRaw)) return undefined;
+  const s = squadRaw as {
+    slug?: string;
+    name?: string;
+    iconUrl?: string;
+    visibility?: string;
+    coverBannerUrl?: string;
+    memberCount?: number;
+  };
+  if (typeof s.slug !== 'string' || !s.slug.trim()) return undefined;
+  const slug = s.slug.trim();
+  return {
+    slug,
+    name: typeof s.name === 'string' && s.name.trim() ? s.name.trim() : slug,
+    iconUrl: typeof s.iconUrl === 'string' && s.iconUrl.trim() ? s.iconUrl.trim() : undefined,
+    coverBannerUrl:
+      typeof s.coverBannerUrl === 'string' && s.coverBannerUrl.trim() ? s.coverBannerUrl.trim() : undefined,
+    visibility: s.visibility === 'private' ? 'private' : 'public',
+    memberCount: typeof s.memberCount === 'number' && Number.isFinite(s.memberCount) ? s.memberCount : undefined,
+  };
+}
+
+function mapLeanPostToFeedListItem(p: unknown): FeedListItem | null {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+  const doc = p as Record<string, unknown>;
+  const authorRaw = doc.authorId;
+  if (!authorRaw || typeof authorRaw !== 'object' || Array.isArray(authorRaw)) {
+    return null;
+  }
+  const a = authorRaw as { username?: string; fullName?: string; profileImg?: string };
+  if (typeof a.username !== 'string' || !a.username.trim()) {
+    return null;
+  }
+  const leAt = doc.lastEditedAt as Date | undefined;
+  const leBy = mapLastEditor(doc.lastEditedById);
+  const summary = typeof doc.summary === 'string' ? doc.summary : '';
+  const content = typeof doc.content === 'string' ? doc.content : '';
+  const squad = mapLeanSquadForFeed(doc.squadId);
+  return {
+    _id: String(doc._id),
+    title: String(doc.title ?? ''),
+    slug: String(doc.slug ?? ''),
+    summary,
+    thumbnailUrl: typeof doc.thumbnailUrl === 'string' ? doc.thumbnailUrl : undefined,
+    updatedAt: doc.updatedAt as Date,
+    createdAt: doc.createdAt as Date,
+    lastEditedAt: leAt ? leAt.toISOString() : undefined,
+    lastEditedBy: leBy,
+    respectCount: normalizeRespectCount((doc as { respectCount?: number }).respectCount),
+    repostCount: normalizeBlogCounter((doc as { repostCount?: number }).repostCount),
+    bookmarkCount: normalizeBlogCounter((doc as { bookmarkCount?: number }).bookmarkCount),
+    commentCount: normalizeBlogCounter((doc as { commentCount?: number }).commentCount),
+    viewCount: normalizeBlogCounter((doc as { viewCount?: number }).viewCount),
+    readTimeMinutes: estimateReadMinutesFromBlogFields(content, summary),
+    author: {
+      username: a.username.trim(),
+      fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
+      profileImg: normalizeProfileImg(a.profileImg),
+    },
+    ...mapTaxonomyFromDoc(doc as TaxonomyFields),
+    ...(squad ? { squad } : {}),
+  };
+}
+
+function engagementCountsFromPostDoc(doc: Record<string, unknown>) {
+  return {
+    respectCount: normalizeRespectCount((doc as { respectCount?: number }).respectCount),
+    repostCount: normalizeBlogCounter((doc as { repostCount?: number }).repostCount),
+    bookmarkCount: normalizeBlogCounter((doc as { bookmarkCount?: number }).bookmarkCount),
+    commentCount: normalizeBlogCounter((doc as { commentCount?: number }).commentCount),
+  };
+}
+
+async function attachViewerEngagementToMyPosts<T extends { _id: unknown }>(
+  req: Request,
+  posts: T[],
+): Promise<Array<T & { viewerHasRespected: boolean; viewerHasReposted: boolean; viewerHasBookmarked: boolean }>> {
+  const viewerId = optionalViewerId(req);
+  if (!viewerId || !posts.length) {
+    return posts.map((p) => ({
+      ...p,
+      viewerHasRespected: false,
+      viewerHasReposted: false,
+      viewerHasBookmarked: false,
+    }));
+  }
+  const ids = posts.map((p) => String(p._id));
+  const [viewerMap, repostMap, bookmarkMap] = await Promise.all([
+    viewerRespectStatesForPosts(viewerId, ids),
+    viewerRepostStatesForPosts(viewerId, ids),
+    viewerBookmarkStatesForPosts(viewerId, ids),
+  ]);
+  return posts.map((p) => {
+    const id = String(p._id);
+    return {
+      ...p,
+      viewerHasRespected: !!viewerMap[id],
+      viewerHasReposted: !!repostMap[id],
+      viewerHasBookmarked: !!bookmarkMap[id],
+    };
+  });
+}
+
+async function applyViewerStateToFeedItems(req: Request, items: FeedListItem[]): Promise<FeedListItem[]> {
+  const viewerId = optionalViewerId(req);
+  if (!viewerId || !items.length) {
+    return items;
+  }
+  const ids = items.map((i) => i._id);
+  const [viewerMap, repostMap, bookmarkMap] = await Promise.all([
+    viewerRespectStatesForPosts(viewerId, ids),
+    viewerRepostStatesForPosts(viewerId, ids),
+    viewerBookmarkStatesForPosts(viewerId, ids),
+  ]);
+  return items.map((it) => ({
+    ...it,
+    viewerHasRespected: !!viewerMap[it._id],
+    viewerHasReposted: !!repostMap[it._id],
+    viewerHasBookmarked: !!bookmarkMap[it._id],
+  }));
+}
+
 function slugWithCollisionSuffix(base: string, attempt: number): string {
   if (attempt <= 0) return base.slice(0, SLUG_MAX_LEN);
   const suf = `-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -145,6 +317,21 @@ export async function createPost(req: Request, res: Response): Promise<void> {
     const thumb = sanitizeThumbnailUrl(thumbnailUrl);
     const summaryStr = typeof summary === 'string' ? summary.trim().slice(0, SUMMARY_MAX_LEN) : '';
 
+    const rawSquad = (req.body as { squadId?: unknown }).squadId;
+    let squadOid: mongoose.Types.ObjectId | undefined;
+    if (rawSquad != null && rawSquad !== '') {
+      if (!mongoose.Types.ObjectId.isValid(String(rawSquad))) {
+        res.status(400).json({ success: false, message: 'Invalid squadId' });
+        return;
+      }
+      squadOid = new mongoose.Types.ObjectId(String(rawSquad));
+      const gate = await assertCanPostOrShareToSquad({ squadId: squadOid, userId: user._id });
+      if (!gate.ok) {
+        res.status(gate.status).json({ success: false, message: gate.message });
+        return;
+      }
+    }
+
     let post = null;
     let lastErr: unknown;
     for (let attempt = 0; attempt < 12; attempt++) {
@@ -162,6 +349,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
           ...(tax.category ? { category: tax.category } : {}),
           ...(tax.tags?.length ? { tags: tax.tags } : {}),
           ...(tax.language ? { language: tax.language } : { language: 'en' }),
+          ...(squadOid ? { squadId: squadOid } : {}),
         });
         break;
       } catch (err) {
@@ -183,6 +371,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
       throw lastErr;
     }
 
+    const pSquad = (post as { squadId?: mongoose.Types.ObjectId }).squadId;
     res.status(201).json({
       success: true,
       post: {
@@ -195,6 +384,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
         status: post.status,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
+        ...(pSquad ? { squadId: String(pSquad) } : {}),
         ...mapTaxonomyFromDoc(post as TaxonomyFields),
       },
     });
@@ -221,6 +411,17 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
     const rawBody = req.body as Record<string, unknown>;
     const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
     const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
+    let draftSquadId: mongoose.Types.ObjectId | null | undefined = undefined;
+    if ('squadId' in rawBody) {
+      const v = rawBody.squadId;
+      if (v === null || v === '') draftSquadId = null;
+      else if (typeof v === 'string' && mongoose.Types.ObjectId.isValid(v)) {
+        draftSquadId = new mongoose.Types.ObjectId(v);
+      } else {
+        res.status(400).json({ success: false, message: 'Invalid squadId' });
+        return;
+      }
+    }
     const titleStr = typeof title === 'string' ? title.trim() : '';
     const contentStr = typeof content === 'string' ? content : '';
     const summaryStr = typeof summary === 'string' ? summary.trim().slice(0, SUMMARY_MAX_LEN) : '';
@@ -239,28 +440,42 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
 
     if (post) {
       const slug = slugify(finalTitle);
-      const updated = await BlogPostModel.findByIdAndUpdate(
-        post._id,
-        {
-          title: finalTitle,
-          slug,
-          summary: summaryStr || undefined,
-          content: contentCheck.normalizedJson,
-          thumbnailUrl: thumb,
-          ...(tax
-            ? {
-                category: tax.category,
-                tags: tax.tags?.length ? tax.tags : undefined,
-                language: tax.language ?? 'en',
-              }
-            : {}),
-        },
-        { new: true }
-      );
+      const prevSq = (post as { squadId?: mongoose.Types.ObjectId | null }).squadId;
+      const effectiveSq: mongoose.Types.ObjectId | null | undefined =
+        draftSquadId !== undefined ? draftSquadId : prevSq ?? null;
+      if (effectiveSq) {
+        const gate = await assertCanPostOrShareToSquad({
+          squadId: effectiveSq as mongoose.Types.ObjectId,
+          userId: user._id,
+        });
+        if (!gate.ok) {
+          res.status(gate.status).json({ success: false, message: gate.message });
+          return;
+        }
+      }
+      const patch: Record<string, unknown> = {
+        title: finalTitle,
+        slug,
+        summary: summaryStr || undefined,
+        content: contentCheck.normalizedJson,
+        thumbnailUrl: thumb,
+        ...(tax
+          ? {
+              category: tax.category,
+              tags: tax.tags?.length ? tax.tags : undefined,
+              language: tax.language ?? 'en',
+            }
+          : {}),
+      };
+      if (draftSquadId !== undefined) {
+        patch.squadId = draftSquadId;
+      }
+      const updated = await BlogPostModel.findByIdAndUpdate(post._id, patch, { new: true });
       if (!updated) {
         res.status(404).json({ success: false, message: 'Draft not found' });
         return;
       }
+      const uSq = (updated as { squadId?: mongoose.Types.ObjectId | null }).squadId;
       res.status(200).json({
         success: true,
         post: {
@@ -273,10 +488,22 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
           status: updated.status,
           createdAt: updated.createdAt,
           updatedAt: updated.updatedAt,
+          ...(uSq ? { squadId: String(uSq) } : {}),
           ...mapTaxonomyFromDoc(updated as TaxonomyFields),
         },
       });
       return;
+    }
+
+    if (draftSquadId) {
+      const gate = await assertCanPostOrShareToSquad({
+        squadId: draftSquadId,
+        userId: user._id,
+      });
+      if (!gate.ok) {
+        res.status(gate.status).json({ success: false, message: gate.message });
+        return;
+      }
     }
 
     const uniqueSlug = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -288,6 +515,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       content: contentCheck.normalizedJson,
       thumbnailUrl: thumb,
       status: 'draft',
+      ...(draftSquadId ? { squadId: draftSquadId } : {}),
       ...(tax
         ? {
             category: tax.category,
@@ -297,6 +525,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
         : { language: 'en' }),
     });
 
+    const cSq = (created as { squadId?: mongoose.Types.ObjectId | null }).squadId;
     res.status(201).json({
       success: true,
       post: {
@@ -309,6 +538,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
         status: created.status,
         createdAt: created.createdAt,
         updatedAt: created.updatedAt,
+        ...(cSq ? { squadId: String(cSq) } : {}),
         ...mapTaxonomyFromDoc(created as TaxonomyFields),
       },
     });
@@ -360,60 +590,58 @@ export async function getDraft(req: Request, res: Response): Promise<void> {
   }
 }
 
-/** GET /api/blog/feed — public: recent published posts (home / explore). */
+/** GET /api/blog/feed — public: recent published posts (home / explore). Optional `tag` or `category` filters. */
 export async function listPublishedFeed(req: Request, res: Response): Promise<void> {
   try {
     const raw = Number.parseInt(String(req.query.limit ?? ''), 10);
     const limit = Number.isFinite(raw) ? Math.min(50, Math.max(1, raw)) : 20;
-    const posts = await BlogPostModel.find({ status: 'published', ...NOT_DELETED })
-      .sort({ updatedAt: -1 })
+    const tagRaw = typeof req.query.tag === 'string' ? req.query.tag.trim().toLowerCase() : '';
+    const categoryRaw =
+      typeof req.query.category === 'string' ? req.query.category.trim().toLowerCase() : '';
+    const sortRaw = typeof req.query.sort === 'string' ? req.query.sort.trim().toLowerCase() : '';
+    const monthRaw = typeof req.query.month === 'string' ? req.query.month.trim() : '';
+    const filter: Record<string, unknown> = { status: 'published', ...NOT_DELETED };
+    if (tagRaw) filter.tags = tagRaw;
+    if (categoryRaw) filter.category = categoryRaw;
+
+    if (/^\d{4}-\d{2}$/.test(monthRaw)) {
+      const [ys, ms] = monthRaw.split('-');
+      const y = Number.parseInt(ys ?? '', 10);
+      const mo = Number.parseInt(ms ?? '', 10);
+      if (Number.isFinite(y) && mo >= 1 && mo <= 12) {
+        const start = new Date(Date.UTC(y, mo - 1, 1, 0, 0, 0, 0));
+        const end = new Date(Date.UTC(y, mo, 1, 0, 0, 0, 0));
+        filter.$or = [
+          { publishedAt: { $gte: start, $lt: end } },
+          {
+            $and: [
+              {
+                $or: [{ publishedAt: { $exists: false } }, { publishedAt: null }],
+              },
+              { createdAt: { $gte: start, $lt: end } },
+            ],
+          },
+        ];
+      }
+    }
+
+    const sort: Record<string, 1 | -1> =
+      sortRaw === 'views' ? { viewCount: -1, updatedAt: -1 } : { updatedAt: -1 };
+
+    const posts = await BlogPostModel.find(filter)
+      .sort(sort)
       .limit(limit)
       .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
+      .populate({
+        path: 'squadId',
+        select: 'slug name iconUrl visibility coverBannerUrl memberCount',
+        model: 'squads',
+      })
       .lean();
 
-    const items = posts
-      .map((p) => {
-        const authorRaw = p.authorId as unknown;
-        if (!authorRaw || typeof authorRaw !== 'object' || Array.isArray(authorRaw)) {
-          return null;
-        }
-        const a = authorRaw as { username?: string; fullName?: string; profileImg?: string };
-        if (typeof a.username !== 'string' || !a.username.trim()) {
-          return null;
-        }
-        const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
-        const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
-        return {
-          _id: String(p._id),
-          title: p.title,
-          slug: p.slug,
-          summary: (p as { summary?: string }).summary ?? '',
-          thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
-          updatedAt: p.updatedAt,
-          createdAt: p.createdAt,
-          lastEditedAt: leAt ? leAt.toISOString() : undefined,
-          lastEditedBy: leBy,
-          respectCount: normalizeRespectCount((p as { respectCount?: number }).respectCount),
-          author: {
-            username: a.username.trim(),
-            fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
-            profileImg: normalizeProfileImg(a.profileImg),
-          },
-          ...mapTaxonomyFromDoc(p as TaxonomyFields),
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null);
-
-    const viewerId = optionalViewerId(req);
-    let viewerMap: Record<string, boolean> = {};
-    if (viewerId && items.length) {
-      viewerMap = await viewerRespectStatesForPosts(viewerId, items.map((i) => i._id));
-    }
-    const postsOut = items.map((it) => ({
-      ...it,
-      ...(viewerId ? { viewerHasRespected: !!viewerMap[it._id] } : {}),
-    }));
+    const items = posts.map(mapLeanPostToFeedListItem).filter((x): x is FeedListItem => x !== null);
+    const postsOut = await applyViewerStateToFeedItems(req, items);
 
     res.status(200).json({ success: true, posts: postsOut });
   } catch (err) {
@@ -450,50 +678,15 @@ export async function listUserPublishedPosts(req: Request, res: Response): Promi
       .limit(limit)
       .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
+      .populate({
+        path: 'squadId',
+        select: 'slug name iconUrl visibility coverBannerUrl memberCount',
+        model: 'squads',
+      })
       .lean();
 
-    const items = posts
-      .map((p) => {
-        const authorRaw = p.authorId as unknown;
-        if (!authorRaw || typeof authorRaw !== 'object' || Array.isArray(authorRaw)) {
-          return null;
-        }
-        const a = authorRaw as { username?: string; fullName?: string; profileImg?: string };
-        if (typeof a.username !== 'string' || !a.username.trim()) {
-          return null;
-        }
-        const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
-        const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
-        return {
-          _id: String(p._id),
-          title: p.title,
-          slug: p.slug,
-          summary: (p as { summary?: string }).summary ?? '',
-          thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
-          updatedAt: p.updatedAt,
-          createdAt: p.createdAt,
-          lastEditedAt: leAt ? leAt.toISOString() : undefined,
-          lastEditedBy: leBy,
-          respectCount: normalizeRespectCount((p as { respectCount?: number }).respectCount),
-          author: {
-            username: a.username.trim(),
-            fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
-            profileImg: normalizeProfileImg(a.profileImg),
-          },
-          ...mapTaxonomyFromDoc(p as TaxonomyFields),
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null);
-
-    const viewerId = optionalViewerId(req);
-    let viewerMap: Record<string, boolean> = {};
-    if (viewerId && items.length) {
-      viewerMap = await viewerRespectStatesForPosts(viewerId, items.map((i) => i._id));
-    }
-    const postsOut = items.map((it) => ({
-      ...it,
-      ...(viewerId ? { viewerHasRespected: !!viewerMap[it._id] } : {}),
-    }));
+    const items = posts.map(mapLeanPostToFeedListItem).filter((x): x is FeedListItem => x !== null);
+    const postsOut = await applyViewerStateToFeedItems(req, items);
 
     res.status(200).json({ success: true, posts: postsOut });
   } catch (err) {
@@ -506,7 +699,8 @@ export async function listUserPublishedPosts(req: Request, res: Response): Promi
 export async function getPublishedPostBySlug(req: Request, res: Response): Promise<void> {
   try {
     const usernameParam = paramString(req.params.username);
-    const slug = paramString(req.params.slug);
+    const slugRaw = paramString(req.params.slug);
+    const slug = slugRaw?.trim() ?? '';
     if (!usernameParam || !slug) {
       res.status(400).json({ success: false, message: 'Invalid path' });
       return;
@@ -528,6 +722,11 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
     })
       .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
+      .populate({
+        path: 'squadId',
+        select: 'slug name iconUrl visibility coverBannerUrl memberCount',
+        model: 'squads',
+      })
       .lean();
     if (!post) {
       res.status(404).json({ success: false, message: 'Post not found' });
@@ -541,13 +740,26 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
     const a = aRaw as { username: string; fullName?: string; profileImg?: string };
     const leAt = (post as { lastEditedAt?: Date }).lastEditedAt;
     const leBy = mapLastEditor((post as { lastEditedById?: unknown }).lastEditedById);
+    const squadDetail = mapLeanSquadForFeed((post as { squadId?: unknown }).squadId);
     const postIdStr = String(post._id);
     const respectCount = normalizeRespectCount((post as { respectCount?: number }).respectCount);
+    const repostCount = normalizeBlogCounter((post as { repostCount?: number }).repostCount);
+    const bookmarkCount = normalizeBlogCounter((post as { bookmarkCount?: number }).bookmarkCount);
+    const commentCount = normalizeBlogCounter((post as { commentCount?: number }).commentCount);
+    const viewCount = normalizeBlogCounter((post as { viewCount?: number }).viewCount);
     const viewerId = optionalViewerId(req);
     let viewerHasRespected: boolean | undefined;
+    let viewerHasReposted: boolean | undefined;
+    let viewerHasBookmarked: boolean | undefined;
     if (viewerId) {
-      const m = await viewerRespectStatesForPosts(viewerId, [postIdStr]);
+      const [m, rm, bm] = await Promise.all([
+        viewerRespectStatesForPosts(viewerId, [postIdStr]),
+        viewerRepostStatesForPosts(viewerId, [postIdStr]),
+        viewerBookmarkStatesForPosts(viewerId, [postIdStr]),
+      ]);
       viewerHasRespected = !!m[postIdStr];
+      viewerHasReposted = !!rm[postIdStr];
+      viewerHasBookmarked = !!bm[postIdStr];
     }
     res.status(200).json({
       success: true,
@@ -563,13 +775,24 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
         lastEditedAt: leAt ? leAt.toISOString() : undefined,
         lastEditedBy: leBy,
         respectCount,
-        ...(viewerId ? { viewerHasRespected: !!viewerHasRespected } : {}),
+        repostCount,
+        bookmarkCount,
+        commentCount,
+        viewCount,
+        ...(viewerId
+          ? {
+              viewerHasRespected: !!viewerHasRespected,
+              viewerHasReposted: !!viewerHasReposted,
+              viewerHasBookmarked: !!viewerHasBookmarked,
+            }
+          : {}),
         author: {
           username: a.username,
           fullName: a.fullName?.trim() ? a.fullName : a.username,
           profileImg: normalizeProfileImg(a.profileImg),
         },
         ...mapTaxonomyFromDoc(post as TaxonomyFields),
+        ...(squadDetail ? { squad: squadDetail } : {}),
       },
     });
   } catch (err) {
@@ -873,6 +1096,9 @@ export async function commitBlogReadView(req: Request, res: Response): Promise<v
       return;
     }
     if (out.status === 1 || out.status === 0) {
+      const postOid = new mongoose.Types.ObjectId(sp);
+      await BlogPostModel.updateOne({ _id: postOid }, { $inc: { viewCount: 1 } });
+      void publishBlogPostStatsSnapshot(postOid);
       res.status(200).json({
         success: true,
         counted: true,
@@ -921,56 +1147,18 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
         deletedAt: { $exists: true, $ne: null, $gte: cutoff },
       })
         .select(
-          'title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt category tags language',
+          'title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount',
         )
         .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
         .sort({ deletedAt: -1 })
         .limit(50)
         .lean();
 
-      res.status(200).json({
-        success: true,
-        posts: posts.map((p) => {
-          const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
-          const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
-          const delAt = (p as { deletedAt?: Date }).deletedAt;
-          return {
-            _id: p._id,
-            title: p.title,
-            slug: p.slug,
-            summary: (p as { summary?: string }).summary,
-            content: p.content,
-            thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
-            status: p.status,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt,
-            deletedAt: delAt ? delAt.toISOString() : undefined,
-            lastEditedAt: leAt ? leAt.toISOString() : undefined,
-            lastEditedBy: leBy,
-            ...mapTaxonomyFromDoc(p as TaxonomyFields),
-          };
-        }),
-      });
-      return;
-    }
-
-    const filter: Record<string, unknown> = { authorId: user._id, ...NOT_DELETED };
-    if (status === 'draft' || status === 'published') filter.status = status;
-
-    const posts = await BlogPostModel.find(filter)
-      .select(
-        'title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt category tags language',
-      )
-      .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
-      .sort({ updatedAt: -1 })
-      .limit(50)
-      .lean();
-
-    res.status(200).json({
-      success: true,
-      posts: posts.map((p) => {
+      const deletedMapped = posts.map((p) => {
         const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
         const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
+        const delAt = (p as { deletedAt?: Date }).deletedAt;
+        const doc = p as Record<string, unknown>;
         return {
           _id: p._id,
           title: p.title,
@@ -981,11 +1169,70 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
           status: p.status,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
+          deletedAt: delAt ? delAt.toISOString() : undefined,
           lastEditedAt: leAt ? leAt.toISOString() : undefined,
           lastEditedBy: leBy,
           ...mapTaxonomyFromDoc(p as TaxonomyFields),
+          ...engagementCountsFromPostDoc(doc),
         };
-      }),
+      });
+
+      res.status(200).json({
+        success: true,
+        posts: deletedMapped,
+      });
+      return;
+    }
+
+    const filter: Record<string, unknown> = { authorId: user._id, ...NOT_DELETED };
+    if (status === 'draft' || status === 'published') filter.status = status;
+
+    const posts = await BlogPostModel.find(filter)
+      .select(
+        'title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount squadId',
+      )
+      .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
+      .populate({
+        path: 'squadId',
+        select: 'slug name iconUrl visibility coverBannerUrl memberCount',
+        model: 'squads',
+      })
+      .sort({ updatedAt: -1 })
+      .limit(50)
+      .lean();
+
+    const mapped = posts.map((p) => {
+      const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
+      const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
+      const summary = (p as { summary?: string }).summary ?? '';
+      const content = (p as { content?: string }).content;
+      const doc = p as Record<string, unknown>;
+      const squad = mapLeanSquadForFeed(doc.squadId);
+      return {
+        _id: p._id,
+        title: p.title,
+        slug: p.slug,
+        summary,
+        content,
+        thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
+        status: p.status,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        lastEditedAt: leAt ? leAt.toISOString() : undefined,
+        lastEditedBy: leBy,
+        readTimeMinutes: estimateReadMinutesFromBlogFields(content, summary),
+        ...mapTaxonomyFromDoc(p as TaxonomyFields),
+        ...engagementCountsFromPostDoc(doc),
+        ...(squad ? { squad } : {}),
+      };
+    });
+
+    const postsOut =
+      status === 'published' ? await attachViewerEngagementToMyPosts(req, mapped) : mapped;
+
+    res.status(200).json({
+      success: true,
+      posts: postsOut,
     });
   } catch (err) {
     console.error(err);
@@ -1023,6 +1270,9 @@ export async function getMyPostById(req: Request, res: Response): Promise<void> 
         status: post.status,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
+        ...((post as { squadId?: mongoose.Types.ObjectId }).squadId
+          ? { squadId: String((post as { squadId?: mongoose.Types.ObjectId }).squadId) }
+          : {}),
         ...mapTaxonomyFromDoc(post as TaxonomyFields),
       },
     });
@@ -1149,6 +1399,18 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    if ('squadId' in rawBody) {
+      const v = rawBody.squadId;
+      if (v === null || v === '') {
+        existing.set('squadId', null);
+      } else if (typeof v === 'string' && mongoose.Types.ObjectId.isValid(v)) {
+        existing.set('squadId', new mongoose.Types.ObjectId(v));
+      } else {
+        res.status(400).json({ success: false, message: 'Invalid squadId' });
+        return;
+      }
+    }
+
     let nextSlug = existing.slug;
     if (typeof title === 'string' && title.trim() && titleStr !== existing.title) {
       const base = slugify(titleStr);
@@ -1194,21 +1456,40 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
       existing.lastEditedById = user._id as unknown as mongoose.Types.ObjectId;
       existing.lastEditedAt = new Date();
     }
+    const exSquad = (existing as { squadId?: mongoose.Types.ObjectId | null }).squadId;
+    if (exSquad) {
+      const gate = await assertCanPostOrShareToSquad({
+        squadId: exSquad as mongoose.Types.ObjectId,
+        userId: user._id,
+      });
+      if (!gate.ok) {
+        res.status(gate.status).json({ success: false, message: gate.message });
+        return;
+      }
+    }
+
     const willBeEligibleRespect = isEligibleForPublicRespect(existing);
     await existing.save();
     if (wasEligibleRespect && !willBeEligibleRespect) {
-      await suspendRespectContributionsForPost(
-        existing._id as mongoose.Types.ObjectId,
-        existing.authorId as mongoose.Types.ObjectId
-      );
+      await Promise.all([
+        suspendRespectContributionsForPost(
+          existing._id as mongoose.Types.ObjectId,
+          existing.authorId as mongoose.Types.ObjectId
+        ),
+        suspendRepostBookmarkContributionsForPost(existing._id as mongoose.Types.ObjectId),
+      ]);
     }
     if (!wasEligibleRespect && willBeEligibleRespect) {
-      await resumeRespectContributionsForPost(
-        existing._id as mongoose.Types.ObjectId,
-        existing.authorId as mongoose.Types.ObjectId
-      );
+      await Promise.all([
+        resumeRespectContributionsForPost(
+          existing._id as mongoose.Types.ObjectId,
+          existing.authorId as mongoose.Types.ObjectId
+        ),
+        resumeRepostBookmarkContributionsForPost(existing._id as mongoose.Types.ObjectId),
+      ]);
     }
 
+    const outSquad = (existing as { squadId?: mongoose.Types.ObjectId | null }).squadId;
     res.status(200).json({
       success: true,
       post: {
@@ -1221,6 +1502,7 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
         status: existing.status,
         createdAt: existing.createdAt,
         updatedAt: existing.updatedAt,
+        ...(outSquad ? { squadId: String(outSquad) } : {}),
         ...mapTaxonomyFromDoc(existing as TaxonomyFields),
       },
     });
@@ -1295,10 +1577,13 @@ export async function restoreMyPost(req: Request, res: Response): Promise<void> 
       restored.publishedAt = new Date();
     }
     await doc.save();
-    await resumeRespectContributionsForPost(
-      doc._id as mongoose.Types.ObjectId,
-      doc.authorId as mongoose.Types.ObjectId
-    );
+    await Promise.all([
+      resumeRespectContributionsForPost(
+        doc._id as mongoose.Types.ObjectId,
+        doc.authorId as mongoose.Types.ObjectId
+      ),
+      resumeRepostBookmarkContributionsForPost(doc._id as mongoose.Types.ObjectId),
+    ]);
 
     res.status(200).json({
       success: true,
@@ -1342,7 +1627,9 @@ export async function purgeMyPostPermanently(req: Request, res: Response): Promi
       res.status(404).json({ success: false, message: 'Post not found or not in trash' });
       return;
     }
-    await deleteAllRespectsForPost(removed._id as mongoose.Types.ObjectId);
+    const pid = removed._id as mongoose.Types.ObjectId;
+    await deleteAllRespectsForPost(pid);
+    await Promise.all([deleteAllRepostsForPost(pid), deleteAllBookmarksForPost(pid)]);
     res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
@@ -1375,10 +1662,13 @@ export async function deleteMyPost(req: Request, res: Response): Promise<void> {
       res.status(404).json({ success: false, message: 'Post not found' });
       return;
     }
-    await suspendRespectContributionsForPost(
-      updated._id as mongoose.Types.ObjectId,
-      updated.authorId as mongoose.Types.ObjectId
-    );
+    await Promise.all([
+      suspendRespectContributionsForPost(
+        updated._id as mongoose.Types.ObjectId,
+        updated.authorId as mongoose.Types.ObjectId
+      ),
+      suspendRepostBookmarkContributionsForPost(updated._id as mongoose.Types.ObjectId),
+    ]);
     res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
@@ -1425,6 +1715,10 @@ export async function getBlogTaxonomy(_req: Request, res: Response): Promise<voi
     const categoriesFromCurated = curatedCats.map((c) => ({
       slug: c.slug,
       name: c.name,
+      description:
+        typeof (c as { description?: string }).description === 'string'
+          ? (c as { description?: string }).description!.trim()
+          : '',
       postCount: catCounts.get(c.slug.toLowerCase()) ?? 0,
     }));
     const extraCats = catAgg
@@ -1432,6 +1726,7 @@ export async function getBlogTaxonomy(_req: Request, res: Response): Promise<voi
       .map((a) => ({
         slug: String(a._id),
         name: String(a._id),
+        description: '',
         postCount: a.postCount,
       }));
     const categories = [...categoriesFromCurated, ...extraCats].sort(
@@ -1442,6 +1737,10 @@ export async function getBlogTaxonomy(_req: Request, res: Response): Promise<voi
     const tagsFromCurated = curatedTags.map((t) => ({
       slug: t.slug,
       name: t.name,
+      description:
+        typeof (t as { description?: string }).description === 'string'
+          ? (t as { description?: string }).description!.trim()
+          : '',
       postCount: tagCounts.get(t.slug.toLowerCase()) ?? 0,
     }));
     const extraTags = tagAgg
@@ -1449,6 +1748,7 @@ export async function getBlogTaxonomy(_req: Request, res: Response): Promise<voi
       .map((a) => ({
         slug: String(a._id),
         name: String(a._id),
+        description: '',
         postCount: a.postCount,
       }));
     const tags = [...tagsFromCurated, ...extraTags]
@@ -1460,4 +1760,144 @@ export async function getBlogTaxonomy(_req: Request, res: Response): Promise<voi
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to load taxonomy' });
   }
+}
+
+/** GET /api/blog/tags/explore — public: trending / popular / recently active tags + full list for Topics page. */
+export async function getBlogTagsExplore(_req: Request, res: Response): Promise<void> {
+  try {
+    await ensureBlogTaxonomySeeds();
+    const publishedMatch = { status: 'published' as const, ...NOT_DELETED };
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    const tagWindowMatch = {
+      ...publishedMatch,
+      tags: { $exists: true, $ne: [] },
+      $expr: {
+        $gte: [{ $ifNull: ['$publishedAt', '$createdAt'] }, fourteenDaysAgo],
+      },
+    };
+
+    const [curatedTags, trendingAgg, popularAgg, recentAgg, tagAgg] = await Promise.all([
+      BlogTagModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
+      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
+        { $match: tagWindowMatch },
+        { $unwind: '$tags' },
+        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
+        { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
+        { $sort: { postCount: -1 } },
+        { $limit: 10 },
+      ]),
+      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
+        {
+          $match: {
+            ...publishedMatch,
+            tags: { $exists: true, $ne: [] },
+          },
+        },
+        { $unwind: '$tags' },
+        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
+        { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
+        { $sort: { postCount: -1 } },
+        { $limit: 10 },
+      ]),
+      BlogPostModel.aggregate<{ _id: string; postCount: number; lastUsedAt: Date }>([
+        {
+          $match: {
+            ...publishedMatch,
+            tags: { $exists: true, $ne: [] },
+          },
+        },
+        {
+          $addFields: {
+            tagSortDate: { $ifNull: ['$publishedAt', '$createdAt'] },
+          },
+        },
+        { $unwind: '$tags' },
+        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
+        {
+          $group: {
+            _id: { $toLower: '$tags' },
+            lastUsedAt: { $max: '$tagSortDate' },
+            postCount: { $sum: 1 },
+          },
+        },
+        { $sort: { lastUsedAt: -1 } },
+        { $limit: 10 },
+      ]),
+      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
+        {
+          $match: {
+            ...publishedMatch,
+            tags: { $exists: true, $ne: [] },
+          },
+        },
+        { $unwind: '$tags' },
+        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
+        { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const nameBySlug = new Map<string, string>();
+    for (const t of curatedTags) {
+      nameBySlug.set(t.slug.toLowerCase(), t.name);
+    }
+
+    const mapRows = (
+      rows: Array<{ _id: unknown; postCount: number; lastUsedAt?: Date }>,
+      withLast?: boolean,
+    ) =>
+      rows.map((r) => {
+        const slug = String(r._id);
+        const low = slug.toLowerCase();
+        const base: {
+          slug: string;
+          name: string;
+          postCount: number;
+          lastUsedAt?: string;
+        } = {
+          slug,
+          name: nameBySlug.get(low) ?? slug,
+          postCount: r.postCount,
+        };
+        if (withLast && r.lastUsedAt != null) {
+          const d = r.lastUsedAt;
+          base.lastUsedAt = d instanceof Date ? d.toISOString() : String(d);
+        }
+        return base;
+      });
+
+    const tagCounts = new Map(tagAgg.map((x) => [String(x._id).toLowerCase(), x.postCount]));
+    const curatedLower = new Set(curatedTags.map((t) => t.slug.toLowerCase()));
+
+    const tagsFromCurated = curatedTags.map((t) => ({
+      slug: t.slug,
+      name: t.name,
+      postCount: tagCounts.get(t.slug.toLowerCase()) ?? 0,
+    }));
+    const extraTags = tagAgg
+      .filter((a) => !curatedLower.has(String(a._id).toLowerCase()))
+      .map((a) => ({
+        slug: String(a._id),
+        name: String(a._id),
+        postCount: a.postCount,
+      }));
+    const allTags = [...tagsFromCurated, ...extraTags].sort((a, b) => a.name.localeCompare(b.name));
+
+    res.status(200).json({
+      success: true,
+      trending: mapRows(trendingAgg),
+      popular: mapRows(popularAgg),
+      recent: mapRows(recentAgg, true),
+      allTags,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to load tags' });
+  }
+}
+
+/** Build feed-shaped items for populated post docs (bookmarks library, etc.). */
+export async function buildFeedListItemsForPosts(req: Request, postDocs: unknown[]) {
+  const items = postDocs.map(mapLeanPostToFeedListItem).filter((x): x is FeedListItem => x !== null);
+  return applyViewerStateToFeedItems(req, items);
 }

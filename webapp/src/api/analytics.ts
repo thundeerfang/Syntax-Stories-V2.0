@@ -1,20 +1,9 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const getApiBase = () => resolvePublicApiBase();
 
-export interface ProfileOverviewMetrics {
-  viewsToday: number;
-  views7Days: number;
-  views30Days: number;
-  uniqueVisitors7Days: number;
-  repeatVisitors7Days: number;
-  totalViews: number;
-}
-
-export interface ProfileTimePoint {
-  date: string;
-  views: number;
-}
+export type { ProfileOverviewMetrics, ProfileTimePoint } from '@contracts/analyticsApi';
+import type { ProfileOverviewMetrics, ProfileTimePoint } from '@contracts/analyticsApi';
 
 export const analyticsApi = {
   // Public: does NOT require auth token; only uses cookies for anon dedupe

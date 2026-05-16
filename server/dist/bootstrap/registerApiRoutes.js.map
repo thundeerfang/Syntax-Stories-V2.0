@@ -1,1 +1,0 @@
-{"version":3,"file":"registerApiRoutes.js","sourceRoot":"","sources":["../../src/bootstrap/registerApiRoutes.ts"],"names":[],"mappings":"AACA,OAAO,MAAM,MAAM,oBAAoB,CAAC;AACxC,OAAO,EAAE,kCAAkC,EAAE,MAAM,uDAAuD,CAAC;AAE3G,uEAAuE;AACvE,MAAM,UAAU,iBAAiB,CAAC,GAAY;IAC5C,GAAG,CAAC,GAAG,CAAC,MAAM,EAAE,kCAAkC,CAAC,CAAC;IACpD,GAAG,CAAC,GAAG,CAAC,MAAM,EAAE,MAAM,CAAC,CAAC;AAC1B,CAAC"}

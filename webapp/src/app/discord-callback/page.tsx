@@ -1,4 +1,5 @@
-import { redirectLegacyOAuthCallback } from '@/lib/legacyOAuthCallbackRedirect';
+import { redirectLegacyOAuthCallback } from '@/lib/auth/legacyOAuthCallbackRedirect';
+
 
 export default async function DiscordCallbackRedirectPage({
   searchParams,

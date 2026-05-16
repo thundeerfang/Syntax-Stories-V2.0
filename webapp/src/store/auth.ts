@@ -4,8 +4,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authApi, AuthError, normalizeUser, type AuthUser, type ProfileUpdateSection, type UpdateProfilePayload } from '@/api/auth';
 import { runProfilePatch } from '@/lib/auth/runProfilePatch';
-import { setLastUserName } from '@/lib/lastUser';
-import { consumePostAuthRedirect } from '@/lib/postAuthRedirect';
+import { setLastUserName } from '@/lib/auth/lastUser';
+import { consumePostAuthRedirect } from '@/lib/auth/postAuthRedirect';
 
 const AUTH_KEY = 'syntax-stories-auth';
 
@@ -51,7 +51,7 @@ type AuthState = {
   updateProfile: (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => Promise<void>;
   sendLoginOtp: (email: string, altcha?: string) => Promise<void>;
   signUp: (fullName: string, email: string, altcha?: string) => Promise<void>;
-  verifyCode: (email: string, code: string) => Promise<void>;
+  verifyCode: (email: string, code: string, opts?: { acceptPolicies?: boolean }) => Promise<void>;
   verifyTwoFactor: (token: string) => Promise<void>;
   logout: () => Promise<void>;
   /** Clear OTP pairing state when the auth dialog closes (does not touch 2FA OAuth challenge). */
@@ -133,7 +133,7 @@ export const useAuthStore = create<AuthState>()(
           throw new Error(message);
         }
       },
-      verifyCode: async (email: string, code: string) => {
+      verifyCode: async (email: string, code: string, opts?: { acceptPolicies?: boolean }) => {
         set({ isLoading: true });
         try {
           const otpVersion = get().pendingOtpVersion;
@@ -146,6 +146,7 @@ export const useAuthStore = create<AuthState>()(
             code,
             ...(typeof otpVersion === 'number' ? { otpVersion } : {}),
             ...(pendingRef ? { referralCode: pendingRef } : {}),
+            ...(opts?.acceptPolicies === true ? { acceptPolicies: true } : {}),
           });
           if (pendingRef && typeof globalThis.sessionStorage !== 'undefined') {
             globalThis.sessionStorage.removeItem('pendingReferralCode');

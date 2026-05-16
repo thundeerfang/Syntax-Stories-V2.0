@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
-import { fetchPublishedLegalPolicy } from '@/lib/publicLegal';
-import { LegalPolicyDocument } from '@/components/legal/LegalPolicyDocument';
-import { LegalPolicyUnavailable } from '@/components/legal/LegalPolicyUnavailable';
+import { fetchPublishedLegalPolicy } from '@/lib/api/publicLegal';
+import { LegalPolicyDocument } from '@/features/legal';
+import { LegalPolicyUnavailable } from '@/features/legal';
+
 
 export async function generateMetadata(): Promise<Metadata> {
   const data = await fetchPublishedLegalPolicy('privacy');

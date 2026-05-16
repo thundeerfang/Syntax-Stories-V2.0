@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
+
 
 export interface ToggleGroupContextValue {
   type: 'single' | 'multiple';
@@ -71,7 +72,7 @@ export const ToggleGroup = React.forwardRef<HTMLFieldSetElement, ToggleGroupProp
         <fieldset
           ref={ref}
           className={cn(
-            'inline-flex min-w-0 m-0 rounded-md border-2 border-border bg-card p-0.5 shadow-[2px_2px_0px_0px_var(--border)]',
+            'inline-flex min-w-0 m-0  border-2 border-border bg-card p-0.5 shadow',
             variant === 'outline' && 'bg-transparent',
             className
           )}
@@ -120,7 +121,7 @@ export const ToggleGroupItem = React.forwardRef<HTMLButtonElement, ToggleGroupIt
         data-state={isActive ? 'on' : 'off'}
         onClick={handleClick}
         className={cn(
-          'inline-flex h-8 w-8 items-center justify-center rounded border-0 transition-colors',
+          'inline-flex h-8 w-8 items-center justify-center  border-0 transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           'hover:bg-muted/80',
           ctx.variant === 'outline' && 'bg-transparent hover:bg-muted/50',

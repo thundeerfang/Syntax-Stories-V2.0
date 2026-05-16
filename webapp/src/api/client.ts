@@ -1,4 +1,4 @@
-import { resolveFetchBaseForApiClient } from '@/lib/publicApiBase';
+import { resolveFetchBaseForApiClient } from '@/lib/api/publicApiBase';
 
 const getBaseUrl = () => resolveFetchBaseForApiClient();
 

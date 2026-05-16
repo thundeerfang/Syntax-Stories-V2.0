@@ -2,6 +2,7 @@
 
 import type { ComponentType } from 'react';
 
+
 export type IconProps = { className?: string };
 
 /** GitHub mark (inline SVG avoids deprecated Lucide `Github` / `GithubIcon` exports). */

@@ -1,4 +1,3 @@
-import { DEFAULT_AVATAR_URL } from '../models/User.js';
 import type { NormalizedOAuthProfile } from './oauth.types.js';
 
 type GoogleLikeProfile = {
@@ -15,7 +14,7 @@ export function normalizeGoogleProfile(profile: GoogleLikeProfile): NormalizedOA
   }
   const photoUrl = profile.photos?.[0]?.value;
   const profileImg =
-    typeof photoUrl === 'string' && photoUrl.startsWith('http') ? photoUrl : DEFAULT_AVATAR_URL;
+    typeof photoUrl === 'string' && photoUrl.startsWith('http') ? photoUrl : '';
   return {
     providerId: profile.id,
     email,
@@ -40,7 +39,7 @@ export function normalizeGithubProfile(profile: GitHubLikeProfile): NormalizedOA
   }
   const avatarUrl = profile._json?.avatar_url;
   const profileImg =
-    typeof avatarUrl === 'string' && avatarUrl.startsWith('http') ? avatarUrl : DEFAULT_AVATAR_URL;
+    typeof avatarUrl === 'string' && avatarUrl.startsWith('http') ? avatarUrl : '';
   const username = profile.username ?? 'user';
   return {
     providerId: String(profile.id),
@@ -66,7 +65,7 @@ export function normalizeFacebookProfile(profile: FacebookLikeProfile): Normaliz
   }
   const photoVal = profile.photos?.[0]?.value;
   const profileImg =
-    typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : DEFAULT_AVATAR_URL;
+    typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : '';
   return {
     providerId: profile.id,
     email,
@@ -90,7 +89,7 @@ export function normalizeXProfile(profile: XLikeProfile): NormalizedOAuthProfile
   const useXSyntheticEmail = !realEmail || email.includes('@twitter.placeholder');
   const photoVal = profile.photos?.[0]?.value;
   const profileImg =
-    typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : DEFAULT_AVATAR_URL;
+    typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : '';
   return {
     providerId: profile.id,
     email,
@@ -124,7 +123,7 @@ export async function fetchDiscordMe(accessToken: string): Promise<DiscordMeProf
 }
 
 function discordAvatarUrl(user: DiscordMeProfile): string {
-  if (!user.avatar) return DEFAULT_AVATAR_URL;
+  if (!user.avatar) return '';
   const ext = user.avatar.startsWith('a_') ? 'gif' : 'png';
   return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=256`;
 }

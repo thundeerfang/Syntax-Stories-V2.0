@@ -1,8 +1,9 @@
 import { Terminal } from 'lucide-react';
 import Link from 'next/link';
-import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/publicHelp';
+import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/api/publicHelp';
 import { DocsBreadcrumb } from '@/components/docs/DocsBreadcrumb';
 import { DocsSidebarNav } from '@/components/docs/DocsSidebarNav';
+
 
 const MIN_BELOW_HEADER = 'min-h-[calc(100vh-var(--header-height))]';
 
@@ -22,7 +23,7 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
     <div className={`flex w-full flex-col ${MIN_BELOW_HEADER}`}>
       {/* Single retro frame: same 4px border on all sides + block shadow (globals @theme --shadow) */}
       <div
-        className={`mx-auto flex w-full max-w-[1440px] flex-1 flex-col ${MIN_BELOW_HEADER} border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)]`}
+        className={`mx-auto flex w-full max-w-[1440px] flex-1 flex-col ${MIN_BELOW_HEADER} border-4 border-border bg-card shadow`}
       >
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           <aside className="sticky top-0 z-[1] hidden h-[calc(100vh-var(--header-height))] w-72 shrink-0 flex-col border-border bg-card/50 lg:flex lg:border-r-4">
@@ -37,7 +38,7 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
                     <Terminal size={18} className="text-primary" />
                     <span className="text-xs font-black uppercase tracking-widest">Browse topics</span>
                   </div>
-                  <span className="border-2 border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow-[2px_2px_0_0_var(--border)] group-open:bg-muted">
+                  <span className="border-2 border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow group-open:bg-muted">
                     Menu
                   </span>
                 </summary>
@@ -46,7 +47,7 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
                     <li>
                       <Link
                         href="/docs"
-                        className="block border-2 border-border bg-muted/20 p-3 text-[10px] font-bold uppercase shadow-[2px_2px_0_0_var(--border)] hover:bg-muted"
+                        className="block border-2 border-border bg-muted/20 p-3 text-[10px] font-bold uppercase shadow hover:bg-muted"
                       >
                         Overview
                       </Link>
@@ -57,7 +58,7 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
                         <li key={a.slug}>
                           <Link
                             href={href}
-                            className="block border-2 border-border bg-card p-3 text-[10px] font-bold uppercase text-muted-foreground shadow-[2px_2px_0_0_var(--border)] hover:bg-muted hover:text-foreground"
+                            className="block border-2 border-border bg-card p-3 text-[10px] font-bold uppercase text-muted-foreground shadow hover:bg-muted hover:text-foreground"
                           >
                             {a.title}
                           </Link>

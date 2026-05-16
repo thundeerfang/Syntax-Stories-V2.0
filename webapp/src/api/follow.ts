@@ -1,53 +1,15 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const getApiBase = () => resolvePublicApiBase();
 
-export interface FollowUser {
-  id: string;
-  username: string;
-  fullName: string;
-  profileImg?: string;
-}
-
-export interface FollowCounts {
-  followersCount: number;
-  followingCount: number;
-}
-
-export interface PublicProfileUser {
-  id: string;
-  username: string;
-  fullName: string;
-  profileImg?: string;
-  coverBanner?: string;
-  bio?: string;
-  portfolioUrl?: string;
-  linkedin?: string;
-  github?: string;
-  instagram?: string;
-  youtube?: string;
-  stackAndTools?: string[];
-  mySetup?: Array<{ label: string; imageUrl: string; productUrl?: string }>;
-  workExperiences?: unknown[];
-  education?: unknown[];
-  certifications?: unknown[];
-  projects?: unknown[];
-  openSourceContributions?: unknown[];
-  createdAt?: string;
-  /** Read-streak display preference (main stat on `/u/:username`). Stored as `blogStreakMode` in API/DB. */
-  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
-}
-
-export type ReadStreakCounts = { current: number; longest: number };
-
-export type ReadStreakPayload = {
-  displayMode: 'daily' | 'weekly' | 'monthly';
-  current: number;
-  longest: number;
-  /** Distinct UTC days with at least one recorded read of another user’s published post. */
-  totalDistinctReadDays?: number;
-  byMode: Record<'daily' | 'weekly' | 'monthly', ReadStreakCounts>;
-};
+export type {
+  FollowUser,
+  FollowCounts,
+  PublicProfileUser,
+  ReadStreakCounts,
+  ReadStreakPayload,
+} from '@contracts/followApi';
+import type { FollowUser, PublicProfileUser, ReadStreakPayload } from '@contracts/followApi';
 
 export const followApi = {
   searchUsers: (q: string) => {
@@ -64,9 +26,10 @@ export const followApi = {
       if (!r.ok) throw new Error(r.statusText);
       return r.json() as Promise<{
         success: boolean;
-        user: PublicProfileUser;
+        user: PublicProfileUser & { blogRespectReceivedCount?: number };
         followersCount: number;
         followingCount: number;
+        blogRespectReceivedCount?: number;
         readStreak?: ReadStreakPayload;
         /** UTC days (YYYY-MM-DD) with a recorded blog read in the heatmap window */
         readHeatmapDays?: string[];
@@ -92,10 +55,17 @@ export const followApi = {
     });
   },
 
-  getFollowing: (username: string, cursor?: string | null, limit = 20) => {
+  getFollowing: (
+    username: string,
+    cursor?: string | null,
+    limit = 20,
+    opts?: Readonly<{ order?: 'asc' | 'desc'; shuffle?: boolean }>,
+  ) => {
     const params = new URLSearchParams();
     if (cursor) params.set('cursor', cursor);
     params.set('limit', String(Math.min(limit, 50)));
+    if (opts?.order === 'asc') params.set('order', 'asc');
+    if (opts?.shuffle) params.set('shuffle', '1');
     const qs = params.toString();
     const querySuffix = qs.length > 0 ? `?${qs}` : '';
     const path = `/api/follow/following/${encodeURIComponent(username)}${querySuffix}`;

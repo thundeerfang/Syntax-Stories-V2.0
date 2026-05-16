@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/publicHelp';
+import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/api/publicHelp';
+
 
 export const metadata: Metadata = {
   title: 'Documentation — Syntax Stories',
@@ -19,7 +20,7 @@ export default async function DocsHomePage() {
         <h1 className="text-3xl font-black tracking-tight text-foreground">Documentation</h1>
         <p className="text-sm text-muted-foreground">
           Guides and reference material for using Syntax Stories. Articles with category{' '}
-          <code className="rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-mono">documentation</code>{' '}
+          <code className="border border-border bg-muted px-1.5 py-0.5 text-xs font-mono">documentation</code>{' '}
           in the CMS appear here and in the sidebar.
         </p>
       </header>
@@ -37,7 +38,7 @@ export default async function DocsHomePage() {
               <li key={a.slug}>
                 <Link
                   href={a.canonicalPath.startsWith('/docs') ? a.canonicalPath : `/docs/${a.slug}`}
-                  className="group flex flex-col rounded border-2 border-border bg-card p-4 shadow-[3px_3px_0px_0px_var(--border)] hover:border-foreground/20 hover:bg-muted/30"
+                  className="group flex flex-col border-2 border-border bg-card p-4 shadow hover:border-foreground/20 hover:bg-muted/30"
                 >
                   <span className="text-sm font-black uppercase tracking-tight text-foreground group-hover:text-primary">
                     {a.title}
@@ -52,7 +53,7 @@ export default async function DocsHomePage() {
         )}
       </section>
 
-      <section className="rounded border-2 border-dashed border-border bg-muted/10 p-4">
+      <section className="ss-empty-dashed-panel p-4">
         <h2 className="text-[11px] font-black uppercase text-muted-foreground">Need account help?</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Visit the{' '}

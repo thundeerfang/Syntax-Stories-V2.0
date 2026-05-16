@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useUIStore } from '@/store/ui';
 
+
 /**
  * Opens the global feedback dialog (same as the floating “Feedback” control).
  * Useful for deep links from docs or support pages.

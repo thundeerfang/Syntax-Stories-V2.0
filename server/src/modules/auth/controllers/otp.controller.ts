@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { UserModel } from '../../../models/User.js';
+import { newRandomDiceBearAvatarSvgUrl } from '../../../utils/diceBearAvatarUrl.js';
 import { SubscriptionModel } from '../../../models/Subscription.js';
 import { authConfig } from '../../../config/auth.config.js';
 import { getRedis } from '../../../config/redis.js';
@@ -35,6 +36,7 @@ import {
 } from '../../../services/emailOtp.service.js';
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { logSecurityEvent } from '../securityEventLog.js';
+import { recordSignupLegalAcceptances } from '../../../modules/legal/recordLegalAcceptances.js';
 
 const OTP_ATTEMPT_LIMIT = 10;
 const OTP_ATTEMPT_BLOCK_SECONDS = 5 * 60;
@@ -279,6 +281,7 @@ async function createUserFromEmailSignup(
     fullName: signupFullName,
     username,
     email: normalizedEmail,
+    profileImg: newRandomDiceBearAvatarSvgUrl(),
     isGoogleAccount: false,
     isGitAccount: false,
     isFacebookAccount: false,
@@ -303,6 +306,7 @@ async function createUserFromEmailSignup(
   } catch (e) {
     console.error(e);
   }
+  await recordSignupLegalAcceptances(user._id, req);
   return { user, isNewUser: true };
 }
 
@@ -388,6 +392,18 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     if (!otpValid) {
       await failOtpVerification(req, res, redis, normalizedEmail, 'invalid_otp');
       return;
+    }
+
+    if (purpose === 'signup') {
+      const accept = !!(req.body as { acceptPolicies?: boolean }).acceptPolicies;
+      if (!accept) {
+        res.status(403).json({
+          success: false,
+          code: 'LEGAL_ACCEPT_REQUIRED' as const,
+          message: 'Please confirm that you agree to the Terms of Service and Privacy Policy.',
+        });
+        return;
+      }
     }
 
     await deleteEmailOtp(purpose, normalizedEmail);

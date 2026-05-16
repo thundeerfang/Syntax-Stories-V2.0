@@ -13,10 +13,11 @@ import {
   type BillingTransactionRow,
 } from '@/api/billing';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
-import { SettingsSectionHeading } from './settings-list/SettingsSectionHeading';
-import { ghostOutlineButtonClassNames } from '@/components/ui/GhostOutlineButton';
+import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from './settings-list/SettingsSectionHeading';
+import { ghostOutlineButtonClassNames } from '@/components/ui/button';
 import { settingsBtnBlockPrimaryMd } from './buttonStyles';
 import Link from 'next/link';
+
 
 function formatInrMinorUnits(amount: number, currency: string): string {
   const cur = currency.toLowerCase();
@@ -109,14 +110,15 @@ export function PaymentsSettingsContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <SettingsTabRoot>
       <SettingsSectionHeading
         icon={<CreditCard />}
         title="Payments & subscription"
         description="Manage your Syntax Stories plan, renewal date, and invoices (Stripe)."
       />
 
-      <div className="grid gap-6 max-w-xl">
+      <SettingsTabPanel className="max-w-xl">
+      <div className="grid gap-6">
         <div className="border-2 border-border bg-muted/10 p-4 space-y-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current plan</p>
           <p className="text-lg font-black">{sub?.planDisplayName ?? '—'}</p>
@@ -195,6 +197,7 @@ export function PaymentsSettingsContent() {
           </div>
         )}
       </div>
-    </div>
+      </SettingsTabPanel>
+    </SettingsTabRoot>
   );
 }

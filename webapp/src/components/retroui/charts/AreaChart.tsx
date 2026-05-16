@@ -9,7 +9,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  type TooltipContentProps,
 } from 'recharts';
+
 
 export interface AreaChartProps<T extends Record<string, unknown>> {
   data: T[];
@@ -39,7 +41,7 @@ function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }
   const name = String(payload[0]?.dataKey ?? categoryLabel);
   return (
     <div
-      className="px-3 py-2 border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] font-sans"
+      className="px-3 py-2 border-2 border-border shadow font-sans"
       style={{
         backgroundColor: 'var(--card)',
         color: 'var(--foreground)',
@@ -57,18 +59,34 @@ function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }
   );
 }
 
-type RechartsTooltipArgs = {
-  active?: boolean;
-  payload?: readonly TooltipPayloadItem[] | TooltipPayloadItem[];
-  label?: string | number;
-};
+function payloadValueToNumber(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string') {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (Array.isArray(raw)) {
+    const n = Number(raw[0]);
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
 
 function createAreaChartTooltipContent(categoryLabel: string) {
-  function RechartsAreaTooltip(props: Readonly<RechartsTooltipArgs>) {
+  function RechartsAreaTooltip(props: TooltipContentProps) {
+    const normalized: TooltipPayloadItem[] =
+      props.payload?.map((entry) => ({
+        name: String(entry.name ?? entry.dataKey ?? ''),
+        value: payloadValueToNumber(entry.value),
+        dataKey: String(entry.dataKey ?? ''),
+        color: typeof entry.color === 'string' ? entry.color : typeof entry.fill === 'string' ? entry.fill : '',
+      })) ?? [];
+
     return (
       <ChartTooltipContent
         active={props.active}
-        payload={props.payload}
+        payload={normalized}
         label={props.label}
         categoryLabel={categoryLabel}
       />

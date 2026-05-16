@@ -7,10 +7,8 @@ function getApiBase(): string {
   return base ? base.replace(/\/$/, '') : '';
 }
 
-export interface CompanyOption {
-  name: string;
-  domain: string;
-}
+export type { CompanyOption } from '@contracts/companiesApi';
+import type { CompanyOption } from '@contracts/companiesApi';
 
 export async function searchCompaniesApi(query: string): Promise<CompanyOption[]> {
   const q = query?.trim();

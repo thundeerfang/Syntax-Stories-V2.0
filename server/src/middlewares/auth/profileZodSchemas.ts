@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  EMPLOYMENT_TYPE_VALUES,
+  LOCATION_TYPE_VALUES,
+} from '@syntax-stories/shared';
 
 function isMonthYear(val: unknown): val is string {
   return typeof val === 'string' && /^\d{4}-\d{2}$/.test(val);
@@ -164,7 +168,7 @@ export const workExperienceItemSchema = z
   .object({
     workId: z.string().max(20).trim().optional(),
     jobTitle: z.string().max(120).trim(),
-    employmentType: z.string().max(50).trim(),
+    employmentType: z.enum(EMPLOYMENT_TYPE_VALUES),
     company: z.string().max(200).trim(),
     companyDomain: z.string().max(120).trim().optional(),
     companyLogo: optUriMax(500),
@@ -173,7 +177,7 @@ export const workExperienceItemSchema = z
     startDate: z.string().max(20).trim(),
     endDate: z.string().max(20).trim().nullable().optional(),
     location: z.string().max(180).trim().optional(),
-    locationType: z.string().max(20).trim(),
+    locationType: z.enum(LOCATION_TYPE_VALUES),
     description: z.string().max(5000).trim().optional(),
     skills: z.array(z.string().max(80).trim()).min(1).max(10),
     promotions: z.array(promotionItemSchema).max(5).optional(),
@@ -319,7 +323,8 @@ const profilePatchFields = {
   fullName: z.string().min(1).max(100).trim().optional(),
   username: usernameSchema.optional(),
   bio: z.string().max(500).trim().optional(),
-  profileImg: z.string().max(2000).trim().optional(),
+  /** Data URIs (DiceBear SVG) can be ~15k+; HTTPS URLs stay well under this cap. */
+  profileImg: z.string().max(131072).trim().optional(),
   profileImgAlt: z.string().max(120).trim().optional(),
   coverBanner: z.string().max(2000).trim().optional(),
   coverBannerAlt: z.string().max(120).trim().optional(),

@@ -1,24 +1,9 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const getApiBase = () => resolvePublicApiBase();
 
-export interface GithubRepoInfo {
-  name: string;
-  full_name: string;
-  html_url: string;
-  description: string;
-  owner: string;
-  avatar_url: string | null;
-}
-
-export interface GithubRepoListItem {
-  id: number;
-  name: string;
-  full_name: string;
-  html_url: string;
-  description: string | null;
-  owner: { login: string; avatar_url?: string };
-}
+export type { GithubRepoInfo, GithubRepoListItem } from '@contracts/githubApi';
+import type { GithubRepoInfo, GithubRepoListItem } from '@contracts/githubApi';
 
 /** Parse GitHub repo URL to { owner, repo } or null. */
 export function parseGithubRepoUrl(url: string): { owner: string; repo: string } | null {

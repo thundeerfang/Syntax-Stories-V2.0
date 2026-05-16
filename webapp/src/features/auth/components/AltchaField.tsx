@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 import { getAltchaChallengeUrl } from '@/api/auth';
-import { acquireGlobalAltchaBusy, releaseGlobalAltchaBusy } from '@/components/ui/UiProcessingShield';
+import { acquireGlobalAltchaBusy, releaseGlobalAltchaBusy } from '@/components/ui/feedback';
+
 
 function isAltchaBusyState(state: string): boolean {
   return state === 'verifying' || state === 'code';

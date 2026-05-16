@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Loader from 'react-loaders';
 import 'loaders.css/loaders.min.css';
-import { consumeOAuthNavigationPending, OAUTH_LEAVING_EVENT } from '@/lib/oauthNavigation';
+import { consumeOAuthNavigationPending, OAUTH_LEAVING_EVENT } from '@/lib/auth/oauthNavigation';
+import { useScrollLock } from '@/hooks/useScrollLock';
+
 
 const TITLE = 'SYSTEM SYNTAX STORIES — BASH';
 const MIN_SHOW_MS = 5000;
@@ -54,13 +56,13 @@ export function GlobalLoader({ pageName = 'app', status }: Readonly<GlobalLoader
 
   return (
     <div className="flex items-center justify-center min-h-[300px] w-full p-4">
-      <div className="loader-scale-in relative mx-auto w-full max-w-[480px] rounded-lg overflow-hidden bg-[#0d0d0f] border border-white/10 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.7)]">
+      <div className="loader-scale-in relative mx-auto w-full max-w-[480px] overflow-hidden bg-[#0d0d0f] border border-white/10 shadow">
         {/* 1fr | auto | 1fr: title stays visually centered; old flex+flex-1 only centered within the middle strip (shifted toward dots) */}
         <div className="bg-[#1a1a1c] grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 border-b border-white/5">
           <div className="flex gap-2 justify-self-start">
-            <div className="h-3 w-3 rounded-full bg-[#ff5f57] opacity-80 hover:opacity-100 transition-opacity" />
-            <div className="h-3 w-3 rounded-full bg-[#febc2e] opacity-80 hover:opacity-100 transition-opacity" />
-            <div className="h-3 w-3 rounded-full bg-[#28c840] opacity-80 hover:opacity-100 transition-opacity" />
+            <div className="h-3 w-3 bg-[#ff5f57] opacity-80 hover:opacity-100 transition-opacity" />
+            <div className="h-3 w-3 bg-[#febc2e] opacity-80 hover:opacity-100 transition-opacity" />
+            <div className="h-3 w-3 bg-[#28c840] opacity-80 hover:opacity-100 transition-opacity" />
           </div>
           <div className="justify-self-center font-mono text-[10px] uppercase tracking-[0.2em] text-white/40 whitespace-nowrap text-center px-1">
             {TITLE}
@@ -94,8 +96,8 @@ export function GlobalLoader({ pageName = 'app', status }: Readonly<GlobalLoader
                 <span className="text-[11px] text-white/30 uppercase tracking-widest">Memory: 256MB / Latency: 14ms</span>
               </div>
             </div>
-            <div className="w-full h-[2px] bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full bg-[#b967ff] animate-progress-loading shadow-[0_0_8px_#b967ff]" />
+            <div className="w-full h-[2px] bg-white/5 overflow-hidden">
+              <div className="h-full bg-[#b967ff] animate-progress-loading shadow" />
             </div>
           </div>
           <div className="mt-6 flex items-center gap-2 opacity-50 text-[11px]">
@@ -184,16 +186,7 @@ export function GlobalLoaderOverlay() {
     };
   }, [pathname]);
 
-  useEffect(() => {
-    if (show) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = prev ?? '';
-      };
-    }
-    document.body.style.overflow = '';
-  }, [show]);
+  useScrollLock(show);
 
   if (!show) return null;
   return (

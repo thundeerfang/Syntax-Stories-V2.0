@@ -1,5 +1,5 @@
-import { blockShadowButtonClassNames } from '@/components/ui/BlockShadowButton';
-import { cn } from '@/lib/utils';
+import { blockShadowButtonClassNames } from '@/components/ui/button';
+import { cn } from '@/lib/core/utils';
 
 /**
  * Settings primary actions — same block shadow + hover/active press as `BlockShadowButton`.
