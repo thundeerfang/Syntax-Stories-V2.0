@@ -46,7 +46,7 @@ export function Dashboard() {
       <RetroPanel title="status" variant="amber">
         <p className="retro-row">&gt; SESSION ACTIVE</p>
         <p className="retro-hint" style={{ marginTop: 8 }}>
-          // Profile from GET /auth/me
+          {'// Profile from GET /auth/me'}
         </p>
       </RetroPanel>
       <p className="retro-hint" style={{ textAlign: 'center' }}>

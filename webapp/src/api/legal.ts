@@ -1,4 +1,4 @@
-import { resolveSameOriginRequestUrl } from '@/lib/publicApiBase';
+import { resolveSameOriginRequestUrl } from '@/lib/api/publicApiBase';
 import type {
   LegalPolicyKind,
   PublishedPolicyResponse,

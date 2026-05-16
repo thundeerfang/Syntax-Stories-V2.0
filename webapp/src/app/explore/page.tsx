@@ -1,5 +1,5 @@
-import { ExplorePageContent } from '@/components/explore/ExplorePageContent';
+import { ExplorePage } from '@/features/explore';
 
-export default function ExplorePage() {
-  return <ExplorePageContent />;
+export default function Page() {
+  return <ExplorePage />;
 }

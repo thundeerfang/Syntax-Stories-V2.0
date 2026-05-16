@@ -3,20 +3,20 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bookmark, ChevronDown, Compass, FolderPlus, Search } from 'lucide-react';
+import { Bookmark, Compass, FolderPlus, Search } from 'lucide-react';
+import { RetroSortDropdown } from '@/components/ui/retro';
 import { toast } from 'sonner';
 import { bookmarksApi, type BookmarkGroupRow } from '@/api/bookmarks';
-import { BlogCard } from '@/components/blog/BlogCard';
-import { RailFeedEmptyState } from '@/components/layout/RailFeedEmptyState';
-import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
+import { BlogCard } from '@/features/blog';
+import { RailFeedEmptyState, ShellPageIntroHeader } from '@/components/layout';
 import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
-import { WarningConfirmDialog } from '@/components/ui/delete';
-import { Dialog, DIALOG_Z_INDEX_STACKED } from '@/components/ui/Dialog';
-import { BlogApiConnectionError } from '@/lib/blogAuthFetch';
-import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
+import { ConfirmDialog } from '@/components/ui/dialog';
+import { Dialog, DIALOG_Z_INDEX_STACKED } from '@/components/ui/dialog';
+import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
+import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { useAuthStore } from '@/store/auth';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 
 const LOGIN_NEXT = '/bookmarks';
@@ -25,75 +25,6 @@ const BOOKMARK_SORT_OPTIONS = [
   { value: 'newest' as const, label: 'Newest saved', shortLabel: 'Newest' },
   { value: 'oldest' as const, label: 'Oldest saved', shortLabel: 'Oldest' },
 ];
-
-function BookmarksSortDropdown({
-  value,
-  onChange,
-}: Readonly<{
-  value: 'newest' | 'oldest';
-  onChange: (v: 'newest' | 'oldest') => void;
-}>) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const close = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, []);
-
-  const label = BOOKMARK_SORT_OPTIONS.find((o) => o.value === value)?.label ?? 'Newest saved';
-  const shortLabel = BOOKMARK_SORT_OPTIONS.find((o) => o.value === value)?.shortLabel ?? 'Newest';
-
-  return (
-    <div ref={rootRef} className="relative shrink-0">
-      <button
-        type="button"
-        title={label}
-        aria-label={`Sort bookmarks: ${label}`}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-[42px] w-[7.25rem] shrink-0 items-center justify-between gap-1.5 rounded-none border-2 border-border bg-background px-2 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-foreground outline-none ring-primary focus-visible:ring-2 sm:w-[7.75rem]"
-      >
-        <span className="min-w-0 truncate">{shortLabel}</span>
-        <ChevronDown
-          className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')}
-          strokeWidth={2.25}
-          aria-hidden
-        />
-      </button>
-      {open ? (
-        <ul
-          role="listbox"
-          className="absolute right-0 top-[calc(100%+4px)] z-30 min-w-full overflow-hidden border-2 border-border bg-card py-1 shadow-[4px_4px_0_0_var(--border)]"
-        >
-          {BOOKMARK_SORT_OPTIONS.map((o) => (
-            <li key={o.value} role="none">
-              <button
-                type="button"
-                role="option"
-                aria-selected={value === o.value}
-                className={cn(
-                  'flex w-full px-3 py-2.5 text-left font-mono text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-muted/60',
-                  value === o.value && 'bg-primary/10 text-primary',
-                )}
-                onClick={() => {
-                  onChange(o.value);
-                  setOpen(false);
-                }}
-              >
-                {o.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
 
 function toastApiError(e: unknown, fallback: string) {
   if (e instanceof BlogApiConnectionError) {
@@ -295,7 +226,7 @@ export default function BookmarksPage() {
             </p>
             <Link
               href={`/login?next=${encodeURIComponent(LOGIN_NEXT)}`}
-              className="inline-block border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-primary-foreground shadow-[4px_4px_0_0_var(--border)] transition-transform hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              className="inline-block border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
             >
               Sign in
             </Link>
@@ -310,7 +241,7 @@ export default function BookmarksPage() {
                       type="button"
                       onClick={() => setSelectedFilter('all')}
                       className={cn(
-                        'shrink-0 rounded-none border-2 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest transition-colors transition-transform active:translate-x-0.5 active:translate-y-0.5',
+                        'shrink-0  border-2 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest transition-colors transition-transform active:translate-x-0.5 active:translate-y-0.5',
                         selectedFilter === 'all'
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-border bg-card text-foreground hover:bg-muted/60',
@@ -324,7 +255,7 @@ export default function BookmarksPage() {
                         <div
                           key={g._id}
                           className={cn(
-                            'flex shrink-0 items-center gap-1 rounded-none border-2 px-1 py-1',
+                            'flex shrink-0 items-center gap-1  border-2 px-1 py-1',
                             active ? 'border-primary bg-primary/10' : 'border-border bg-card',
                           )}
                         >
@@ -362,9 +293,9 @@ export default function BookmarksPage() {
                                 : `Make ${g.name} the default folder for new bookmarks`
                             }
                             className={cn(
-                              'relative mr-1 shrink-0 rounded-full border-2 transition-colors disabled:opacity-100',
+                              'relative mr-1 shrink-0  border-2 transition-colors disabled:opacity-100',
                               g.isDefault
-                                ? 'pointer-events-none size-2.5 cursor-default border-purple-600 bg-purple-600 shadow-[0_0_0_2px_var(--background)]'
+                                ? 'pointer-events-none size-2.5 cursor-default border-purple-600 bg-purple-600 shadow'
                                 : 'size-2.5 border-muted-foreground/35 bg-transparent hover:border-purple-500 disabled:opacity-50',
                             )}
                           />
@@ -374,7 +305,7 @@ export default function BookmarksPage() {
                     <button
                       type="button"
                       onClick={() => setCreateOpen(true)}
-                      className="ml-auto inline-flex shrink-0 items-center gap-2 rounded-none border-2 border-border bg-card px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest shadow-[3px_3px_0_0_var(--border)] hover:bg-muted/50"
+                      className="ml-auto inline-flex shrink-0 items-center gap-2 border-2 border-border bg-card px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest shadow hover:bg-muted/50"
                     >
                       <FolderPlus className="size-4 shrink-0" strokeWidth={2.25} aria-hidden />
                       Create folder
@@ -395,11 +326,16 @@ export default function BookmarksPage() {
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="Search saved titles…"
-                        className="h-[42px] w-full rounded-none border-2 border-border bg-background py-2.5 pl-10 pr-3 font-mono text-xs outline-none ring-primary focus-visible:ring-2"
+                        className="h-[42px] w-full border-2 border-border bg-background py-2.5 pl-10 pr-3 font-mono text-xs outline-none ring-primary focus-visible:ring-2"
                         autoComplete="off"
                       />
                     </div>
-                    <BookmarksSortDropdown value={sortOrder} onChange={setSortOrder} />
+                    <RetroSortDropdown
+                      value={sortOrder}
+                      onChange={setSortOrder}
+                      options={BOOKMARK_SORT_OPTIONS}
+                      ariaLabelPrefix="Sort bookmarks"
+                    />
                   </div>
                 </div>
               </div>
@@ -452,18 +388,20 @@ export default function BookmarksPage() {
               )}
             </section>
 
-            <WarningConfirmDialog
+            <ConfirmDialog
               open={defaultConfirmOpen}
               onClose={closeDefaultConfirm}
               titleId="bookmark-default-folder-title"
               title="Are you sure you want to change the default?"
-              description={
+              variant="warning"
+              message={
                 pendingDefault
                   ? `New saves will go to “${pendingDefault.name}” unless you pick another folder when bookmarking.`
                   : undefined
               }
               confirmLabel="Make default"
-              confirming={defaultConfirming}
+              closeOnConfirm={false}
+              loading={defaultConfirming}
               onConfirm={confirmSetDefault}
             />
 
@@ -490,7 +428,7 @@ export default function BookmarksPage() {
                     onChange={(e) => setCreateName(e.target.value)}
                     placeholder="e.g. Research"
                     maxLength={80}
-                    className="w-full rounded-none border-2 border-border bg-background px-3 py-2 font-mono text-xs outline-none ring-primary focus-visible:ring-2"
+                    className="w-full border-2 border-border bg-background px-3 py-2 font-mono text-xs outline-none ring-primary focus-visible:ring-2"
                     autoComplete="off"
                   />
                 </div>
@@ -504,7 +442,7 @@ export default function BookmarksPage() {
                     onChange={(e) => setCreateEmoji(e.target.value.slice(0, 8))}
                     placeholder="📚"
                     maxLength={8}
-                    className="w-full rounded-none border-2 border-border bg-background px-3 py-2 font-mono text-sm outline-none ring-primary focus-visible:ring-2"
+                    className="w-full border-2 border-border bg-background px-3 py-2 font-mono text-sm outline-none ring-primary focus-visible:ring-2"
                     autoComplete="off"
                   />
                 </div>
@@ -527,7 +465,7 @@ export default function BookmarksPage() {
                     type="button"
                     disabled={createSubmitting}
                     onClick={() => setCreateOpen(false)}
-                    className="border-2 border-border bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide shadow-[2px_2px_0px_0px_var(--border)] transition-colors hover:bg-muted/40 disabled:opacity-50"
+                    className="border-2 border-border bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide shadow transition-colors hover:bg-muted/40 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -535,7 +473,7 @@ export default function BookmarksPage() {
                     type="button"
                     disabled={createSubmitting || !createName.trim()}
                     onClick={() => void handleCreateGroup()}
-                    className="border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-[2px_2px_0px_0px_var(--border)] transition-transform hover:-translate-y-0.5 disabled:opacity-40"
+                    className="border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 disabled:opacity-40"
                   >
                     {createSubmitting ? 'Creating…' : 'Create'}
                   </button>

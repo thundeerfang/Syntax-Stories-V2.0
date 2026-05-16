@@ -217,6 +217,45 @@ function mapLeanPostToFeedListItem(p: unknown): FeedListItem | null {
   };
 }
 
+function engagementCountsFromPostDoc(doc: Record<string, unknown>) {
+  return {
+    respectCount: normalizeRespectCount((doc as { respectCount?: number }).respectCount),
+    repostCount: normalizeBlogCounter((doc as { repostCount?: number }).repostCount),
+    bookmarkCount: normalizeBlogCounter((doc as { bookmarkCount?: number }).bookmarkCount),
+    commentCount: normalizeBlogCounter((doc as { commentCount?: number }).commentCount),
+  };
+}
+
+async function attachViewerEngagementToMyPosts<T extends { _id: unknown }>(
+  req: Request,
+  posts: T[],
+): Promise<Array<T & { viewerHasRespected: boolean; viewerHasReposted: boolean; viewerHasBookmarked: boolean }>> {
+  const viewerId = optionalViewerId(req);
+  if (!viewerId || !posts.length) {
+    return posts.map((p) => ({
+      ...p,
+      viewerHasRespected: false,
+      viewerHasReposted: false,
+      viewerHasBookmarked: false,
+    }));
+  }
+  const ids = posts.map((p) => String(p._id));
+  const [viewerMap, repostMap, bookmarkMap] = await Promise.all([
+    viewerRespectStatesForPosts(viewerId, ids),
+    viewerRepostStatesForPosts(viewerId, ids),
+    viewerBookmarkStatesForPosts(viewerId, ids),
+  ]);
+  return posts.map((p) => {
+    const id = String(p._id);
+    return {
+      ...p,
+      viewerHasRespected: !!viewerMap[id],
+      viewerHasReposted: !!repostMap[id],
+      viewerHasBookmarked: !!bookmarkMap[id],
+    };
+  });
+}
+
 async function applyViewerStateToFeedItems(req: Request, items: FeedListItem[]): Promise<FeedListItem[]> {
   const viewerId = optionalViewerId(req);
   if (!viewerId || !items.length) {
@@ -1108,35 +1147,39 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
         deletedAt: { $exists: true, $ne: null, $gte: cutoff },
       })
         .select(
-          'title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt category tags language',
+          'title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount',
         )
         .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
         .sort({ deletedAt: -1 })
         .limit(50)
         .lean();
 
+      const deletedMapped = posts.map((p) => {
+        const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
+        const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
+        const delAt = (p as { deletedAt?: Date }).deletedAt;
+        const doc = p as Record<string, unknown>;
+        return {
+          _id: p._id,
+          title: p.title,
+          slug: p.slug,
+          summary: (p as { summary?: string }).summary,
+          content: p.content,
+          thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
+          status: p.status,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          deletedAt: delAt ? delAt.toISOString() : undefined,
+          lastEditedAt: leAt ? leAt.toISOString() : undefined,
+          lastEditedBy: leBy,
+          ...mapTaxonomyFromDoc(p as TaxonomyFields),
+          ...engagementCountsFromPostDoc(doc),
+        };
+      });
+
       res.status(200).json({
         success: true,
-        posts: posts.map((p) => {
-          const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
-          const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
-          const delAt = (p as { deletedAt?: Date }).deletedAt;
-          return {
-            _id: p._id,
-            title: p.title,
-            slug: p.slug,
-            summary: (p as { summary?: string }).summary,
-            content: p.content,
-            thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
-            status: p.status,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt,
-            deletedAt: delAt ? delAt.toISOString() : undefined,
-            lastEditedAt: leAt ? leAt.toISOString() : undefined,
-            lastEditedBy: leBy,
-            ...mapTaxonomyFromDoc(p as TaxonomyFields),
-          };
-        }),
+        posts: deletedMapped,
       });
       return;
     }
@@ -1146,36 +1189,50 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
 
     const posts = await BlogPostModel.find(filter)
       .select(
-        'title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt category tags language',
+        'title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount squadId',
       )
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
+      .populate({
+        path: 'squadId',
+        select: 'slug name iconUrl visibility coverBannerUrl memberCount',
+        model: 'squads',
+      })
       .sort({ updatedAt: -1 })
       .limit(50)
       .lean();
 
+    const mapped = posts.map((p) => {
+      const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
+      const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
+      const summary = (p as { summary?: string }).summary ?? '';
+      const content = (p as { content?: string }).content;
+      const doc = p as Record<string, unknown>;
+      const squad = mapLeanSquadForFeed(doc.squadId);
+      return {
+        _id: p._id,
+        title: p.title,
+        slug: p.slug,
+        summary,
+        content,
+        thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
+        status: p.status,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        lastEditedAt: leAt ? leAt.toISOString() : undefined,
+        lastEditedBy: leBy,
+        readTimeMinutes: estimateReadMinutesFromBlogFields(content, summary),
+        ...mapTaxonomyFromDoc(p as TaxonomyFields),
+        ...engagementCountsFromPostDoc(doc),
+        ...(squad ? { squad } : {}),
+      };
+    });
+
+    const postsOut =
+      status === 'published' ? await attachViewerEngagementToMyPosts(req, mapped) : mapped;
+
     res.status(200).json({
       success: true,
-      posts: posts.map((p) => {
-        const leAt = (p as { lastEditedAt?: Date }).lastEditedAt;
-        const leBy = mapLastEditor((p as { lastEditedById?: unknown }).lastEditedById);
-        const summary = (p as { summary?: string }).summary ?? '';
-        const content = (p as { content?: string }).content;
-        return {
-          _id: p._id,
-          title: p.title,
-          slug: p.slug,
-          summary,
-          content,
-          thumbnailUrl: (p as { thumbnailUrl?: string }).thumbnailUrl,
-          status: p.status,
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-          lastEditedAt: leAt ? leAt.toISOString() : undefined,
-          lastEditedBy: leBy,
-          readTimeMinutes: estimateReadMinutesFromBlogFields(content, summary),
-          ...mapTaxonomyFromDoc(p as TaxonomyFields),
-        };
-      }),
+      posts: postsOut,
     });
   } catch (err) {
     console.error(err);

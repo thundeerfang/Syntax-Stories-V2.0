@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useMemo, type ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 export type AlertStatus = 'success' | 'info' | 'error' | 'warning';
 
@@ -27,7 +27,7 @@ export function Alert({ status, className, children }: Readonly<AlertProps>) {
       <div
         role="alert"
         className={cn(
-          'rounded-lg border-2 p-4',
+          ' border-2 p-4',
           statusStyles[status],
           className
         )}

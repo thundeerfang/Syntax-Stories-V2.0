@@ -15,9 +15,9 @@ import {
   Fingerprint,
   Activity,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { HoverCard } from '@/components/ui/HoverCard';
-import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
+import { cn } from '@/lib/core/utils';
+import { HoverCard } from '@/components/ui/popover';
+import { LinkPreviewCardContent } from '@/components/ui/popover';
 import type { WorkExperience } from '@/api/auth';
 
 type MediaItem = { url: string; title?: string };
@@ -276,7 +276,7 @@ export function WorkExperienceCard({
 
             {/* Promotions / Career timeline rail (more prominent UI) */}
             {timelineEntries.length > 1 && (
-              <div className="mt-3 space-y-3 rounded-sm border border-border/40 bg-muted/10 p-3">
+              <div className="mt-3 space-y-3 border border-border/40 bg-muted/10 p-3">
                 <h5 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                   <TrendingUp className="size-3.5 text-primary" /> Career Progression Path
                 </h5>
@@ -332,7 +332,7 @@ export function WorkExperienceCard({
                     return (
                       <div
                         key={`${label}:${m.url}`}
-                        className="flex min-w-0 flex-col gap-1.5 rounded border border-border/60 bg-card/50 p-2 overflow-hidden"
+                        className="flex min-w-0 flex-col gap-1.5 border border-border/60 bg-card/50 p-2 overflow-hidden"
                       >
                         <span className="shrink-0 w-full px-2 py-0.5 border border-primary/50 bg-primary/10 text-[9px] font-mono font-black uppercase tracking-wider text-primary text-center truncate">
                           {label}
@@ -379,7 +379,7 @@ export function WorkExperienceCard({
                   })}
                 </div>
               ) : (
-                <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 py-6 px-4 border-2 border-dashed border-border/60 rounded bg-muted/5">
+                <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 py-6 px-4 border-2 border-dashed border-border/60 bg-muted/5">
                   <ImageOff className="size-10 text-muted-foreground/40" aria-hidden />
                   <p className="text-[10px] font-mono font-bold uppercase text-muted-foreground/70 text-center">
                     No image uploaded or documents

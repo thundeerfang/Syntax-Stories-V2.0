@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth';
-import { cn } from '@/lib/utils';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
+import { cn } from '@/lib/core/utils';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import {
   BlockShadowButton,
   FormInput,
@@ -29,13 +29,7 @@ import { getAltchaChallengeUrl } from '@/api/auth';
 import { collectFeedbackClientMeta } from '@/api/feedback';
 import { submitContactLead } from '@/api/contact';
 
-const FOOTER_LINKS = [
-  { label: 'Help center', href: '/help' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'Invite program', href: '/invite' },
-] as const;
-
-const TOPIC_SUGGESTIONS = ['Partnership', 'Billing', 'Feature Request', 'Bug Report'];
+import { CONTACT_TOPIC_SUGGESTIONS, PRODUCT_SITE_LINKS } from '@/lib/shell/siteLinks';
 
 export default function ContactPage() {
   const token = useAuthStore((s) => s.token);
@@ -105,7 +99,7 @@ export default function ContactPage() {
   if (!isHydrated) {
     return (
       <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-[60vh] items-center justify-center py-16')}>
-        <div className="mx-auto w-full max-w-md border-4 border-border bg-card p-8 text-center shadow-[8px_8px_0_0_var(--border)]">
+        <div className="mx-auto w-full max-w-md border-4 border-border bg-card p-8 text-center shadow">
           <div className="mx-auto mb-4 size-12 animate-spin border-4 border-primary border-t-transparent" />
           <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Initializing</p>
         </div>
@@ -132,7 +126,7 @@ export default function ContactPage() {
             />
 
             {/* Form Section */}
-            <section className="border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)]">
+            <section className="border-4 border-border bg-card shadow">
               <div className="flex items-center justify-between border-b-4 border-border bg-muted/30 px-6 py-4">
                 <h2 className="flex items-center gap-3 text-sm font-black uppercase tracking-widest">
                   <MessageSquareText className="size-5 text-primary" />
@@ -144,7 +138,7 @@ export default function ContactPage() {
               {status === 'done' ? (
                 <div className="flex flex-col items-center gap-6 px-6 py-20 text-center">
                   <div className="relative">
-                    <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+                    <div className="absolute inset-0 animate-ping bg-primary/20" />
                     <CheckCircle2 className="relative size-20 text-primary" strokeWidth={1.5} />
                   </div>
                   <div className="space-y-2">
@@ -193,7 +187,7 @@ export default function ContactPage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-3 border-4 border-dashed border-border bg-muted/10 p-4">
-                        <div className="size-3 rounded-full bg-primary" />
+                        <div className="size-3 bg-primary" />
                         <p className="text-xs font-bold uppercase tracking-tight text-muted-foreground">
                           Authenticated as <span className="text-foreground">Current User</span>
                         </p>
@@ -220,7 +214,7 @@ export default function ContactPage() {
                         placeholder="What's this about?"
                       />
                       <div className="flex flex-wrap gap-2">
-                        {TOPIC_SUGGESTIONS.map((t) => (
+                        {CONTACT_TOPIC_SUGGESTIONS.map((t) => (
                           <GhostOutlineButton
                             key={t}
                             type="button"
@@ -270,7 +264,7 @@ export default function ContactPage() {
 
           {/* Sidebar */}
           <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
-            <div className="border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)]">
+            <div className="border-4 border-border bg-card shadow">
               <div className="border-b-4 border-border bg-muted/30 px-6 py-4">
                 <h2 className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-foreground">
                   <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
@@ -304,7 +298,7 @@ export default function ContactPage() {
                   </div>
                   <a
                     href="mailto:hello@syntaxstories.example"
-                    className="group inline-flex w-full max-w-full items-center justify-between gap-2 border-4 border-border bg-muted/10 px-3 py-2.5 text-left text-[11px] font-black uppercase tracking-tight text-foreground shadow-[2px_2px_0_0_var(--border)] transition-all hover:border-primary/50 hover:text-primary"
+                    className="group inline-flex w-full max-w-full items-center justify-between gap-2 border-4 border-border bg-muted/10 px-3 py-2.5 text-left text-[11px] font-black uppercase tracking-tight text-foreground shadow transition-all hover:border-primary/50 hover:text-primary"
                   >
                     <span className="min-w-0 truncate">hello@syntaxstories.example</span>
                     <ArrowRight
@@ -344,10 +338,10 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="border-4 border-border bg-primary p-6 shadow-[6px_6px_0_0_var(--border)]">
+            <div className="border-4 border-border bg-primary p-6 shadow">
               <h3 className="text-xs font-black uppercase tracking-widest text-primary-foreground">Quick Links</h3>
               <div className="mt-4 grid grid-cols-1 gap-2">
-                {FOOTER_LINKS.map((l) => (
+                {PRODUCT_SITE_LINKS.map((l) => (
                   <Link
                     key={l.href}
                     href={l.href}

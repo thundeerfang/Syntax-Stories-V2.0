@@ -9,6 +9,7 @@ import {
   joinSquad,
   leaveSquad,
   listMySquads,
+  listSquadsForUser,
   listPublicSquads,
   listSquadMembers,
   patchSquad,
@@ -23,6 +24,7 @@ const router = Router();
 
 router.get('/', listPublicSquads);
 router.get('/mine', verifyToken, listMySquads);
+router.get('/u/:username', optionalVerifyToken, listSquadsForUser);
 router.post('/', verifyToken, createSquad);
 
 router.get('/s/:slug', optionalVerifyToken, getSquadBySlug);

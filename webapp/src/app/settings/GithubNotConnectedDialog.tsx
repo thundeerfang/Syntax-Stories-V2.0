@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Dialog } from '@/components/ui/Dialog';
-import { GithubConnectLottie } from '@/components/ui/GithubConnectLottie';
-import { cn } from '@/lib/utils';
+import { Dialog } from '@/components/ui/dialog';
+import { GithubConnectLottie } from '@/components/ui/lottie';
+import { cn } from '@/lib/core/utils';
 import { settingsBtnBlockPrimarySm } from '@/app/settings/buttonStyles';
 
 export function GithubNotConnectedDialog({
@@ -19,7 +19,7 @@ export function GithubNotConnectedDialog({
       onClose={onClose}
       titleId="github-not-connected-dialog-title"
       showCloseButton={false}
-      panelClassName="max-w-md border-4 border-border shadow-[8px_8px_0px_0px_var(--border)]"
+      panelClassName="max-w-md border-4 border-border shadow"
       contentClassName="flex min-h-0 flex-col gap-5 px-6 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8"
     >
       <h2 id="github-not-connected-dialog-title" className="sr-only">

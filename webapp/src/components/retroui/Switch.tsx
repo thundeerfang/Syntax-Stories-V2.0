@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 export interface SwitchProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onChange'> {
   id?: string;
@@ -31,7 +31,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         id={id}
         onClick={handleClick}
         className={cn(
-          'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-none border-2 border-border bg-muted transition-colors',
+          'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center  border-2 border-border bg-muted transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
           'disabled:pointer-events-none disabled:opacity-50',
           isOn && 'border-primary bg-primary',
@@ -41,7 +41,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       >
         <span
           className={cn(
-            'pointer-events-none block h-4 w-4 border-2 border-border bg-background shadow-sm transition-transform',
+            'pointer-events-none block h-4 w-4 border-2 border-border bg-background shadow transition-transform',
             isOn ? 'translate-x-[1.375rem]' : 'translate-x-1'
           )}
         />

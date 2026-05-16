@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Calendar, GraduationCap, Pencil, Sigma, Tag, Trash2, Cpu } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 const EDU_CARD_FOOTER_MARKS = ['e0', 'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7'] as const;
 
@@ -157,7 +157,7 @@ export function EducationCard({
                   {e.degree || 'NULL_CREDENTIAL'}
                 </h4>
                 <div className="mt-1 flex items-center gap-2 min-w-0">
-                  <div className="size-1.5 shrink-0 rounded-full bg-primary" />
+                  <div className="size-1.5 shrink-0 bg-primary" />
                   <p className="text-[10px] font-mono font-bold text-foreground tracking-tight uppercase truncate">
                     {e.school || 'NOT_SPECIFIED'}
                   </p>

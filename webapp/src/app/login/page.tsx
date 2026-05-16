@@ -15,7 +15,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isHydrated) return;
     if (token) {
-      router.replace('/');
+      router.replace('/', '');
       return;
     }
     const error = searchParams.get('error');
@@ -24,7 +24,7 @@ export default function LoginPage() {
       toast.error(error, { id: 'syntax-stories-login-oauth-error' });
     }
     open('login');
-    router.replace('/');
+    router.replace('/', '');
   }, [isHydrated, token, open, router, searchParams]);
   return null;
 }

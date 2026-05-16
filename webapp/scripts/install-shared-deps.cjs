@@ -27,3 +27,6 @@ if (existsSync(lockfile)) {
   );
   execSync('npm install --omit=dev', { cwd: sharedRoot, stdio: 'inherit' });
 }
+
+console.log('[install-shared-deps] building @syntax-stories/shared…');
+execSync('npm run build', { cwd: sharedRoot, stdio: 'inherit' });

@@ -12,9 +12,9 @@ import {
   Archive,
   Hash
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { HoverCard } from '@/components/ui/HoverCard';
-import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
+import { cn } from '@/lib/core/utils';
+import { HoverCard } from '@/components/ui/popover';
+import { LinkPreviewCardContent } from '@/components/ui/popover';
 
 type MediaItem = { url: string; title?: string };
 
@@ -221,7 +221,7 @@ export function ProjectCard({
         {/* Footer Hardware Deco — reduced padding */}
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1.5 items-center">
-            <div className="h-2 w-8 bg-muted-foreground/10 rounded-full overflow-hidden">
+            <div className="h-2 w-8 bg-muted-foreground/10 overflow-hidden">
                <div className="h-full bg-primary/40 w-2/3" />
             </div>
             <span className="text-[8px] font-mono font-bold text-muted-foreground/40 tracking-widest uppercase">

@@ -11,9 +11,9 @@ import {
   Globe, ShieldCheck, Box
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
-import { BlogWriteEditor, Block, createBlockInSection, stripLegacyGifBlocks } from '@/components/ui/BlogWriteEditor';
+import { cn } from '@/lib/core/utils';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+import { BlogWriteEditor, Block, createBlockInSection, stripLegacyGifBlocks } from '@/components/ui/editor';
 
 const TITLE_MAX = 300;
 /** Single section for /write (no section UI); must match how editor filters blocks. */
@@ -75,7 +75,7 @@ export default function WriteBlogPage() {
       <div className={SHELL_CONTENT_RAIL_CLASS}>
       <div className="w-full">
       {/* 1. TOP SYSTEM NAV */}
-      <div className="border-b-2 border-border bg-card py-2 flex items-center justify-between shadow-[0_2px_0_0_rgba(0,0,0,1)] sticky top-0 z-50">
+      <div className="border-b-2 border-border bg-card py-2 flex items-center justify-between shadow sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-1 border-2 border-black">
             <TerminalIcon className="h-4 w-4 text-primary-foreground" />
@@ -164,7 +164,7 @@ export default function WriteBlogPage() {
               <button
                 onClick={() => handleSubmit('published')}
                 disabled={submitting}
-                className="group relative bg-primary text-primary-foreground border-2 border-black p-3 font-black uppercase text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                className="group relative bg-primary text-primary-foreground border-2 border-black p-3 font-black uppercase text-xs shadow active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
               >
                 <div className="flex items-center justify-center gap-2">
                   <Send className="h-4 w-4" /> {submitAction === 'published' ? 'Deploying...' : 'Deploy_Post'}
@@ -174,7 +174,7 @@ export default function WriteBlogPage() {
               <button
                 onClick={() => handleSubmit('draft')}
                 disabled={submitting}
-                className="bg-muted border-2 border-border p-3 font-black uppercase text-xs shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all hover:bg-card"
+                className="bg-muted border-2 border-border p-3 font-black uppercase text-xs shadow active:shadow-none active:translate-x-1 active:translate-y-1 transition-all hover:bg-card"
               >
                 <div className="flex items-center justify-center gap-2">
                   <Save className="h-4 w-4" /> {submitAction === 'draft' ? 'Saving...' : 'Save_Local'}
@@ -223,7 +223,7 @@ export default function WriteBlogPage() {
       <div className="fixed bottom-0 left-0 right-0 h-8 bg-black border-t-2 border-border flex items-center px-4 z-[60] lg:ml-0">
          <div className="flex gap-4 items-center w-full">
             <div className="text-[9px] text-green-500 font-bold flex items-center gap-2">
-               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+               <div className="w-2 h-2 bg-green-500 animate-pulse" />
                SYSTEM_STABLE
             </div>
             <div className="text-[9px] text-muted-foreground font-mono truncate">

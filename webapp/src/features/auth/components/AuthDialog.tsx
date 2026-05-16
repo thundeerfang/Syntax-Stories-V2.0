@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
 import { Button, Dialog, DIALOG_Z_INDEX_STACKED, useGlobalAltchaBusy } from '@/components/ui';
-import { clearLegalSignupAckCookie } from '@/lib/legalSignupAckCookie';
+import { clearLegalSignupAckCookie } from '@/lib/auth/legalSignupAckCookie';
 import { AltchaField } from './AltchaField';
 import { readAltchaPayload, useOtpFlow } from '../hooks/useOtpFlow';
 import type { AuthDialogView } from '@/store/authDialog';
@@ -89,7 +89,6 @@ export function AuthDialog() {
   const [legalTermsAccepted, setLegalTermsAccepted] = useState(false);
   const [legalPrivacyAccepted, setLegalPrivacyAccepted] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const signupPoliciesReady = legalTermsAccepted && legalPrivacyAccepted;
 
   const {
     altchaOn,
@@ -313,7 +312,7 @@ export function AuthDialog() {
         open={resendOtpOpen}
         onClose={() => setResendOtpOpen(false)}
         titleId="resend-otp-title"
-        panelClassName="max-w-sm border-2 border-border bg-card shadow-[6px_6px_0px_0px_var(--border)]"
+        panelClassName="max-w-sm border-2 border-border bg-card shadow"
         contentClassName="p-5 sm:p-6"
         closeOnBackdropClick={!blockResendDialogDismiss}
         closeOnEscape={!blockResendDialogDismiss}

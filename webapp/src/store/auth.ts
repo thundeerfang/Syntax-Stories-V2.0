@@ -4,8 +4,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authApi, AuthError, normalizeUser, type AuthUser, type ProfileUpdateSection, type UpdateProfilePayload } from '@/api/auth';
 import { runProfilePatch } from '@/lib/auth/runProfilePatch';
-import { setLastUserName } from '@/lib/lastUser';
-import { consumePostAuthRedirect } from '@/lib/postAuthRedirect';
+import { setLastUserName } from '@/lib/auth/lastUser';
+import { consumePostAuthRedirect } from '@/lib/auth/postAuthRedirect';
 
 const AUTH_KEY = 'syntax-stories-auth';
 

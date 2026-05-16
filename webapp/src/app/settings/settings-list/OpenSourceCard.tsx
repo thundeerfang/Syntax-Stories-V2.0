@@ -9,7 +9,7 @@ import {
   Terminal,
   Hash,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 const OPEN_SOURCE_FOOTER_MARKS = ['o0', 'o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9'] as const;
 
@@ -52,7 +52,7 @@ export function OpenSourceCard(props: OpenSourceCardProps) {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="size-1.5 bg-emerald-500 animate-pulse" />
             <span className="text-[9px] font-mono font-bold uppercase tracking-tighter text-emerald-500/80">
               GITHUB_STABLE
             </span>

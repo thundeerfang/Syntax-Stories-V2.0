@@ -3,7 +3,7 @@
 import type { ComponentType } from 'react';
 import { useToastStore } from '@/store/toast';
 import { Alert } from '@/components/retroui/Alert';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 import { CheckCircle, Info, X, AlertCircle } from 'lucide-react';
 
 const statusIcons = {
@@ -61,7 +61,7 @@ function ToastItem({
       <Alert
         status={status}
         className={cn(
-          'relative flex items-center gap-3 pr-10 rounded-none shadow-md bg-card',
+          'relative flex items-center gap-3 pr-10  shadow bg-card',
           retroStatusStyles[status]
         )}
       >

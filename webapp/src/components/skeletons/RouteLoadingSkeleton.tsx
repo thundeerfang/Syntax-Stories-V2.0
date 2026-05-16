@@ -8,6 +8,8 @@ import {
   ContactPageSkeletonInner,
   DocsPageSkeletonInner,
   FollowingPageContentSkeleton,
+  ExplorePageSkeletonInner,
+  TrendingPageSkeletonInner,
   HomePageSkeletonInner,
   ProfilePageSkeletonInner,
   SettingsPageSkeletonInner,
@@ -16,6 +18,12 @@ import {
 function pickInner(path: string) {
   if (path === '/following' || path === '/bookmarks' || path === '/reposts') {
     return <FollowingPageContentSkeleton showIntro />;
+  }
+  if (path === '/explore') {
+    return <ExplorePageSkeletonInner />;
+  }
+  if (path === '/trending') {
+    return <TrendingPageSkeletonInner />;
   }
   if (path === '/docs' || path.startsWith('/docs/')) {
     return <DocsPageSkeletonInner />;
@@ -47,7 +55,7 @@ function pickInner(path: string) {
   return <HomePageSkeletonInner />;
 }
 
-/** Next.js `loading.tsx` fallback: structural placeholder for the active route. */
+/** Route transition skeleton — used by `LayoutShell` Suspense fallback (and nested `loading.tsx` where kept). */
 export function RouteLoadingSkeleton() {
   const pathname = usePathname() ?? '';
   return <div className="relative min-h-[50vh] w-full">{pickInner(pathname)}</div>;

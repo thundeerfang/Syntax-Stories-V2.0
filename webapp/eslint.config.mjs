@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import { boundariesConfig } from './eslint.boundaries.mjs';
 
 const require = createRequire(import.meta.url);
 const nextCoreWebVitals = require('eslint-config-next/core-web-vitals');
@@ -7,6 +8,7 @@ const nextCoreWebVitals = require('eslint-config-next/core-web-vitals');
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   ...nextCoreWebVitals,
+  boundariesConfig,
   eslintConfigPrettier,
   {
     ignores: [

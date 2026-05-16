@@ -1,55 +1,15 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const getApiBase = () => resolvePublicApiBase();
 
-export interface FollowUser {
-  id: string;
-  username: string;
-  fullName: string;
-  profileImg?: string;
-  /** When present (following list), ISO time you followed this user */
-  followedAt?: string;
-}
-
-export interface FollowCounts {
-  followersCount: number;
-  followingCount: number;
-}
-
-export interface PublicProfileUser {
-  id: string;
-  username: string;
-  fullName: string;
-  profileImg?: string;
-  coverBanner?: string;
-  bio?: string;
-  portfolioUrl?: string;
-  linkedin?: string;
-  github?: string;
-  instagram?: string;
-  youtube?: string;
-  stackAndTools?: string[];
-  mySetup?: Array<{ label: string; imageUrl: string; productUrl?: string }>;
-  workExperiences?: unknown[];
-  education?: unknown[];
-  certifications?: unknown[];
-  projects?: unknown[];
-  openSourceContributions?: unknown[];
-  createdAt?: string;
-  /** Read-streak display preference (main stat on `/u/:username`). Stored as `blogStreakMode` in API/DB. */
-  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
-}
-
-export type ReadStreakCounts = { current: number; longest: number };
-
-export type ReadStreakPayload = {
-  displayMode: 'daily' | 'weekly' | 'monthly';
-  current: number;
-  longest: number;
-  /** Distinct UTC days with at least one recorded read of another user’s published post. */
-  totalDistinctReadDays?: number;
-  byMode: Record<'daily' | 'weekly' | 'monthly', ReadStreakCounts>;
-};
+export type {
+  FollowUser,
+  FollowCounts,
+  PublicProfileUser,
+  ReadStreakCounts,
+  ReadStreakPayload,
+} from '@contracts/followApi';
+import type { FollowUser, PublicProfileUser, ReadStreakPayload } from '@contracts/followApi';
 
 export const followApi = {
   searchUsers: (q: string) => {

@@ -5,15 +5,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Compass, Users } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { followApi, type FollowUser } from '@/api/follow';
-import { BlogCard } from '@/components/blog/BlogCard';
-import { RailFeedEmptyState } from '@/components/layout/RailFeedEmptyState';
-import { RailSectionSubheader } from '@/components/layout/RailSectionSubheader';
-import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
+import { BlogCard } from '@/features/blog';
+import {
+  RailFeedEmptyState,
+  RailFeedErrorState,
+  RailSectionSubheader,
+  ShellPageIntroHeader,
+} from '@/components/layout';
 import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
 import { useAuthStore } from '@/store/auth';
-import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
-import { cn } from '@/lib/utils';
+import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 import type { PublicFeedPost } from '@/types/blog';
 
@@ -133,14 +136,16 @@ export default function FollowingPage() {
     setPostsError(null);
     try {
       if (selectedUsername) {
-        const res = await blogApi.getUserPublishedPosts(selectedUsername, 36);
+        const res = await blogApi.getUserPublishedPosts(selectedUsername, 36, token);
         if (!res.success) throw new Error('Could not load posts');
         setPosts(res.posts.map(mapPublicFeedPostToPost));
         return;
       }
       const perAuthor = 10;
       const batches = await Promise.all(
-        following.map((u) => blogApi.getUserPublishedPosts(u.username, perAuthor).then((r) => r.posts ?? [])),
+        following.map((u) =>
+          blogApi.getUserPublishedPosts(u.username, perAuthor, token).then((r) => r.posts ?? []),
+        ),
       );
       const merged = mergeFollowingPosts(batches, 48);
       setPosts(merged.map(mapPublicFeedPostToPost));
@@ -150,7 +155,7 @@ export default function FollowingPage() {
     } finally {
       setPostsLoading(false);
     }
-  }, [me, following, selectedUsername]);
+  }, [me, following, selectedUsername, token]);
 
   useEffect(() => {
     if (!isHydrated || !me || !token) return;
@@ -186,7 +191,16 @@ export default function FollowingPage() {
         ariaLabel: 'Everyone you follow',
       },
       ...followingChipUsers.map((u) => ({
-        label: chipHandleLabel(u.username),
+        label: (
+          <span className="inline-flex max-w-[8.5rem] items-center gap-1.5 normal-case tracking-normal">
+            <img
+              src={chipAvatarSrc(u.profileImg, u.username)}
+              alt=""
+              className="size-5 shrink-0 border border-border object-cover"
+            />
+            <span className="truncate">{searchPrimaryLabel(u)}</span>
+          </span>
+        ),
         onClick: () => setSelectedUsername(u.username),
         variant: selectedUsername === u.username ? ('primary' as const) : ('default' as const),
         ariaLabel: `Posts from @${u.username}`,
@@ -227,7 +241,7 @@ export default function FollowingPage() {
             </p>
             <Link
               href={`/login?next=${encodeURIComponent(LOGIN_NEXT)}`}
-              className="inline-block border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-primary-foreground shadow-[4px_4px_0_0_var(--border)] transition-transform hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              className="inline-block border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
             >
               Sign in
             </Link>
@@ -275,7 +289,7 @@ export default function FollowingPage() {
                 <div
                   id="following-search-results"
                   role="listbox"
-                  className="absolute right-3 top-[calc(100%+4px)] z-50 max-h-60 w-[min(100%,18rem)] overflow-y-auto overscroll-contain border-2 border-border bg-card py-1 shadow-[4px_4px_0_0_var(--border)] sm:right-4 sm:w-72"
+                  className="absolute right-3 top-[calc(100%+4px)] z-50 max-h-60 w-[min(100%,18rem)] overflow-y-auto overscroll-contain border-2 border-border bg-card py-1 shadow sm:right-4 sm:w-72"
                 >
                   {filteredSidebar.length === 0 ? (
                     <p className="px-3 py-3 font-mono text-[11px] text-muted-foreground">No matches.</p>
@@ -296,7 +310,7 @@ export default function FollowingPage() {
                         <img
                           src={chipAvatarSrc(u.profileImg, u.username)}
                           alt=""
-                          className="size-9 shrink-0 rounded-none border border-border object-cover"
+                          className="size-9 shrink-0 border border-border object-cover"
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-black uppercase tracking-tight text-foreground">
@@ -332,7 +346,11 @@ export default function FollowingPage() {
               {postsLoading ? (
                 <FollowingPostsGridSkeleton />
               ) : postsError ? (
-                <p className="text-sm text-destructive">{postsError}</p>
+                <RailFeedErrorState
+                  title="Could not load posts"
+                  description={postsError}
+                  onRetry={() => void loadPosts()}
+                />
               ) : posts.length === 0 ? (
                 <RailFeedEmptyState
                   icon={Users}

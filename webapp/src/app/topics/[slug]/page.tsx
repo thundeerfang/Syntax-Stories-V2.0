@@ -5,16 +5,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Hash } from 'lucide-react';
 import { blogApi } from '@/api/blog';
-import { BlogCard } from '@/components/blog/BlogCard';
-import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
+import { BlogCard } from '@/features/blog';
+import { RailFeedErrorState, ShellPageIntroHeader } from '@/components/layout';
 import { FollowingPostsGridSkeleton } from '@/components/skeletons';
-import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
-import { cn } from '@/lib/utils';
+import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
+import { useAuthStore } from '@/store/auth';
 
 /** Tag stream under Topics: `/topics/{slug}` (e.g. `/topics/javascript`). */
 export default function TopicsTagFeedPage() {
+  const token = useAuthStore((s) => s.token);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const params = useParams();
   const raw = params?.slug;
   const tagSlug = typeof raw === 'string' ? decodeURIComponent(raw) : '';
@@ -31,7 +34,7 @@ export default function TopicsTagFeedPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const { posts: rawPosts } = await blogApi.getPublishedFeed(48, { tag: tagSlug });
+      const { posts: rawPosts } = await blogApi.getPublishedFeed(48, { tag: tagSlug }, token);
       setPosts(rawPosts.map(mapPublicFeedPostToPost));
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Could not load posts');
@@ -39,11 +42,12 @@ export default function TopicsTagFeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [tagSlug]);
+  }, [tagSlug, token]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     void load();
-  }, [load]);
+  }, [load, isHydrated]);
 
   return (
     <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
@@ -66,9 +70,11 @@ export default function TopicsTagFeedPage() {
         />
 
         {errorMsg ? (
-          <p className="text-sm text-destructive" role="alert">
-            {errorMsg}
-          </p>
+          <RailFeedErrorState
+            title="Could not load posts"
+            description={errorMsg}
+            onRetry={() => void load()}
+          />
         ) : null}
 
         <section aria-label="Posts with this tag" className="min-w-0">

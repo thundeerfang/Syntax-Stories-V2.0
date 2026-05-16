@@ -1,15 +1,16 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { LayoutShell } from '@/components/layout/LayoutShell';
+import { LayoutShell } from '@/components/layout';
 import { StoreHydration } from '@/components/StoreHydration';
 import { AuthDialogWrapper } from '@/features/auth';
 import { SearchDialogWrapper } from '@/components/search';
 import { SonnerToaster } from '@/components/retroui';
-import { UiProcessingShield } from '@/components/ui';
+import { UiProcessingShield } from '@/components/ui/feedback';
 import { Providers } from './providers';
 import { AppwritePing } from '@/components/appwrite/AppwritePing';
-import { ConnectivityGate } from '@/components/connectivity/ConnectivityGate';
+import { ConnectivityGate } from '@/features/connectivity';
+import { GlobalEngagementEffects } from '@/components/effects/GlobalEngagementEffects';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -50,6 +51,7 @@ export default function RootLayout({
           <SearchDialogWrapper />
           <SonnerToaster />
           <LayoutShell>{children}</LayoutShell>
+          <GlobalEngagementEffects />
           <ConnectivityGate />
         </Providers>
       </body>

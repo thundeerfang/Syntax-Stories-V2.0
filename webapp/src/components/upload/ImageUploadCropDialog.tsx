@@ -3,21 +3,21 @@
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import type { Accept } from 'react-dropzone';
 import Cropper, { type Area } from 'react-easy-crop';
-import { CropperKeyboardWrapper } from '@/components/ui/CropperKeyboardWrapper';
-import { FormDialog } from '@/components/ui/FormDialog';
-import { ImageDropzone, IMAGE_ACCEPT_RASTER } from '@/components/ui/ImageDropzone';
+import { CropperKeyboardWrapper } from '@/components/ui/media';
+import { FormDialog } from '@/components/ui/dialog';
+import { ImageDropzone, IMAGE_ACCEPT_RASTER } from '@/components/ui/form';
 import { Button } from '@/components/ui';
 import { Input, Label } from '@/components/retroui';
 import { RotateCcw, RotateCw, Undo2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { SettingsFullWidthSegmentedControl } from '@/app/settings/settings-list/SettingsFullWidthSegmentedControl';
+import { cn } from '@/lib/core/utils';
+import { FullWidthSegmentedControl } from '@/components/ui/layout';
 import {
   exportCroppedImageFile,
   imageAdjustmentsPreviewFilter,
   NEUTRAL_IMAGE_ADJUSTMENTS,
   type ImageEditAdjustments,
-} from '@/lib/exportCroppedImageFile';
+} from '@/lib/media/exportCroppedImageFile';
 
 type EditorTab = 'crop' | 'rotate' | 'adjust';
 
@@ -105,8 +105,7 @@ function AdjSlider({
 }
 
 /**
- * Shared image pick → crop (react-easy-crop) → export flow using `FormDialog` (no footer strip;
- * actions live in the body like profile photo upload).
+ * Shared image pick → crop (react-easy-crop) → export flow using `FormDialog` with footer actions.
  */
 export function ImageUploadCropDialog({
   open,
@@ -261,16 +260,40 @@ export function ImageUploadCropDialog({
 
   const maxMb = Math.max(1, Math.round(maxSizeBytes / (1024 * 1024)));
 
-  const titleFields =
-    imageTitleField &&
-    (
-      <div className="grid gap-1.5">
+  const actionFooter =
+    selectedFile != null ? (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
+          disabled={busy}
+          onClick={chooseAnother}
+        >
+          {chooseAnotherLabel}
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
+          disabled={busy}
+          onClick={() => void handleConfirm()}
+        >
+          {busy ? 'Working…' : confirmLabel}
+        </Button>
+      </div>
+    ) : null;
+
+  const renderTitleFields = (className?: string) =>
+    imageTitleField ? (
+      <div className={cn('grid gap-1.5', className)}>
         <Label htmlFor={imageTitleInputId} className="text-[10px] font-bold uppercase text-muted-foreground">
           {imageTitleLabel}
         </Label>
         <div className="relative">
           <span
-            className="pointer-events-none absolute left-2.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center text-primary"
+            className="pointer-events-none absolute left-2.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center text-primary"
             aria-hidden
           >
             <UploadCloud className="size-4 shrink-0" strokeWidth={2.25} />
@@ -282,11 +305,11 @@ export function ImageUploadCropDialog({
             onChange={(e) => setImageTitleInput(e.target.value.slice(0, imageTitleMaxLength))}
             maxLength={imageTitleMaxLength}
             disabled={busy}
-            className="pl-11"
+            className="h-9 py-1.5 pl-10 text-sm leading-tight"
           />
         </div>
       </div>
-    );
+    ) : null;
 
   return (
     <FormDialog
@@ -300,19 +323,21 @@ export function ImageUploadCropDialog({
       subtitle={subtitle ?? `JPEG, PNG, GIF or WebP · max ${maxMb} MB`}
       subtitleClassName={subtitleClassName}
       panelClassName={cn('max-w-md sm:max-w-xl', panelClassName)}
+      footer={actionFooter}
+      footerClassName="justify-end"
       interactionLock={busy}
     >
       <div className="flex flex-col gap-4">
         {!selectedFile && (
           <>
-            {titleFields}
+            {renderTitleFields()}
             <ImageDropzone
               disabled={busy}
               maxSizeBytes={maxSizeBytes}
               accept={dropAccept}
               className={cn(
                 'flex min-h-[152px] w-full flex-col items-center justify-center border-2 border-dashed px-6 py-8 text-center transition-colors',
-                'rounded-none border-border bg-muted/20 outline-none hover:bg-muted/30',
+                ' border-border bg-muted/20 outline-none hover:bg-muted/30',
                 'cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/40',
                 busy && 'pointer-events-none opacity-70'
               )}
@@ -336,44 +361,23 @@ export function ImageUploadCropDialog({
 
         {selectedFile && passthrough && imageUrl && (
           <div className="flex flex-col gap-4">
-            <div className="flex max-h-48 items-center justify-center rounded-none border-2 border-border bg-muted/30 p-4">
+            <div className="flex max-h-48 items-center justify-center border-2 border-border bg-muted/30 p-4">
               <img src={imageUrl} alt="" className="max-h-40 max-w-full object-contain" />
             </div>
             <p className="text-center text-xs font-bold text-foreground break-all">{selectedFile.name}</p>
             <p className="text-center text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               Vector — no cropping
             </p>
-            {titleFields}
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t-2 border-border pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
-                disabled={busy}
-                onClick={chooseAnother}
-              >
-                {chooseAnotherLabel}
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
-                disabled={busy}
-                onClick={() => void handleConfirm()}
-              >
-                {busy ? 'Working…' : confirmLabel}
-              </Button>
-            </div>
+            {renderTitleFields('pt-4')}
           </div>
         )}
 
         {selectedFile && !passthrough && imageUrl && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <CropperKeyboardWrapper
               imageReady={!!imageUrl}
               className={cn(
-                'w-full overflow-hidden rounded-none border-2 border-border bg-muted',
+                'w-full overflow-hidden  border-2 border-border bg-muted',
                 cropMinHeightClass
               )}
             >
@@ -398,7 +402,7 @@ export function ImageUploadCropDialog({
               />
             </CropperKeyboardWrapper>
 
-            <SettingsFullWidthSegmentedControl
+            <FullWidthSegmentedControl
               label="Editor"
               value={editorTab}
               disabled={busy}
@@ -412,31 +416,26 @@ export function ImageUploadCropDialog({
               }}
             />
 
-            <div role="tabpanel" className="min-h-[7rem]">
+            <div role="tabpanel">
               {editorTab === 'crop' && (
-                <div className="flex flex-col gap-3">
-                  <div className="flex w-full items-center gap-3 border-2 border-border bg-muted/20 p-3 shadow-[3px_3px_0_0_var(--border)]">
-                    <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-primary">
-                      Zoom
-                    </span>
-                    <input
-                      type="range"
-                      min={1}
-                      max={3}
-                      step={0.05}
-                      value={zoom}
-                      onChange={(e) => setZoom(Number(e.target.value))}
-                      className={cn(ADJ_RANGE_INPUT_CLASS, 'min-w-0 flex-1')}
-                      disabled={busy}
-                      aria-label="Zoom"
-                    />
-                    <span className="w-14 shrink-0 text-right font-mono text-xs font-black text-foreground">
-                      {zoom.toFixed(1)}×
-                    </span>
-                  </div>
-                  <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-                    Click the crop frame, then arrow keys to pan. Hold Shift for smaller steps.
-                  </p>
+                <div className="flex w-full items-center gap-3 border-2 border-border bg-muted/20 p-3 shadow">
+                  <span className="shrink-0 text-[10px] font-black uppercase tracking-widest text-primary">
+                    Zoom
+                  </span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={3}
+                    step={0.05}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className={cn(ADJ_RANGE_INPUT_CLASS, 'min-w-0 flex-1')}
+                    disabled={busy}
+                    aria-label="Zoom"
+                  />
+                  <span className="w-14 shrink-0 text-right font-mono text-xs font-black text-foreground">
+                    {zoom.toFixed(1)}×
+                  </span>
                 </div>
               )}
 
@@ -462,7 +461,7 @@ export function ImageUploadCropDialog({
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 min-w-[4.5rem] shrink-0 border-2 px-3 text-[10px] font-black uppercase shadow-[2px_2px_0_0_var(--border)]"
+                      className="h-11 min-w-[4.5rem] shrink-0 border-2 px-3 text-[10px] font-black uppercase shadow"
                       disabled={busy}
                       onClick={() => setRotation((r) => r - 90)}
                       aria-label="Rotate 90 degrees counter-clockwise"
@@ -473,7 +472,7 @@ export function ImageUploadCropDialog({
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 min-w-[4.5rem] shrink-0 border-2 px-3 text-[10px] font-black uppercase shadow-[2px_2px_0_0_var(--border)]"
+                      className="h-11 min-w-[4.5rem] shrink-0 border-2 px-3 text-[10px] font-black uppercase shadow"
                       disabled={busy}
                       onClick={() => setRotation((r) => r + 90)}
                       aria-label="Rotate 90 degrees clockwise"
@@ -484,7 +483,7 @@ export function ImageUploadCropDialog({
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 min-w-[8.5rem] shrink-0 border-2 px-4 text-[10px] font-black uppercase shadow-[2px_2px_0_0_var(--border)]"
+                      className="h-11 min-w-[8.5rem] shrink-0 border-2 px-4 text-[10px] font-black uppercase shadow"
                       disabled={busy}
                       onClick={() => setRotation(0)}
                     >
@@ -540,7 +539,7 @@ export function ImageUploadCropDialog({
                   <Button
                     type="button"
                     variant="outline"
-                    className="flex h-12 w-full items-center justify-center gap-2 border-2 px-4 text-[10px] font-black uppercase tracking-widest shadow-[3px_3px_0_0_var(--border)]"
+                    className="flex h-12 w-full items-center justify-center gap-2 border-2 px-4 text-[10px] font-black uppercase tracking-widest shadow"
                     disabled={busy}
                     onClick={() => setAdjustments({ ...NEUTRAL_IMAGE_ADJUSTMENTS })}
                   >
@@ -551,28 +550,7 @@ export function ImageUploadCropDialog({
               )}
             </div>
 
-            {titleFields}
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t-2 border-border pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
-                disabled={busy}
-                onClick={chooseAnother}
-              >
-                {chooseAnotherLabel}
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                className="h-12 min-h-12 border-2 px-4 text-[10px] font-black uppercase tracking-widest"
-                disabled={busy}
-                onClick={() => void handleConfirm()}
-              >
-                {busy ? 'Working…' : confirmLabel}
-              </Button>
-            </div>
+            {renderTitleFields('pt-4')}
           </div>
         )}
       </div>

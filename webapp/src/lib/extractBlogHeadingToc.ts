@@ -1,4 +1,4 @@
-import type { Block } from '@/types/blog';
+import type { Block } from '@/types';
 
 export interface BlogHeadingTocItem {
   anchorId: string;

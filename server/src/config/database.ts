@@ -7,6 +7,8 @@ import {
   ensureLegalPoliciesSeed,
   ensureSeedAdminLegalAcceptance,
 } from '../modules/legal/ensureLegalPoliciesSeed.js';
+import { ensureCmsReferenceSeeds } from '../modules/cms/ensureCmsReferenceSeeds.js';
+import { ensureMarketingContentSeeds } from '../modules/cms/ensureMarketingContentSeeds.js';
 
 export async function connectDatabase(): Promise<void> {
   const uri = env.MONGODB_URI;
@@ -19,6 +21,8 @@ export async function connectDatabase(): Promise<void> {
     await ensureAdminAccessCatalogSeed();
     await ensureLegalPoliciesSeed();
     await ensureSeedAdminLegalAcceptance();
+    await ensureCmsReferenceSeeds();
+    await ensureMarketingContentSeeds();
   } catch (err) {
     console.error('[MongoDB] Connection error:', err);
     throw err;

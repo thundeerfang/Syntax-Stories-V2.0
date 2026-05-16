@@ -22,7 +22,7 @@ export function AuthHome() {
         </Link>
       </RetroPanel>
       <p className="retro-hint">
-        // API: /auth/send-otp · /auth/signup-email · /auth/verify-otp (same as webapp)
+        {'// API: /auth/send-otp · /auth/signup-email · /auth/verify-otp (same as webapp)'}
       </p>
     </div>
   );

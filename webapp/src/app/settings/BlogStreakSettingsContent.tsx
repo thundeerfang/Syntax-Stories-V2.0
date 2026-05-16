@@ -6,13 +6,17 @@ import { Flame, Loader2 } from 'lucide-react';
 import { followApi, type ReadStreakPayload } from '@/api/follow';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
-import { SettingsSectionHeading } from './settings-list/SettingsSectionHeading';
+import {
+  SettingsSectionHeading,
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from './settings-list/SettingsSectionHeading';
 import {
   SettingsFullWidthSegmentedControl,
   SettingsMetricCard,
 } from './settings-list/SettingsFullWidthSegmentedControl';
 import { settingsBtnBlockPrimaryMd } from './buttonStyles';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 type Mode = 'daily' | 'weekly' | 'monthly';
 
@@ -99,13 +103,14 @@ export function BlogStreakSettingsContent() {
   const modes: Mode[] = ['daily', 'weekly', 'monthly'];
 
   return (
-    <div className="w-full min-w-0 space-y-8">
+    <SettingsTabRoot className="w-full min-w-0">
       <SettingsSectionHeading
         icon={<Flame className="size-5" />}
         title="Blog read streak"
         description="One UTC day = you view one published post. Your profile shows your streak (daily/weekly/monthly) from the same history."
       />
 
+      <SettingsTabPanel className="w-full min-w-0">
       <div className="w-full min-w-0 space-y-2">
         <SettingsFullWidthSegmentedControl
           label="Profile display"
@@ -152,6 +157,7 @@ export function BlogStreakSettingsContent() {
           Refresh numbers
         </button>
       </div>
-    </div>
+      </SettingsTabPanel>
+    </SettingsTabRoot>
   );
 }

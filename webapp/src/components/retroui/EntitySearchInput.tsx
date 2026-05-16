@@ -3,14 +3,14 @@
 import * as React from 'react';
 import { Building2, Loader2 } from 'lucide-react';
 import { Label } from './Label';
-import { cn } from '@/lib/utils';
-import type { EntityOption } from '@/data/entities';
-import { getLogoUrl } from '@/data/entities';
+import { cn } from '@/lib/core/utils';
+import type { EntityOption } from '@/lib/core/entityOption';
+import { getLogoUrl } from '@/lib/core/entityOption';
 
 const DEBOUNCE_MS = 300;
 
 const ENTITY_SEARCH_LISTBOX_CLASS =
-  'absolute z-50 mt-1 w-full rounded-md border-2 border-border bg-card shadow-lg overflow-hidden max-h-60 overflow-y-auto';
+  'absolute z-50 mt-1 w-full  border-2 border-border bg-card shadow overflow-hidden max-h-60 overflow-y-auto';
 
 const ENTITY_OPTION_BTN_CLASS =
   'w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm font-medium hover:bg-muted/50 transition-colors border-b border-border last:border-b-0';
@@ -151,7 +151,7 @@ export function EntitySearchInput({
           placeholder={placeholder}
           autoComplete="off"
           className={cn(
-            'w-full rounded-md border-2 border-border bg-background px-3 py-2.5 text-sm font-medium',
+            'w-full  border-2 border-border bg-background px-3 py-2.5 text-sm font-medium',
             'placeholder:text-muted-foreground/70',
             'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors',
             'disabled:cursor-not-allowed disabled:opacity-50',
@@ -197,7 +197,7 @@ function EntityOptionRow({
   return (
     <li>
       <EntityComboboxOptionButton onSelect={onSelect}>
-        <span className="size-8 rounded border border-border bg-muted shrink-0 overflow-hidden flex items-center justify-center">
+        <span className="size-8 border border-border bg-muted shrink-0 overflow-hidden flex items-center justify-center">
           {showDefault ? (
             <Building2 className="size-4 text-muted-foreground" />
           ) : (

@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Award, Calendar, Code2, ExternalLink, Pencil, Trash2, ShieldCheck, Fingerprint } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { HoverCard } from '@/components/ui/HoverCard';
-import { LinkPreviewCardContent } from '@/components/ui/LinkPreviewCardContent';
+import { cn } from '@/lib/core/utils';
+import { HoverCard } from '@/components/ui/popover';
+import { LinkPreviewCardContent } from '@/components/ui/popover';
 
 type MediaItem = { url: string; title?: string };
 
@@ -122,7 +122,7 @@ export function CertificationCard({
                   {e.name || 'UNNAMED_CERTIFICATION'}
                 </h4>
                 <div className="mt-1 flex items-center gap-2 min-w-0">
-                  <div className="size-1.5 shrink-0 rounded-full bg-primary" />
+                  <div className="size-1.5 shrink-0 bg-primary" />
                   <p className="text-[10px] font-mono font-bold text-foreground tracking-tight uppercase truncate">
                     {e.issuingOrganization || 'UNKNOWN_ISSUER'}
                   </p>

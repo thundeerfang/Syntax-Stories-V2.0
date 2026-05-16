@@ -25,11 +25,11 @@ export default function SignupPage() {
   useEffect(() => {
     if (!isHydrated) return;
     if (token) {
-      router.replace('/');
+      router.replace('/', '');
       return;
     }
     open('signup');
-    router.replace('/');
+    router.replace('/', '');
   }, [isHydrated, token, open, router]);
   return null;
 }

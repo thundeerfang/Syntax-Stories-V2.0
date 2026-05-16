@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 /**
  * Sets `pendingReferralCode` in sessionStorage (backup for verify body) and redirects to the API
@@ -15,7 +15,7 @@ export default function InviteLandingPage() {
   useEffect(() => {
     const trimmed = code.trim();
     if (!trimmed) {
-      globalThis.location?.replace('/');
+      globalThis.location?.replace('/', '');
       return;
     }
     const normalized = trimmed.toUpperCase();
@@ -26,7 +26,7 @@ export default function InviteLandingPage() {
     }
     const api = resolvePublicApiBase();
     if (!api) {
-      globalThis.location?.replace('/');
+      globalThis.location?.replace('/', '');
       return;
     }
     const next = encodeURIComponent('/');

@@ -40,7 +40,7 @@ function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }
   const name = String(payload[0]?.dataKey ?? categoryLabel);
   return (
     <div
-      className="px-3 py-2 border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] font-sans"
+      className="px-3 py-2 border-2 border-border shadow font-sans"
       style={{
         backgroundColor: 'var(--card)',
         color: 'var(--foreground)',

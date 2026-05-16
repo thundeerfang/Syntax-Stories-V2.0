@@ -1,6 +1,14 @@
-import { blogAuthFetch, blogPublicFetch } from '@/lib/blogAuthFetch';
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
-import type { PublicFeedPost } from '@/types/blog';
+import { blogAuthFetch, blogPublicFetch } from '@/lib/api/blogAuthFetch';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
+import type {
+  SquadCategory,
+  SquadFeedRow,
+  SquadInvitePermission,
+  SquadMemberRole,
+  SquadPostPolicy,
+  SquadSummary,
+  SquadVisibility,
+} from '@contracts/squadsApi';
 
 const getApiBase = () => resolvePublicApiBase();
 
@@ -10,64 +18,16 @@ async function readJson<T>(r: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-export type SquadVisibility = 'public' | 'private';
-export type SquadPostPolicy = 'all_members' | 'staff_only';
-export type SquadInvitePermission = 'all_members' | 'staff_only';
-export type SquadMemberRole = 'admin' | 'moderator' | 'member';
-
-/** Public squads only (API). */
-export type SquadCategory =
-  | 'languages'
-  | 'web'
-  | 'ai'
-  | 'devops'
-  | 'mobile'
-  | 'game'
-  | 'career'
-  | 'open_source'
-  | 'devrel'
-  | 'devtools';
-
-export type SquadMemberPreview = { username: string; profileImg: string };
-
-export type SquadSummary = {
-  _id: string;
-  slug: string;
-  /** Display handle (`@{handle}`); same as slug from API. */
-  handle?: string;
-  name: string;
-  description: string;
-  iconUrl?: string;
-  /** Optional header banner (URL or API-relative path). */
-  coverBannerUrl?: string;
-  visibility: SquadVisibility;
-  /** Present for public squads. */
-  category?: SquadCategory;
-  postPolicy: SquadPostPolicy;
-  /** Stored for a future moderation queue; not enforced on publish yet. */
-  requirePostApproval?: boolean;
-  invitePermission?: SquadInvitePermission;
-  memberCount: number;
-  createdAt?: string;
-  /** Up to four members for directory cards. */
-  memberPreview?: SquadMemberPreview[];
-  viewerRole?: SquadMemberRole;
-  viewerIsStaff?: boolean;
-  /** Private squad: signed-out or non-member — show join UI only. */
-  viewerNeedsInvite?: boolean;
-  /** Squad creator (Mongo user id). */
-  creatorUserId?: string;
-  /** Private squad: invite token (only returned to admins). */
-  inviteToken?: string;
-};
-
-export type SquadFeedRow = {
-  kind: 'authored' | 'shared';
-  item: PublicFeedPost;
-  sharedAt?: string;
-  sharedById?: string;
-  pinned?: boolean;
-};
+export type {
+  SquadVisibility,
+  SquadPostPolicy,
+  SquadInvitePermission,
+  SquadMemberRole,
+  SquadCategory,
+  SquadMemberPreview,
+  SquadSummary,
+  SquadFeedRow,
+} from '@contracts/squadsApi';
 
 async function optionalAuthFetch(url: string, init: RequestInit | undefined, accessToken: string | null) {
   if (accessToken) {
@@ -97,6 +57,18 @@ export const squadsApi = {
 
   listMine: async (accessToken: string): Promise<{ success: boolean; squads: SquadSummary[] }> => {
     const r = await blogAuthFetch(`${getApiBase()}/api/squads/mine`, { method: 'GET' }, accessToken);
+    const data = (await readJson(r)) as { success?: boolean; squads?: SquadSummary[]; message?: string };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return { success: true, squads: data.squads ?? [] };
+  },
+
+  /** Squads a profile user belongs to (`GET /api/squads/u/:username`). */
+  listForUser: async (
+    username: string,
+    accessToken: string | null,
+  ): Promise<{ success: boolean; squads: SquadSummary[] }> => {
+    const slug = encodeURIComponent(username.trim().toLowerCase());
+    const r = await optionalAuthFetch(`${getApiBase()}/api/squads/u/${slug}`, { method: 'GET' }, accessToken);
     const data = (await readJson(r)) as { success?: boolean; squads?: SquadSummary[]; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, squads: data.squads ?? [] };

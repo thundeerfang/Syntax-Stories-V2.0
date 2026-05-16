@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import { OAuthBrowserCallback } from '@/components/auth/OAuthBrowserCallback';
-import { getOAuthCallbackProviderLabel } from '@/lib/oauthCallbackProviders';
+import { OAuthBrowserCallback } from '@/features/auth';
+import { getOAuthCallbackProviderLabel } from '@/lib/auth/oauthCallbackProviders';
 
 export default async function OAuthCallbackPage({
   params,

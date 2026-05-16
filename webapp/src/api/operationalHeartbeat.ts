@@ -1,4 +1,4 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const OPERATIONAL_PING_PATH = '/api/webhooks/operational/ping';
 
@@ -12,9 +12,8 @@ function operationalPingUrl(): string {
   return `${origin}${OPERATIONAL_PING_PATH}`;
 }
 
-export type OperationalPingResult =
-  | { ok: true; latencyMs: number; service: string; t: string }
-  | { ok: false; latencyMs?: number; error: string };
+export type { OperationalPingResult } from '@contracts/webhooksApi';
+import type { OperationalPingResult } from '@contracts/webhooksApi';
 
 /**
  * Public operational heartbeat — GET /api/webhooks/operational/ping (no auth).

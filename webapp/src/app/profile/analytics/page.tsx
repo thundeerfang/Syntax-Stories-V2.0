@@ -24,7 +24,7 @@ import {
 } from 'recharts';
 import { analyticsApi, type ProfileOverviewMetrics, type ProfileTimePoint } from '@/api/analytics';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 import { AnalyticsPageSkeletonInner } from '@/components/skeletons';
 
 type TabId = 'overview' | 'content' | 'audience';
@@ -68,13 +68,13 @@ export default function ProfileAnalyticsPage() {
         {/* TOP STATUS BAR */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-4 border-border pb-6">
           <div className="flex items-center gap-4">
-            <div className="size-12 bg-primary flex items-center justify-center border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] shrink-0">
+            <div className="size-12 bg-primary flex items-center justify-center border-4 border-black shadow shrink-0">
               <Zap className="size-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">Analytics</h1>
               <div className="flex items-center gap-2 mt-1">
-                <div className="size-2 bg-green-500 rounded-full animate-pulse" />
+                <div className="size-2 bg-green-500 animate-pulse" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">System_Active: {user?.username}</span>
               </div>
             </div>
@@ -161,7 +161,7 @@ export default function ProfileAnalyticsPage() {
               {activeTab === 'overview' ? (
                 <>
                   {/* Performance Chart Card */}
-                  <div className="border-4 border-border bg-card p-6 shadow-[6px_6px_0px_0px_var(--border)] relative">
+                  <div className="border-4 border-border bg-card p-6 shadow relative">
                     <div className="absolute top-0 left-0 bg-primary px-3 py-1 text-[9px] font-black text-white uppercase tracking-widest">
                       Growth_Engine_v1
                     </div>
@@ -287,7 +287,7 @@ function CustomTooltip({
   const row = payload?.[0];
   if (active && row) {
     return (
-      <div className="border-2 border-black bg-card p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+      <div className="border-2 border-black bg-card p-3 shadow">
         <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-1">
           {row.payload?.rawDate}
         </p>

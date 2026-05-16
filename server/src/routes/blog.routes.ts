@@ -36,10 +36,22 @@ import {
 } from '../controllers/blogEngagement.controller.js';
 import { postBlogRespectViewerState, setBlogRespect } from '../controllers/blogRespect.controller.js';
 import { streamBlogPostStats } from '../controllers/blogStatsStream.controller.js';
+import {
+  followCategory,
+  getCategoryMembersPreview,
+  listMyFollowedCategories,
+  syncMyFollowedCategories,
+  unfollowCategory,
+} from '../controllers/blogCategoryFollow.controller.js';
 
 const router = Router();
 
 router.get('/taxonomy', getBlogTaxonomy);
+router.get('/categories/members-preview', getCategoryMembersPreview);
+router.get('/categories/following', verifyToken, listMyFollowedCategories);
+router.post('/categories/following/sync', verifyToken, syncMyFollowedCategories);
+router.post('/categories/:slug/follow', verifyToken, followCategory);
+router.delete('/categories/:slug/follow', verifyToken, unfollowCategory);
 router.get('/tags/explore', getBlogTagsExplore);
 router.get('/feed', optionalVerifyToken, listPublishedFeed);
 router.get('/u/:username/posts', optionalVerifyToken, listUserPublishedPosts);

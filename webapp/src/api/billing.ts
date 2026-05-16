@@ -1,33 +1,9 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const base = () => resolvePublicApiBase();
 
-export type BillingPlanKey = 'free' | 'pro' | 'proplus' | 'ultra' | 'premium';
-
-export type BillingSubscriptionDto = {
-  planKey: BillingPlanKey;
-  planDisplayName: string;
-  status: string;
-  stripeSubscriptionId: string | null;
-  currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  isGraceActive: boolean;
-  graceUntil: string | null;
-  lastSyncedAt: string | null;
-  stale: boolean;
-};
-
-export type BillingTransactionRow = {
-  id: string;
-  stripeInvoiceId: string;
-  amountPaid: number;
-  currency: string;
-  status: string;
-  paidAt: string | null;
-  description: string;
-  hostedInvoiceUrl: string | null;
-  invoicePdfUrl: string | null;
-};
+export type { BillingPlanKey, BillingSubscriptionDto, BillingTransactionRow } from '@contracts/billingApi';
+import type { BillingSubscriptionDto, BillingTransactionRow } from '@contracts/billingApi';
 
 function authHeaders(token: string): HeadersInit {
   return {

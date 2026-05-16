@@ -1,5 +1,5 @@
-import { TrendingPageContent } from '@/components/trending/TrendingPageContent';
+import { TrendingPage } from '@/features/trending';
 
-export default function TrendingPage() {
-  return <TrendingPageContent />;
+export default function Page() {
+  return <TrendingPage />;
 }

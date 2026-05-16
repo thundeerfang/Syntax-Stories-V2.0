@@ -1,29 +1,17 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import {
+  SQUAD_CATEGORY_VALUES,
+  type SquadCategory,
+  isSquadCategory,
+} from '@syntax-stories/shared';
+
+export { SQUAD_CATEGORY_VALUES, type SquadCategory, isSquadCategory };
 
 export type SquadVisibility = 'public' | 'private';
 /** Who may author new squad posts or share into the squad feed. */
 export type SquadPostPolicy = 'all_members' | 'staff_only';
 /** Who may add other users as members (invite-by-username). */
 export type SquadInvitePermission = 'all_members' | 'staff_only';
-
-/** Public squads only; stored only when `visibility === 'public'`. */
-export const SQUAD_CATEGORY_VALUES = [
-  'languages',
-  'web',
-  'ai',
-  'devops',
-  'mobile',
-  'game',
-  'career',
-  'open_source',
-  'devrel',
-  'devtools',
-] as const;
-export type SquadCategory = (typeof SQUAD_CATEGORY_VALUES)[number];
-
-export function isSquadCategory(v: string): v is SquadCategory {
-  return (SQUAD_CATEGORY_VALUES as readonly string[]).includes(v);
-}
 
 export interface ISquad extends Document {
   slug: string;

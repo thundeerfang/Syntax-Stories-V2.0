@@ -4,19 +4,22 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Compass, FileStack, Layers } from 'lucide-react';
 import { blogApi } from '@/api/blog';
-import { BlogCard } from '@/components/blog/BlogCard';
-import { RailFeedEmptyState } from '@/components/layout/RailFeedEmptyState';
+import { BlogCard } from '@/features/blog';
 import {
+  RailFeedEmptyState,
+  RailFeedErrorState,
   RailSectionSubheader,
+  ShellPageIntroHeader,
   type RailSectionSubheaderSortProps,
-} from '@/components/layout/RailSectionSubheader';
-import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
+} from '@/components/layout';
 import { FollowingPostsGridSkeleton } from '@/components/skeletons';
-import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
-import { cn } from '@/lib/utils';
+import { CategoryFollowButton } from '@/features/topics';
+import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+import { cn } from '@/lib/core/utils';
 import type { BlogTaxonomyRow } from '@/types/blog';
 import type { Post } from '@/types';
+import { useAuthStore } from '@/store/auth';
 
 type PostSort = 'newest' | 'oldest' | 'title-asc';
 
@@ -56,6 +59,8 @@ function comparePosts(a: Post, b: Post, sort: PostSort): number {
 
 /** Category stream under Topics: `/topics/category/{slug}`. */
 export default function TopicsCategoryFeedPage() {
+  const token = useAuthStore((s) => s.token);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const params = useParams();
   const raw = params?.slug;
   const categorySlug = typeof raw === 'string' ? decodeURIComponent(raw) : '';
@@ -83,7 +88,7 @@ export default function TopicsCategoryFeedPage() {
     setErrorMsg(null);
     try {
       const [{ posts: rawPosts }, tax] = await Promise.all([
-        blogApi.getPublishedFeed(48, { category: categorySlug }),
+        blogApi.getPublishedFeed(48, { category: categorySlug }, token),
         blogApi.getTaxonomy(),
       ]);
       setPosts(rawPosts.map(mapPublicFeedPostToPost));
@@ -95,11 +100,12 @@ export default function TopicsCategoryFeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [categorySlug]);
+  }, [categorySlug, token]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     void load();
-  }, [load]);
+  }, [load, isHydrated]);
 
   const taxonomyRow = useMemo(
     () => categories.find((c) => c.slug.toLowerCase() === categorySlug.toLowerCase()),
@@ -135,6 +141,11 @@ export default function TopicsCategoryFeedPage() {
             { label: displayTitle },
           ]}
           description="Stories published in this taxonomy category across the community."
+          descriptionEnd={
+            categorySlug ? (
+              <CategoryFollowButton slug={categorySlug} name={displayTitle} />
+            ) : null
+          }
           title={
             <h1 className="flex items-center gap-2 text-2xl font-black uppercase italic tracking-tighter text-foreground sm:text-3xl lg:text-4xl">
               <Layers className="size-7 shrink-0 text-primary sm:size-8" strokeWidth={2.5} aria-hidden />
@@ -146,9 +157,11 @@ export default function TopicsCategoryFeedPage() {
         />
 
         {errorMsg ? (
-          <p className="text-sm text-destructive" role="alert">
-            {errorMsg}
-          </p>
+          <RailFeedErrorState
+            title="Could not load posts"
+            description={errorMsg}
+            onRetry={() => void load()}
+          />
         ) : null}
 
         {!categorySlug ? (

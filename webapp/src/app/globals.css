@@ -7,9 +7,10 @@
   --font-head: "Inter", system-ui, sans-serif;
   --radius: 0;
 
-  --shadow-sm: 2px 2px 0 0 var(--border);
-  --shadow: 3px 3px 0 0 var(--border);
-  --shadow-md: 4px 4px 0 0 var(--border);
+  /* Single block shadow — import `SHADOW` from `@/lib/shadows.js` */
+  --shadow: 2px 2px 0 0 var(--shadow-color);
+  --shadow-block-hover: 2px 2px 0 0 var(--shadow-color), inset 0 0 0 100vmax var(--block-btn-hover-inset);
+  --shadow-ghost-inset: inset 0 0 0 100vmax var(--ghost-btn-hover-inset);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -55,6 +56,8 @@ html {
   --destructive: #ef4444;
   --destructive-foreground: #fff;
   --border: #3a3a3a;
+  /** Soft gray-black block shadow (lighter than border — not solid black). */
+  --shadow-color: #7c7c86;
   --rail-frost-bg: rgba(255, 255, 255, 0.78);
   --dock-frost-bg: rgba(255, 255, 255, 0.28);
   /** Block shadow buttons: subtle gray hover wash (inset spread + outer block shadow). */
@@ -91,6 +94,7 @@ altcha-widget {
   --destructive: #ef4444;
   --destructive-foreground: #fff;
   --border: #2e2e32;
+  --shadow-color: #54545e;
   --rail-frost-bg: rgba(12, 12, 16, 0.72);
   --dock-frost-bg: rgba(12, 12, 16, 0.3);
   --scrollbar-track: #0a0a0b;
@@ -98,6 +102,35 @@ altcha-widget {
 }
 
 @custom-variant dark (&:is(.dark *));
+
+/* Retro UI utilities — prefer `@/lib/shadows.js` class tokens over arbitrary shadows */
+@utility retro-card {
+  @apply border-2 border-border bg-card text-card-foreground shadow;
+}
+
+@utility retro-card-lg {
+  @apply border-4 border-border bg-card text-card-foreground shadow;
+}
+
+@utility retro-label {
+  @apply font-mono text-[10px] font-black uppercase tracking-widest;
+}
+
+@utility retro-sort-trigger {
+  @apply flex h-[42px] min-w-[7.25rem] shrink-0 items-center justify-between gap-1.5  border-2 border-border bg-background px-2 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-w-[7.75rem];
+}
+
+@utility retro-dropdown-panel {
+  @apply absolute right-0 top-[calc(100%+4px)] z-30 min-w-full overflow-hidden border-2 border-border bg-card py-1 shadow;
+}
+
+@utility retro-panel {
+  @apply border-2 border-border bg-muted/20 p-1 shadow;
+}
+
+@utility retro-metric-card {
+  @apply min-w-0 border-2 border-border bg-muted/10 p-4 shadow;
+}
 
 /* Theme transition app-wide so dark/light switch is smooth on every page */
 html,
@@ -158,7 +191,7 @@ html * {
   margin: 0 0.35em;
   border-radius: 0;
   border: 2px solid var(--border);
-  box-shadow: 4px 4px 0 0 var(--border);
+  box-shadow: var(--shadow);
   background: var(--primary);
   color: var(--primary-foreground);
   font-size: 0.875rem;
@@ -212,7 +245,7 @@ html * {
   color: var(--primary);
   text-decoration: none !important;
   text-underline-offset: unset;
-  box-shadow: 3px 3px 0 0 var(--border);
+  box-shadow: var(--shadow);
   vertical-align: baseline;
   max-width: 100%;
 }
@@ -310,7 +343,7 @@ html * {
 
 *::-webkit-scrollbar-thumb {
   background: var(--primary);
-  border-radius: 4px;
+  border-radius: 0;
   border: 2px solid var(--scrollbar-thumb-border);
 }
 
@@ -488,18 +521,47 @@ html * {
 .grid-bg {
   background-color: var(--background);
   background-image:
-    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 0, 0, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .dark .grid-bg {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
 }
 
+/* Rail / feed empty & not-found panels — soft primary wash; layout grid stays visible. */
+.ss-empty-dashed-panel {
+  background:
+    radial-gradient(
+      ellipse 90% 70% at 50% 28%,
+      color-mix(in srgb, var(--primary) 8%, transparent) 0%,
+      color-mix(in srgb, var(--primary) 2.5%, transparent) 52%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary) 5%, transparent) 0%,
+      transparent 75%
+    );
+}
 
+.dark .ss-empty-dashed-panel {
+  background:
+    radial-gradient(
+      ellipse 90% 70% at 50% 28%,
+      color-mix(in srgb, var(--primary) 11%, transparent) 0%,
+      color-mix(in srgb, var(--primary) 3.5%, transparent) 52%,
+      transparent 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary) 7%, transparent) 0%,
+      transparent 75%
+    );
+}
 
 /**
  * Sidebar + footer: same frost recipe as `Navbar.tsx` (inline there), defined here with `html.dark`
@@ -542,10 +604,10 @@ html * {
   left: 2px !important;
   top: 3px !important;
   margin-left: 0 !important;
-  border-radius: 9999px !important;
+  border-radius: 0 !important;
   background: var(--card) !important;
   border: 2px solid color-mix(in srgb, var(--primary) 70%, var(--border)) !important;
-  box-shadow: 2px 2px 0 0 var(--border) !important;
+  box-shadow: var(--shadow) !important;
   /* No library bounce / entrance on icon */
   animation: none !important;
   transition: none !important;
@@ -596,7 +658,7 @@ html * {
 .ss-we-timeline .ss-we-pulse-ring {
   position: absolute;
   inset: -2px;
-  border-radius: 9999px;
+  border-radius: 0;
   border: 2px solid var(--primary);
   opacity: 0.55;
   animation: none !important;
@@ -719,6 +781,38 @@ html * {
   height: 9px;
   margin-left: -1px;
   transform-origin: bottom center;
-  border-radius: 1px;
+  border-radius: 0;
   animation: ss-comment-like-ray 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes presence-dot-blink {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.45);
+  }
+  50% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 3px rgb(34 197 94 / 0);
+  }
+}
+
+.presence-dot-blink {
+  animation: presence-dot-blink 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presence-dot-blink {
+    animation: none;
+  }
+}
+
+/* Sonner: center close control on the right (overrides library top:0 defaults). */
+[data-sonner-toast] [data-close-button] {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0.5rem !important;
+  left: auto !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
 }

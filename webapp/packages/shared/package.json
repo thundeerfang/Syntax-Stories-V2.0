@@ -2,10 +2,18 @@
   "name": "@syntax-stories/shared",
   "version": "0.0.1",
   "private": true,
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "zod": "^3.24.1"

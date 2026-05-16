@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { client } from '@/lib/appwrite';
+import { client } from '@/lib/core/appwrite';
 
 /**
  * On each full load of the app, calls `client.ping()` once to verify reachability

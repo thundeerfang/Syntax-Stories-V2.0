@@ -1,22 +1,7 @@
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
-import { getOrCreateDeviceFingerprint } from '@/lib/deviceFingerprint';
-import type { FeedbackClientMeta } from '@/api/feedback';
-
-export type SubmitContactParams = {
-  fullName?: string;
-  email?: string;
-  company?: string;
-  topic: string;
-  message: string;
-  altcha?: string;
-  clientMeta?: FeedbackClientMeta;
-};
-
-export type SubmitContactResponse = {
-  success: boolean;
-  id?: string;
-  message?: string;
-};
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
+import { getOrCreateDeviceFingerprint } from '@/lib/auth/deviceFingerprint';
+export type { SubmitContactParams, SubmitContactResponse } from '@contracts/contactApi';
+import type { SubmitContactParams, SubmitContactResponse } from '@contracts/contactApi';
 
 function apiBase(): string {
   return resolvePublicApiBase().replace(/\/$/, '');

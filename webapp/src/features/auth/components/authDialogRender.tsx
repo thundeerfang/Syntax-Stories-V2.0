@@ -13,9 +13,9 @@ import {
   XIcon,
   ICON_DISCORD,
 } from '@/components/icons/SocialProviderIcons';
-import { cn } from '@/lib/utils';
-import { markOAuthNavigationPending } from '@/lib/oauthNavigation';
-import { clearLegalSignupAckCookie, setLegalSignupAckCookie } from '@/lib/legalSignupAckCookie';
+import { cn } from '@/lib/core/utils';
+import { markOAuthNavigationPending } from '@/lib/auth/oauthNavigation';
+import { clearLegalSignupAckCookie, setLegalSignupAckCookie } from '@/lib/auth/legalSignupAckCookie';
 import { AltchaField } from './AltchaField';
 import type { AuthDialogStep } from './authDialogStep';
 
@@ -189,7 +189,7 @@ function AuthSignupLegalConsent(
   };
 
   return (
-    <div className="space-y-3 rounded-md border-2 border-border bg-muted/20 px-3 py-3">
+    <div className="space-y-3 border-2 border-border bg-muted/20 px-3 py-3">
       <div className="flex gap-2 items-center">
         <Checkbox
           checked={p.termsAccepted}

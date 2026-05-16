@@ -7,7 +7,7 @@ import { Dialog } from '@/components/ui';
 import { followApi, type FollowUser } from '@/api/follow';
 import { Search, X, User, Loader2, Command, ArrowDown, ArrowUp, CornerDownLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 const DEBOUNCE_MS = 280;
 
@@ -146,7 +146,7 @@ export function SearchDialog() {
       titleId="search-dialog-title"
       panelClassName={cn(
         'pointer-events-auto w-full max-w-xl max-h-[90vh] sm:max-h-[80vh] overflow-hidden border-2 sm:border-4 border-border bg-background',
-        'max-sm:shadow-none sm:shadow-[12px_12px_0px_0px_hsl(var(--border))]',
+        'max-sm:shadow-none sm:shadow',
       )}
       contentClassName="relative p-0"
       showCloseButton={false}
@@ -166,7 +166,7 @@ export function SearchDialog() {
           <button
             type="button"
             onClick={close}
-            className="rounded-sm p-1 transition-colors hover:bg-primary-foreground/20 hover:text-primary-foreground"
+            className="p-1 transition-colors hover:bg-primary-foreground/20 hover:text-primary-foreground"
             aria-label="Close dialog"
           >
             <X className="size-4" />
@@ -300,7 +300,7 @@ export function SearchDialog() {
       {/* 4. Footer Status Bar */}
       <div className="border-t-2 sm:border-t-4 border-border bg-background px-3 py-2 sm:px-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
-           <div className={`size-1.5 rounded-full ${loading ? 'animate-pulse bg-primary' : 'bg-primary/70'}`} />
+           <div className={`size-1.5  ${loading ? 'animate-pulse bg-primary' : 'bg-primary/70'}`} />
            <span className="text-[9px] font-black uppercase text-muted-foreground">{footerStatusLabel}</span>
         </div>
         <span className="text-[9px] font-black uppercase text-muted-foreground/30">Query_Interface_v2</span>

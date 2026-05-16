@@ -11,7 +11,7 @@ import {
   Award,
 } from 'lucide-react';
 import { BlockShadowButton } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 import { SettingsSectionHeading } from './SettingsSectionHeading';
 
 type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';

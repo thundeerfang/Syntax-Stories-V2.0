@@ -1,5 +1,5 @@
-import { blogAuthFetch } from '@/lib/blogAuthFetch';
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { blogAuthFetch } from '@/lib/api/blogAuthFetch';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import type { PublicFeedPost } from '@/types/blog';
 
 const getApiBase = () => resolvePublicApiBase();

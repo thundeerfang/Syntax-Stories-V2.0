@@ -4,6 +4,7 @@ import type { AuthUser } from '../middlewares/auth/index.js';
 import type { RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
 import { SquadModel } from '../models/Squad.js';
 import { SquadMemberModel } from '../models/SquadMember.js';
+import { UserModel } from '../models/User.js';
 import { SquadSharedPostModel } from '../models/SquadSharedPost.js';
 import { BlogPostModel } from '../models/BlogPost.js';
 import { buildFeedListItemsForPosts } from './blog.controller.js';
@@ -154,6 +155,61 @@ export async function listMySquads(req: Request, res: Response): Promise<void> {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to load your squads' });
+  }
+}
+
+/** GET /api/squads/u/:username — squads a user belongs to (public squads for guests; all if viewer is that user). */
+export async function listSquadsForUser(req: Request, res: Response): Promise<void> {
+  try {
+    const username = paramString(req.params.username)?.trim().toLowerCase();
+    if (!username) {
+      res.status(400).json({ success: false, message: 'Invalid username' });
+      return;
+    }
+    const profileUser = await UserModel.findOne({ username, isActive: true }).select('_id username').lean();
+    if (!profileUser?._id) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+    const r = req as RequestWithOptionalAuth;
+    const viewerId = r.authUser?._id;
+    const isSelf = viewerId != null && String(profileUser._id) === String(viewerId);
+
+    const uid = profileUser._id as mongoose.Types.ObjectId;
+    const links = await SquadMemberModel.find({ userId: uid }).select('squadId role').lean();
+    const ids = links.map((l) => l.squadId as mongoose.Types.ObjectId);
+    if (!ids.length) {
+      res.status(200).json({ success: true, squads: [] });
+      return;
+    }
+
+    const squadFilter: { _id: { $in: mongoose.Types.ObjectId[] }; visibility?: string } = {
+      _id: { $in: ids },
+    };
+    if (!isSelf) {
+      squadFilter.visibility = 'public';
+    }
+
+    const squads = await SquadModel.find(squadFilter).sort({ updatedAt: -1 }).lean();
+    const roleBy = new Map(links.map((l) => [String(l.squadId), l.role as SquadMemberRole]));
+    const previews = await getMemberPreviewsForSquads(squads.map((s) => s._id as mongoose.Types.ObjectId));
+
+    res.status(200).json({
+      success: true,
+      squads: squads.map((s) => {
+        const base = {
+          ...mapSquadSummary(s),
+          memberPreview: previews.get(String(s._id)) ?? [],
+        };
+        if (isSelf) {
+          return { ...base, viewerRole: roleBy.get(String(s._id)) ?? 'member' };
+        }
+        return base;
+      }),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to load squads' });
   }
 }
 
@@ -665,12 +721,21 @@ export async function listSquadMembers(req: Request, res: Response): Promise<voi
     const order: Record<SquadMemberRole, number> = { admin: 0, moderator: 1, member: 2 };
     const members = rows
       .map((row) => {
-        const u = row.userId as unknown as { username?: string; fullName?: string; profileImg?: string };
+        const populated = row.userId as unknown as {
+          _id?: unknown;
+          username?: string;
+          fullName?: string;
+          profileImg?: string;
+        } | null;
+        const userId =
+          populated != null && populated._id != null
+            ? String(populated._id)
+            : String(row.userId);
         return {
-          userId: String((row.userId as { _id?: unknown })?._id ?? row.userId),
-          username: typeof u.username === 'string' ? u.username : '',
-          fullName: typeof u.fullName === 'string' ? u.fullName : '',
-          profileImg: typeof u.profileImg === 'string' ? u.profileImg : '',
+          userId,
+          username: typeof populated?.username === 'string' ? populated.username : '',
+          fullName: typeof populated?.fullName === 'string' ? populated.fullName : '',
+          profileImg: typeof populated?.profileImg === 'string' ? populated.profileImg : '',
           role: row.role as SquadMemberRole,
         };
       })

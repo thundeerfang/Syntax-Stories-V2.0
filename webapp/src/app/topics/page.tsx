@@ -2,19 +2,20 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ChevronDown, Layers } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Layers } from 'lucide-react';
+import { RetroSortDropdown } from '@/components/ui/retro';
 import { toast } from 'sonner';
 import { blogApi } from '@/api/blog';
 import { fetchTagsExplore, type TagExploreRow } from '@/api/tagsExplore';
-import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
-import { FeaturedCategoryCard } from '@/components/explore/FeaturedCategoryCard';
-import { RankCountPill } from '@/components/topics/RankCountPill';
-import { SearchField } from '@/components/ui/SearchField';
-import { HashtagBadgeLink } from '@/components/tags/HashtagBadgeLink';
-import { BlogApiConnectionError } from '@/lib/blogAuthFetch';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
-import { cn } from '@/lib/utils';
+import { ShellPageIntroHeader } from '@/components/layout';
+import { FeaturedCategoryCard } from '@/features/explore';
+import { RankCountPill } from '@/features/topics';
+import { SearchField } from '@/components/ui/form';
+import { HashtagBadgeLink } from '@/features/tags';
+import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+import { cn } from '@/lib/core/utils';
 import type { BlogTaxonomyRow } from '@/types/blog';
 
 const DotLottieReact = dynamic(
@@ -48,7 +49,7 @@ function HeaderDotLottie({ src, size }: Readonly<{ src: string; size: number }>)
 }
 
 const tagLinkHoverClass =
-  'inline-flex max-w-full min-w-0 items-center rounded-none px-2.5 py-1 font-mono text-[12px] font-medium tracking-tight text-foreground transition-colors hover:bg-primary hover:text-primary-foreground';
+  'inline-flex max-w-full min-w-0 items-center  px-2.5 py-1 font-mono text-[12px] font-medium tracking-tight text-foreground transition-colors hover:bg-primary hover:text-primary-foreground';
 
 type TagSort = 'name-asc' | 'name-desc' | 'posts-desc' | 'recent';
 
@@ -58,75 +59,6 @@ const TAG_SORT_OPTIONS: ReadonlyArray<{ value: TagSort; label: string; shortLabe
   { value: 'posts-desc', label: 'Most posts', shortLabel: 'Posts' },
   { value: 'recent', label: 'Recently used', shortLabel: 'Recent' },
 ];
-
-function TagsSortDropdown({
-  value,
-  onChange,
-}: Readonly<{
-  value: TagSort;
-  onChange: (v: TagSort) => void;
-}>) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const close = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, []);
-
-  const label = TAG_SORT_OPTIONS.find((o) => o.value === value)?.label ?? TAG_SORT_OPTIONS[0].label;
-  const shortLabel = TAG_SORT_OPTIONS.find((o) => o.value === value)?.shortLabel ?? TAG_SORT_OPTIONS[0].shortLabel;
-
-  return (
-    <div ref={rootRef} className="relative shrink-0">
-      <button
-        type="button"
-        title={label}
-        aria-label={`Sort tags: ${label}`}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-[42px] w-[7.25rem] shrink-0 items-center justify-between gap-1.5 rounded-none border-2 border-border bg-background px-2 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-foreground outline-none ring-primary focus-visible:ring-2 sm:w-[8.25rem]"
-      >
-        <span className="min-w-0 truncate">{shortLabel}</span>
-        <ChevronDown
-          className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')}
-          strokeWidth={2.25}
-          aria-hidden
-        />
-      </button>
-      {open ? (
-        <ul
-          role="listbox"
-          className="absolute right-0 top-[calc(100%+4px)] z-30 min-w-full overflow-hidden border-2 border-border bg-card py-1 shadow-[4px_4px_0_0_var(--border)]"
-        >
-          {TAG_SORT_OPTIONS.map((o) => (
-            <li key={o.value} role="none">
-              <button
-                type="button"
-                role="option"
-                aria-selected={value === o.value}
-                className={cn(
-                  'flex w-full px-3 py-2.5 text-left font-mono text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-muted/60',
-                  value === o.value && 'bg-primary/10 text-primary',
-                )}
-                onClick={() => {
-                  onChange(o.value);
-                  setOpen(false);
-                }}
-              >
-                {o.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
 
 function TagRankCard({
   title,
@@ -340,7 +272,7 @@ export default function TopicsPage() {
           </h2>
           <div>
             {loading ? (
-              <div className="h-24 animate-pulse rounded-none bg-muted/30" aria-hidden />
+              <div className="h-24 animate-pulse bg-muted/30" aria-hidden />
             ) : allCategoriesSorted.length === 0 ? (
               <p className="text-sm text-muted-foreground">No categories in taxonomy yet.</p>
             ) : (
@@ -378,13 +310,19 @@ export default function TopicsPage() {
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search tags…"
                 />
-                <TagsSortDropdown value={tagSort} onChange={setTagSort} />
+                <RetroSortDropdown
+                  value={tagSort}
+                  onChange={setTagSort}
+                  options={TAG_SORT_OPTIONS}
+                  ariaLabelPrefix="Sort tags"
+                  triggerClassName="sm:min-w-[8.25rem]"
+                />
               </div>
             </div>
           </div>
           <div>
             {loading ? (
-              <div className="h-24 animate-pulse rounded-none bg-muted/30" aria-hidden />
+              <div className="h-24 animate-pulse bg-muted/30" aria-hidden />
             ) : allTags.length === 0 ? (
               <p className="text-sm text-muted-foreground">No tags published yet.</p>
             ) : filteredSortedTags.length === 0 ? (

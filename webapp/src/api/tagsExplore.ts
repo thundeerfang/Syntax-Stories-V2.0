@@ -1,5 +1,5 @@
-import { blogPublicFetch } from '@/lib/blogAuthFetch';
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { blogPublicFetch } from '@/lib/api/blogAuthFetch';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const getApiBase = () => resolvePublicApiBase();
 
@@ -9,12 +9,8 @@ async function readJson<T>(r: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-export interface TagExploreRow {
-  slug: string;
-  name: string;
-  postCount: number;
-  lastUsedAt?: string;
-}
+export type { TagExploreRow } from '@contracts/tagsExploreApi';
+import type { TagExploreRow } from '@contracts/tagsExploreApi';
 
 /** Public GET /api/blog/tags/explore — kept out of `blog.ts` so `/topics` does not pull the full blog API bundle during dev compile. */
 export async function fetchTagsExplore(): Promise<{

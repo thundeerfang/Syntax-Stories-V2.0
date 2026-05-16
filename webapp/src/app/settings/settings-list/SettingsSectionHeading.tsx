@@ -1,7 +1,27 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
+
+/** Outer spacing for every settings tab (heading + panel). */
+export const settingsTabRootClassName = 'space-y-5';
+
+/** Muted panel behind tab body — no inner padding; sections control their own spacing. */
+export const settingsTabPanelClassName = 'bg-muted/5 space-y-5';
+
+export function SettingsTabRoot({
+  children,
+  className,
+}: Readonly<{ children: ReactNode; className?: string }>) {
+  return <div className={cn(settingsTabRootClassName, className)}>{children}</div>;
+}
+
+export function SettingsTabPanel({
+  children,
+  className,
+}: Readonly<{ children: ReactNode; className?: string }>) {
+  return <div className={cn(settingsTabPanelClassName, className)}>{children}</div>;
+}
 
 /**
  * Shared section title for settings: left icon tile (same as Open Source Sync) + title + description.
@@ -21,7 +41,7 @@ export function SettingsSectionHeading({
   return (
     <div className={cn('flex items-center gap-4', className)}>
       <div
-        className="flex size-12 shrink-0 items-center justify-center border-2 border-border bg-foreground text-background shadow-[3px_3px_0px_0px_var(--primary)] [&_svg]:size-7"
+        className="flex size-12 shrink-0 items-center justify-center bg-foreground text-background shadow [&_svg]:size-7"
         aria-hidden
       >
         {icon}

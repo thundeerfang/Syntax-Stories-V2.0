@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BookOpen, ChevronRight, FileText, Layout, Library, Search, Command } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 export type DocsSidebarArticle = { slug: string; title: string; canonicalPath?: string };
 
@@ -11,7 +11,7 @@ export type DocsSidebarArticle = { slug: string; title: string; canonicalPath?: 
 function BlinkDot() {
   return (
     <span
-      className="size-1.5 shrink-0 rounded-full bg-primary motion-safe:animate-pulse motion-reduce:animate-none"
+      className="size-1.5 shrink-0 bg-primary motion-safe:animate-pulse motion-reduce:animate-none"
       aria-hidden
     />
   );
@@ -35,7 +35,7 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 border-b-4 border-border bg-muted/30 px-4 py-4">
         <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center border-2 border-border bg-card shadow-[2px_2px_0_0_var(--border)]">
+          <div className="flex size-9 shrink-0 items-center justify-center border-2 border-border bg-card shadow">
             <BookOpen className="size-4 text-primary" aria-hidden />
           </div>
           <div className="min-w-0 flex-1 pt-0.5">
@@ -80,7 +80,7 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
                 'flex items-center gap-3 border-4 border-transparent px-3 py-2 text-[11px] font-bold uppercase tracking-tight text-muted-foreground',
                 'hover:border-border hover:bg-muted/40 hover:text-foreground',
                 overviewActive &&
-                  'border-border bg-card text-foreground shadow-[4px_4px_0_0_var(--border)] hover:border-border'
+                  'border-border bg-card text-foreground shadow hover:border-border'
               )}
             >
               <FileText size={12} className="shrink-0 text-primary" />
@@ -105,7 +105,7 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
                     'flex items-center gap-3 border-4 border-transparent px-3 py-2 text-[11px] font-bold uppercase tracking-tight text-muted-foreground',
                     'hover:border-border hover:bg-muted/40 hover:text-foreground',
                     active &&
-                      'border-border bg-card text-foreground shadow-[4px_4px_0_0_var(--border)] hover:border-border'
+                      'border-border bg-card text-foreground shadow hover:border-border'
                   )}
                 >
                   <FileText size={12} className="shrink-0 text-primary" />

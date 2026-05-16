@@ -36,14 +36,13 @@ export function SonnerToaster() {
           classNames: {
             // Do not use position:relative here — Sonner stacks toasts with position:absolute + transforms.
             toast:
-              '!rounded-lg !border-2 !border-border !bg-card !text-foreground !shadow-[4px_4px_0_0_var(--border)] !font-sans !px-4 !py-3 !min-h-[3rem]',
+              '! !border-2 !border-border !bg-card !text-foreground !shadow !font-sans !px-4 !py-3 !min-h-[3rem]',
             /** Reserve space so absolutely positioned close button never overlaps title/description text. */
             content: '!min-w-0 !flex-1 !pr-9',
             title: '!text-sm !font-bold !tracking-tight !text-foreground !break-words',
             description: '!text-xs !text-muted-foreground !mt-0.5 !break-words',
             closeButton:
-              '!absolute !left-auto !top-3 !right-2 !translate-x-0 !translate-y-0 !flex !size-6 !min-h-6 !min-w-6 !shrink-0 !items-center !justify-center !border-0 !bg-transparent !p-0 !shadow-none hover:!bg-muted/60 !rounded-sm !text-muted-foreground hover:!text-foreground !z-[2] [&_svg]:!size-3.5 [&_svg]:!shrink-0',
-            success:
+            '!absolute !right-3 !top-8 !z-10 !flex !h-6 !w-6 !-translate-y-1/2 !items-center !justify-center !rounded-md !border-0 !bg-transparent !p-0 !shadow-none !text-muted-foreground transition-colors hover:!bg-muted/60 hover:!text-foreground [&_svg]:!h-3.5 [&_svg]:!w-3.5',            success:
               '!border-emerald-600 dark:!border-emerald-500 !bg-card',
             error: '!border-destructive !bg-card',
             warning: '!border-amber-500 dark:!border-amber-400 !bg-card',

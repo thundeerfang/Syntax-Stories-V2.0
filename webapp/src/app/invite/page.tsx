@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { UserPlus, Copy, Check, Users, Link2, Sparkles, ChevronRight, Radio } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
-import { setPostAuthRedirect } from '@/lib/postAuthRedirect';
-import { cn } from '@/lib/utils';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
+import { setPostAuthRedirect } from '@/lib/auth/postAuthRedirect';
+import { cn } from '@/lib/core/utils';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 
 type InviteMeResponse = {
   success: boolean;
@@ -150,7 +150,7 @@ export default function InviteDashboardPage() {
     if (!isHydrated) return;
     if (!token) {
       setPostAuthRedirect('/invite');
-      router.replace('/login');
+      router.replace('/login', '');
       return;
     }
     void load();
@@ -170,7 +170,7 @@ export default function InviteDashboardPage() {
   if (!isHydrated) {
     return (
       <div className={SHELL_CONTENT_RAIL_CLASS}>
-        <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow-[8px_8px_0_0_var(--border)]">
+        <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Invite desk</p>
           <p className="mt-3 text-sm font-black uppercase tracking-wide text-foreground">Loading…</p>
         </div>
@@ -181,7 +181,7 @@ export default function InviteDashboardPage() {
   if (!token) {
     return (
       <div className={SHELL_CONTENT_RAIL_CLASS}>
-        <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow-[8px_8px_0_0_var(--border)]">
+        <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Invite desk</p>
           <p className="mt-3 text-sm font-black uppercase tracking-wide text-foreground">Redirecting to sign in…</p>
         </div>
@@ -198,7 +198,7 @@ export default function InviteDashboardPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(0,480px)] xl:gap-10">
           <div className="min-w-0 space-y-6 md:space-y-8">
         {/* Big page header — panel card, not a navbar strip */}
-        <div className="overflow-hidden border-4 border-border bg-card shadow-[10px_10px_0_0_var(--border)]">
+        <div className="overflow-hidden border-4 border-border bg-card shadow">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b-4 border-dashed border-border bg-muted/50 px-4 py-2.5 sm:px-6">
             <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               <Radio className="size-3.5 shrink-0 text-primary" aria-hidden />
@@ -243,7 +243,7 @@ export default function InviteDashboardPage() {
           </div>
         </div>
 
-        <div className="border-4 border-border bg-card shadow-[6px_6px_0_0_var(--border)]">
+        <div className="border-4 border-border bg-card shadow">
           <div className="grid divide-y-4 divide-dashed divide-border sm:grid-cols-2 sm:divide-x-4 sm:divide-y-0">
             <div className="p-5 sm:p-6">
               <div className="flex items-center gap-2 border-b-2 border-dashed border-border pb-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -277,23 +277,23 @@ export default function InviteDashboardPage() {
         </div>
 
         {loading && (
-          <div className="border-4 border-dashed border-border bg-muted/20 px-4 py-8 text-center shadow-[4px_4px_0_0_var(--border)]">
+          <div className="border-4 border-dashed border-border bg-muted/20 px-4 py-8 text-center shadow">
             <UserPlus className="mx-auto mb-3 size-8 text-muted-foreground/60" strokeWidth={2} aria-hidden />
             <p className="text-sm font-black uppercase tracking-wide text-muted-foreground">Pulling your links & roster…</p>
           </div>
         )}
 
         {error && !loading && (
-          <p className="border-4 border-destructive bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive shadow-[6px_6px_0_0_var(--border)]">
+          <p className="border-4 border-destructive bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive shadow">
             {error}
           </p>
         )}
 
         {!loading && me?.inviteUrl && (
-            <section className="border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)]">
+            <section className="border-4 border-border bg-card shadow">
               <div className="border-b-4 border-border bg-muted/30 px-5 py-3 sm:px-6">
                 <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-foreground">
-                  <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow-[2px_2px_0_0_var(--border)]">
+                  <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow">
                     <Link2 className="size-4" aria-hidden />
                   </span>
                   Share &amp; copy
@@ -304,13 +304,13 @@ export default function InviteDashboardPage() {
             <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
               Invite URL (opens your invite landing page)
             </p>
-            <div className="flex gap-2 break-all border-4 border-border bg-muted/25 px-3 py-3 font-mono text-xs leading-snug text-foreground shadow-[inset_3px_3px_0_0_rgba(0,0,0,0.04)]">
+            <div className="flex gap-2 break-all border-4 border-border bg-muted/25 px-3 py-3 font-mono text-xs leading-snug text-foreground shadow">
               <span className="min-w-0 flex-1">{me.inviteUrl}</span>
             </div>
             <button
               type="button"
               onClick={() => void copyText(me.inviteUrl!, 'link')}
-              className="mt-4 flex w-full items-center justify-center gap-2 border-4 border-border bg-primary py-3 text-[10px] font-black uppercase tracking-[0.15em] text-primary-foreground shadow-[5px_5px_0_0_var(--border)] transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_var(--border)] active:translate-x-1 active:translate-y-1 active:shadow-none sm:w-auto sm:px-10"
+              className="mt-4 flex w-full items-center justify-center gap-2 border-4 border-border bg-primary py-3 text-[10px] font-black uppercase tracking-[0.15em] text-primary-foreground shadow transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow active:translate-x-1 active:translate-y-1 active:shadow-none sm:w-auto sm:px-10"
             >
               {copied === 'link' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               {copied === 'link' ? 'Copied' : 'Copy invite URL'}
@@ -322,13 +322,13 @@ export default function InviteDashboardPage() {
                   Referral code only
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <code className="border-4 border-border bg-background px-3 py-2 font-mono text-sm font-bold tracking-widest shadow-[3px_3px_0_0_var(--border)]">
+                  <code className="border-4 border-border bg-background px-3 py-2 font-mono text-sm font-bold tracking-widest shadow">
                     {me.referralCode}
                   </code>
                   <button
                     type="button"
                     onClick={() => void copyText(me.referralCode!, 'code')}
-                    className="border-4 border-border bg-card px-4 py-2 text-[10px] font-black uppercase tracking-wide shadow-[3px_3px_0_0_var(--border)] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none"
+                    className="border-4 border-border bg-card px-4 py-2 text-[10px] font-black uppercase tracking-wide shadow transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none"
                   >
                     {copied === 'code' ? 'Copied' : 'Copy code'}
                   </button>
@@ -361,7 +361,7 @@ export default function InviteDashboardPage() {
                     <button
                       type="button"
                       onClick={() => void copyText(me.attachUrl!, 'attach')}
-                      className="flex items-center justify-center gap-2 border-4 border-border bg-card px-4 py-2.5 text-[10px] font-black uppercase tracking-wide shadow-[4px_4px_0_0_var(--border)] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none"
+                      className="flex items-center justify-center gap-2 border-4 border-border bg-card px-4 py-2.5 text-[10px] font-black uppercase tracking-wide shadow transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none"
                     >
                       {copied === 'attach' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       {copied === 'attach' ? 'Copied' : 'Copy signup URL'}
@@ -376,10 +376,10 @@ export default function InviteDashboardPage() {
           </div>
 
           <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
-            <section className="border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)]">
+            <section className="border-4 border-border bg-card shadow">
               <div className="border-b-4 border-border bg-muted/30 px-5 py-3 sm:px-6">
                 <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-foreground">
-                  <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow-[2px_2px_0_0_var(--border)]">
+                  <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow">
                     <Users className="size-4" aria-hidden />
                   </span>
                   Referral roster
@@ -466,7 +466,7 @@ export default function InviteDashboardPage() {
                           <td className="px-3 py-3 text-right sm:px-4">
                             <span
                               className={cn(
-                                'inline-block border-4 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-[2px_2px_0_0_var(--border)]',
+                                'inline-block border-4 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow',
                                 row.isActive
                                   ? 'border-primary/40 bg-primary/10 text-primary'
                                   : 'border-border bg-muted text-muted-foreground'
@@ -488,7 +488,7 @@ export default function InviteDashboardPage() {
                     type="button"
                     onClick={() => void loadMoreReferred()}
                     disabled={referredLoadingMore}
-                    className="w-full border-4 border-border bg-background py-3 text-[10px] font-black uppercase tracking-[0.2em] text-foreground shadow-[4px_4px_0_0_var(--border)] transition-all hover:bg-muted/30 hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_var(--border)] disabled:translate-x-0 disabled:translate-y-0 disabled:opacity-50 disabled:shadow-[4px_4px_0_0_var(--border)] sm:w-auto sm:px-12"
+                    className="w-full border-4 border-border bg-background py-3 text-[10px] font-black uppercase tracking-[0.2em] text-foreground shadow transition-all hover:bg-muted/30 hover:translate-x-px hover:translate-y-px hover:shadow disabled:translate-x-0 disabled:translate-y-0 disabled:opacity-50 disabled:shadow sm:w-auto sm:px-12"
                   >
                     {referredLoadingMore ? 'Loading…' : `Load more (${referredTotal - referred.length} left)`}
                   </button>

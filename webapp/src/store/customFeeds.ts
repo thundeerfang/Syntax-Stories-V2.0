@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CustomFeedRules } from '@/lib/applyCustomFeedRules';
+import type { CustomFeedRules } from '@/lib/feeds/applyCustomFeedRules';
 
 const STORAGE_KEY = 'syntax-stories-custom-feeds-v1';
 

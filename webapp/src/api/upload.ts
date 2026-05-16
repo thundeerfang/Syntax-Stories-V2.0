@@ -3,20 +3,8 @@ function getApiBase(): string {
   return base ? base.replace(/\/$/, '') : '';
 }
 
-export interface UploadResponse {
-  success: boolean;
-  url?: string;
-  /** Tiny JPEG data URL from Sharp — use with `next/image` `placeholder="blur"`. */
-  blurDataUrl?: string;
-  message?: string;
-}
-
-export interface CropArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+export type { UploadResponse, CropArea } from '@contracts/uploadApi';
+import type { CropArea, UploadResponse } from '@contracts/uploadApi';
 
 export async function uploadAvatar(
   token: string,

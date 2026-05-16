@@ -4,7 +4,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search } from 'lucide-react';
 import { Label } from './Label';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/core/utils';
 
 /** Above dialog panels (z-[100]) so the list tracks the trigger while the dialog body scrolls. */
 const LISTBOX_Z = 160;
@@ -29,7 +29,7 @@ function SearchableSelectListboxShell({
     <div
       ref={listboxRef}
       className={cn(
-        'fixed rounded-md border-2 border-border bg-card shadow-lg overflow-hidden flex flex-col',
+        'fixed  border-2 border-border bg-card shadow overflow-hidden flex flex-col',
         className,
       )}
       style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width, zIndex: LISTBOX_Z }}
@@ -194,7 +194,7 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
               if (!open && searchable) setTimeout(() => inputRef.current?.focus(), 50);
             }}
             className={cn(
-              'w-full min-w-0 rounded-md border-2 border-border bg-background px-3 py-2.5 text-sm font-medium text-left flex items-center justify-between gap-2',
+              'w-full min-w-0  border-2 border-border bg-background px-3 py-2.5 text-sm font-medium text-left flex items-center justify-between gap-2',
               'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors',
               'disabled:cursor-not-allowed disabled:opacity-50',
               error && 'border-destructive',
@@ -233,7 +233,7 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
                           if (e.key === 'Escape') setOpen(false);
                         }}
                         placeholder="Search..."
-                        className="w-full rounded border-2 border-border bg-background py-2 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-primary"
+                        className="w-full border-2 border-border bg-background py-2 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-primary"
                       />
                     </div>
                   </div>

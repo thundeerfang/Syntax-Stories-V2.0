@@ -1,5 +1,5 @@
-import { blogAuthFetch } from '@/lib/blogAuthFetch';
-import { resolvePublicApiBase } from '@/lib/publicApiBase';
+import { blogAuthFetch } from '@/lib/api/blogAuthFetch';
+import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import type { PublicFeedPost } from '@/types/blog';
 
 const getApiBase = () => resolvePublicApiBase();
@@ -10,15 +10,8 @@ async function readJson<T>(r: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-export type BookmarkGroupRow = {
-  _id: string;
-  name: string;
-  /** Optional folder emoji from the server (may be empty). */
-  emoji: string;
-  isDefault: boolean;
-  /** Posts saved in this folder (from GET /api/bookmarks/groups). */
-  bookmarkCount?: number;
-};
+export type { BookmarkGroupRow } from '@contracts/bookmarksApi';
+import type { BookmarkGroupRow } from '@contracts/bookmarksApi';
 
 export const bookmarksApi = {
   listGroups: async (accessToken: string): Promise<{ success: boolean; groups: BookmarkGroupRow[] }> => {

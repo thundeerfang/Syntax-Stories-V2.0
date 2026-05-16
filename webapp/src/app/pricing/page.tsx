@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { createCheckoutSession } from '@/api/billing';
 import { useAuthStore } from '@/store/auth';
 import { BlockShadowButton } from '@/components/ui';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
-import { cn } from '@/lib/utils';
+import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+import { cn } from '@/lib/core/utils';
 
 type PlanKey = 'pro' | 'proplus' | 'ultra';
 
@@ -130,12 +130,12 @@ export default function PricingPage() {
               <article
                 key={p.key}
                 className={cn(
-                  'relative flex min-h-0 flex-col border-4 border-border bg-card text-card-foreground shadow-[8px_8px_0_0_var(--border)]',
-                  p.featured && 'border-primary shadow-[8px_8px_0_0_var(--primary)]',
+                  'relative flex min-h-0 flex-col border-4 border-border bg-card text-card-foreground shadow',
+                  p.featured && 'border-primary shadow',
                 )}
               >
                 {p.badge ? (
-                  <div className="absolute -top-3 left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap border-2 border-border bg-primary px-3 py-1 font-mono text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-[2px_2px_0_0_var(--border)]">
+                  <div className="absolute -top-3 left-1/2 z-[1] -translate-x-1/2 whitespace-nowrap border-2 border-border bg-primary px-3 py-1 font-mono text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow">
                     {p.badge}
                   </div>
                 ) : null}
@@ -160,7 +160,7 @@ export default function PricingPage() {
                   <ul className="flex flex-1 flex-col gap-3 text-left">
                     {p.bullets.map((b) => (
                       <li key={b} className="flex gap-3 text-sm leading-snug">
-                        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center border-2 border-border bg-muted/40 text-primary shadow-[1px_1px_0_0_var(--border)]">
+                        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center border-2 border-border bg-muted/40 text-primary shadow">
                           <Check className="size-3.5" strokeWidth={3} aria-hidden />
                         </span>
                         <span className="text-foreground/95">{b}</span>

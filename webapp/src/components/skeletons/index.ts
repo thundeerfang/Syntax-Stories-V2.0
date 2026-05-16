@@ -1,6 +1,10 @@
-export { SkBlock, SkBar } from './primitives';
+export { SkBlock, SkBar, SkGradientFill } from './primitives';
 export {
   HomePageSkeletonInner,
+  HomeHeroSkeleton,
+  HomeLibraryHeaderSkeleton,
+  HomeLibraryPillsSkeleton,
+  ProfileCardSkeleton,
   ProfilePageSkeletonInner,
   type ProfilePageSkeletonVariant,
   AnalyticsPageSkeletonInner,
@@ -8,6 +12,7 @@ export {
   SettingsPageSkeletonInner,
   SettingsSidebarSkeleton,
   SettingsContentSkeleton,
+  StackToolsSettingsSkeleton,
   DialogPanelSkeleton,
   FollowingToolbarSkeleton,
   FollowingPostsGridSkeleton,
@@ -16,5 +21,19 @@ export {
   BlogPostPageSkeletonInner,
   DocsPageSkeletonInner,
   ContactPageSkeletonInner,
+  NavbarSkeleton,
+  SidebarSkeleton,
+  FooterSkeleton,
+  ExplorePageSkeletonInner,
+  ExploreSpotlightSkeleton,
+  ExploreTopSquadsSkeleton,
+  ExploreSquadCardSkeleton,
+  ExploreHotTagsSkeleton,
+  ExploreSectorGridSkeleton,
+  ExploreSectorCategoryCardSkeleton,
+  CompactBlogPostsSwiperSkeleton,
+  TrendingStackedHeroSkeleton,
+  TrendingCategoryLaneSkeleton,
+  TrendingPageSkeletonInner,
 } from './PageSkeletons';
 export { RouteLoadingSkeleton } from './RouteLoadingSkeleton';
