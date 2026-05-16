@@ -5,20 +5,16 @@ export {
   type ProfilePageSkeletonVariant,
   AnalyticsPageSkeletonInner,
   BlogWritePageSkeletonInner,
-} from './page-skeletons';
-export {
   SettingsPageSkeletonInner,
   SettingsSidebarSkeleton,
   SettingsContentSkeleton,
-} from './settings-page-skeleton';
-export { DialogPanelSkeleton } from './DialogPanelSkeleton';
-export { RouteLoadingSkeleton } from './RouteLoadingSkeleton';
-export {
+  DialogPanelSkeleton,
   FollowingToolbarSkeleton,
   FollowingPostsGridSkeleton,
   FollowingIntroSkeleton,
   FollowingPageContentSkeleton,
-} from './FollowingPageSkeleton';
-export { BlogPostPageSkeletonInner } from './BlogPostPageSkeleton';
-export { DocsPageSkeletonInner } from './DocsPageSkeleton';
-export { ContactPageSkeletonInner } from './ContactPageSkeleton';
+  BlogPostPageSkeletonInner,
+  DocsPageSkeletonInner,
+  ContactPageSkeletonInner,
+} from './PageSkeletons';
+export { RouteLoadingSkeleton } from './RouteLoadingSkeleton';

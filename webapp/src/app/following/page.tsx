@@ -9,7 +9,7 @@ import { BlogCard } from '@/components/blog/BlogCard';
 import { RailFeedEmptyState } from '@/components/layout/RailFeedEmptyState';
 import { RailSectionSubheader } from '@/components/layout/RailSectionSubheader';
 import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
-import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons/FollowingPageSkeleton';
+import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
 import { useAuthStore } from '@/store/auth';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';

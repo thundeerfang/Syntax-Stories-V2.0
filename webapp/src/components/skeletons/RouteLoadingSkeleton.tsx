@@ -3,15 +3,15 @@
 import { usePathname } from 'next/navigation';
 import {
   AnalyticsPageSkeletonInner,
+  BlogPostPageSkeletonInner,
   BlogWritePageSkeletonInner,
+  ContactPageSkeletonInner,
+  DocsPageSkeletonInner,
+  FollowingPageContentSkeleton,
   HomePageSkeletonInner,
   ProfilePageSkeletonInner,
-} from './page-skeletons';
-import { FollowingPageContentSkeleton } from './FollowingPageSkeleton';
-import { BlogPostPageSkeletonInner } from './BlogPostPageSkeleton';
-import { SettingsPageSkeletonInner } from './settings-page-skeleton';
-import { DocsPageSkeletonInner } from './DocsPageSkeleton';
-import { ContactPageSkeletonInner } from './ContactPageSkeleton';
+  SettingsPageSkeletonInner,
+} from './PageSkeletons';
 
 function pickInner(path: string) {
   if (path === '/following' || path === '/bookmarks' || path === '/reposts') {

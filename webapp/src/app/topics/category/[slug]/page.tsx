@@ -11,7 +11,7 @@ import {
   type RailSectionSubheaderSortProps,
 } from '@/components/layout/RailSectionSubheader';
 import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
-import { FollowingPostsGridSkeleton } from '@/components/skeletons/FollowingPageSkeleton';
+import { FollowingPostsGridSkeleton } from '@/components/skeletons';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
 import { cn } from '@/lib/utils';

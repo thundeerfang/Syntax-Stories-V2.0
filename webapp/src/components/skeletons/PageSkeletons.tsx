@@ -653,3 +653,392 @@ export function BlogWritePageSkeletonInner() {
     </div>
   );
 }
+
+/** Matches `PublicBlogPostPage` loading UI — use in route `loading.tsx` + client fetch state. */
+export function BlogPostPageSkeletonInner() {
+  return (
+    <div className="public-blog-post-page flex min-h-screen flex-col bg-background text-foreground">
+      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'relative flex-1 !overflow-visible py-6 md:py-10 xl:py-6')}>
+        <div className="w-full border-2 border-border bg-transparent">
+          <div className="px-3 py-6 sm:px-4 lg:px-5 md:py-10">
+            <div className="mb-8 flex flex-wrap gap-3">
+              <div className="h-8 w-40 animate-pulse bg-muted sm:h-9" aria-hidden />
+              <div className="h-8 w-32 animate-pulse bg-muted/70 sm:h-9" aria-hidden />
+            </div>
+            <div className="mb-10 space-y-3 md:space-y-4">
+              <div className="h-10 w-full max-w-4xl animate-pulse bg-muted md:h-14" aria-hidden />
+              <div className="h-10 w-[92%] max-w-3xl animate-pulse bg-muted md:h-14" aria-hidden />
+              <div className="h-10 w-[64%] max-w-2xl animate-pulse bg-muted md:h-14" aria-hidden />
+            </div>
+            <div className="border-l-4 border-primary/25 bg-muted/10 p-6 md:p-8">
+              <div className="mb-4 h-3 w-36 animate-pulse bg-muted/80" aria-hidden />
+              <div className="space-y-2">
+                <div className="h-2.5 w-full animate-pulse bg-muted" aria-hidden />
+                <div className="h-2.5 w-full animate-pulse bg-muted" aria-hidden />
+                <div className="h-2.5 w-[78%] animate-pulse bg-muted" aria-hidden />
+              </div>
+            </div>
+            <div className="mt-8 flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase text-muted-foreground">
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
+              Initializing_Stream…
+            </div>
+          </div>
+          <div className="px-3 py-6 sm:px-4 lg:px-5 md:py-10">
+            <div className={cn('space-y-3', SHELL_CONTENT_MEASURE_CLASS)}>
+              {Array.from({ length: 10 }, (_, i) => (
+                <div
+                  key={`blog-post-sk-${i}`}
+                  className="h-2.5 animate-pulse bg-muted"
+                  style={{ width: i % 4 === 0 ? '100%' : i % 4 === 1 ? '96%' : i % 4 === 2 ? '88%' : '72%' }}
+                  aria-hidden
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type DialogPanelSkeletonProps = {
+  /** Shown above structural placeholders (e.g. OAuth status). */
+  statusLine?: ReactNode;
+  className?: string;
+};
+
+/** Matches `FormDialog` / `Dialog` proportions: header tile + title, form rows, footer actions. */
+export function DialogPanelSkeleton({ statusLine, className }: Readonly<DialogPanelSkeletonProps>) {
+  return (
+    <div
+      className={cn(
+        'flex w-full max-w-lg flex-col overflow-hidden rounded-none border-2 border-border bg-card shadow-[8px_8px_0_0_var(--border)]',
+        className,
+      )}
+    >
+      <header className="flex items-end gap-3 border-b-2 border-border bg-muted/20 px-4 py-3 sm:gap-4">
+        <SkBlock className="size-11 shrink-0 animate-pulse border-2 border-border" />
+        <div className="min-w-0 flex-1 space-y-2 pb-0.5">
+          <SkBar className="h-4 max-w-[220px] w-[60%]" />
+          <SkBar className="h-2 max-w-[280px] w-[75%]" />
+        </div>
+        <SkBlock className="size-8 shrink-0 animate-pulse" />
+      </header>
+      {statusLine != null && (
+        <div className="border-b border-border/60 bg-background/80 px-4 py-2 text-center text-xs font-medium text-muted-foreground">
+          {statusLine}
+        </div>
+      )}
+      <div className="min-h-[max(12rem,28vh)] space-y-4 p-4 sm:p-5">
+        <div className="space-y-2">
+          <SkBar className="h-2 w-24" />
+          <SkBlock className="h-10 w-full animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <SkBar className="h-2 w-28" />
+          <SkBlock className="h-10 w-full animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <SkBar className="h-2 w-20" />
+          <SkBlock className="h-24 w-full animate-pulse" />
+        </div>
+      </div>
+      <footer className="flex justify-end gap-2 border-t-2 border-border bg-muted/10 px-4 py-3">
+        <SkBlock className="h-9 w-20 animate-pulse" />
+        <SkBlock className="h-9 w-24 animate-pulse" />
+      </footer>
+    </div>
+  );
+}
+
+const DOCS_PAGE_MIN = 'min-h-[calc(100vh-var(--header-height))]';
+
+/** Matches `docs/layout` chrome: frame, sidebar rail, breadcrumb strip, prose blocks. */
+export function DocsPageSkeletonInner() {
+  return (
+    <div className={`flex w-full flex-col ${DOCS_PAGE_MIN}`}>
+      <div
+        className={`mx-auto flex w-full max-w-[1440px] flex-1 flex-col border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)] ${DOCS_PAGE_MIN}`}
+      >
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          <aside className="hidden w-72 shrink-0 flex-col gap-4 border-border bg-card/50 p-4 lg:flex lg:border-r-4">
+            <div className="space-y-2 border-b-4 border-border pb-4">
+              <Skeleton className="h-4 w-16 rounded-none" />
+              <Skeleton className="h-3 w-28 rounded-none" />
+            </div>
+            <Skeleton className="h-9 w-full rounded-none border-2 border-border/40" />
+            <div className="space-y-2 pt-2">
+              <Skeleton className="h-3 w-24 rounded-none" />
+              <Skeleton className="h-10 w-full rounded-none border-2 border-border/40" />
+              <Skeleton className="h-10 w-full rounded-none border-2 border-border/40" />
+              <Skeleton className="h-10 w-full rounded-none border-2 border-border/40" />
+            </div>
+            <div className="mt-auto space-y-2 border-t-4 border-border pt-4">
+              <Skeleton className="h-3 w-32 rounded-none" />
+              <Skeleton className="h-8 w-full rounded-none border-2 border-border/40" />
+            </div>
+          </aside>
+
+          <main className="flex min-w-0 flex-1 flex-col">
+            <div className="flex h-12 shrink-0 items-center gap-2 border-b-4 border-border bg-muted/15 px-4 sm:px-8">
+              <Skeleton className="h-3 w-14 rounded-none" />
+              <Skeleton className="h-3 w-3 rounded-none" />
+              <Skeleton className="h-3 w-28 rounded-none" />
+            </div>
+            <div className="mx-auto w-full max-w-4xl flex-1 space-y-6 px-4 py-10 sm:px-10 lg:py-14">
+              <Skeleton className="h-10 w-full max-w-md rounded-none" />
+              <Skeleton className="h-4 w-full max-w-2xl rounded-none" />
+              <Skeleton className="h-4 w-full max-w-xl rounded-none" />
+              <div className="space-y-3 pt-4">
+                <Skeleton className="h-24 w-full rounded-none border-2 border-border/40" />
+                <Skeleton className="h-24 w-full rounded-none border-2 border-border/40" />
+                <Skeleton className="h-16 w-full rounded-none border-2 border-border/40" />
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Matches contact page: rail, two-column grid, form card + sidebar card. */
+export function ContactPageSkeletonInner() {
+  return (
+    <div className={`${SHELL_CONTENT_RAIL_CLASS} py-8 pb-24 md:py-12`}>
+      <div className="w-full space-y-8">
+        <div className="grid items-start gap-8 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] xl:gap-12">
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <Skeleton className="h-3 w-40 rounded-none" />
+              <Skeleton className="h-12 w-full max-w-lg rounded-none" />
+              <Skeleton className="h-4 w-full max-w-xl rounded-none" />
+            </div>
+
+            <section className="border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)]">
+              <div className="flex items-center justify-between border-b-4 border-border bg-muted/30 px-6 py-4">
+                <Skeleton className="h-5 w-40 rounded-none" />
+                <Skeleton className="size-5 rounded-none" />
+              </div>
+              <div className="space-y-6 p-6 sm:p-10">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <Skeleton className="h-14 w-full rounded-none border-2 border-border/40" />
+                  <Skeleton className="h-14 w-full rounded-none border-2 border-border/40" />
+                </div>
+                <Skeleton className="h-14 w-full rounded-none border-2 border-border/40" />
+                <Skeleton className="h-14 w-full rounded-none border-2 border-border/40" />
+                <Skeleton className="h-36 w-full rounded-none border-2 border-border/40" />
+                <Skeleton className="h-12 w-full rounded-none border-2 border-border/40" />
+              </div>
+            </section>
+          </div>
+
+          <aside className="space-y-6">
+            <div className="border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)]">
+              <div className="border-b-4 border-border bg-muted/30 px-6 py-4">
+                <Skeleton className="h-4 w-28 rounded-none" />
+              </div>
+              <div className="space-y-4 p-6">
+                <Skeleton className="h-4 w-full rounded-none" />
+                <Skeleton className="h-4 w-full max-w-sm rounded-none" />
+                <Skeleton className="h-20 w-full rounded-none border-2 border-border/30" />
+              </div>
+            </div>
+            <div className="border-4 border-border bg-card p-6 shadow-[6px_6px_0_0_var(--border)]">
+              <Skeleton className="h-3 w-24 rounded-none" />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Skeleton className="h-8 w-20 rounded-none" />
+                <Skeleton className="h-8 w-16 rounded-none" />
+                <Skeleton className="h-8 w-24 rounded-none" />
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SettingsSidebarSkeleton({ itemCount }: { itemCount: number }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 border-4 border-border bg-card p-4 shadow-[4px_4px_0px_0px_var(--border)]">
+        <SkBlock className="size-10 shrink-0 animate-pulse" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <SkBar className="h-2.5 w-[70%]" />
+          <SkBar className="h-2 w-[50%]" />
+        </div>
+      </div>
+      <div className="space-y-2 border-4 border-border bg-card p-3 shadow-[4px_4px_0px_0px_var(--border)]">
+        {Array.from({ length: itemCount }, (_, idx) => `nav-skeleton-${idx + 1}`).map((itemId, i) => (
+          <div key={itemId} className="flex items-center gap-3 px-1 py-1.5">
+            <SkBlock className="size-4 shrink-0 animate-pulse" />
+            <SkBar style={{ width: `${45 + ((i * 11) % 41)}%` }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SettingsContentSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn('space-y-8', className)}>
+      <div className="space-y-3">
+        <SkBar className="h-6 w-[40%]" />
+        <SkBar className="h-3 w-[65%]" />
+      </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="space-y-3">
+          <SkBar className="h-2 w-[30%]" />
+          <SkBlock className="h-32 animate-pulse" />
+        </div>
+        <div className="space-y-3">
+          <SkBar className="h-2 w-[25%]" />
+          <div className="flex items-center gap-4">
+            <SkBlock className="size-20 animate-pulse" />
+            <SkBar className="h-8 w-20" />
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4 border-t-2 border-border/20 pt-6">
+        <SkBar className="h-2 w-[25%]" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <SkBar className="h-2 w-[20%]" />
+            <SkBlock className="h-10 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <SkBar className="h-2 w-[20%]" />
+            <SkBlock className="h-10 animate-pulse" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <SkBar className="h-2 w-[15%]" />
+          <SkBlock className="h-24 animate-pulse" />
+        </div>
+      </div>
+      <div className="flex justify-end gap-3 border-t-2 border-border/20 pt-6">
+        <SkBar className="h-10 w-20" />
+        <SkBar className="h-10 w-[120px]" />
+      </div>
+    </div>
+  );
+}
+
+/** Settings grid — for route `loading` and auth gate (inside main content). */
+export function SettingsPageSkeletonInner({ navItems = 18 }: { navItems?: number }) {
+  return (
+    <div className="min-h-screen font-sans text-foreground">
+      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-12')}>
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[256px_1fr]">
+          <aside className="mx-auto w-full max-w-[256px] overflow-hidden lg:mx-0">
+            <SettingsSidebarSkeleton itemCount={navItems} />
+          </aside>
+          <main className="min-w-0">
+            <div className="min-h-[600px] border-4 border-border bg-card p-6 shadow-[8px_8px_0px_0px_var(--border)] md:p-10">
+              <SettingsContentSkeleton className="animate-pulse" />
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Toolbar — matches `RailSectionSubheader` with left writer buttons + search on following page. */
+export function FollowingToolbarSkeleton() {
+  return (
+    <div
+      className="flex h-[58px] w-full animate-pulse items-center justify-between gap-3 border-2 border-border bg-white px-3 shadow-[4px_4px_0_0_var(--border)] dark:bg-card sm:h-[62px] sm:px-4"
+      aria-hidden
+    >
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+        {Array.from({ length: 5 }, (_, i) => `fc-${i}`).map((id) => (
+          <SkBlock key={id} className="h-[42px] w-[6.5rem] shrink-0 rounded-none border-2 border-border bg-muted/20" />
+        ))}
+      </div>
+      <SkBlock className="h-[42px] w-36 shrink-0 rounded-none border-2 border-border bg-muted/15 sm:w-44" />
+    </div>
+  );
+}
+
+/** Blog-card–shaped tiles (matches `BlogCard` weight). */
+function FollowingBlogCardSkeletonTile() {
+  return (
+    <div className="flex min-h-0 w-full flex-col overflow-hidden border-[3px] border-border bg-card text-card-foreground shadow-[4px_4px_0_0_var(--border)]">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 sm:gap-2 sm:p-2.5">
+        <div className="-mx-2 -mt-2 w-[calc(100%+1rem)] shrink-0 overflow-hidden sm:-mx-2.5 sm:-mt-2.5 sm:w-[calc(100%+1.25rem)]">
+          <SkBlock className="aspect-[16/10] w-full max-h-[150px] animate-pulse bg-muted/30 sm:max-h-[170px]" />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex shrink-0 items-center justify-between gap-3 pb-2.5">
+            <SkBlock className="h-5 w-24 animate-pulse border-2 border-border/60 bg-muted/25" />
+            <SkBar className="h-2 w-8" />
+          </div>
+          <div className="space-y-2">
+            <SkBar className="h-3 w-full" />
+            <SkBar className="h-3 w-[88%]" />
+          </div>
+          <div className="flex items-center gap-2 pt-1.5 sm:pt-2">
+            <SkBlock className="size-8 shrink-0 animate-pulse border border-border bg-muted/30 sm:size-9" />
+            <div className="min-w-0 flex-1 space-y-1">
+              <SkBar className="h-2 w-28" />
+              <SkBar className="h-2 w-20" />
+            </div>
+            <div className="ml-auto flex shrink-0 gap-0.5">
+              <SkBlock className="size-7 shrink-0 border-2 border-border bg-muted/20" />
+              <SkBlock className="size-7 shrink-0 border-2 border-border bg-muted/20" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function FollowingPostsGridSkeleton({ count = 6 }: Readonly<{ count?: number }>) {
+  return (
+    <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
+      {Array.from({ length: count }, (_, i) => `fp-${i}`).map((id) => (
+        <li key={id} className="flex min-h-0">
+          <FollowingBlogCardSkeletonTile />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Intro row placeholders — aligns with `ShellPageIntroHeader` spacing. */
+export function FollowingIntroSkeleton() {
+  return (
+    <header className="flex w-full flex-col items-start space-y-3 md:space-y-4" aria-hidden>
+      <SkBlock className="h-10 w-full max-w-md animate-pulse border-2 border-border bg-card shadow-[3px_3px_0_0_var(--border)]" />
+      <div className="w-full space-y-2">
+        <SkBar className="h-8 w-full max-w-[18rem] sm:h-10" />
+        <SkBar className="h-8 w-full max-w-[14rem] sm:h-10" />
+      </div>
+      <div className="w-full max-w-3xl space-y-2">
+        <SkBar className="h-3 w-full" />
+        <SkBar className="h-3 w-[92%]" />
+      </div>
+    </header>
+  );
+}
+
+/** Full rail layout for following, bookmarks, reposts, and similar feed pages. */
+export function FollowingPageContentSkeleton({
+  showIntro = false,
+}: Readonly<{ showIntro?: boolean }>) {
+  return (
+    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
+      <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8" aria-busy="true">
+        {showIntro ? <FollowingIntroSkeleton /> : null}
+        <FollowingToolbarSkeleton />
+        <section aria-label="Loading posts" className="min-w-0">
+          <FollowingPostsGridSkeleton />
+        </section>
+      </div>
+    </div>
+  );
+}

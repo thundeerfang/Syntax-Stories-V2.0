@@ -7,7 +7,7 @@ import { Hash } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { BlogCard } from '@/components/blog/BlogCard';
 import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
-import { FollowingPostsGridSkeleton } from '@/components/skeletons/FollowingPageSkeleton';
+import { FollowingPostsGridSkeleton } from '@/components/skeletons';
 import { mapPublicFeedPostToPost } from '@/lib/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shellContentRail';
 import { cn } from '@/lib/utils';

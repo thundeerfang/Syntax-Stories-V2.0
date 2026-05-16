@@ -9,7 +9,7 @@ import { bookmarksApi, type BookmarkGroupRow } from '@/api/bookmarks';
 import { BlogCard } from '@/components/blog/BlogCard';
 import { RailFeedEmptyState } from '@/components/layout/RailFeedEmptyState';
 import { ShellPageIntroHeader } from '@/components/layout/ShellPageIntroHeader';
-import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons/FollowingPageSkeleton';
+import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
 import { WarningConfirmDialog } from '@/components/ui/delete';
 import { Dialog, DIALOG_Z_INDEX_STACKED } from '@/components/ui/Dialog';
 import { BlogApiConnectionError } from '@/lib/blogAuthFetch';
