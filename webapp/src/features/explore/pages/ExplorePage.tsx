@@ -40,11 +40,13 @@ import {
   type CategoryMemberPreview,
   type CategoryMembersSnapshot,
 } from '@/lib/profile/categoryMembers';
-import { FOLLOWED_CATEGORIES_CHANGED_EVENT, isCategorySlugFollowed } from '@/lib/feeds/followedCategoriesStorage';
 import {
-  refreshFollowedCategoriesFromServer,
-  toggleCategoryFollowWithSync,
-} from '@/lib/feeds/categoryFollowActions';
+  FOLLOWED_CATEGORIES_CHANGED_EVENT,
+  isCategorySlugFollowed,
+  readFollowedCategorySlugs,
+  writeFollowedCategorySlugs,
+} from '@/lib/feeds/followedCategoriesStorage';
+import { toggleCategoryFollowWithSync } from '@/lib/feeds/categoryFollowActions';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';

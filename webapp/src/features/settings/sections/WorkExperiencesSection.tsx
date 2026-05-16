@@ -12,7 +12,6 @@ import {
   ImagePlus,
   X,
   TrendingUp,
-  Search,
   Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
@@ -69,6 +68,7 @@ import {
   resolveProfileMediaItems,
   parseMediaLinkLineInput,
 } from '../lib/workExperienceForm';
+
 
 
 

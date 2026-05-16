@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Link2, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
@@ -12,6 +12,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Input, Label } from '@/components/retroui';
 import { buildLocationString } from '@/lib/profile/profileLocation';
 import { monthYearToValue, profileYearOptions } from '@/lib/profile/dateLabels';
+
 
 
 

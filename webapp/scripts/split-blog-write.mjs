@@ -33,9 +33,6 @@ for (const c of chunks) {
       `export default function ${c.defaultExport}`,
     );
   }
-  const header = c.file === 'writeUtils.ts'
-    ? `'use client';\n\n${importBlock}\n\n`
-    : `'use client';\n\n${importBlock}\n\nimport {\n  ${c.file === 'SummaryEditor.tsx' ? 'writeUtils imports' : ''}\n} from './writeUtils';\n\n`;
   // Simpler: all files get full import block; BlogWritePage imports submodules
   const content =
     c.file === 'BlogWritePage.tsx'

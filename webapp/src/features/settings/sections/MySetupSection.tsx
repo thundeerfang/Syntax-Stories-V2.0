@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -16,9 +16,9 @@ import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { ImageUploadCropDialog } from '@/components/upload';
 import { uploadMedia } from '@/api/upload';
-import { Label } from '@/components/retroui';
 import { type SetupItem as MySetupItem } from '@/app/settings/settings-list/MySetupCard';
 import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+
 
 
 

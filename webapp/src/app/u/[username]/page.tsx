@@ -219,7 +219,7 @@ export default function PublicProfilePage() { // NOSONAR S3776 — large public 
       })
       .catch(() => {
         toast.error('User not found');
-        router.replace('/', '');
+        router.replace('/');
       })
       .finally(() => setLoading(false));
   }, [username, router]);

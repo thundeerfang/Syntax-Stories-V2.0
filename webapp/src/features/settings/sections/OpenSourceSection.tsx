@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Github, Search, Loader2 } from 'lucide-react';
+import { Github, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { settingsBtnBlockPrimarySm } from '@/app/settings/buttonStyles';
 import { GithubNotConnectedDialog } from '@/app/settings/GithubNotConnectedDialog';
@@ -15,6 +15,7 @@ import { OpenSourceCard } from '@/app/settings/settings-list/OpenSourceCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
 import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
 import { SettingsSectionEmptyState } from '../components/SettingsSectionEmptyState';
+
 
 
 

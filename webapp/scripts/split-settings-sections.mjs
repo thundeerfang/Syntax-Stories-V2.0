@@ -83,7 +83,6 @@ ${sectionImports}
 
 const shellBody = shellLines
   .join('\n')
-  .replace(/<SyntaxCardContent \/>/g, '<SyntaxCardContent />')
   .replace(/function SettingsPage/g, 'export default function SettingsPage');
 
 fs.writeFileSync(path.join(root, 'SettingsPage.tsx'), `${shellImports}\n${shellBody}`);

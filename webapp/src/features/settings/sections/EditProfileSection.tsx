@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Camera,
@@ -36,6 +36,7 @@ import { GhostOutlineButton } from '@/components/ui';
 import { ToggleGroup, ToggleGroupItem } from '@/components/retroui';
 import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
 import { PresenceIndicatorSettingsCard } from '../components/PresenceIndicatorSettingsCard';
+
 
 
 export function EditProfileContent() {

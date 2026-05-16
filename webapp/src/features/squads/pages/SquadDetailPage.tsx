@@ -194,7 +194,7 @@ export default function SquadDetailPage() {
         setSquad(null);
         setFeed([]);
         setPinnedCount(0);
-        router.replace('/', '');
+        router.replace('/');
         return;
       }
       toast.error(e instanceof Error ? e.message : 'Could not load squad');

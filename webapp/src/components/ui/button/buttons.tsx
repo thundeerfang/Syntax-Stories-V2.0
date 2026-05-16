@@ -132,7 +132,7 @@ export type BlockShadowButtonClassOptions = {
 };
 
 export function blockShadowButtonClassNames(options: BlockShadowButtonClassOptions = {}): string {
-  const { variant = 'primary', size = 'md', shadow = 'md', fullWidth = false, className } = options;
+  const { variant = 'primary', size = 'md', fullWidth = false, className } = options;
 
   return cn(
     'inline-flex cursor-pointer items-center justify-center gap-2  border-2 border-border font-black uppercase tracking-widest',

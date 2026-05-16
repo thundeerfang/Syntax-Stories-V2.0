@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { CreditCard, Instagram, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { CreditCard } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { SyntaxCardDialog } from '@/features/profile';
 import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+
 
 
 

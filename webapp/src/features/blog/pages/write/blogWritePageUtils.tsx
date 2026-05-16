@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
 import { uploadCover } from '@/api/upload';
 import type { BlogPublishTaxonomy } from '@/lib/blog/blogPublishTaxonomy';
@@ -25,6 +24,7 @@ import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
 import { blockTypeDisplayName } from '@/lib/blog/writeWorkspaceStats';
 import { Block, stripLegacyGifBlocks } from '@/components/ui/editor';
 import { motion, AnimatePresence } from 'framer-motion';
+
 
 
 

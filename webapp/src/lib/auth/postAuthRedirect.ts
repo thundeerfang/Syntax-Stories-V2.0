@@ -12,7 +12,7 @@ export function setPostAuthRedirect(path: string): void {
 
 /**
  * After successful sign-in: if a path was stored, navigate there and return true.
- * Otherwise return false (caller may `router.replace('/', '')`).
+ * Otherwise return false (caller may `router.replace('/')`).
  */
 export function consumePostAuthRedirect(): boolean {
   try {

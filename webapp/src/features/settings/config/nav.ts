@@ -2,10 +2,8 @@ import type { ElementType } from 'react';
 import {
   Award,
   Bell,
-  BookOpen,
   Briefcase,
   CreditCard,
-  FileText,
   Flame,
   FolderGit2,
   Github,
@@ -13,12 +11,11 @@ import {
   Mail,
   Monitor,
   Plug,
-  ShieldCheck,
-  Tag,
   User,
   Wallet,
   Wrench,
 } from 'lucide-react';
+
 
 export interface SettingsNavItem {
   id: string;

@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { ShieldCheck, ChevronDown, Mail, Check } from 'lucide-react';
+import { ShieldCheck, ChevronDown, Mail } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
 import { GhostOutlineButton } from '@/components/ui';
-import { Input, Label } from '@/components/retroui';
+import { Label } from '@/components/retroui';
 import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+
 
 
 

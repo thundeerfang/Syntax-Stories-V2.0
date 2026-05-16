@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Plug, X } from 'lucide-react';
+import { Plug } from 'lucide-react';
 import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/core/utils';
 import { useAuthStore } from '@/store/auth';
@@ -10,6 +10,7 @@ import { authApi } from '@/api/auth';
 import { markOAuthNavigationPending } from '@/lib/auth/oauthNavigation';
 import { GithubConnectLottie } from '@/components/ui/lottie';
 import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+
 
 
 

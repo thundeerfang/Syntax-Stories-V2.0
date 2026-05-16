@@ -160,7 +160,7 @@ export default function InviteDashboardPage() {
     if (!isHydrated) return;
     if (!token) {
       setPostAuthRedirect('/invite');
-      router.replace('/login', '');
+      router.replace('/login');
       return;
     }
     void load();

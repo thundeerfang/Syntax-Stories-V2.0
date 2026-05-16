@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -20,6 +20,7 @@ import { getSkillIconUrl, getSkillIconUrlBySlug, preloadSkillIcons } from '@/lib
 import { SkillIconImage } from '@/components/ui/media';
 import { searchTechStack, type TechStackItem } from '@/lib/blog/referenceSearch';
 import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+
 
 
 

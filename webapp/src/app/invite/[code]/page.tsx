@@ -16,7 +16,7 @@ export default function InviteLandingPage() {
   useEffect(() => {
     const trimmed = code.trim();
     if (!trimmed) {
-      globalThis.location?.replace('/', '');
+      globalThis.location?.replace('/');
       return;
     }
     const normalized = trimmed.toUpperCase();
@@ -27,7 +27,7 @@ export default function InviteLandingPage() {
     }
     const api = resolvePublicApiBase();
     if (!api) {
-      globalThis.location?.replace('/', '');
+      globalThis.location?.replace('/');
       return;
     }
     const next = encodeURIComponent('/');

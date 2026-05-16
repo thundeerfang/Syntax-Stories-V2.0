@@ -38,7 +38,7 @@ export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCal
     if (error) {
       handledRef.current = true;
       toast.error(error);
-      router.replace('/login', '');
+      router.replace('/login');
       return;
     }
 
@@ -51,25 +51,25 @@ export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCal
         .then((res) => {
           if (!res.success || !res.accessToken) {
             toast.error(res.message ?? 'Sign-in failed');
-            router.replace('/login', '');
+            router.replace('/login');
             return;
           }
           return authApi.getAccount(res.accessToken).then((accountRes) => {
             const user = normalizeUser(accountRes.user);
             setAuth(user, res.accessToken!, res.refreshToken ?? undefined);
             if (consumePostAuthRedirect()) return;
-            router.replace('/', '');
+            router.replace('/');
           });
         })
         .catch(() => {
           toast.error('Sign-in failed');
-          router.replace('/login', '');
+          router.replace('/login');
         });
       return;
     }
 
     handledRef.current = true;
-    router.replace('/login', '');
+    router.replace('/login');
   }, [searchParams, setAuth, router]);
 
   const twoFactorRequired = searchParams.get('twoFactorRequired');
@@ -85,7 +85,7 @@ export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCal
       setAuth(user, res.accessToken, res.refreshToken ?? undefined);
       toast.success('Signed in successfully.');
       if (consumePostAuthRedirect()) return;
-      router.replace('/', '');
+      router.replace('/');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Invalid 2FA code');
     } finally {

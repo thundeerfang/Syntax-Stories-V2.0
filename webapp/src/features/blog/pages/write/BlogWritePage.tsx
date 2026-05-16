@@ -46,6 +46,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 
 
+
 import {
   SummaryEditor,
   BlogWriteTopNav,
@@ -56,10 +57,7 @@ import {
   SUMMARY_MAX_WORDS,
   serializeWriteWorkspace,
   summaryWordCount,
-  draftSyncBadgeTitle,
-  draftSyncBadgeLabel,
   MAX_BLOCKS_PER_SECTION,
-  type RevisionKind,
   type RevisionEntry,
   formatRevisionWhen,
   revisionKindBadgeClass,
@@ -67,11 +65,9 @@ import {
   THUMB_MAX_MB,
   REVISIONS_SIDEBAR_VISIBLE,
   resolveCentreMaxWidthClass,
-  taxonomyApiFields,
   taxonomyPayload,
   type WriteFocusChrome,
   type DraftSyncUi,
-  focusContextLabel,
   runBlogWriteSubmit,
 } from './blogWritePageUtils';
 

@@ -21,7 +21,7 @@ export function useRequireAuth() {
   useEffect(() => {
     if (!isHydrated) return;
     if (!token) {
-      router.replace('/login', '');
+      router.replace('/login');
       return;
     }
     if (!didValidate.current) {
