@@ -43,20 +43,16 @@ describeRedis('readViewCommitMerged Lua (RUN_REDIS_TESTS=1 + REDIS_URL)', () => 
       used: '0',
     });
 
-    const out = await evalReadViewCommitMerged(
-      client,
-      [sk, streakKey, zKey, ackKey],
-      {
-        today,
-        yesterday,
-        zsetScoreMs: readDayZsetScoreMs(today),
-        trimMinScoreStr: String(readDaysTrimMinRetainMsUtc(now)),
-        lastUpdatedMs: String(now.getTime()),
-        userId,
-        postId,
-        ackTtlSeconds: READ_VIEW_ACK_TTL_SEC,
-      }
-    );
+    const out = await evalReadViewCommitMerged(client, [sk, streakKey, zKey, ackKey], {
+      today,
+      yesterday,
+      zsetScoreMs: readDayZsetScoreMs(today),
+      trimMinScoreStr: String(readDaysTrimMinRetainMsUtc(now)),
+      lastUpdatedMs: String(now.getTime()),
+      userId,
+      postId,
+      ackTtlSeconds: READ_VIEW_ACK_TTL_SEC,
+    });
 
     expect([0, 1]).toContain(out.status);
     expect(out.lastDay).toBe(today);
@@ -83,20 +79,16 @@ describeRedis('readViewCommitMerged Lua (RUN_REDIS_TESTS=1 + REDIS_URL)', () => 
     const today = '2030-07-01';
     const yesterday = '2030-06-30';
 
-    const out = await evalReadViewCommitMerged(
-      client,
-      [sk, streakKey, zKey, ackKey],
-      {
-        today,
-        yesterday,
-        zsetScoreMs: readDayZsetScoreMs(today),
-        trimMinScoreStr: String(readDaysTrimMinRetainMsUtc(now)),
-        lastUpdatedMs: String(now.getTime()),
-        userId,
-        postId,
-        ackTtlSeconds: READ_VIEW_ACK_TTL_SEC,
-      }
-    );
+    const out = await evalReadViewCommitMerged(client, [sk, streakKey, zKey, ackKey], {
+      today,
+      yesterday,
+      zsetScoreMs: readDayZsetScoreMs(today),
+      trimMinScoreStr: String(readDaysTrimMinRetainMsUtc(now)),
+      lastUpdatedMs: String(now.getTime()),
+      userId,
+      postId,
+      ackTtlSeconds: READ_VIEW_ACK_TTL_SEC,
+    });
 
     expect(out.status).toBe(2);
     await client.del(ackKey);

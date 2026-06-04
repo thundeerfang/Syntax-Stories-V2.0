@@ -13,8 +13,7 @@ export function normalizeGoogleProfile(profile: GoogleLikeProfile): NormalizedOA
     throw new Error('Email not provided by Google');
   }
   const photoUrl = profile.photos?.[0]?.value;
-  const profileImg =
-    typeof photoUrl === 'string' && photoUrl.startsWith('http') ? photoUrl : '';
+  const profileImg = typeof photoUrl === 'string' && photoUrl.startsWith('http') ? photoUrl : '';
   return {
     providerId: profile.id,
     email,
@@ -38,8 +37,7 @@ export function normalizeGithubProfile(profile: GitHubLikeProfile): NormalizedOA
     throw new Error('Email is required but not available from GitHub');
   }
   const avatarUrl = profile._json?.avatar_url;
-  const profileImg =
-    typeof avatarUrl === 'string' && avatarUrl.startsWith('http') ? avatarUrl : '';
+  const profileImg = typeof avatarUrl === 'string' && avatarUrl.startsWith('http') ? avatarUrl : '';
   const username = profile.username ?? 'user';
   return {
     providerId: String(profile.id),
@@ -64,8 +62,7 @@ export function normalizeFacebookProfile(profile: FacebookLikeProfile): Normaliz
     throw new Error('Email not available from Facebook');
   }
   const photoVal = profile.photos?.[0]?.value;
-  const profileImg =
-    typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : '';
+  const profileImg = typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : '';
   return {
     providerId: profile.id,
     email,
@@ -88,8 +85,7 @@ export function normalizeXProfile(profile: XLikeProfile): NormalizedOAuthProfile
   const email = realEmail ?? fallbackEmail;
   const useXSyntheticEmail = !realEmail || email.includes('@twitter.placeholder');
   const photoVal = profile.photos?.[0]?.value;
-  const profileImg =
-    typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : '';
+  const profileImg = typeof photoVal === 'string' && photoVal.startsWith('http') ? photoVal : '';
   return {
     providerId: profile.id,
     email,
@@ -126,6 +122,54 @@ function discordAvatarUrl(user: DiscordMeProfile): string {
   if (!user.avatar) return '';
   const ext = user.avatar.startsWith('a_') ? 'gif' : 'png';
   return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=256`;
+}
+
+const TWITCH_API = 'https://api.twitch.tv/helix';
+
+export type TwitchMeProfile = {
+  id: string;
+  login: string;
+  display_name?: string;
+  email?: string;
+  profile_image_url?: string;
+};
+
+export async function fetchTwitchMe(
+  accessToken: string,
+  clientId: string
+): Promise<TwitchMeProfile> {
+  const res = await fetch(`${TWITCH_API}/users`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Client-Id': clientId,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Twitch profile failed: ${res.status} ${text}`);
+  }
+  const json = (await res.json()) as { data?: TwitchMeProfile[] };
+  const user = json.data?.[0];
+  if (!user?.id) throw new Error('Twitch did not return a user profile.');
+  return user;
+}
+
+export function normalizeTwitchProfile(twitchUser: TwitchMeProfile): NormalizedOAuthProfile {
+  const email = twitchUser.email?.trim()?.toLowerCase();
+  if (!email) {
+    throw new Error(
+      'Twitch did not return an email. Verify your Twitch account email or allow user:read:email scope.'
+    );
+  }
+  const baseUsername = (twitchUser.login || 'user').replaceAll(/\W/g, '').slice(0, 20) || 'user';
+  const fullName = (twitchUser.display_name ?? twitchUser.login ?? 'User').trim() || 'User';
+  return {
+    providerId: twitchUser.id,
+    email,
+    fullName,
+    profileImg: twitchUser.profile_image_url?.trim() ?? '',
+    twitchUsernameBase: baseUsername,
+  };
 }
 
 export function normalizeDiscordProfile(discordUser: DiscordMeProfile): NormalizedOAuthProfile {

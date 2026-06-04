@@ -39,7 +39,11 @@ export const followApi = {
   getFollowCounts: (username: string) =>
     fetch(`${getApiBase()}/api/follow/counts/${encodeURIComponent(username)}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<{ success: boolean; followersCount: number; followingCount: number }>;
+      return r.json() as Promise<{
+        success: boolean;
+        followersCount: number;
+        followingCount: number;
+      }>;
     }),
 
   getFollowers: (username: string, cursor?: string | null, limit = 20) => {
@@ -51,7 +55,11 @@ export const followApi = {
     const path = `/api/follow/followers/${encodeURIComponent(username)}${querySuffix}`;
     return fetch(`${getApiBase()}${path}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>;
+      return r.json() as Promise<{
+        success: boolean;
+        list: FollowUser[];
+        nextCursor: string | null;
+      }>;
     });
   },
 
@@ -59,7 +67,7 @@ export const followApi = {
     username: string,
     cursor?: string | null,
     limit = 20,
-    opts?: Readonly<{ order?: 'asc' | 'desc'; shuffle?: boolean }>,
+    opts?: Readonly<{ order?: 'asc' | 'desc'; shuffle?: boolean }>
   ) => {
     const params = new URLSearchParams();
     if (cursor) params.set('cursor', cursor);
@@ -71,7 +79,11 @@ export const followApi = {
     const path = `/api/follow/following/${encodeURIComponent(username)}${querySuffix}`;
     return fetch(`${getApiBase()}${path}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<{ success: boolean; list: FollowUser[]; nextCursor: string | null }>;
+      return r.json() as Promise<{
+        success: boolean;
+        list: FollowUser[];
+        nextCursor: string | null;
+      }>;
     });
   },
 

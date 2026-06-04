@@ -1,44 +1,48 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import {
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
-import AttachFileRoundedIcon from '@mui/icons-material/AttachFileRounded';
-import {
-  listFeedbackSubmissions,
-  type FeedbackSubmissionListItem,
-} from '@/lib/api';
-import { DashboardPageHeader } from '@/components/layout/DashboardPageHeader';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded';
+import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
+import { listFeedbackSubmissions, type FeedbackSubmissionListItem } from '@/lib/api';
+import { CentricPageHeader } from '@/components/layout/CentricPageHeader';
+import { pageBreadcrumbs } from '@/components/layout/pageHeaderBreadcrumbs';
+import { AdminDataTable } from '@/components/ui/AdminDataTable';
+import { AdminTabs } from '@/components/ui/AdminTabs';
+import { FeedbackCategoriesPanel } from '@/components/feedback/FeedbackCategoriesPanel';
+import { resolveAdminApiToken } from '@/lib/auth/adminAuthSession';
 import { useSessionStore } from '@/store/session';
+import { feedbacksColumns } from './feedbacksColumns';
 
 export default function FeedbacksPage() {
   const token = useSessionStore((s) => s.token);
+  const httpOnlyCookies = useSessionStore((s) => s.httpOnlyCookies);
+  const hasPermission = useSessionStore((s) => s.hasPermission);
+  const permissions = useSessionStore((s) => s.permissions);
+  const apiToken = resolveAdminApiToken(token, httpOnlyCookies);
+  const canManageCategories =
+    permissions.length === 0 ||
+    hasPermission('feedback:manage') ||
+    hasPermission('feedback:read');
+
+  const [tab, setTab] = useState(0);
   const [items, setItems] = useState<FeedbackSubmissionListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const columns = useMemo(() => feedbacksColumns, []);
+
   const load = useCallback(
     async (cursor?: string | null) => {
-      if (!token) return;
+      if (!apiToken) return;
       setLoading(true);
       setError(null);
       try {
-        const r = await listFeedbackSubmissions(token, { limit: 30, cursor: cursor ?? undefined });
+        const r = await listFeedbackSubmissions(apiToken, {
+          limit: 30,
+          cursor: cursor ?? undefined,
+        });
         if (cursor) {
           setItems((prev) => [...prev, ...r.items]);
         } else {
@@ -51,119 +55,62 @@ export default function FeedbacksPage() {
         setLoading(false);
       }
     },
-    [token]
+    [apiToken]
   );
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (tab === 0) void load();
+  }, [load, tab]);
+
+  const tabs = useMemo(
+    () => [
+      { label: 'Submissions', icon: RateReviewRoundedIcon },
+      { label: 'Categories', icon: CategoryRoundedIcon },
+    ],
+    []
+  );
 
   return (
-    <Stack spacing={3}>
-      <DashboardPageHeader
+    <Stack spacing={2}>
+      <CentricPageHeader
         title="Feedback"
-        subtitle="Form submissions from the public feedback flow. Open an item for a full review with tabs."
+        description="Review submissions and manage categories shown on the public feedback form."
+        icon={<RateReviewRoundedIcon />}
+        breadcrumbs={pageBreadcrumbs('Feedback', '/feedbacks')}
       />
 
-      {error ? (
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
-      ) : null}
+      <AdminTabs tabs={tabs} value={tab} onChange={setTab}>
+        {tab === 0 ? (
+          <Stack spacing={2}>
+            {error ? (
+              <Typography color="error" variant="body2">
+                {error}
+              </Typography>
+            ) : null}
 
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        className="border border-[var(--color-border)]"
-        sx={{ borderColor: 'divider', borderRadius: 2 }}
-      >
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'action.hover' }}>
-              <TableCell>Submitted</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>From</TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Subject</TableCell>
-              <TableCell width={56} align="center">
-                File
-              </TableCell>
-              <TableCell align="right" width={100}>
-                {' '}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading && items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
-                  <CircularProgress size={28} />
-                </TableCell>
-              </TableRow>
-            ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    No submissions yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              items.map((row) => (
-                <TableRow key={row.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {row.createdAt
-                        ? new Date(row.createdAt).toLocaleString(undefined, {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })
-                        : '—'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip size="small" label={row.categoryLabel} variant="outlined" />
-                  </TableCell>
-                  <TableCell>
-                    <Typography fontWeight={600}>
-                      {row.firstName} {row.lastName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {row.email}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                    <Typography variant="body2" noWrap title={row.subject}>
-                      {row.subject}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    {row.hasAttachment ? (
-                      <AttachFileRoundedIcon fontSize="small" color="action" aria-label="Has attachment" />
-                    ) : (
-                      <Typography variant="caption" color="text.disabled">
-                        —
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button component={Link} href={`/feedbacks/${row.id}`} size="small" variant="outlined">
-                      Review
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            <AdminDataTable
+              data={items}
+              columns={columns}
+              loading={loading && items.length === 0}
+              getRowId={(row) => row.id}
+              emptyMessage="No submissions yet."
+              totalLabel="submissions"
+              pageSize={25}
+              dense
+            />
 
-      {nextCursor ? (
-        <Box>
-          <Button variant="outlined" disabled={loading} onClick={() => void load(nextCursor)}>
-            {loading ? <CircularProgress size={20} /> : 'Load more'}
-          </Button>
-        </Box>
-      ) : null}
+            {nextCursor ? (
+              <Box>
+                <Button variant="outlined" disabled={loading} onClick={() => void load(nextCursor)}>
+                  {loading ? <CircularProgress size={20} /> : 'Load more'}
+                </Button>
+              </Box>
+            ) : null}
+          </Stack>
+        ) : (
+          <FeedbackCategoriesPanel token={apiToken} canManage={canManageCategories} />
+        )}
+      </AdminTabs>
     </Stack>
   );
 }

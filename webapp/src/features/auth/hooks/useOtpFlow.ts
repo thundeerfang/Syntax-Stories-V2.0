@@ -29,8 +29,16 @@ export function useOtpFlow(params: {
   twoFactor: { challengeToken: string; email: string } | null;
   setCode: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const { verifyEmail, name, stepBeforeVerify, sendLoginOtp, signUp, isLoading, twoFactor, setCode } =
-    params;
+  const {
+    verifyEmail,
+    name,
+    stepBeforeVerify,
+    sendLoginOtp,
+    signUp,
+    isLoading,
+    twoFactor,
+    setCode,
+  } = params;
 
   const resendAltchaFormRef = useRef<HTMLFormElement>(null);
   const altchaOn = !!getAltchaChallengeUrl();

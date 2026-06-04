@@ -40,7 +40,13 @@ export interface ISubscription extends Document {
 
 const SubscriptionSchema = new Schema<ISubscription>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'users', required: true, unique: true, index: true },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'users',
+      required: true,
+      unique: true,
+      index: true,
+    },
     plan: {
       type: String,
       enum: ['free', 'pro', 'proplus', 'ultra', 'premium'],
@@ -78,4 +84,5 @@ const SubscriptionSchema = new Schema<ISubscription>(
 );
 
 export const SubscriptionModel: Model<ISubscription> =
-  mongoose.models?.subscriptions ?? mongoose.model<ISubscription>('subscriptions', SubscriptionSchema);
+  mongoose.models?.subscriptions ??
+  mongoose.model<ISubscription>('subscriptions', SubscriptionSchema);

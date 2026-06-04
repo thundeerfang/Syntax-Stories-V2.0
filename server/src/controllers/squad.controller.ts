@@ -2,6 +2,10 @@ import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import type { AuthUser } from '../middlewares/auth/index.js';
 import type { RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
+import {
+  attachAchievementsToResponse,
+  dispatchAchievementEvents,
+} from '../achievements/achievement.service.js';
 import { SquadModel } from '../models/Squad.js';
 import { SquadMemberModel } from '../models/SquadMember.js';
 import { UserModel } from '../models/User.js';
@@ -86,7 +90,8 @@ function mapSquadSummary(s: {
     ...(category ? { category } : {}),
     postPolicy: s.postPolicy,
     requirePostApproval: (s as { requirePostApproval?: boolean }).requirePostApproval === true,
-    invitePermission: ((s as { invitePermission?: string }).invitePermission ?? 'all_members') as SquadInvitePermission,
+    invitePermission: ((s as { invitePermission?: string }).invitePermission ??
+      'all_members') as SquadInvitePermission,
     memberCount: s.memberCount,
     createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : undefined,
     ...(s.createdById != null ? { creatorUserId: String(s.createdById) } : {}),
@@ -96,8 +101,16 @@ function mapSquadSummary(s: {
 /** GET /api/squads — public squads (paginated). */
 export async function listPublicSquads(req: Request, res: Response): Promise<void> {
   try {
-    const limit = parseLimit(paramString(req.query.limit as string | string[] | undefined), 24, 100);
-    const offset = parseLimit(paramString(req.query.offset as string | string[] | undefined), 0, 10_000);
+    const limit = parseLimit(
+      paramString(req.query.limit as string | string[] | undefined),
+      24,
+      100
+    );
+    const offset = parseLimit(
+      paramString(req.query.offset as string | string[] | undefined),
+      0,
+      10_000
+    );
     const [rows, total] = await Promise.all([
       SquadModel.find({ visibility: 'public' })
         .sort({ createdAt: -1 })
@@ -143,7 +156,9 @@ export async function listMySquads(req: Request, res: Response): Promise<void> {
       .sort({ updatedAt: -1 })
       .lean();
     const roleBy = new Map(links.map((l) => [String(l.squadId), l.role as SquadMemberRole]));
-    const previews = await getMemberPreviewsForSquads(squads.map((s) => s._id as mongoose.Types.ObjectId));
+    const previews = await getMemberPreviewsForSquads(
+      squads.map((s) => s._id as mongoose.Types.ObjectId)
+    );
     res.status(200).json({
       success: true,
       squads: squads.map((s) => ({
@@ -166,7 +181,9 @@ export async function listSquadsForUser(req: Request, res: Response): Promise<vo
       res.status(400).json({ success: false, message: 'Invalid username' });
       return;
     }
-    const profileUser = await UserModel.findOne({ username, isActive: true }).select('_id username').lean();
+    const profileUser = await UserModel.findOne({ username, isActive: true })
+      .select('_id username')
+      .lean();
     if (!profileUser?._id) {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
@@ -192,7 +209,9 @@ export async function listSquadsForUser(req: Request, res: Response): Promise<vo
 
     const squads = await SquadModel.find(squadFilter).sort({ updatedAt: -1 }).lean();
     const roleBy = new Map(links.map((l) => [String(l.squadId), l.role as SquadMemberRole]));
-    const previews = await getMemberPreviewsForSquads(squads.map((s) => s._id as mongoose.Types.ObjectId));
+    const previews = await getMemberPreviewsForSquads(
+      squads.map((s) => s._id as mongoose.Types.ObjectId)
+    );
 
     res.status(200).json({
       success: true,
@@ -239,11 +258,12 @@ export async function createSquad(req: Request, res: Response): Promise<void> {
       return;
     }
     if (description.length > 500) {
-      res.status(400).json({ success: false, message: 'Description must be at most 500 characters' });
+      res
+        .status(400)
+        .json({ success: false, message: 'Description must be at most 500 characters' });
       return;
     }
-    const visibility: SquadVisibility =
-      body.visibility === 'private' ? 'private' : 'public';
+    const visibility: SquadVisibility = body.visibility === 'private' ? 'private' : 'public';
     let category: SquadCategory | undefined;
     if (visibility === 'public') {
       const c = typeof body.category === 'string' ? body.category.trim() : '';
@@ -262,7 +282,8 @@ export async function createSquad(req: Request, res: Response): Promise<void> {
       body.invitePermission === 'staff_only' ? 'staff_only' : 'all_members';
     const requirePostApproval = body.requirePostApproval === true;
     const iconUrl = typeof body.iconUrl === 'string' ? body.iconUrl : undefined;
-    const coverBannerUrl = typeof body.coverBannerUrl === 'string' ? body.coverBannerUrl : undefined;
+    const coverBannerUrl =
+      typeof body.coverBannerUrl === 'string' ? body.coverBannerUrl : undefined;
 
     const handleSeed = squadHandleSeedFromName(name);
     const { squad, inviteToken } = await createSquadWithAdmin({
@@ -337,9 +358,10 @@ export async function getSquadBySlug(req: Request, res: Response): Promise<void>
     let inviteTokenForAdmin: string | undefined;
     if (viewerRole === 'admin' && squad.visibility === 'private' && viewerId) {
       const t = await SquadModel.findById(squadOid).select('+inviteToken').lean();
-      const tok = typeof (t as { inviteToken?: string })?.inviteToken === 'string'
-        ? (t as { inviteToken: string }).inviteToken
-        : undefined;
+      const tok =
+        typeof (t as { inviteToken?: string })?.inviteToken === 'string'
+          ? (t as { inviteToken: string }).inviteToken
+          : undefined;
       inviteTokenForAdmin = tok;
     }
 
@@ -454,7 +476,7 @@ export async function patchSquad(req: Request, res: Response): Promise<void> {
 
     const applyUrlField = (
       key: 'coverBannerUrl' | 'iconUrl',
-      raw: unknown,
+      raw: unknown
     ): { ok: true } | { ok: false; status: number; message: string } => {
       if (raw === null || raw === '') {
         unsetFields.push(key);
@@ -589,13 +611,16 @@ export async function joinSquad(req: Request, res: Response): Promise<void> {
         res.status(r.status).json({ success: false, message: r.message });
         return;
       }
-      res.status(200).json({ success: true });
+      const newlyUnlocked = await dispatchAchievementEvents(String(user._id), [{ type: 'profile_sync' }]);
+      res.status(200).json(attachAchievementsToResponse({ success: true }, newlyUnlocked));
       return;
     }
     const body = req.body as { inviteToken?: unknown };
     const inviteToken = typeof body.inviteToken === 'string' ? body.inviteToken.trim() : '';
     if (!inviteToken) {
-      res.status(400).json({ success: false, message: 'inviteToken is required for private squads' });
+      res
+        .status(400)
+        .json({ success: false, message: 'inviteToken is required for private squads' });
       return;
     }
     const r = await joinPrivateSquadWithToken({ squadId, userId: user._id, inviteToken });
@@ -603,7 +628,8 @@ export async function joinSquad(req: Request, res: Response): Promise<void> {
       res.status(r.status).json({ success: false, message: r.message });
       return;
     }
-    res.status(200).json({ success: true });
+    const newlyUnlocked = await dispatchAchievementEvents(String(user._id), [{ type: 'profile_sync' }]);
+    res.status(200).json(attachAchievementsToResponse({ success: true }, newlyUnlocked));
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to join squad' });
@@ -728,9 +754,7 @@ export async function listSquadMembers(req: Request, res: Response): Promise<voi
           profileImg?: string;
         } | null;
         const userId =
-          populated != null && populated._id != null
-            ? String(populated._id)
-            : String(row.userId);
+          populated != null && populated._id != null ? String(populated._id) : String(row.userId);
         return {
           userId,
           username: typeof populated?.username === 'string' ? populated.username : '',
@@ -938,7 +962,8 @@ export async function getSquadFeed(req: Request, res: Response): Promise<void> {
     const rows: FeedRow[] = [];
 
     for (const p of authored) {
-      const pub = (p as { publishedAt?: Date }).publishedAt ?? (p as { createdAt?: Date }).createdAt;
+      const pub =
+        (p as { publishedAt?: Date }).publishedAt ?? (p as { createdAt?: Date }).createdAt;
       const t = pub instanceof Date ? pub.getTime() : 0;
       rows.push({ kind: 'authored', sortAt: t, post: p });
     }

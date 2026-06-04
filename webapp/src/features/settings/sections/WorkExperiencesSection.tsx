@@ -32,11 +32,19 @@ import {
   EntitySearchInput,
   Textarea,
 } from '@/components/retroui';
-import { getCountryOptions, getStateOptions, getCityOptions, parseLocationString } from '@/lib/profile/profileLocation';
+import {
+  getCountryOptions,
+  getStateOptions,
+  getCityOptions,
+  parseLocationString,
+} from '@/lib/profile/profileLocation';
 import { searchCompaniesWithApi } from '@/lib/blog/referenceSearch';
 import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
-import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+import {
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 import { EMPLOYMENT_TYPE_OPTIONS, LOCATION_TYPE_SELECT_OPTIONS } from '@syntax-stories/shared';
 import {
   MONTH_SELECT_OPTIONS,
@@ -69,21 +77,36 @@ import {
   parseMediaLinkLineInput,
 } from '../lib/workExperienceForm';
 
-
-
-
 export function WorkExperiencesContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
   const router = useRouter();
   const searchParams = useSearchParams();
   const list = (user?.workExperiences ?? []).map((w) => {
-    const mediaItems: MediaItem[] = (w.media && w.media.length > 0)
-      ? w.media.map((m) => ({ url: m.url, title: m.title }))
-      : (w.mediaUrls ?? []).map((url) => ({ url }));
-    const raw = w as { promotions?: Array<{ jobTitle?: string; startDate?: string; endDate?: string; currentPosition?: boolean; media?: { url: string; title?: string }[] }>; promotion?: { jobTitle?: string; startDate?: string; endDate?: string; currentPosition?: boolean } };
-    const promotionsList = Array.isArray(raw.promotions) && raw.promotions.length > 0
-      ? raw.promotions
-      : raw.promotion && raw.promotion.jobTitle ? [raw.promotion] : [];
+    const mediaItems: MediaItem[] =
+      w.media && w.media.length > 0
+        ? w.media.map((m) => ({ url: m.url, title: m.title }))
+        : (w.mediaUrls ?? []).map((url) => ({ url }));
+    const raw = w as {
+      promotions?: Array<{
+        jobTitle?: string;
+        startDate?: string;
+        endDate?: string;
+        currentPosition?: boolean;
+        media?: { url: string; title?: string }[];
+      }>;
+      promotion?: {
+        jobTitle?: string;
+        startDate?: string;
+        endDate?: string;
+        currentPosition?: boolean;
+      };
+    };
+    const promotionsList =
+      Array.isArray(raw.promotions) && raw.promotions.length > 0
+        ? raw.promotions
+        : raw.promotion && raw.promotion.jobTitle
+          ? [raw.promotion]
+          : [];
     const promotions = promotionsList
       .filter((p) => p && p.jobTitle)
       .map((p) => ({
@@ -91,7 +114,10 @@ export function WorkExperiencesContent() {
         startDate: p.startDate,
         endDate: p.endDate,
         currentPosition: !!p.currentPosition,
-        mediaItems: ((p as { media?: { url: string; title?: string }[] }).media ?? []).map((m) => ({ url: m.url, title: m.title })),
+        mediaItems: ((p as { media?: { url: string; title?: string }[] }).media ?? []).map((m) => ({
+          url: m.url,
+          title: m.title,
+        })),
       }));
     return {
       jobTitle: w.jobTitle ?? w.role ?? '',
@@ -128,10 +154,16 @@ export function WorkExperiencesContent() {
   const [promoMediaUploadIndex, setPromoMediaUploadIndex] = useState<number | null>(null);
   const [promoLinkUrl, setPromoLinkUrl] = useState('');
   const [promoLinkTitle, setPromoLinkTitle] = useState('');
-  const [promoFullViewMedia, setPromoFullViewMedia] = useState<{ pIdx: number; item: MediaItem } | null>(null);
+  const [promoFullViewMedia, setPromoFullViewMedia] = useState<{
+    pIdx: number;
+    item: MediaItem;
+  } | null>(null);
   const [companyLogoDialogOpen, setCompanyLogoDialogOpen] = useState(false);
   const addMediaDropdownRef = useRef<HTMLDivElement>(null);
-  const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
+  const hasFormChanged = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(initialForm),
+    [form, initialForm]
+  );
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (addMediaDropdownRef.current && !addMediaDropdownRef.current.contains(e.target as Node)) {
@@ -207,7 +239,7 @@ export function WorkExperiencesContent() {
       setPromoFullViewMedia(null);
       setDialogOpen(true);
     },
-    [list],
+    [list]
   );
   const openedEditFromUrlRef = useRef(false);
   useEffect(() => {
@@ -257,14 +289,21 @@ export function WorkExperiencesContent() {
       return;
     }
     setFieldErrors({});
-    const endDateVal = form.currentPosition ? undefined : monthYearToValue(form.endMonth, form.endYear) || undefined;
+    const endDateVal = form.currentPosition
+      ? undefined
+      : monthYearToValue(form.endMonth, form.endYear) || undefined;
 
     // Resolve pending media items (work experience + promotions) before building the entry.
     const resolveItems = async (items: MediaItem[]): Promise<MediaItem[] | null> => {
       try {
-        return (await resolveProfileMediaItems(token, items)).map((x) => ({ url: x.url, title: x.title }));
+        return (await resolveProfileMediaItems(token, items)).map((x) => ({
+          url: x.url,
+          title: x.title,
+        }));
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to upload media.', { id: 'syntax-media-upload' });
+        toast.error(e instanceof Error ? e.message : 'Failed to upload media.', {
+          id: 'syntax-media-upload',
+        });
         return null;
       }
     };
@@ -285,12 +324,22 @@ export function WorkExperiencesContent() {
     };
 
     const promotionsVal = mapWorkExpPromotionsForSubmit(formForSubmit);
-    const entry = buildWorkExperienceProfileEntry(formForSubmit, startDateVal, endDateVal, promotionsVal);
-    const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
+    const entry = buildWorkExperienceProfileEntry(
+      formForSubmit,
+      startDateVal,
+      endDateVal,
+      promotionsVal
+    );
+    const next =
+      editingIndex !== null
+        ? list.map((e, i) => (i === editingIndex ? entry : e))
+        : [...list, entry];
     setSaving(true);
     try {
       await updateProfile({ workExperiences: next }, { section: 'work' });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-work-entry-success' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', {
+        id: 'syntax-work-entry-success',
+      });
       setDialogOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
@@ -301,7 +350,8 @@ export function WorkExperiencesContent() {
 
   const addSkill = (skill: string) => {
     const s = skill.trim();
-    if (s && !form.skills.includes(s) && form.skills.length < 30) setForm((f) => ({ ...f, skills: [...f.skills, s] }));
+    if (s && !form.skills.includes(s) && form.skills.length < 30)
+      setForm((f) => ({ ...f, skills: [...f.skills, s] }));
   };
 
   return (
@@ -346,7 +396,12 @@ export function WorkExperiencesContent() {
         confirmLabel="Destroy Record"
         variant="danger"
         loading={saving}
-        onConfirm={() => { if (removeConfirmIndex !== null) { remove(removeConfirmIndex); setRemoveConfirmIndex(null); } }}
+        onConfirm={() => {
+          if (removeConfirmIndex !== null) {
+            remove(removeConfirmIndex);
+            setRemoveConfirmIndex(null);
+          }
+        }}
       />
       <MediaFullViewDialog
         open={!!listPreviewMedia}
@@ -382,7 +437,9 @@ export function WorkExperiencesContent() {
         panelClassName="max-w-2xl"
         footer={
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+              * Required fields
+            </p>
             <div className="flex gap-3">
               <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>
                 Cancel
@@ -400,13 +457,29 @@ export function WorkExperiencesContent() {
         }
       >
         <div className="space-y-4">
-          <FormInput id="we-job" label="Job title *" placeholder="Ex: Senior Frontend Engineer" maxLength={120} value={form.jobTitle} error={fieldErrors.jobTitle} onChange={(e) => { setForm((f) => ({ ...f, jobTitle: e.target.value })); if (fieldErrors.jobTitle) setFieldErrors((e2) => (e2.jobTitle ? { ...e2, jobTitle: '' } : e2)); }} />
+          <FormInput
+            id="we-job"
+            label="Job title *"
+            placeholder="Ex: Senior Frontend Engineer"
+            maxLength={120}
+            value={form.jobTitle}
+            error={fieldErrors.jobTitle}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, jobTitle: e.target.value }));
+              if (fieldErrors.jobTitle)
+                setFieldErrors((e2) => (e2.jobTitle ? { ...e2, jobTitle: '' } : e2));
+            }}
+          />
           <SearchableSelect
             id="we-type"
             label="Employment type *"
             placeholder="Select type"
             value={form.employmentType}
-            onChange={(v) => { setForm((f) => ({ ...f, employmentType: v })); if (fieldErrors.employmentType) setFieldErrors((e) => (e.employmentType ? { ...e, employmentType: '' } : e)); }}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, employmentType: v }));
+              if (fieldErrors.employmentType)
+                setFieldErrors((e) => (e.employmentType ? { ...e, employmentType: '' } : e));
+            }}
             options={EMPLOYMENT_TYPE_OPTIONS}
             listMaxHeight={220}
             error={fieldErrors.employmentType}
@@ -416,13 +489,24 @@ export function WorkExperiencesContent() {
             label="Company or organization *"
             placeholder="Type company name (e.g. Microsoft)"
             value={form.company}
-            onChange={(v) => { setForm((f) => ({ ...f, company: v })); if (fieldErrors.company) setFieldErrors((e2) => (e2.company ? { ...e2, company: '' } : e2)); }}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, company: v }));
+              if (fieldErrors.company)
+                setFieldErrors((e2) => (e2.company ? { ...e2, company: '' } : e2));
+            }}
             onDomainSelect={(d) => setForm((f) => ({ ...f, companyDomain: d }))}
             searchOptions={searchCompaniesWithApi}
             error={fieldErrors.company}
             maxLength={200}
           />
-          <FormInput id="we-domain" label="Company domain (optional)" placeholder="Ex: company.com" maxLength={120} value={form.companyDomain} onChange={(e) => setForm((f) => ({ ...f, companyDomain: e.target.value }))} />
+          <FormInput
+            id="we-domain"
+            label="Company domain (optional)"
+            placeholder="Ex: company.com"
+            maxLength={120}
+            value={form.companyDomain}
+            onChange={(e) => setForm((f) => ({ ...f, companyDomain: e.target.value }))}
+          />
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase">Company logo (optional)</Label>
             <div className="flex items-center gap-3">
@@ -433,10 +517,19 @@ export function WorkExperiencesContent() {
                     alt={form.companyLogoAlt.trim() || 'Company logo'}
                     title={form.companyLogoAlt.trim() || undefined}
                     className="size-full object-contain"
-                    onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }}
+                    onError={(ev) => {
+                      (ev.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                 ) : form.companyDomain ? (
-                  <img src={`https://logo.clearbit.com/${form.companyDomain.replace(/^https?:\/\//i, '').replace(/\/$/, '')}`} alt="" className="size-full object-contain" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />
+                  <img
+                    src={`https://logo.clearbit.com/${form.companyDomain.replace(/^https?:\/\//i, '').replace(/\/$/, '')}`}
+                    alt=""
+                    className="size-full object-contain"
+                    onError={(ev) => {
+                      (ev.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
                 ) : (
                   <Building2 className="size-6 text-muted-foreground" />
                 )}
@@ -451,7 +544,11 @@ export function WorkExperiencesContent() {
                   Upload logo
                 </button>
                 {form.companyLogo && (
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, companyLogo: '', companyLogoAlt: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, companyLogo: '', companyLogoAlt: '' }))}
+                    className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10"
+                  >
                     Remove
                   </button>
                 )}
@@ -474,7 +571,12 @@ export function WorkExperiencesContent() {
                 const currEnd = monthYearToValue(f.endMonth, f.endYear);
                 if (latestPromoEnd && (!currEnd || currEnd < latestPromoEnd)) {
                   const parts = valueToMonthYear(latestPromoEnd);
-                  return { ...f, currentPosition: false, endMonth: parts.month, endYear: parts.year };
+                  return {
+                    ...f,
+                    currentPosition: false,
+                    endMonth: parts.month,
+                    endYear: parts.year,
+                  };
                 }
                 return { ...f, currentPosition: false };
               })
@@ -489,22 +591,60 @@ export function WorkExperiencesContent() {
                   <div key={pIdx} className="border-2 border-primary/30 bg-primary/5 p-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black uppercase text-primary flex items-center gap-2">
-                        <TrendingUp className="size-4" /> Promotion{form.promotions.length > 1 ? ` ${pIdx + 1}` : ''} — new position & dates
+                        <TrendingUp className="size-4" /> Promotion
+                        {form.promotions.length > 1 ? ` ${pIdx + 1}` : ''} — new position & dates
                       </span>
                       <button
                         type="button"
-                        onClick={() => setForm((f) => ({ ...f, promotions: f.promotions.filter((_, i) => i !== pIdx) }))}
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            promotions: f.promotions.filter((_, i) => i !== pIdx),
+                          }))
+                        }
                         className="text-[10px] font-bold uppercase text-muted-foreground hover:text-destructive"
                       >
                         Remove
                       </button>
                     </div>
-                    <FormInput id={`we-promo-title-${pIdx}`} label="New position *" placeholder="Ex: Senior Engineer" maxLength={120} value={promo.jobTitle} onChange={(e) => setForm((f) => ({ ...f, promotions: f.promotions.map((p, i) => i === pIdx ? { ...p, jobTitle: e.target.value } : p) }))} />
+                    <FormInput
+                      id={`we-promo-title-${pIdx}`}
+                      label="New position *"
+                      placeholder="Ex: Senior Engineer"
+                      maxLength={120}
+                      value={promo.jobTitle}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          promotions: f.promotions.map((p, i) =>
+                            i === pIdx ? { ...p, jobTitle: e.target.value } : p
+                          ),
+                        }))
+                      }
+                    />
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase">Promotion start date *</Label>
+                        <Label className="text-[10px] font-bold uppercase">
+                          Promotion start date *
+                        </Label>
                         <div className="flex gap-2">
-                          <SearchableSelect id={`we-promo-start-month-${pIdx}`} label="" placeholder="Month" value={promo.startMonth} onChange={(v) => setForm((f) => ({ ...f, promotions: f.promotions.map((p, i) => i === pIdx ? { ...p, startMonth: v } : p) }))} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" />
+                          <SearchableSelect
+                            id={`we-promo-start-month-${pIdx}`}
+                            label=""
+                            placeholder="Month"
+                            value={promo.startMonth}
+                            onChange={(v) =>
+                              setForm((f) => ({
+                                ...f,
+                                promotions: f.promotions.map((p, i) =>
+                                  i === pIdx ? { ...p, startMonth: v } : p
+                                ),
+                              }))
+                            }
+                            options={MONTH_SELECT_OPTIONS}
+                            listMaxHeight={220}
+                            widthClass="flex-1 min-w-0"
+                          />
                           <SearchableSelect
                             id={`we-promo-start-year-${pIdx}`}
                             label=""
@@ -518,7 +658,10 @@ export function WorkExperiencesContent() {
                                   const nextStartYear = v;
                                   const sy = parseInt(nextStartYear || '', 10);
                                   const ey = parseInt(p.endYear || '', 10);
-                                  const nextEndYear = Number.isFinite(sy) && Number.isFinite(ey) && ey < sy ? nextStartYear : p.endYear;
+                                  const nextEndYear =
+                                    Number.isFinite(sy) && Number.isFinite(ey) && ey < sy
+                                      ? nextStartYear
+                                      : p.endYear;
                                   return { ...p, startYear: nextStartYear, endYear: nextEndYear };
                                 }),
                               }))
@@ -530,15 +673,40 @@ export function WorkExperiencesContent() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase">End date{endDateRequired ? ' *' : ' (optional for current role)'}</Label>
+                        <Label className="text-[10px] font-bold uppercase">
+                          End date{endDateRequired ? ' *' : ' (optional for current role)'}
+                        </Label>
                         <div className="flex gap-2">
-                          <SearchableSelect id={`we-promo-end-month-${pIdx}`} label="" placeholder="Month" value={promo.endMonth} onChange={(v) => setForm((f) => ({ ...f, promotions: f.promotions.map((p, i) => i === pIdx ? { ...p, endMonth: v } : p) }))} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" />
+                          <SearchableSelect
+                            id={`we-promo-end-month-${pIdx}`}
+                            label=""
+                            placeholder="Month"
+                            value={promo.endMonth}
+                            onChange={(v) =>
+                              setForm((f) => ({
+                                ...f,
+                                promotions: f.promotions.map((p, i) =>
+                                  i === pIdx ? { ...p, endMonth: v } : p
+                                ),
+                              }))
+                            }
+                            options={MONTH_SELECT_OPTIONS}
+                            listMaxHeight={220}
+                            widthClass="flex-1 min-w-0"
+                          />
                           <SearchableSelect
                             id={`we-promo-end-year-${pIdx}`}
                             label=""
                             placeholder="Year"
                             value={promo.endYear}
-                            onChange={(v) => setForm((f) => ({ ...f, promotions: f.promotions.map((p, i) => i === pIdx ? { ...p, endYear: v } : p) }))}
+                            onChange={(v) =>
+                              setForm((f) => ({
+                                ...f,
+                                promotions: f.promotions.map((p, i) =>
+                                  i === pIdx ? { ...p, endYear: v } : p
+                                ),
+                              }))
+                            }
                             options={yearOptionsFromMin(promo.startYear)}
                             listMaxHeight={220}
                             widthClass="flex-1 min-w-0"
@@ -547,9 +715,12 @@ export function WorkExperiencesContent() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase">Media (optional, max 5)</Label>
+                      <Label className="text-[10px] font-bold uppercase">
+                        Media (optional, max 5)
+                      </Label>
                       <p className="text-[9px] text-muted-foreground">
-                        Mix links and uploads. One URL per line in the link box; optional title when adding a single URL.
+                        Mix links and uploads. One URL per line in the link box; optional title when
+                        adding a single URL.
                       </p>
                       {promo.mediaItems.length > 0 && (
                         <ul className="space-y-2">
@@ -558,7 +729,19 @@ export function WorkExperiencesContent() {
                               key={mi}
                               item={m}
                               onPreview={() => setPromoFullViewMedia({ pIdx, item: m })}
-                              onRemove={() => setForm((f) => ({ ...f, promotions: f.promotions.map((p, i) => i === pIdx ? { ...p, mediaItems: p.mediaItems.filter((_, j) => j !== mi) } : p) }))}
+                              onRemove={() =>
+                                setForm((f) => ({
+                                  ...f,
+                                  promotions: f.promotions.map((p, i) =>
+                                    i === pIdx
+                                      ? {
+                                          ...p,
+                                          mediaItems: p.mediaItems.filter((_, j) => j !== mi),
+                                        }
+                                      : p
+                                  ),
+                                }))
+                              }
                             />
                           ))}
                         </ul>
@@ -566,16 +749,27 @@ export function WorkExperiencesContent() {
                       {promo.mediaItems.length < 5 && (
                         <div className="flex flex-col gap-2">
                           {promoMediaDropdownIndex === pIdx && (
-                            <div className="fixed inset-0 z-[99]" aria-hidden onClick={() => setPromoMediaDropdownIndex(null)} />
+                            <div
+                              className="fixed inset-0 z-[99]"
+                              aria-hidden
+                              onClick={() => setPromoMediaDropdownIndex(null)}
+                            />
                           )}
                           <div className="relative z-[120] w-fit max-w-full">
                             <button
                               type="button"
-                              onClick={() => setPromoMediaDropdownIndex((prev) => (prev === pIdx ? null : pIdx))}
+                              onClick={() =>
+                                setPromoMediaDropdownIndex((prev) => (prev === pIdx ? null : pIdx))
+                              }
                               className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
                             >
                               <Plus className="size-3" /> Add media
-                              <ChevronDown className={cn('size-3 transition-transform', promoMediaDropdownIndex === pIdx && 'rotate-180')} />
+                              <ChevronDown
+                                className={cn(
+                                  'size-3 transition-transform',
+                                  promoMediaDropdownIndex === pIdx && 'rotate-180'
+                                )}
+                              />
                             </button>
                             {promoMediaDropdownIndex === pIdx && (
                               <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow py-1">
@@ -593,7 +787,14 @@ export function WorkExperiencesContent() {
                                 >
                                   <Link2 className="size-4" /> Add link
                                 </button>
-                                <button type="button" onClick={() => { setPromoMediaDropdownIndex(null); setPromoMediaUploadIndex(pIdx); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPromoMediaDropdownIndex(null);
+                                    setPromoMediaUploadIndex(pIdx);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
+                                >
                                   <ImagePlus className="size-4" /> Upload media
                                 </button>
                               </div>
@@ -604,10 +805,16 @@ export function WorkExperiencesContent() {
                       {promoMediaLinkIndex === pIdx && (
                         <div className="relative z-0 overflow-hidden border-2 border-border bg-muted/10">
                           <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-muted/20 px-3 py-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wide">Add link</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wide">
+                              Add link
+                            </span>
                             <button
                               type="button"
-                              onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }}
+                              onClick={() => {
+                                setPromoMediaLinkIndex(null);
+                                setPromoLinkUrl('');
+                                setPromoLinkTitle('');
+                              }}
                               className="flex size-8 shrink-0 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow hover:bg-muted hover:text-foreground"
                               aria-label="Close"
                             >
@@ -624,14 +831,33 @@ export function WorkExperiencesContent() {
                               rows={4}
                               autoComplete="off"
                             />
-                            <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
-                            <Input placeholder="Single-URL adds only" value={promoLinkTitle} onChange={(e) => setPromoLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
+                            <Label className="text-[10px] font-bold uppercase">
+                              Title (optional)
+                            </Label>
+                            <Input
+                              placeholder="Single-URL adds only"
+                              value={promoLinkTitle}
+                              onChange={(e) => setPromoLinkTitle(e.target.value)}
+                              className="text-sm"
+                              maxLength={120}
+                            />
                             <div className="flex gap-2">
-                              <GhostOutlineButton type="button" size="sm" onClick={() => { setPromoMediaLinkIndex(null); setPromoLinkUrl(''); setPromoLinkTitle(''); }}>Cancel</GhostOutlineButton>
+                              <GhostOutlineButton
+                                type="button"
+                                size="sm"
+                                onClick={() => {
+                                  setPromoMediaLinkIndex(null);
+                                  setPromoLinkUrl('');
+                                  setPromoLinkTitle('');
+                                }}
+                              >
+                                Cancel
+                              </GhostOutlineButton>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const { urls, skippedNonEmpty } = parseMediaLinkLineInput(promoLinkUrl);
+                                  const { urls, skippedNonEmpty } =
+                                    parseMediaLinkLineInput(promoLinkUrl);
                                   if (urls.length === 0) {
                                     toast.error(
                                       skippedNonEmpty > 0
@@ -655,7 +881,8 @@ export function WorkExperiencesContent() {
                                       added = slice.length;
                                       const titled = slice.map((url, i) => ({
                                         url,
-                                        title: slice.length === 1 ? title : i === 0 ? title : undefined,
+                                        title:
+                                          slice.length === 1 ? title : i === 0 ? title : undefined,
                                       }));
                                       const nextItems = [...prev, ...titled];
                                       nextLen = nextItems.length;
@@ -671,13 +898,22 @@ export function WorkExperiencesContent() {
                                   setPromoLinkTitle('');
                                   if (nextLen >= 5) setPromoMediaLinkIndex(null);
                                   if (skippedNonEmpty > 0) {
-                                    toast.message(`Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`, { id: 'syntax-skip-url-lines' });
+                                    toast.message(
+                                      `Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`,
+                                      { id: 'syntax-skip-url-lines' }
+                                    );
                                   }
                                   if (urls.length > added) {
-                                    toast.message(`Added ${added} link(s); max is 5 media items for this role.`, { id: 'syntax-max-media' });
+                                    toast.message(
+                                      `Added ${added} link(s); max is 5 media items for this role.`,
+                                      { id: 'syntax-max-media' }
+                                    );
                                   }
                                 }}
-                                className={cn(settingsBtnBlockPrimarySm, 'px-3 py-1.5 text-[10px] font-bold')}
+                                className={cn(
+                                  settingsBtnBlockPrimarySm,
+                                  'px-3 py-1.5 text-[10px] font-bold'
+                                )}
                               >
                                 Add link(s)
                               </button>
@@ -691,7 +927,12 @@ export function WorkExperiencesContent() {
               })}
               <button
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, promotions: [...f.promotions, { ...PROMOTION_DEFAULT }].slice(0, 5) }))}
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    promotions: [...f.promotions, { ...PROMOTION_DEFAULT }].slice(0, 5),
+                  }))
+                }
                 disabled={form.promotions.length >= 5}
                 className="inline-flex items-center gap-2 px-3 py-2 border-2 border-border bg-muted/30 font-bold text-[10px] uppercase tracking-wide hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -708,7 +949,11 @@ export function WorkExperiencesContent() {
                   label=""
                   placeholder="Month"
                   value={form.startMonth}
-                  onChange={(v) => { setForm((f) => ({ ...f, startMonth: v })); if (fieldErrors.startDate) setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2)); }}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, startMonth: v }));
+                    if (fieldErrors.startDate)
+                      setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2));
+                  }}
                   options={MONTH_SELECT_OPTIONS}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
@@ -722,27 +967,37 @@ export function WorkExperiencesContent() {
                     setForm((f) => {
                       const sy = parseInt(v || '', 10);
                       const ey = parseInt(f.endYear || '', 10);
-                      const nextEndYear = Number.isFinite(sy) && Number.isFinite(ey) && ey < sy ? v : f.endYear;
+                      const nextEndYear =
+                        Number.isFinite(sy) && Number.isFinite(ey) && ey < sy ? v : f.endYear;
                       return { ...f, startYear: v, endYear: nextEndYear };
                     });
-                    if (fieldErrors.startDate) setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2));
+                    if (fieldErrors.startDate)
+                      setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2));
                   }}
                   options={YEAR_OPTIONS}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
                 />
               </div>
-              {fieldErrors.startDate && <p className="text-xs text-destructive font-medium">{fieldErrors.startDate}</p>}
+              {fieldErrors.startDate && (
+                <p className="text-xs text-destructive font-medium">{fieldErrors.startDate}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase">End date{!form.currentPosition ? ' *' : ''}</Label>
+              <Label className="text-[10px] font-bold uppercase">
+                End date{!form.currentPosition ? ' *' : ''}
+              </Label>
               <div className="flex gap-2">
                 <SearchableSelect
                   id="we-end-month"
                   label=""
                   placeholder="Month"
                   value={form.endMonth}
-                  onChange={(v) => { setForm((f) => ({ ...f, endMonth: v })); if (fieldErrors.endDate) setFieldErrors((e) => (e.endDate ? { ...e, endDate: '' } : e)); }}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, endMonth: v }));
+                    if (fieldErrors.endDate)
+                      setFieldErrors((e) => (e.endDate ? { ...e, endDate: '' } : e));
+                  }}
                   options={MONTH_SELECT_OPTIONS}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
@@ -753,15 +1008,25 @@ export function WorkExperiencesContent() {
                   label=""
                   placeholder="Year"
                   value={form.endYear}
-                  onChange={(v) => { setForm((f) => ({ ...f, endYear: v })); if (fieldErrors.endDate) setFieldErrors((e) => (e.endDate ? { ...e, endDate: '' } : e)); }}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, endYear: v }));
+                    if (fieldErrors.endDate)
+                      setFieldErrors((e) => (e.endDate ? { ...e, endDate: '' } : e));
+                  }}
                   options={yearOptionsFromMin(form.startYear)}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
                   disabled={form.currentPosition}
                 />
               </div>
-              {fieldErrors.endDate && <p className="text-xs text-destructive font-medium">{fieldErrors.endDate}</p>}
-              {form.currentPosition && !fieldErrors.endDate && <p className="text-[9px] text-muted-foreground">Disabled while currently working here</p>}
+              {fieldErrors.endDate && (
+                <p className="text-xs text-destructive font-medium">{fieldErrors.endDate}</p>
+              )}
+              {form.currentPosition && !fieldErrors.endDate && (
+                <p className="text-[9px] text-muted-foreground">
+                  Disabled while currently working here
+                </p>
+              )}
             </div>
           </div>
           <SearchableSelect
@@ -769,7 +1034,11 @@ export function WorkExperiencesContent() {
             label="Work arrangement *"
             placeholder="Select work arrangement *"
             value={form.locationType}
-            onChange={(v) => { setForm((f) => ({ ...f, locationType: v })); if (fieldErrors.locationType) setFieldErrors((e) => (e.locationType ? { ...e, locationType: '' } : e)); }}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, locationType: v }));
+              if (fieldErrors.locationType)
+                setFieldErrors((e) => (e.locationType ? { ...e, locationType: '' } : e));
+            }}
             options={[...LOCATION_TYPE_SELECT_OPTIONS]}
             listMaxHeight={180}
             error={fieldErrors.locationType}
@@ -780,7 +1049,9 @@ export function WorkExperiencesContent() {
               label="Country"
               placeholder="Select country"
               value={form.locationCountry}
-              onChange={(v) => setForm((f) => ({ ...f, locationCountry: v, locationState: '', locationCity: '' }))}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, locationCountry: v, locationState: '', locationCity: '' }))
+              }
               options={getCountryOptions()}
               listMaxHeight={200}
             />
@@ -808,7 +1079,8 @@ export function WorkExperiencesContent() {
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase">Media (optional)</Label>
             <p className="text-[9px] text-muted-foreground">
-              Up to 5 items total — any mix of links and uploaded images. Paste one URL per line to add several links at once; optional title applies when you add a single URL.
+              Up to 5 items total — any mix of links and uploaded images. Paste one URL per line to
+              add several links at once; optional title applies when you add a single URL.
             </p>
             {form.mediaItems.length > 0 && (
               <ul className="space-y-2">
@@ -817,12 +1089,19 @@ export function WorkExperiencesContent() {
                     key={i}
                     item={m}
                     onPreview={() => setFullViewMedia(m)}
-                    onRemove={() => setForm((f) => ({ ...f, mediaItems: f.mediaItems.filter((_, j) => j !== i) }))}
+                    onRemove={() =>
+                      setForm((f) => ({ ...f, mediaItems: f.mediaItems.filter((_, j) => j !== i) }))
+                    }
                   />
                 ))}
               </ul>
             )}
-            <MediaFullViewDialog open={!!fullViewMedia} onClose={() => setFullViewMedia(null)} src={fullViewMedia?.url ?? ''} title={fullViewMedia?.title} />
+            <MediaFullViewDialog
+              open={!!fullViewMedia}
+              onClose={() => setFullViewMedia(null)}
+              src={fullViewMedia?.url ?? ''}
+              title={fullViewMedia?.title}
+            />
             {form.mediaItems.length < 5 && (
               <div className="flex flex-col gap-2" ref={addMediaDropdownRef}>
                 {addMediaDropdownOpen && (
@@ -839,7 +1118,12 @@ export function WorkExperiencesContent() {
                     className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
                   >
                     <Plus className="size-3" /> Add media
-                    <ChevronDown className={cn('size-3 transition-transform', addMediaDropdownOpen && 'rotate-180')} />
+                    <ChevronDown
+                      className={cn(
+                        'size-3 transition-transform',
+                        addMediaDropdownOpen && 'rotate-180'
+                      )}
+                    />
                   </button>
                   {addMediaDropdownOpen && (
                     <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow py-1">
@@ -890,7 +1174,10 @@ export function WorkExperiencesContent() {
                   const title = (meta?.imageTitle ?? '').trim() || 'Media image';
                   setForm((f) => ({
                     ...f,
-                    mediaItems: [...f.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5),
+                    mediaItems: [
+                      ...f.mediaItems,
+                      { url, title, isPending: true, pendingFile: file },
+                    ].slice(0, 5),
                   }));
                   toast.success('Media staged. It will upload when you save.');
                 }}
@@ -932,7 +1219,15 @@ export function WorkExperiencesContent() {
                   setForm((f) => ({
                     ...f,
                     promotions: f.promotions.map((p, i) =>
-                      i === idx ? { ...p, mediaItems: [...p.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5) } : p
+                      i === idx
+                        ? {
+                            ...p,
+                            mediaItems: [
+                              ...p.mediaItems,
+                              { url, title, isPending: true, pendingFile: file },
+                            ].slice(0, 5),
+                          }
+                        : p
                     ),
                   }));
                   setPromoMediaUploadIndex(null);
@@ -947,7 +1242,15 @@ export function WorkExperiencesContent() {
             src={promoFullViewMedia?.item.url ?? ''}
             title={promoFullViewMedia?.item.title}
           />
-          <FormTextarea id="we-desc" label="Description — Key technologies, projects, achievements" placeholder="Key technologies, projects, and achievements" maxLength={5000} rows={5} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 5000) }))} />
+          <FormTextarea
+            id="we-desc"
+            label="Description — Key technologies, projects, achievements"
+            placeholder="Key technologies, projects, and achievements"
+            maxLength={5000}
+            rows={5}
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 5000) }))}
+          />
           <div className="grid w-full items-center gap-1.5">
             <Label htmlFor="we-skills">Skills * (min 1)</Label>
             <Input
@@ -964,7 +1267,8 @@ export function WorkExperiencesContent() {
                     .filter(Boolean)
                     .forEach(addSkill);
                   input.value = '';
-                  if (fieldErrors.skills) setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
+                  if (fieldErrors.skills)
+                    setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
                 }
               }}
               onBlur={(e) => {
@@ -972,17 +1276,31 @@ export function WorkExperiencesContent() {
                 if (v.includes(',')) {
                   v.split(',').forEach(addSkill);
                   e.target.value = '';
-                  if (fieldErrors.skills) setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
+                  if (fieldErrors.skills)
+                    setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
                 }
               }}
               className={fieldErrors.skills ? 'border-destructive' : ''}
             />
-            {fieldErrors.skills && <p className="text-xs text-destructive font-medium">{fieldErrors.skills}</p>}
+            {fieldErrors.skills && (
+              <p className="text-xs text-destructive font-medium">{fieldErrors.skills}</p>
+            )}
             <div className="flex flex-wrap gap-1.5 mt-2">
               {form.skills.map((s, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted border border-border text-[10px] font-bold">
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted border border-border text-[10px] font-bold"
+                >
                   {s}
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, skills: f.skills.filter((_, j) => j !== i) }))} className="hover:text-destructive">×</button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({ ...f, skills: f.skills.filter((_, j) => j !== i) }))
+                    }
+                    className="hover:text-destructive"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -992,4 +1310,3 @@ export function WorkExperiencesContent() {
     </SettingsTabRoot>
   );
 }
-

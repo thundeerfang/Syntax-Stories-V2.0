@@ -15,7 +15,9 @@ function layoutFromRoot(root: string): UploadDirectoryLayout {
   };
 }
 
-export function createLocalDiskUploadStorage(rootDir = path.join(process.cwd(), 'uploads')): UploadStorage {
+export function createLocalDiskUploadStorage(
+  rootDir = path.join(process.cwd(), 'uploads')
+): UploadStorage {
   const dirs = layoutFromRoot(rootDir);
   return {
     dirs,

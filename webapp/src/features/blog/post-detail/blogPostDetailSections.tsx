@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { blogApi } from '@/api/blog';
+import { handleAchievementsResponse } from '@/lib/achievements/handleAchievementsResponse';
 import { BlogPostAuthor } from '@/features/blog';
 import { BlockShadowButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
@@ -60,7 +61,12 @@ import { cn } from '@/lib/core/utils';
 import { useAuthDialogStore, type AuthDialogView } from '@/store/authDialog';
 import { triggerRespectLightning } from '@/store/engagementEffects';
 import { useAuthStore } from '@/store/auth';
-import type { ParagraphPayload, PublicBlogComment, PublicFeedPost, PublicFeedPostAuthor } from '@/types/blog';
+import type {
+  ParagraphPayload,
+  PublicBlogComment,
+  PublicFeedPost,
+  PublicFeedPostAuthor,
+} from '@/types/blog';
 import { coerceParagraphDoc } from '@/types/blog';
 import 'highlight.js/styles/github-dark.css';
 
@@ -117,7 +123,7 @@ function BlogImagePreviewModal({
     aspect === 'landscape' && 'max-w-[min(96vw,72rem)]',
     aspect === 'square' && 'max-w-[min(96vw,42rem)]',
     aspect === 'portrait' && 'max-w-[min(96vw,28rem)]',
-    aspect === 'unknown' && 'max-w-[min(96vw,80rem)]',
+    aspect === 'unknown' && 'max-w-[min(96vw,80rem)]'
   );
 
   return (
@@ -173,7 +179,6 @@ export function BlogImagePreviewProvider({ children }: Readonly<{ children: Reac
   );
 }
 
-
 // ─── BlogPostSidebarStats.tsx ───
 
 function formatStat(n: number): string {
@@ -201,7 +206,7 @@ function StatRow({
       <span
         className={cn(
           'shrink-0 font-mono text-xs font-black tabular-nums text-foreground',
-          valueClassName,
+          valueClassName
         )}
       >
         {value}
@@ -250,7 +255,6 @@ export function BlogPostSidebarStats({
   );
 }
 
-
 // ─── BlogPostTableOfContents.tsx ───
 
 export function BlogPostTableOfContents({
@@ -287,7 +291,9 @@ export function BlogPostTableOfContents({
                   className={cn(
                     'w-full text-left font-sans text-xs font-semibold leading-snug text-foreground transition-colors',
                     'hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card',
-                    item.level === 3 ? 'pl-3 text-[11px] text-muted-foreground hover:text-primary' : '',
+                    item.level === 3
+                      ? 'pl-3 text-[11px] text-muted-foreground hover:text-primary'
+                      : ''
                   )}
                 >
                   {item.text}
@@ -300,7 +306,6 @@ export function BlogPostTableOfContents({
     </nav>
   );
 }
-
 
 // ─── BlogCodeBlockDisplay.tsx ───
 
@@ -317,7 +322,7 @@ export function BlogCodeBlockDisplay({
 }>) {
   const { language, html } = useMemo(
     () => highlightCodeToHtml(code, languageHint),
-    [code, languageHint],
+    [code, languageHint]
   );
   const [copied, setCopied] = useState(false);
 
@@ -336,7 +341,7 @@ export function BlogCodeBlockDisplay({
     <div
       className={cn(
         'mx-auto my-5 w-full max-w-4xl overflow-hidden border-2 border-border',
-        className,
+        className
       )}
     >
       <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-zinc-900 px-3 py-2 sm:px-4">
@@ -348,7 +353,11 @@ export function BlogCodeBlockDisplay({
           onClick={() => void copy()}
           className="inline-flex shrink-0 items-center gap-1.5 border-2 border-zinc-600 bg-zinc-800 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-zinc-100 transition-colors hover:border-primary hover:bg-zinc-700 hover:text-white"
         >
-          {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+          {copied ? (
+            <Check className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <Copy className="h-3.5 w-3.5" aria-hidden />
+          )}
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
@@ -362,7 +371,6 @@ export function BlogCodeBlockDisplay({
     </div>
   );
 }
-
 
 // ─── MermaidBlockDisplay.tsx ───
 
@@ -393,7 +401,10 @@ export function MermaidBlockDisplay({
         const mermaid = (await import('mermaid')).default;
         mermaid.initialize({
           startOnLoad: false,
-          theme: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+          theme:
+            typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+              ? 'dark'
+              : 'default',
           securityLevel: 'loose',
         });
         const id = `mermaid-${uid}-${Math.random().toString(36).slice(2, 9)}`;
@@ -436,12 +447,14 @@ export function MermaidBlockDisplay({
           </details>
         </div>
       ) : (
-        <div ref={ref} className="mermaid-render flex justify-center py-1 [&_svg]:max-h-[min(70vh,480px)]" />
+        <div
+          ref={ref}
+          className="mermaid-render flex justify-center py-1 [&_svg]:max-h-[min(70vh,480px)]"
+        />
       )}
     </div>
   );
 }
-
 
 // ─── BlogPostDetailSideRail.tsx ───
 
@@ -548,9 +561,11 @@ function PostMiniList({
                 {p.title}
               </span>
             </Link>
-              {dateLabel ? (
-                <p className="mt-1.5 font-sans text-xs font-normal text-muted-foreground">{dateLabel}</p>
-              ) : null}
+            {dateLabel ? (
+              <p className="mt-1.5 font-sans text-xs font-normal text-muted-foreground">
+                {dateLabel}
+              </p>
+            ) : null}
           </li>
         );
       })}
@@ -586,17 +601,17 @@ export function BlogPostDetailSideRail({
 
   const whatsappHref = useMemo(
     () => `https://wa.me/?text=${encodeURIComponent(shareText)}`,
-    [shareText],
+    [shareText]
   );
 
   const facebookHref = useMemo(
     () => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`,
-    [postUrl],
+    [postUrl]
   );
 
   const linkedInHref = useMemo(
     () => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`,
-    [postUrl],
+    [postUrl]
   );
 
   const copyLink = async () => {
@@ -652,7 +667,11 @@ export function BlogPostDetailSideRail({
           <UserPen className="size-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
           More by AUTHOR
         </h2>
-        <PostMiniList posts={moreByAuthor} loading={loading} emptyLabel="No other posts from this author." />
+        <PostMiniList
+          posts={moreByAuthor}
+          loading={loading}
+          emptyLabel="No other posts from this author."
+        />
       </section>
 
       <section className={RAIL_CARD} aria-labelledby="blog-rail-share">
@@ -749,7 +768,6 @@ export function BlogPostDetailSideRail({
   );
 }
 
-
 // ─── BlogPostCommentsDock.tsx ───
 
 const COMPOSER_ANCHOR_ID = 'blog-comment-composer-anchor';
@@ -758,7 +776,8 @@ const FOOTER_ID = 'app-footer';
 const BASE_BOTTOM_GAP_PX = 10;
 const FOOTER_LIFT_DEADBAND_PX = 1;
 
-const dockLabelClass = 'whitespace-nowrap font-mono text-[10px] font-black uppercase tracking-tight';
+const dockLabelClass =
+  'whitespace-nowrap font-mono text-[10px] font-black uppercase tracking-tight';
 
 function DockCountBubble({ count, loading }: Readonly<{ count: number; loading?: boolean }>) {
   const text = loading ? '…' : count > 99 ? '99+' : String(count);
@@ -766,7 +785,7 @@ function DockCountBubble({ count, loading }: Readonly<{ count: number; loading?:
     <span
       className={cn(
         'absolute -right-2.5 -top-2 z-10 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center  border-2 border-border px-0.5',
-        'bg-primary font-mono text-[8px] font-black tabular-nums leading-none text-primary-foreground shadow',
+        'bg-primary font-mono text-[8px] font-black tabular-nums leading-none text-primary-foreground shadow'
       )}
       aria-hidden
     >
@@ -824,13 +843,15 @@ function DockAction({
             ? 'border-primary bg-primary/15 text-primary'
             : softInactive
               ? 'border-border bg-background/20 text-muted-foreground hover:bg-background/35 hover:text-foreground'
-              : 'bg-background/25 text-foreground hover:bg-background/40',
+              : 'bg-background/25 text-foreground hover:bg-background/40'
       )}
     >
       <span className={cn('relative inline-flex shrink-0', iconClassName)}>
         {icon}
         {showActiveDot ? <DockActiveDot /> : null}
-        {badgeCount !== undefined ? <DockCountBubble count={badgeCount} loading={badgeLoading} /> : null}
+        {badgeCount !== undefined ? (
+          <DockCountBubble count={badgeCount} loading={badgeLoading} />
+        ) : null}
       </span>
       <span className={dockLabelClass}>{label}</span>
     </button>
@@ -863,7 +884,7 @@ function BookmarkDockAction({
         'transition-colors duration-200 ease-in-out',
         bookmarked
           ? 'border-primary bg-primary/15 text-primary'
-          : 'bg-background/25 text-foreground hover:bg-background/40',
+          : 'bg-background/25 text-foreground hover:bg-background/40'
       )}
     >
       <span className="relative inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center">
@@ -911,7 +932,7 @@ function RespectDockAction({
         'transition-colors duration-200 ease-in-out',
         respected
           ? 'border-primary bg-primary/15 text-primary'
-          : 'bg-background/25 text-foreground hover:bg-background/40',
+          : 'bg-background/25 text-foreground hover:bg-background/40'
       )}
     >
       <span className="relative inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center">
@@ -979,7 +1000,7 @@ export function BlogPostCommentsDock({
       ([entry]) => {
         setCommentsInView(entry.isIntersecting);
       },
-      { root: null, threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
+      { root: null, threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -1032,28 +1053,32 @@ export function BlogPostCommentsDock({
     return token;
   }, [token, openAuthDialog]);
 
-  const toggleRespect = useCallback(async (source?: HTMLButtonElement) => {
-    const t = requireToken();
-    if (!t) return;
-    const prev = engagementRef.current;
-    const wantOn = !prev.viewerHasRespected;
-    try {
-      const r = await blogApi.setPostRespect(username, slug, wantOn, t);
-      onEngagementChange({
-        ...prev,
-        viewerHasRespected: r.respecting,
-        respectCount: r.respectCount,
-      });
-      if (r.respecting && wantOn && source) {
-        triggerRespectLightning(source);
+  const toggleRespect = useCallback(
+    async (source?: HTMLButtonElement) => {
+      const t = requireToken();
+      if (!t) return;
+      const prev = engagementRef.current;
+      const wantOn = !prev.viewerHasRespected;
+      try {
+        const r = await blogApi.setPostRespect(username, slug, wantOn, t);
+        handleAchievementsResponse(r);
+        onEngagementChange({
+          ...prev,
+          viewerHasRespected: r.respecting,
+          respectCount: r.respectCount,
+        });
+        if (r.respecting && wantOn && source) {
+          triggerRespectLightning(source);
+        }
+        if (wantOn && !r.respecting) {
+          toast.info('You can’t Respect your own post.');
+        }
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update Respect');
       }
-      if (wantOn && !r.respecting) {
-        toast.info('You can’t Respect your own post.');
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not update Respect');
-    }
-  }, [requireToken, username, slug, onEngagementChange]);
+    },
+    [requireToken, username, slug, onEngagementChange]
+  );
 
   const toggleRepost = useCallback(async () => {
     const t = requireToken();
@@ -1096,7 +1121,7 @@ export function BlogPostCommentsDock({
     const el = document.getElementById(COMPOSER_ANCHOR_ID);
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const focusable = el?.querySelector<HTMLElement>(
-      'textarea, [contenteditable="true"], .ProseMirror',
+      'textarea, [contenteditable="true"], .ProseMirror'
     );
     window.setTimeout(() => focusable?.focus(), 400);
   };
@@ -1104,13 +1129,15 @@ export function BlogPostCommentsDock({
   return (
     <div
       className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-3 pt-2"
-      style={{ bottom: `calc(${BASE_BOTTOM_GAP_PX}px + ${footerLiftPx}px + env(safe-area-inset-bottom, 0px))` }}
+      style={{
+        bottom: `calc(${BASE_BOTTOM_GAP_PX}px + ${footerLiftPx}px + env(safe-area-inset-bottom, 0px))`,
+      }}
       role="toolbar"
       aria-label="Post engagement"
     >
       <div
         className={cn(
-          'pointer-events-auto relative max-w-[min(100%,40rem)] overflow-hidden border border-border/45',
+          'pointer-events-auto relative max-w-[min(100%,40rem)] overflow-hidden border border-border/45'
         )}
       >
         <div
@@ -1155,7 +1182,6 @@ export function BlogPostCommentsDock({
   );
 }
 
-
 // ─── BlogCommentsSection.tsx ───
 
 type ThreadSort = 'oldest' | 'newest';
@@ -1197,11 +1223,14 @@ function CommentLikeButton({
       }}
       className={cn(
         'inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase',
-        liked ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+        liked ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
       )}
       aria-pressed={liked}
     >
-      <span className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+      <span
+        className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
+        aria-hidden
+      >
         {rayBurstSeq > 0 ? (
           <span
             key={rayBurstSeq}
@@ -1223,7 +1252,7 @@ function CommentLikeButton({
         <Heart
           className={cn(
             'relative z-[1] h-3.5 w-3.5 transition-[transform,color,fill] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
-            liked ? 'scale-[1.12] fill-current' : 'fill-none',
+            liked ? 'scale-[1.12] fill-current' : 'fill-none'
           )}
           strokeWidth={2.5}
         />
@@ -1261,7 +1290,9 @@ function orderThreadComments(flat: PublicBlogComment[], sort: ThreadSort): Publi
 }
 
 /** DFS `ordered` list → each root with its contiguous descendant slice (thread). */
-function splitIntoThreads(ordered: PublicBlogComment[]): { root: PublicBlogComment; replies: PublicBlogComment[] }[] {
+function splitIntoThreads(
+  ordered: PublicBlogComment[]
+): { root: PublicBlogComment; replies: PublicBlogComment[] }[] {
   const threads: { root: PublicBlogComment; replies: PublicBlogComment[] }[] = [];
   let i = 0;
   while (i < ordered.length) {
@@ -1285,7 +1316,7 @@ function splitIntoThreads(ordered: PublicBlogComment[]): { root: PublicBlogComme
 function replyDepthFromRoot(
   rootId: string,
   comment: PublicBlogComment,
-  byId: Map<string, PublicBlogComment>,
+  byId: Map<string, PublicBlogComment>
 ): number {
   let levelsBelowRoot = 0;
   let pid: string | null | undefined = comment.parentId;
@@ -1299,7 +1330,7 @@ function replyDepthFromRoot(
 /** Thread root id that contains this comment id (root or any reply). */
 function threadRootIdContainingComment(
   threadList: { root: PublicBlogComment; replies: PublicBlogComment[] }[],
-  commentId: string,
+  commentId: string
 ): string | null {
   for (const t of threadList) {
     if (t.root._id === commentId) return t.root._id;
@@ -1343,7 +1374,7 @@ function CommentReadBody({ text, compact }: Readonly<{ text: string; compact?: b
         readOnly
         normalizeContent={false}
         className={cn(
-          '!border-none !bg-transparent !p-0 !shadow-none text-sm leading-relaxed text-foreground/90 selection:bg-primary/30',
+          '!border-none !bg-transparent !p-0 !shadow-none text-sm leading-relaxed text-foreground/90 selection:bg-primary/30'
         )}
         readOnlyLinkPreview={(href) => <LinkPreviewCardContent domain={href} />}
       />
@@ -1413,7 +1444,12 @@ function CommentCardView({
 
   const inner = (
     <div className="min-w-0">
-      <div className={cn('flex flex-wrap items-start justify-between gap-x-2 gap-y-1', compact && 'gap-x-2')}>
+      <div
+        className={cn(
+          'flex flex-wrap items-start justify-between gap-x-2 gap-y-1',
+          compact && 'gap-x-2'
+        )}
+      >
         <BlogPostAuthor author={c.author} className="flex min-w-0 max-w-full items-start gap-2">
           <Link href={`/u/${c.author.username}`} className="shrink-0">
             <img
@@ -1455,7 +1491,7 @@ function CommentCardView({
               <span
                 className={cn(
                   'shrink-0 border-2 border-border bg-background px-1.5 font-mono text-[9px] font-bold uppercase tracking-wide text-muted-foreground sm:px-2 sm:text-[10px]',
-                  metaPad,
+                  metaPad
                 )}
                 title={new Date(c.createdAt).toLocaleString()}
               >
@@ -1473,7 +1509,7 @@ function CommentCardView({
             <span
               className={cn(
                 'shrink-0 border-2 border-border bg-background px-1.5 font-mono text-[9px] font-bold uppercase tracking-wide text-muted-foreground sm:px-2 sm:text-[10px]',
-                metaPad,
+                metaPad
               )}
               title={new Date(c.createdAt).toLocaleString()}
             >
@@ -1498,7 +1534,7 @@ function CommentCardView({
             className={cn(
               'min-h-[4rem] border-2 border-border bg-card p-0 font-mono text-sm',
               'focus-within:border-primary',
-              compact && 'min-h-[3.5rem] text-[13px]',
+              compact && 'min-h-[3.5rem] text-[13px]'
             )}
           />
           <div className="flex flex-wrap justify-end gap-2">
@@ -1529,7 +1565,12 @@ function CommentCardView({
       )}
 
       {editingId !== c._id ? (
-        <div className={cn('flex flex-wrap items-center justify-end gap-x-3 gap-y-1', compact ? 'mt-1.5' : 'mt-2')}>
+        <div
+          className={cn(
+            'flex flex-wrap items-center justify-end gap-x-3 gap-y-1',
+            compact ? 'mt-1.5' : 'mt-2'
+          )}
+        >
           <button
             type="button"
             onClick={() => {
@@ -1560,13 +1601,13 @@ function CommentCardView({
               }}
               className={cn(
                 'inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground',
-                threadRepliesExpanded && 'text-primary',
+                threadRepliesExpanded && 'text-primary'
               )}
             >
               <ChevronDown
                 className={cn(
                   'h-3.5 w-3.5 shrink-0 transition-transform duration-200',
-                  threadRepliesExpanded && 'rotate-180',
+                  threadRepliesExpanded && 'rotate-180'
                 )}
                 strokeWidth={2.5}
                 aria-hidden
@@ -1616,19 +1657,16 @@ function CommentCardView({
         style={{ marginLeft: extraIndentPx }}
       >
         {showTimelineDot ? (
-          <div className="relative flex w-5 shrink-0 items-center justify-center self-stretch" aria-hidden>
+          <div
+            className="relative flex w-5 shrink-0 items-center justify-center self-stretch"
+            aria-hidden
+          >
             <span className="absolute top-1/2 left-1/2 z-[1] size-2.5 -translate-x-1/2 -translate-y-1/2 border-2 border-border bg-primary ring-2 ring-card" />
           </div>
         ) : (
           <div className="w-5 shrink-0" aria-hidden />
         )}
-        <div
-          className={cn(
-            'min-w-0 flex-1 border-2 border-border bg-card',
-            pad,
-            'bg-muted/5',
-          )}
-        >
+        <div className={cn('min-w-0 flex-1 border-2 border-border bg-card', pad, 'bg-muted/5')}>
           {inner}
         </div>
       </article>
@@ -1636,7 +1674,10 @@ function CommentCardView({
   }
 
   return (
-    <article id={`blog-comment-${c._id}`} className={cn('scroll-mt-28 border-2 border-border bg-card', pad)}>
+    <article
+      id={`blog-comment-${c._id}`}
+      className={cn('scroll-mt-28 border-2 border-border bg-card', pad)}
+    >
       {inner}
     </article>
   );
@@ -1679,7 +1720,6 @@ export function BlogCommentsSection({
   const commentById = useMemo(() => new Map(comments.map((x) => [x._id, x])), [comments]);
   const threads = useMemo(() => splitIntoThreads(ordered), [ordered]);
   const [expandedReplyRootId, setExpandedReplyRootId] = useState<string | null>(null);
-  const freshEmptyDoc = useMemo(() => emptyTipTapDoc(), [formKey]);
 
   const viewerAvatar =
     user?.profileImg ||
@@ -1724,7 +1764,7 @@ export function BlogCommentsSection({
         slug,
         draftSerialized,
         token,
-        replyParentId ?? undefined,
+        replyParentId ?? undefined
       );
       setComments((prev) => orderThreadComments([...prev, comment], threadSort));
       setCommentTotal((t) => t + 1);
@@ -1764,8 +1804,8 @@ export function BlogCommentsSection({
               ...x,
               likedByViewer: !was,
               likeCount: Math.max(0, prevCount + (was ? -1 : 1)),
-            },
-      ),
+            }
+      )
     );
     try {
       const r = await blogApi.toggleCommentLike(username, slug, c._id, token);
@@ -1777,12 +1817,12 @@ export function BlogCommentsSection({
                 ...x,
                 likeCount: r.likeCount,
                 likedByViewer: r.likedByViewer,
-              },
-        ),
+              }
+        )
       );
     } catch {
       setComments((list) =>
-        list.map((x) => (x._id !== c._id ? x : { ...x, likedByViewer: was, likeCount: prevCount })),
+        list.map((x) => (x._id !== c._id ? x : { ...x, likedByViewer: was, likeCount: prevCount }))
       );
       toast.error('Could not update like', { id: 'syntax-blog-comments-like' });
     }
@@ -1828,7 +1868,7 @@ export function BlogCommentsSection({
         }, 1800);
       }, delay);
     },
-    [threads, expandedReplyRootId],
+    [threads, expandedReplyRootId]
   );
 
   const saveEdit = async () => {
@@ -1880,7 +1920,7 @@ export function BlogCommentsSection({
     <span
       className={cn(
         'flex h-10 min-w-10 shrink-0 items-center justify-center  border-2 border-border bg-card px-2',
-        'font-mono text-xs font-black tabular-nums text-foreground shadow',
+        'font-mono text-xs font-black tabular-nums text-foreground shadow'
       )}
       title={loading ? 'Loading count…' : `${commentTotal} comments`}
       aria-label={loading ? 'Comment count loading' : `${commentTotal} comments`}
@@ -1921,7 +1961,10 @@ export function BlogCommentsSection({
                   className="h-10 w-10 border-2 border-border object-cover"
                 />
               ) : (
-                <div className="h-10 w-10 border-2 border-dashed border-border bg-muted/40" aria-hidden />
+                <div
+                  className="h-10 w-10 border-2 border-dashed border-border bg-muted/40"
+                  aria-hidden
+                />
               )}
             </div>
             <div className="min-w-0 flex-1 space-y-2">
@@ -1931,12 +1974,12 @@ export function BlogCommentsSection({
               <div
                 className={cn(
                   'border-2 border-border bg-card p-3 font-mono text-sm shadow',
-                  'focus-within:border-primary focus-within:shadow',
+                  'focus-within:border-primary focus-within:shadow'
                 )}
               >
                 <RichParagraphEditor
                   key={formKey}
-                  initialDoc={freshEmptyDoc}
+                  initialDoc={draftDoc}
                   onChange={setDraftDoc}
                   editorPlaceholder="Share your thoughts…"
                   className="min-h-[4.5rem] border-0 bg-transparent p-0 font-mono text-sm shadow-none focus-within:ring-0"
@@ -1977,7 +2020,11 @@ export function BlogCommentsSection({
             id="blog-comments-heading"
             className="flex min-w-0 items-center gap-2 font-mono text-sm font-black uppercase tracking-wider text-foreground"
           >
-            <MessageSquare className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+            <MessageSquare
+              className="h-4 w-4 shrink-0 text-primary"
+              strokeWidth={2.5}
+              aria-hidden
+            />
             <span>Signal_Channel</span>
           </h2>
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -1991,7 +2038,11 @@ export function BlogCommentsSection({
             id="blog-comments-heading"
             className="mb-4 flex items-center gap-2 font-mono text-sm font-black uppercase tracking-wider text-foreground"
           >
-            <MessageSquare className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+            <MessageSquare
+              className="h-4 w-4 shrink-0 text-primary"
+              strokeWidth={2.5}
+              aria-hidden
+            />
             Comments
           </h2>
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -2068,7 +2119,9 @@ export function BlogCommentsSection({
                           {replies.map((reply, idx) => {
                             const depth = replyDepthFromRoot(root._id, reply, commentById);
                             const indent = Math.min(Math.max(depth - 1, 0), 4) * 8;
-                            const parentComment = reply.parentId ? commentById.get(reply.parentId) : undefined;
+                            const parentComment = reply.parentId
+                              ? commentById.get(reply.parentId)
+                              : undefined;
                             const replyParentAuthor = parentComment
                               ? {
                                   username: parentComment.author.username,
@@ -2144,4 +2197,3 @@ export function BlogCommentsSection({
     </section>
   );
 }
-

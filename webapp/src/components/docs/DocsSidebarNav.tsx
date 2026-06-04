@@ -2,17 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  BookOpen,
-  ChevronRight,
-  FileText,
-  Layout,
-  Library,
-  Search,
-  Command,
-} from 'lucide-react';
+import { BookOpen, ChevronRight, FileText, Layout, Library, Search, Command } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
-
 
 export type DocsSidebarArticle = { slug: string; title: string; canonicalPath?: string };
 
@@ -48,7 +39,9 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
             <BookOpen className="size-4 text-primary" aria-hidden />
           </div>
           <div className="min-w-0 flex-1 pt-0.5">
-            <p className="font-mono text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Docs</p>
+            <p className="font-mono text-[11px] font-black uppercase tracking-[0.2em] text-foreground">
+              Docs
+            </p>
             <div className="mt-1.5 flex items-center gap-2">
               <Library className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
               <p className="font-mono text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -65,7 +58,9 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
           aria-hidden
         >
           <Search size={12} className="shrink-0" />
-          <span className="flex-1 text-[10px] font-bold uppercase tracking-widest">Search index</span>
+          <span className="flex-1 text-[10px] font-bold uppercase tracking-widest">
+            Search index
+          </span>
           <span className="flex items-center gap-0.5 border border-border px-1 font-mono text-[8px]">
             <Command size={8} />K
           </span>
@@ -88,8 +83,7 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
               className={cn(
                 'flex items-center gap-3 border-4 border-transparent px-3 py-2 text-[11px] font-bold uppercase tracking-tight text-muted-foreground',
                 'hover:border-border hover:bg-muted/40 hover:text-foreground',
-                overviewActive &&
-                  'border-border bg-card text-foreground shadow hover:border-border'
+                overviewActive && 'border-border bg-card text-foreground shadow hover:border-border'
               )}
             >
               <FileText size={12} className="shrink-0 text-primary" />
@@ -113,8 +107,7 @@ export function DocsSidebarNav({ articles }: { articles: DocsSidebarArticle[] })
                   className={cn(
                     'flex items-center gap-3 border-4 border-transparent px-3 py-2 text-[11px] font-bold uppercase tracking-tight text-muted-foreground',
                     'hover:border-border hover:bg-muted/40 hover:text-foreground',
-                    active &&
-                      'border-border bg-card text-foreground shadow hover:border-border'
+                    active && 'border-border bg-card text-foreground shadow hover:border-border'
                   )}
                 >
                   <FileText size={12} className="shrink-0 text-primary" />

@@ -14,6 +14,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import { blogApi } from '@/api/blog';
+import { handleAchievementsResponse } from '@/lib/achievements/handleAchievementsResponse';
 import { LinkPreviewCardContent } from '@/components/ui/popover';
 import { RichParagraphEditor } from '@/components/ui/editor';
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
@@ -49,9 +50,11 @@ import { Button } from '@/components/ui';
 import { useAuthStore } from '@/store/auth';
 import { extractBlogHeadingToc } from '@/lib/extractBlogHeadingToc';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
-import { SHELL_CONTENT_MEASURE_CLASS, SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+import {
+  SHELL_CONTENT_MEASURE_CLASS,
+  SHELL_CONTENT_RAIL_CLASS,
+} from '@/lib/shell/shellContentRail';
 import { BlogPostPageSkeletonInner } from '@/components/skeletons';
-
 
 /** Cancels article body horizontal padding (`px-3 sm:px-4 lg:px-5`) so full-width media meets the article edges. */
 const BLOG_ARTICLE_FULL_BLEED_CLASS =
@@ -107,7 +110,7 @@ function parseBlocks(content: string): Block[] {
 function clampPublicVideoSize(
   count: number,
   size: VideoEmbedDisplaySize | undefined,
-  layout: VideoEmbedLayoutDirection,
+  layout: VideoEmbedLayoutDirection
 ): VideoEmbedDisplaySize {
   if (layout === 'column') return size === 'sm' || size === 'md' || size === 'lg' ? size : 'md';
   if (count >= 3) return 'sm';
@@ -153,16 +156,14 @@ function ContentEmbedFrame({
     <div
       className={cn(
         'overflow-hidden border-2 border-border bg-card',
-        noShadow
-          ? 'shadow-none'
-          : 'shadow transition-shadow duration-200 hover:shadow',
-        className,
+        noShadow ? 'shadow-none' : 'shadow transition-shadow duration-200 hover:shadow',
+        className
       )}
     >
       <div
         className={cn(
           'flex items-center gap-2 border-b-2 border-border bg-muted/40 px-3 py-2 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-foreground',
-          showEmbedBadge ? 'justify-between' : 'justify-start',
+          showEmbedBadge ? 'justify-between' : 'justify-start'
         )}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
@@ -192,7 +193,7 @@ function ContentEmbedFrame({
 
 function embeddedFigureInnerClass(
   layout: ImageBlockLayout,
-  opts?: Readonly<{ squareInNarrowEmbed?: boolean }>,
+  opts?: Readonly<{ squareInNarrowEmbed?: boolean }>
 ): string {
   switch (layout) {
     case 'square':
@@ -219,7 +220,10 @@ function isYoutubeEmbedUrl(src: string): boolean {
   return /youtube\.com\/embed|youtube-nocookie\.com\/embed/i.test(src);
 }
 
-function publicVideoItemClass(size: VideoEmbedDisplaySize, layout: VideoEmbedLayoutDirection): string {
+function publicVideoItemClass(
+  size: VideoEmbedDisplaySize,
+  layout: VideoEmbedLayoutDirection
+): string {
   if (layout === 'column') {
     if (size === 'sm') return 'w-full max-w-[7.75rem] mx-auto shrink-0';
     if (size === 'md') return 'w-full max-w-[11.5rem] mx-auto shrink-0';
@@ -273,7 +277,7 @@ function HeadingBlock({
         /* Match sticky rail offset (`top-24`) so TOC scroll targets clear the navbar */
         'mx-auto mb-6 w-full scroll-mt-24',
         SHELL_CONTENT_MEASURE_CLASS,
-        level === 3 ? 'mt-8' : 'mt-12',
+        level === 3 ? 'mt-8' : 'mt-12'
       )}
     >
       <Tag
@@ -281,7 +285,7 @@ function HeadingBlock({
           'flex items-center gap-3 font-mono font-black tracking-tight text-foreground',
           level === 3
             ? 'border-l-4 border-primary/50 pl-4 text-base normal-case sm:text-lg'
-            : 'text-2xl uppercase sm:text-3xl',
+            : 'text-2xl uppercase sm:text-3xl'
         )}
       >
         {level === 3 ? (
@@ -304,7 +308,10 @@ function HeadingBlock({
 function PartitionBlock() {
   return (
     <div
-      className={cn('mx-auto my-16 flex items-center gap-4 opacity-30', SHELL_CONTENT_MEASURE_CLASS)}
+      className={cn(
+        'mx-auto my-16 flex items-center gap-4 opacity-30',
+        SHELL_CONTENT_MEASURE_CLASS
+      )}
       role="separator"
       aria-hidden
     >
@@ -335,7 +342,7 @@ function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>
       className={cn(
         'relative overflow-hidden bg-muted',
         embeddedFigureInnerClass(layout, { squareInNarrowEmbed: squareCard }),
-        BLOG_RASTER_HOVER_GROUP_CLASS,
+        BLOG_RASTER_HOVER_GROUP_CLASS
       )}
     >
       <img src={url} alt={alt} className={BLOG_RASTER_IMG_CLASS} />
@@ -352,7 +359,7 @@ function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>
           <span
             className={cn(
               RETRO_MEDIA_BADGE,
-              'min-w-0 max-w-full justify-start overflow-hidden text-ellipsis whitespace-nowrap',
+              'min-w-0 max-w-full justify-start overflow-hidden text-ellipsis whitespace-nowrap'
             )}
           >
             {title}
@@ -366,7 +373,7 @@ function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>
       className={cn(
         'my-12 w-full space-y-0',
         fullBleed ? BLOG_ARTICLE_FULL_BLEED_CLASS : SHELL_CONTENT_MEASURE_CLASS,
-        (squareCard || landscapeCard) && 'flex justify-center',
+        (squareCard || landscapeCard) && 'flex justify-center'
       )}
     >
       {fullBleed ? (
@@ -392,13 +399,12 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
   if (!url) return null;
   const caption = typeof payload?.caption === 'string' ? payload.caption.trim() : '';
   const photographer = typeof payload?.photographer === 'string' ? payload.photographer.trim() : '';
-  const photoId = typeof payload?.unsplashPhotoId === 'string' ? payload.unsplashPhotoId.trim() : '';
+  const photoId =
+    typeof payload?.unsplashPhotoId === 'string' ? payload.unsplashPhotoId.trim() : '';
   const layout = coerceImageLayout(payload?.layout);
   let creditLine = '';
   if (photographer) {
-    creditLine = /^Photo by/i.test(photographer)
-      ? photographer
-      : `Photo by ${photographer}`;
+    creditLine = /^Photo by/i.test(photographer) ? photographer : `Photo by ${photographer}`;
   }
   const unsplashPhotoHref = photoId
     ? `https://unsplash.com/photos/${encodeURIComponent(photoId)}`
@@ -419,7 +425,7 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
       className={cn(
         'relative overflow-hidden bg-muted',
         embeddedFigureInnerClass(layout, { squareInNarrowEmbed: squareCard }),
-        BLOG_RASTER_HOVER_GROUP_CLASS,
+        BLOG_RASTER_HOVER_GROUP_CLASS
       )}
     >
       <img src={url} alt={alt} className={BLOG_RASTER_IMG_CLASS} />
@@ -436,7 +442,7 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
           <span
             className={cn(
               RETRO_MEDIA_BADGE,
-              'min-w-0 max-w-full justify-start overflow-hidden text-ellipsis whitespace-nowrap',
+              'min-w-0 max-w-full justify-start overflow-hidden text-ellipsis whitespace-nowrap'
             )}
           >
             {caption}
@@ -454,7 +460,7 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
               RETRO_MEDIA_BADGE,
               'blog-figure-credit-link pointer-events-auto block min-w-0 truncate whitespace-nowrap !text-white',
               'shadow-none hover:bg-black/90 hover:!text-white',
-              'transition-colors duration-300',
+              'transition-colors duration-300'
             )}
           >
             {creditLine}
@@ -468,7 +474,7 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
       className={cn(
         'my-12 w-full space-y-0',
         fullBleed ? BLOG_ARTICLE_FULL_BLEED_CLASS : SHELL_CONTENT_MEASURE_CLASS,
-        (squareCard || landscapeCard) && 'flex justify-center',
+        (squareCard || landscapeCard) && 'flex justify-center'
       )}
     >
       {fullBleed ? (
@@ -506,40 +512,43 @@ function VideoEmbedBlock({ payload }: Readonly<{ payload?: Record<string, unknow
         <div
           className={cn(
             'flex flex-wrap justify-center gap-4 p-3 sm:p-4',
-            layout === 'column' ? 'flex-col items-center' : 'flex-row',
+            layout === 'column' ? 'flex-col items-center' : 'flex-row'
           )}
         >
-      {urls.map((src) => {
-        const yt = isYoutubeEmbedUrl(src);
-        const itemClass = publicVideoItemClass(size, layout);
-        const iframeClass = yt
-          ? youtubeIframeHeightClass(size)
-          : cn('aspect-video w-full min-h-[10rem] border-0');
-        const lgYoutube = yt && size === 'lg';
-        return (
-          <div key={src} className={cn('relative overflow-hidden border-2 border-border shadow', itemClass)}>
-            {lgYoutube ? (
-              <div className="relative aspect-video w-full min-h-[12rem] max-h-[min(80vh,36rem)]">
-                <iframe
-                  src={src}
-                  title="Embedded video"
-                  className="absolute inset-0 h-full w-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
+          {urls.map((src) => {
+            const yt = isYoutubeEmbedUrl(src);
+            const itemClass = publicVideoItemClass(size, layout);
+            const iframeClass = yt
+              ? youtubeIframeHeightClass(size)
+              : cn('aspect-video w-full min-h-[10rem] border-0');
+            const lgYoutube = yt && size === 'lg';
+            return (
+              <div
+                key={src}
+                className={cn('relative overflow-hidden border-2 border-border shadow', itemClass)}
+              >
+                {lgYoutube ? (
+                  <div className="relative aspect-video w-full min-h-[12rem] max-h-[min(80vh,36rem)]">
+                    <iframe
+                      src={src}
+                      title="Embedded video"
+                      className="absolute inset-0 h-full w-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <iframe
+                    src={src}
+                    title="Embedded video"
+                    className={iframeClass}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                )}
               </div>
-            ) : (
-              <iframe
-                src={src}
-                title="Embedded video"
-                className={iframeClass}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            )}
-          </div>
-        );
-      })}
+            );
+          })}
         </div>
       </ContentEmbedFrame>
     </div>
@@ -549,9 +558,7 @@ function VideoEmbedBlock({ payload }: Readonly<{ payload?: Record<string, unknow
 function CodeBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>) {
   const code = getCodeText(payload);
   const languageHint =
-    typeof payload?.language === 'string' && payload.language.trim()
-      ? payload.language
-      : null;
+    typeof payload?.language === 'string' && payload.language.trim() ? payload.language : null;
   if (!code) return null;
   return (
     <div className={cn('my-8 w-full', SHELL_CONTENT_MEASURE_CLASS)}>
@@ -565,7 +572,12 @@ function TableBlock({ payload }: Readonly<{ payload?: TablePayload }>) {
   if (!rows.length) return null;
   const cap = (payload?.caption ?? '').trim();
   return (
-    <figure className={cn('my-8 w-full overflow-hidden border-2 border-border bg-background', SHELL_CONTENT_MEASURE_CLASS)}>
+    <figure
+      className={cn(
+        'my-8 w-full overflow-hidden border-2 border-border bg-background',
+        SHELL_CONTENT_MEASURE_CLASS
+      )}
+    >
       <div className="flex items-center gap-2 border-b-2 border-border bg-muted/30 px-3 py-1.5 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-foreground">
         <span className="shrink-0 text-primary" aria-hidden>
           ▣
@@ -586,7 +598,10 @@ function TableBlock({ payload }: Readonly<{ payload?: TablePayload }>) {
             {rows.map((row, ri) => (
               <tr
                 key={`tr-${ri}`}
-                className={cn('border-b border-border last:border-0', ri === 0 && 'bg-muted font-bold')}
+                className={cn(
+                  'border-b border-border last:border-0',
+                  ri === 0 && 'bg-muted font-bold'
+                )}
               >
                 {row.map((cell, ci) => (
                   <td
@@ -641,40 +656,40 @@ function GithubRepoBlock({ payload }: Readonly<{ payload?: Record<string, unknow
         noShadow
       >
         <div className="flex flex-col gap-4 p-5 transition-all sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-1 items-start gap-4">
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-14 w-14 shrink-0 border-2 border-border object-cover"
-          />
-        ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-border bg-muted">
-            <GithubIcon className="h-7 w-7" />
+          <div className="flex min-w-0 flex-1 items-start gap-4">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-14 w-14 shrink-0 border-2 border-border object-cover"
+              />
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-border bg-muted">
+                <GithubIcon className="h-7 w-7" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h4 className="font-mono text-base font-black uppercase text-foreground">
+                {owner}/{name}
+              </h4>
+              {description ? (
+                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{description}</p>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">Repository on GitHub</p>
+              )}
+            </div>
           </div>
-        )}
-        <div className="min-w-0">
-          <h4 className="font-mono text-base font-black uppercase text-foreground">
-            {owner}/{name}
-          </h4>
-          {description ? (
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{description}</p>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">Repository on GitHub</p>
-          )}
-        </div>
-      </div>
-      <Button
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        variant="primary"
-        size="sm"
-        className="shrink-0 font-mono normal-case tracking-normal"
-      >
-        <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        Open on GitHub
-      </Button>
+          <Button
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="primary"
+            size="sm"
+            className="shrink-0 font-mono normal-case tracking-normal"
+          >
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Open on GitHub
+          </Button>
         </div>
       </ContentEmbedFrame>
     </div>
@@ -770,13 +785,13 @@ export default function PublicBlogPostPage() {
 
   const tocItems = useMemo(
     () => (post ? extractBlogHeadingToc(parseBlocks(post.content)) : []),
-    [post],
+    [post]
   );
   const hasToc = tocItems.length > 0;
 
   const summaryHtmlSafe = useMemo(
     () => sanitizePublicSummaryHtml(post?.summary ?? ''),
-    [post?.summary],
+    [post?.summary]
   );
 
   useEffect(() => {
@@ -823,8 +838,10 @@ export default function PublicBlogPostPage() {
     });
   }, [post]);
 
+  const postId = post?._id;
+
   useEffect(() => {
-    if (!username || !slug || !post) return;
+    if (!username || !slug || !postId) return;
     const base = resolvePublicApiBase();
     if (!base) return;
     const url = `${base}/api/blog/p/${encodeURIComponent(username)}/${encodeURIComponent(slug)}/stats/stream`;
@@ -845,11 +862,17 @@ export default function PublicBlogPostPage() {
           setDockEngagement((prev) => ({
             ...prev,
             respectCount:
-              typeof d.stats!.respectCount === 'number' ? d.stats!.respectCount! : prev.respectCount,
-            repostCount: typeof d.stats!.repostCount === 'number' ? d.stats!.repostCount! : prev.repostCount,
+              typeof d.stats!.respectCount === 'number'
+                ? d.stats!.respectCount!
+                : prev.respectCount,
+            repostCount:
+              typeof d.stats!.repostCount === 'number' ? d.stats!.repostCount! : prev.repostCount,
             bookmarkCount:
-              typeof d.stats!.bookmarkCount === 'number' ? d.stats!.bookmarkCount! : prev.bookmarkCount,
-            viewCount: typeof d.stats!.viewCount === 'number' ? d.stats!.viewCount! : prev.viewCount,
+              typeof d.stats!.bookmarkCount === 'number'
+                ? d.stats!.bookmarkCount!
+                : prev.bookmarkCount,
+            viewCount:
+              typeof d.stats!.viewCount === 'number' ? d.stats!.viewCount! : prev.viewCount,
           }));
           if (typeof d.stats!.commentCount === 'number') {
             setDockCommentStats({ total: d.stats!.commentCount!, loading: false });
@@ -860,7 +883,7 @@ export default function PublicBlogPostPage() {
       }
     };
     return () => es.close();
-  }, [username, slug, post?._id]);
+  }, [username, slug, postId]);
 
   useEffect(() => {
     if (!username || !slug) return;
@@ -907,7 +930,8 @@ export default function PublicBlogPostPage() {
         }
 
         try {
-          await blogApi.commitReadView(username, slug, token, start.sessionId);
+          const commit = await blogApi.commitReadView(username, slug, token, start.sessionId);
+          handleAchievementsResponse(commit);
         } catch {
           void blogApi.recordReadDay(username, slug, token).catch(() => {
             /* best-effort */
@@ -938,7 +962,9 @@ export default function PublicBlogPostPage() {
       <div className="flex min-h-screen w-full items-center justify-center bg-background p-6">
         <div className="max-w-md border-4 border-destructive bg-destructive/5 p-10 shadow">
           <AlertTriangle className="mb-4 h-12 w-12 text-destructive" aria-hidden />
-          <h1 className="mb-4 font-mono text-2xl font-black uppercase text-destructive">Access_Denied</h1>
+          <h1 className="mb-4 font-mono text-2xl font-black uppercase text-destructive">
+            Access_Denied
+          </h1>
           <p className="mb-8 font-mono text-sm leading-relaxed opacity-80">
             {error ??
               'The requested document does not exist or has been retracted from the public index.'}
@@ -961,20 +987,19 @@ export default function PublicBlogPostPage() {
   const dateRaw = post.updatedAt?.trim() || post.createdAt?.trim() || '';
   const publishedDate = dateRaw ? new Date(dateRaw) : null;
   const dateValid = publishedDate && !Number.isNaN(publishedDate.getTime());
-  const dateStrLong =
-    dateValid
-      ? publishedDate.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        })
-      : '—';
+  const dateStrLong = dateValid
+    ? publishedDate.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '—';
 
   const showEditedForAuthorOnly = Boolean(
     viewerUsername &&
-      post.author?.username &&
-      viewerUsername === post.author.username &&
-      post.lastEditedAt?.trim(),
+    post.author?.username &&
+    viewerUsername === post.author.username &&
+    post.lastEditedAt?.trim()
   );
 
   const heroThumbnail = post.thumbnailUrl?.trim() ?? '';
@@ -988,12 +1013,7 @@ export default function PublicBlogPostPage() {
           aria-hidden
         />
 
-        <div
-          className={cn(
-            SHELL_CONTENT_RAIL_CLASS,
-            'relative flex-1 !overflow-visible',
-          )}
-        >
+        <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'relative flex-1 !overflow-visible')}>
           <div className="flex flex-col gap-6 !overflow-visible bg-transparent xl:flex-row xl:items-start xl:gap-6">
             <aside className="sticky top-24 z-20 hidden w-[11.5rem] max-w-[11.5rem] shrink-0 self-start xl:block">
               <div className="flex max-h-[calc(100vh-8rem)] min-h-0 flex-col gap-4 pr-2">
@@ -1028,7 +1048,11 @@ export default function PublicBlogPostPage() {
                         dateTime={dateRaw || undefined}
                         className="flex items-center gap-2 border-2 border-border bg-muted/50 px-3 py-1 font-mono text-xs font-bold uppercase"
                       >
-                        <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                        <Calendar
+                          className="h-3.5 w-3.5 shrink-0 text-primary"
+                          strokeWidth={2.5}
+                          aria-hidden
+                        />
                         {dateStrLong}
                       </time>
                       {showEditedForAuthorOnly ? (
@@ -1057,10 +1081,17 @@ export default function PublicBlogPostPage() {
 
                     {hasSummary ? (
                       <div className="group relative border-b border-dashed border-muted-foreground/40 pb-0">
-                        <div className="absolute -left-12 top-0 bottom-0 hidden w-1 bg-primary/20 md:block" aria-hidden />
+                        <div
+                          className="absolute -left-12 top-0 bottom-0 hidden w-1 bg-primary/20 md:block"
+                          aria-hidden
+                        />
                         <div className="border-l-4 border-primary bg-primary/5 p-4 pb-3 md:p-5 md:pb-4">
                           <div className="mb-2 flex items-center gap-2">
-                            <Terminal className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                            <Terminal
+                              className="h-4 w-4 shrink-0 text-primary"
+                              strokeWidth={2.5}
+                              aria-hidden
+                            />
                             <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary">
                               Briefing_Field
                             </span>
@@ -1085,47 +1116,48 @@ export default function PublicBlogPostPage() {
                   </div>
                 </header>
 
-            <div className="px-3 pt-2 pb-6 sm:px-4 lg:px-5 md:pt-3 md:pb-10">
-              <div className="prose-retro [&_.public-blog-body>div:first-child]:mt-0">
-                <BlogPublicBody content={post.content} />
-              </div>
+                <div className="px-3 pt-2 pb-6 sm:px-4 lg:px-5 md:pt-3 md:pb-10">
+                  <div className="prose-retro [&_.public-blog-body>div:first-child]:mt-0">
+                    <BlogPublicBody content={post.content} />
+                  </div>
 
-              <section
-                id="blog-comments-section"
-                className={cn(
-                  'mt-12 border-t border-dashed border-muted-foreground/40 pt-8',
-                  'pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]',
-                )}
-                aria-labelledby="blog-comments-heading"
-              >
-                <BlogCommentsSection
-                  username={username}
-                  slug={slug}
-                  hideTitle
-                  onCommentStatsChange={setDockCommentStats}
-                />
-              </section>
-            </div>
+                  <section
+                    id="blog-comments-section"
+                    className={cn(
+                      'mt-12 border-t border-dashed border-muted-foreground/40 pt-8',
+                      'pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]'
+                    )}
+                    aria-labelledby="blog-comments-heading"
+                  >
+                    <BlogCommentsSection
+                      username={username}
+                      slug={slug}
+                      hideTitle
+                      onCommentStatsChange={setDockCommentStats}
+                    />
+                  </section>
+                </div>
 
-            <footer className="flex flex-col items-center justify-between gap-3 border-t border-dashed border-muted-foreground/35 bg-muted/20 px-5 py-3 md:flex-row md:px-5 lg:px-6">
-              <div className="flex items-center gap-3 font-mono text-xs font-bold uppercase text-muted-foreground">
-                <span className="size-2 animate-pulse bg-primary" aria-hidden />
-                END_OF_TRANSMISSION {' // '}{new Date().getFullYear()}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  globalThis.window?.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className={cn(
-                  'flex items-center gap-2 border-2 border-border bg-card px-6 py-2 font-mono text-xs font-black uppercase shadow transition-all',
-                  'hover:bg-primary hover:text-primary-foreground hover:shadow-none active:translate-y-1',
-                )}
-              >
-                <ArrowUp className="h-4 w-4" aria-hidden />
-                Top
-              </button>
-            </footer>
+                <footer className="flex flex-col items-center justify-between gap-3 border-t border-dashed border-muted-foreground/35 bg-muted/20 px-5 py-3 md:flex-row md:px-5 lg:px-6">
+                  <div className="flex items-center gap-3 font-mono text-xs font-bold uppercase text-muted-foreground">
+                    <span className="size-2 animate-pulse bg-primary" aria-hidden />
+                    END_OF_TRANSMISSION {' // '}
+                    {new Date().getFullYear()}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      globalThis.window?.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={cn(
+                      'flex items-center gap-2 border-2 border-border bg-card px-6 py-2 font-mono text-xs font-black uppercase shadow transition-all',
+                      'hover:bg-primary hover:text-primary-foreground hover:shadow-none active:translate-y-1'
+                    )}
+                  >
+                    <ArrowUp className="h-4 w-4" aria-hidden />
+                    Top
+                  </button>
+                </footer>
               </article>
             </main>
 

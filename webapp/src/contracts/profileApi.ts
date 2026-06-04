@@ -3,6 +3,8 @@
  * Runtime client: `webapp/src/api/auth.ts`. Keep in sync with server auth module.
  */
 
+import type { AchievementsPayload } from './achievementsApi';
+
 export interface WorkExperience {
   workId?: string;
   jobTitle?: string;
@@ -146,6 +148,7 @@ export type AccountUser = {
   coverBannerAlt?: string;
   bio?: string;
   job?: string;
+  profileLocation?: string;
   portfolioUrl?: string;
   linkedin?: string;
   instagram?: string;
@@ -176,6 +179,7 @@ export type AccountResponseJson = {
   message?: string;
   user?: AccountUser;
   data?: { user: AccountUser };
+  achievements?: AchievementsPayload;
 };
 
 export interface AccountResponse {
@@ -192,6 +196,7 @@ export type UpdateProfilePayload = Partial<{
   coverBanner: string;
   coverBannerAlt: string;
   job: string;
+  profileLocation: string;
   portfolioUrl: string;
   linkedin: string;
   instagram: string;

@@ -1,13 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SquadFeedPinChrome } from '@/features/blog';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -33,17 +27,25 @@ import { CreateSquadDialog } from '@/features/squads';
 import { BlogCard } from '@/features/blog';
 import { InfoSwiperDialog } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import { SquadMembersDialog, SquadsDiscoverCategoryView, type SquadMembersDialogRow } from '../components/SquadSlugSections';
+import {
+  SquadMembersDialog,
+  SquadsDiscoverCategoryView,
+  type SquadMembersDialogRow,
+} from '../components/SquadSlugSections';
 import { SQUADS_INTRO_SLIDES } from '@/features/squads';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { isSquadCategory, squadCategoryLabel } from '@/lib/squads/squadCategory';
 import { cn } from '@/lib/core/utils';
-import { squadsApi, type SquadFeedRow, type SquadMemberRole, type SquadSummary } from '@/api/squads';
+import {
+  squadsApi,
+  type SquadFeedRow,
+  type SquadMemberRole,
+  type SquadSummary,
+} from '@/api/squads';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
-
 
 type MemberRow = SquadMembersDialogRow;
 
@@ -65,7 +67,11 @@ function memberAvatarSrc(profileImg: string | undefined, username: string): stri
   if (!trimmed) {
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
   }
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:')
+  ) {
     return trimmed;
   }
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
@@ -98,7 +104,10 @@ function roleLabelPublic(role: SquadMemberRole): string {
   return 'Member';
 }
 
-function SectionHeading({ children, icon: Icon }: Readonly<{ children: ReactNode; icon?: LucideIcon }>) {
+function SectionHeading({
+  children,
+  icon: Icon,
+}: Readonly<{ children: ReactNode; icon?: LucideIcon }>) {
   return (
     <h3 className="mb-4 flex items-center gap-2 border-b-2 border-border pb-2 font-mono text-xs font-black uppercase tracking-widest text-foreground">
       {Icon ? <Icon className="size-4 shrink-0" strokeWidth={2} aria-hidden /> : null}
@@ -157,7 +166,9 @@ export default function SquadDetailPage() {
   const [feed, setFeed] = useState<SquadFeedRow[]>([]);
   const [pinnedCount, setPinnedCount] = useState(0);
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
-  const [pinConfirm, setPinConfirm] = useState<{ postId: string; mode: 'pin' | 'unpin' } | null>(null);
+  const [pinConfirm, setPinConfirm] = useState<{ postId: string; mode: 'pin' | 'unpin' } | null>(
+    null
+  );
   const [pinBusy, setPinBusy] = useState(false);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [inviteField, setInviteField] = useState('');
@@ -218,7 +229,8 @@ export default function SquadDetailPage() {
       return;
     }
     const gated =
-      squad.viewerNeedsInvite === true || (squad.visibility === 'private' && squad.viewerRole == null);
+      squad.viewerNeedsInvite === true ||
+      (squad.visibility === 'private' && squad.viewerRole == null);
     if (gated) {
       setMembers([]);
       return;
@@ -277,7 +289,11 @@ export default function SquadDetailPage() {
     if (!slug) return;
     setBusy(true);
     try {
-      await squadsApi.join(slug, token, squad?.visibility === 'private' ? inviteField.trim() : undefined);
+      await squadsApi.join(
+        slug,
+        token,
+        squad?.visibility === 'private' ? inviteField.trim() : undefined
+      );
       toast.success('Joined squad');
       setInviteField('');
       await load();
@@ -369,7 +385,10 @@ export default function SquadDetailPage() {
 
   const feedVisible =
     squad &&
-    !(squad.viewerNeedsInvite === true || (squad.visibility === 'private' && squad.viewerRole == null));
+    !(
+      squad.viewerNeedsInvite === true ||
+      (squad.visibility === 'private' && squad.viewerRole == null)
+    );
 
   const createdLabel = formatSquadCreated(squad?.createdAt);
   const bannerSrc = squad ? resolveSquadBannerSrc(squad.coverBannerUrl) : undefined;
@@ -526,7 +545,11 @@ export default function SquadDetailPage() {
                           className="h-12 border-b-4 border-r-4 border-primary font-black uppercase italic tracking-widest"
                           onClick={() => void join()}
                         >
-                          <UserPlus className="mr-2 size-5 shrink-0" strokeWidth={2.5} aria-hidden />
+                          <UserPlus
+                            className="mr-2 size-5 shrink-0"
+                            strokeWidth={2.5}
+                            aria-hidden
+                          />
                           Join squad
                         </Button>
                         {squad.visibility === 'private' ? (
@@ -689,7 +712,7 @@ export default function SquadDetailPage() {
                     className={cn(
                       'inline-flex shrink-0 items-center gap-2 border-2 border-border bg-card px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest shadow transition-colors',
                       'hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40',
-                      showPinnedOnly && 'border-primary bg-primary/10 text-primary',
+                      showPinnedOnly && 'border-primary bg-primary/10 text-primary'
                     )}
                   >
                     <Pin className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
@@ -732,13 +755,19 @@ export default function SquadDetailPage() {
                             }
                           : undefined;
                       return (
-                        <li key={`${row.kind}-${row.item._id}-${i}`} className="flex min-h-0 flex-col gap-2">
+                        <li
+                          key={`${row.kind}-${row.item._id}-${i}`}
+                          className="flex min-h-0 flex-col gap-2"
+                        >
                           {row.kind === 'shared' ? (
                             <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
                               Shared to squad
                             </p>
                           ) : null}
-                          <BlogCard post={mapPublicFeedPostToPost(row.item)} squadFeedPin={pinChrome} />
+                          <BlogCard
+                            post={mapPublicFeedPostToPost(row.item)}
+                            squadFeedPin={pinChrome}
+                          />
                         </li>
                       );
                     })}
@@ -758,15 +787,10 @@ export default function SquadDetailPage() {
                   </p>
                   <p className="mt-4 text-sm text-muted-foreground">
                     Handle{' '}
-                    <span className="font-mono font-bold text-foreground">@{squad.handle ?? squad.slug}</span>
-                    {createdLabel ? (
-                      <>
-                        {' '}
-                        · Created {createdLabel}
-                      </>
-                    ) : null}
-                    {' '}
-                    ·{' '}
+                    <span className="font-mono font-bold text-foreground">
+                      @{squad.handle ?? squad.slug}
+                    </span>
+                    {createdLabel ? <> · Created {createdLabel}</> : null} ·{' '}
                     {squad.visibility === 'public' ? 'Public squad' : 'Private squad'}
                   </p>
                 </div>
@@ -817,7 +841,7 @@ export default function SquadDetailPage() {
                     viewerNeedsInvite: prev.viewerNeedsInvite,
                     inviteToken: prev.inviteToken,
                   }
-                : next,
+                : next
             );
           }}
         />

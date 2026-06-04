@@ -50,6 +50,7 @@ export const PROFILE_SECTION_KEYS: Record<ProfileUpdateSection, readonly string[
     'coverBanner',
     'coverBannerAlt',
     'job',
+    'profileLocation',
     'portfolioUrl',
     'isGoogleAccount',
     'isGitAccount',

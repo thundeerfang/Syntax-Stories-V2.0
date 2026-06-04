@@ -1,32 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
   FormControl,
   FormControlLabel,
-  IconButton,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
-  Tooltip,
   Typography,
 } from '@mui/material';
+import { AdminBlinkSectionHeader } from '@/components/ui/AdminBlinkSectionHeader';
+import { AdminFeedbackMessage } from '@/components/ui/AdminFeedbackMessage';
+import { useAdminStepUpRetry } from '@/lib/auth/useAdminStepUpRetry';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
-import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
+import KeyRoundedIcon from '@mui/icons-material/KeyRounded';
 import type { CatalogPermissionRow, CatalogSlugRow } from '@/admin';
 import {
   archiveAccessPermission,
@@ -39,9 +31,12 @@ import {
   updateAccessPermission,
 } from '@/admin';
 import { AdminDialog } from '@/components/ui/AdminDialog';
+import { AdminDataTable } from '@/components/ui/AdminDataTable';
 import { ConfirmArchiveDialog } from '@/components/ui/ConfirmArchiveDialog';
+import { permissionsTableColumns } from './accessCrudColumns';
+import { AdminDialogInfo } from '@/components/ui/AdminDialogInfo';
 
-export function PermissionsCrudSection({ token }: { token: string }) {
+export function PermissionsCrudSection({ token }: { token: string | null }) {
   const [items, setItems] = useState<CatalogPermissionRow[]>([]);
   const [resources, setResources] = useState<CatalogSlugRow[]>([]);
   const [actions, setActions] = useState<CatalogSlugRow[]>([]);
@@ -91,6 +86,8 @@ export function PermissionsCrudSection({ token }: { token: string }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useAdminStepUpRetry(refresh);
 
   function openCreate() {
     setDescription('');
@@ -169,109 +166,87 @@ export function PermissionsCrudSection({ token }: { token: string }) {
     }
   }
 
+  const columns = useMemo(
+    () =>
+      permissionsTableColumns({
+        onEdit: openEdit,
+        onArchive: setArchiveRow,
+        onRestore: (row) => void doRestore(row),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   return (
     <Stack spacing={2}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between">
-        <FormControlLabel
-          control={
-            <Switch checked={includeDeleted} onChange={(_, v) => setIncludeDeleted(v)} size="small" />
-          }
-          label="Show archived"
-        />
-        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreate} sx={{ borderRadius: 2 }}>
-          Add permission
-        </Button>
-      </Stack>
-
       {error ? (
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
+        <AdminFeedbackMessage severity="error" message={error} onClose={() => setError(null)} />
       ) : null}
 
-      <TableContainer component={Paper} elevation={0} className="border border-[var(--color-border)]" sx={{ borderColor: 'divider', borderRadius: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'action.hover' }}>
-              <TableCell>Key</TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Resource</TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Action</TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Scope</TableCell>
-              <TableCell width={120} align="right">
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5}>Loading…</TableCell>
-              </TableRow>
-            ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 2 }}>
-                    No permission rows.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              items.map((row) => (
-                <TableRow key={row.id} hover sx={{ opacity: row.deletedAt ? 0.65 : 1 }}>
-                  <TableCell>
-                    <Typography fontWeight={600} fontFamily="monospace" variant="body2">
-                      {row.key}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{row.resource}</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{row.action}</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{row.type}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={0} justifyContent="flex-end">
-                      {!row.deletedAt ? (
-                        <>
-                          <Tooltip title="Edit details">
-                            <IconButton size="small" onClick={() => openEdit(row)} aria-label="Edit">
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Archive">
-                            <IconButton size="small" onClick={() => setArchiveRow(row)} aria-label="Archive">
-                              <ArchiveOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      ) : (
-                        <Tooltip title="Restore">
-                          <IconButton size="small" onClick={() => void doRestore(row)} aria-label="Restore">
-                            <UnarchiveOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <AdminBlinkSectionHeader
+        title="Permissions"
+        right={
+          <>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={includeDeleted}
+                  onChange={(_, v) => setIncludeDeleted(v)}
+                  size="small"
+                />
+              }
+              label="Archived"
+            />
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<AddRoundedIcon />}
+              onClick={openCreate}
+            >
+              Add permission
+            </Button>
+          </>
+        }
+      />
+
+      <AdminDataTable
+        data={items}
+        columns={columns}
+        loading={loading}
+        getRowId={(row) => row.id}
+        emptyMessage="No permission rows."
+        totalLabel="permissions"
+        pageSize={25}
+        dense
+      />
 
       <AdminDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         title="Create permission"
+        headerIcon={<KeyRoundedIcon />}
+        footerStart={
+          <AdminDialogInfo title="Permission keys" tooltip="How keys are built">
+            <Typography variant="body2" color="text.secondary">
+              The key is built from resource, action, and scope. For the default management scope,
+              the key is resource:action (for example user:list). Non-management scope types append
+              a third segment, such as user:read:team.
+            </Typography>
+          </AdminDialogInfo>
+        }
         maxWidth="sm"
         primaryButton={{ label: 'Create', onClick: () => void submitCreate(), disabled: saving }}
         secondaryButton={{ label: 'Cancel', onClick: () => setCreateOpen(false), disabled: saving }}
       >
         <Stack spacing={2} sx={{ pt: 0.5 }}>
-          <Typography variant="caption" color="text.secondary">
-            The key is built from resource, action, and scope (non-management scopes append a third segment).
-          </Typography>
           <FormControl fullWidth required disabled={!resources.length}>
             <InputLabel id="perm-res">Resource</InputLabel>
-            <Select labelId="perm-res" label="Resource" value={resource} onChange={(e) => setResource(e.target.value)}>
+            <Select
+              labelId="perm-res"
+              label="Resource"
+              value={resource}
+              onChange={(e) => setResource(e.target.value)}
+            >
               {resources.map((r) => (
                 <MenuItem key={r.id} value={r.slug}>
                   {r.slug} — {r.displayName}
@@ -281,7 +256,12 @@ export function PermissionsCrudSection({ token }: { token: string }) {
           </FormControl>
           <FormControl fullWidth required disabled={!actions.length}>
             <InputLabel id="perm-act">Action</InputLabel>
-            <Select labelId="perm-act" label="Action" value={action} onChange={(e) => setAction(e.target.value)}>
+            <Select
+              labelId="perm-act"
+              label="Action"
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+            >
               {actions.map((r) => (
                 <MenuItem key={r.id} value={r.slug}>
                   {r.slug} — {r.displayName}
@@ -291,7 +271,12 @@ export function PermissionsCrudSection({ token }: { token: string }) {
           </FormControl>
           <FormControl fullWidth required disabled={!scopes.length}>
             <InputLabel id="perm-scope">Scope type</InputLabel>
-            <Select labelId="perm-scope" label="Scope type" value={scopeType} onChange={(e) => setScopeType(e.target.value)}>
+            <Select
+              labelId="perm-scope"
+              label="Scope type"
+              value={scopeType}
+              onChange={(e) => setScopeType(e.target.value)}
+            >
               {scopes.map((r) => (
                 <MenuItem key={r.id} value={r.slug}>
                   {r.slug} — {r.displayName}
@@ -299,8 +284,21 @@ export function PermissionsCrudSection({ token }: { token: string }) {
               ))}
             </Select>
           </FormControl>
-          <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth multiline minRows={2} />
-          <TextField label="Sort order" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} type="number" fullWidth />
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            fullWidth
+            multiline
+            minRows={2}
+          />
+          <TextField
+            label="Sort order"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            type="number"
+            fullWidth
+          />
         </Stack>
       </AdminDialog>
 
@@ -321,8 +319,21 @@ export function PermissionsCrudSection({ token }: { token: string }) {
               </Box>{' '}
               is fixed. To change resource or action, archive this row and create a new permission.
             </Typography>
-            <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth multiline minRows={2} />
-            <TextField label="Sort order" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} type="number" fullWidth />
+            <TextField
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+            />
+            <TextField
+              label="Sort order"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              type="number"
+              fullWidth
+            />
           </Stack>
         ) : null}
       </AdminDialog>

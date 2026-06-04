@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { fetchPublishedArticleBySlug } from '@/lib/api/publicHelp';
 
-
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -34,7 +33,9 @@ export default async function DocsArticlePage({ params }: Props) {
           <h1 className="text-3xl font-black tracking-tight text-foreground">{article.title}</h1>
           {article.summary ? <p className="text-muted-foreground">{article.summary}</p> : null}
         </header>
-        <div className="prose prose-neutral max-w-none whitespace-pre-wrap dark:prose-invert">{article.body}</div>
+        <div className="prose prose-neutral max-w-none whitespace-pre-wrap dark:prose-invert">
+          {article.body}
+        </div>
       </div>
     );
   }

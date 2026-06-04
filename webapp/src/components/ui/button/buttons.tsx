@@ -9,9 +9,12 @@ import { Loader2 } from 'lucide-react';
 import { SHADOW_BLOCK_BUTTON, SHADOW_GHOST_HOVER } from '@/lib/core/shadows';
 import { cn } from '@/lib/core/utils';
 
-
 /** Shared loading spinner markup for button primitives. */
-export function renderButtonChildren(loading: boolean, spinnerClassName: string, children: ReactNode) {
+export function renderButtonChildren(
+  loading: boolean,
+  spinnerClassName: string,
+  children: ReactNode
+) {
   if (loading) {
     return (
       <>
@@ -26,7 +29,8 @@ export function renderButtonChildren(loading: boolean, spinnerClassName: string,
 // —— Standard Button ————————————————————————————————————————————————————————
 
 export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'href'>,
+  extends
+    Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'href'>,
     Pick<AnchorHTMLAttributes<HTMLAnchorElement>, 'target' | 'rel' | 'download'> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
@@ -50,7 +54,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
       children,
       ...props
     },
-    ref,
+    ref
   ) => {
     const isDisabled = disabled || loading;
     const spinnerClassName = size === 'sm' ? 'size-3.5' : size === 'lg' ? 'size-5' : 'size-4';
@@ -70,7 +74,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
         'h-10 px-4 text-sm': size === 'md',
         'h-12 px-6 text-base': size === 'lg',
       },
-      className,
+      className
     );
 
     if (href) {
@@ -87,9 +91,12 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
             'no-underline [text-decoration-line:none]',
             variant === 'primary' &&
               '!text-primary-foreground visited:!text-primary-foreground hover:!text-primary-foreground',
-            variant === 'secondary' && '!text-foreground visited:!text-foreground hover:!text-foreground',
-            variant === 'outline' && '!text-foreground visited:!text-foreground hover:!text-foreground',
-            variant === 'ghost' && '!text-foreground visited:!text-foreground hover:!text-foreground',
+            variant === 'secondary' &&
+              '!text-foreground visited:!text-foreground hover:!text-foreground',
+            variant === 'outline' &&
+              '!text-foreground visited:!text-foreground hover:!text-foreground',
+            variant === 'ghost' &&
+              '!text-foreground visited:!text-foreground hover:!text-foreground'
           )}
           {...(props as AnchorHTMLAttributes<HTMLAnchorElement>)}
         >
@@ -110,7 +117,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
         {renderButtonChildren(loading, spinnerClassName, children)}
       </button>
     );
-  },
+  }
 );
 
 Button.displayName = 'Button';
@@ -150,7 +157,7 @@ export function blockShadowButtonClassNames(options: BlockShadowButtonClassOptio
       'px-6 py-3.5 text-sm': size === 'lg',
     },
     fullWidth && 'w-full',
-    className,
+    className
   );
 }
 
@@ -174,7 +181,7 @@ export const BlockShadowButton = forwardRef<HTMLButtonElement, BlockShadowButton
       children,
       ...props
     },
-    ref,
+    ref
   ) => {
     const spinnerClassName = size === 'sm' ? 'size-3.5' : size === 'lg' ? 'size-4' : 'size-3.5';
 
@@ -186,14 +193,14 @@ export const BlockShadowButton = forwardRef<HTMLButtonElement, BlockShadowButton
         aria-busy={loading || undefined}
         className={cn(
           blockShadowButtonClassNames({ variant, size, shadow, fullWidth, className }),
-          'disabled:pointer-events-none disabled:opacity-50',
+          'disabled:pointer-events-none disabled:opacity-50'
         )}
         {...props}
       >
         {renderButtonChildren(loading, spinnerClassName, children)}
       </button>
     );
-  },
+  }
 );
 
 BlockShadowButton.displayName = 'BlockShadowButton';
@@ -222,7 +229,7 @@ export function ghostOutlineButtonClassNames(options: GhostOutlineButtonClassOpt
       'px-6 py-4 text-xs font-black uppercase tracking-widest': size === 'lg',
     },
     fullWidth && 'w-full',
-    className,
+    className
   );
 }
 
@@ -234,8 +241,17 @@ export type GhostOutlineButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElemen
 
 export const GhostOutlineButton = forwardRef<HTMLButtonElement, GhostOutlineButtonProps>(
   (
-    { size = 'md', fullWidth = false, className, type = 'button', disabled, loading = false, children, ...props },
-    ref,
+    {
+      size = 'md',
+      fullWidth = false,
+      className,
+      type = 'button',
+      disabled,
+      loading = false,
+      children,
+      ...props
+    },
+    ref
   ) => {
     const spinnerClassName = size === 'lg' ? 'size-4' : 'size-3.5';
 
@@ -247,14 +263,14 @@ export const GhostOutlineButton = forwardRef<HTMLButtonElement, GhostOutlineButt
         aria-busy={loading || undefined}
         className={cn(
           ghostOutlineButtonClassNames({ size, fullWidth, className }),
-          'disabled:pointer-events-none disabled:opacity-50',
+          'disabled:pointer-events-none disabled:opacity-50'
         )}
         {...props}
       >
         {renderButtonChildren(loading, spinnerClassName, children)}
       </button>
     );
-  },
+  }
 );
 
 GhostOutlineButton.displayName = 'GhostOutlineButton';

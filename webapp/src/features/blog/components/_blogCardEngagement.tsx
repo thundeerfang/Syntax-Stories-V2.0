@@ -37,7 +37,12 @@ type ShareToSquadDialogProps = Readonly<{
   postId: string;
 }>;
 
-export function ShareToSquadDialog({ open, onClose, accessToken, postId }: ShareToSquadDialogProps) {
+export function ShareToSquadDialog({
+  open,
+  onClose,
+  accessToken,
+  postId,
+}: ShareToSquadDialogProps) {
   const [squads, setSquads] = useState<SquadSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
@@ -102,11 +107,15 @@ export function ShareToSquadDialog({ open, onClose, accessToken, postId }: Share
                 className={cn(
                   'flex w-full items-center gap-3 border-2 border-border bg-card px-3 py-2 text-left text-sm font-semibold transition-colors',
                   'hover:border-primary hover:bg-primary/5',
-                  sharing === s.slug && 'opacity-60',
+                  sharing === s.slug && 'opacity-60'
                 )}
               >
                 {s.iconUrl ? (
-                  <img src={s.iconUrl} alt="" className="size-9 shrink-0 border-2 border-border object-cover" />
+                  <img
+                    src={s.iconUrl}
+                    alt=""
+                    className="size-9 shrink-0 border-2 border-border object-cover"
+                  />
                 ) : (
                   <div className="flex size-9 shrink-0 items-center justify-center border-2 border-border bg-muted text-[10px] font-black uppercase text-muted-foreground">
                     {s.name.slice(0, 1)}
@@ -166,7 +175,7 @@ export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }
         'center',
         SQUAD_POPOVER_CARD_HEIGHT_PX,
         SQUAD_POPOVER_CARD_WIDTH_PX,
-        SQUAD_HOVER_GAP_PX,
+        SQUAD_HOVER_GAP_PX
       );
       setPosition({ top, left });
       setResolvedSide(side);
@@ -211,7 +220,7 @@ export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }
         'center',
         SQUAD_POPOVER_CARD_HEIGHT_PX,
         SQUAD_POPOVER_CARD_WIDTH_PX,
-        SQUAD_HOVER_GAP_PX,
+        SQUAD_HOVER_GAP_PX
       );
       setPosition({ top, left });
       setResolvedSide(side);
@@ -247,7 +256,7 @@ export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }
       }
       setPrivateWarnOpen(true);
     },
-    [router, squad.visibility, squadHref],
+    [router, squad.visibility, squadHref]
   );
 
   const iconSrc = squadPopoverIconSrc(squad);
@@ -277,7 +286,7 @@ export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body,
+      document.body
     );
 
   return (
@@ -296,7 +305,7 @@ export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }
           title={squad.visibility === 'public' ? squad.name : `${squad.name} (private)`}
           className={cn(
             'relative shrink-0 overflow-hidden  border-2 border-border bg-muted object-cover transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-            'h-6 w-6',
+            'h-6 w-6'
           )}
         >
           <img src={iconSrc} alt="" className="size-full object-cover" />
@@ -325,7 +334,7 @@ const ACTION_BTN_BASE = cn(
   ' border-0 bg-transparent',
   'transition-colors duration-150 ease-out',
   'hover:bg-muted/50',
-  'disabled:pointer-events-none disabled:opacity-55',
+  'disabled:pointer-events-none disabled:opacity-55'
 );
 
 const ICON_WRAP = 'relative flex size-[22px] shrink-0 items-center justify-center';
@@ -341,7 +350,7 @@ function EngagementCountBubble({ count }: Readonly<{ count: number }>) {
     <span
       className={cn(
         'absolute -right-2 -top-2 z-10 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center  border-2 border-border px-0.5',
-        'bg-primary font-mono text-[8px] font-black tabular-nums leading-none text-primary-foreground',
+        'bg-primary font-mono text-[8px] font-black tabular-nums leading-none text-primary-foreground'
       )}
       aria-hidden
     >
@@ -402,12 +411,7 @@ export function BlogCardEngagementRail({ post, className }: BlogCardEngagementRa
           title="Respect"
           className={cn(ACTION_BTN_BASE, busy === 'respect' && 'opacity-60')}
         >
-          <span
-            className={cn(
-              ICON_WRAP,
-              respecting && ' bg-primary/15 dark:bg-primary/20',
-            )}
-          >
+          <span className={cn(ICON_WRAP, respecting && ' bg-primary/15 dark:bg-primary/20')}>
             {hoverRespect && !respecting ? (
               <SparkLottie play size={lottieSize} />
             ) : (
@@ -436,10 +440,7 @@ export function BlogCardEngagementRail({ post, className }: BlogCardEngagementRa
           className={cn(ACTION_BTN_BASE, busy === 'repost' && 'opacity-60')}
         >
           <span
-            className={cn(
-              ICON_WRAP,
-              reposting && ' bg-primary/15 text-primary dark:bg-primary/20',
-            )}
+            className={cn(ICON_WRAP, reposting && ' bg-primary/15 text-primary dark:bg-primary/20')}
           >
             <Repeat2
               className={cn('h-4 w-4', reposting && 'text-primary')}
@@ -468,11 +469,15 @@ export function BlogCardEngagementRail({ post, className }: BlogCardEngagementRa
           <span
             className={cn(
               ICON_WRAP,
-              bookmarked && ' bg-primary/15 text-primary dark:bg-primary/20',
+              bookmarked && ' bg-primary/15 text-primary dark:bg-primary/20'
             )}
           >
             {bookmarked ? (
-              <Bookmark className="h-4 w-4 fill-primary text-primary" strokeWidth={2.5} aria-hidden />
+              <Bookmark
+                className="h-4 w-4 fill-primary text-primary"
+                strokeWidth={2.5}
+                aria-hidden
+              />
             ) : hoverBookmark ? (
               <BookmarkLottie play size={lottieSize} />
             ) : (
@@ -499,7 +504,11 @@ export function BlogCardEngagementRail({ post, className }: BlogCardEngagementRa
                 className={ACTION_BTN_BASE}
               >
                 <span className={ICON_WRAP}>
-                  <UsersRound className="h-4 w-4 text-foreground/75" strokeWidth={2.5} aria-hidden />
+                  <UsersRound
+                    className="h-4 w-4 text-foreground/75"
+                    strokeWidth={2.5}
+                    aria-hidden
+                  />
                 </span>
               </button>
             )}

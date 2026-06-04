@@ -9,6 +9,11 @@ dist
 webapp/.env.local
 server/.env.local
 
+docs-webapp/.env
+docs-webapp/.env.local
+docs-webapp/.next
+
+desktop/.env
 
 webapp/.env
 server/.env

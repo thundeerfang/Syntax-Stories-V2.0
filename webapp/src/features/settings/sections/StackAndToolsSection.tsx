@@ -3,31 +3,30 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import {
-  Monitor,
-  Plus,
-  X,
-  Search,
-  SearchX,
-} from 'lucide-react';
+import { Monitor, Plus, X, Search, SearchX } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { STACK_AND_TOOLS_MAX } from '@/lib/profile/stackAndToolsLimits';
 import { STACK_TOOL_NAME_MAX, STACK_TOOL_NAME_MIN } from '@/lib/profile/profileLinkLimits';
 import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import { getSkillIconUrl, getSkillIconUrlBySlug, preloadSkillIcons } from '@/lib/profile/skillIcons';
+import {
+  getSkillIconUrl,
+  getSkillIconUrlBySlug,
+  preloadSkillIcons,
+} from '@/lib/profile/skillIcons';
 import { SkillIconImage } from '@/components/ui/media';
 import { searchTechStack, type TechStackItem } from '@/lib/blog/referenceSearch';
-import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
-
-
-
+import {
+  SettingsSectionHeading,
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 
 export function StackAndToolsContent() {
   const { user, updateProfile } = useSettingsAuthSlice();
-  const [items, setItems] = useState<string[]>(
-    () => (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX)
+  const [items, setItems] = useState<string[]>(() =>
+    (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX)
   );
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);
@@ -146,7 +145,9 @@ export function StackAndToolsContent() {
 
       <SettingsTabPanel>
         <div className="space-y-2">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Active Modules</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+            Active Modules
+          </h3>
           <div className="flex flex-wrap gap-2">
             <AnimatePresence mode="popLayout">
               {items.map((t, i) => (
@@ -174,7 +175,11 @@ export function StackAndToolsContent() {
             </AnimatePresence>
             {items.length === 0 && (
               <div className="flex w-full flex-col items-center gap-2 border-2 border-dashed border-border bg-muted/10 px-4 py-3 text-center">
-                <SearchX className="size-8 shrink-0 text-muted-foreground/70" strokeWidth={2.25} aria-hidden />
+                <SearchX
+                  className="size-8 shrink-0 text-muted-foreground/70"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
                 <p className="text-[10px] font-bold uppercase text-muted-foreground">
                   No modules initialized. Use the search below.
                 </p>
@@ -184,7 +189,10 @@ export function StackAndToolsContent() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="stack-module-search" className="text-[10px] font-bold uppercase text-muted-foreground">
+          <label
+            htmlFor="stack-module-search"
+            className="text-[10px] font-bold uppercase text-muted-foreground"
+          >
             Module search
           </label>
           <div
@@ -196,7 +204,10 @@ export function StackAndToolsContent() {
             )}
           >
             <div className="group flex items-center">
-              <Search className="ml-3 size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-primary" aria-hidden />
+              <Search
+                className="ml-3 size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-primary"
+                aria-hidden
+              />
               <input
                 id="stack-module-search"
                 type="text"
@@ -229,8 +240,14 @@ export function StackAndToolsContent() {
                 >
                   {suggestions.length === 0 ? (
                     <li className="flex flex-col items-center gap-2 px-4 py-4 text-center">
-                      <SearchX className="size-7 shrink-0 text-muted-foreground/70" strokeWidth={2.25} aria-hidden />
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground">No matches found</p>
+                      <SearchX
+                        className="size-7 shrink-0 text-muted-foreground/70"
+                        strokeWidth={2.25}
+                        aria-hidden
+                      />
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                        No matches found
+                      </p>
                       <p className="text-[9px] text-muted-foreground">
                         Press Enter to add &ldquo;{input.trim()}&rdquo; as a custom skill
                       </p>
@@ -247,7 +264,9 @@ export function StackAndToolsContent() {
                           onMouseEnter={() => setHighlight(i)}
                           className={cn(
                             'w-full flex items-center gap-4 px-4 py-3 text-left transition-colors group/item',
-                            i === highlight ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50'
+                            i === highlight
+                              ? 'bg-primary text-primary-foreground'
+                              : 'hover:bg-muted/50'
                           )}
                         >
                           <div
@@ -256,14 +275,21 @@ export function StackAndToolsContent() {
                               i === highlight ? 'border-primary-foreground' : 'border-border'
                             )}
                           >
-                            <SkillIconImage src={getSkillIconUrlBySlug(item.slug)} alt={item.name} />
+                            <SkillIconImage
+                              src={getSkillIconUrlBySlug(item.slug)}
+                              alt={item.name}
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-black uppercase tracking-tighter truncate">{item.name}</p>
+                            <p className="text-sm font-black uppercase tracking-tighter truncate">
+                              {item.name}
+                            </p>
                             <p
                               className={cn(
                                 'text-[9px] font-bold uppercase tracking-widest',
-                                i === highlight ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                                i === highlight
+                                  ? 'text-primary-foreground/80'
+                                  : 'text-muted-foreground'
                               )}
                             >
                               {item.category}
@@ -272,7 +298,9 @@ export function StackAndToolsContent() {
                           <Plus
                             className={cn(
                               'size-4 shrink-0 transition-transform',
-                              i === highlight ? 'scale-110 rotate-0' : 'scale-100 opacity-0 group-hover/item:opacity-100'
+                              i === highlight
+                                ? 'scale-110 rotate-0'
+                                : 'scale-100 opacity-0 group-hover/item:opacity-100'
                             )}
                           />
                         </button>
@@ -284,7 +312,8 @@ export function StackAndToolsContent() {
             </AnimatePresence>
           </div>
           <p className="text-[9px] text-muted-foreground">
-            {STACK_TOOL_NAME_MIN}–{STACK_TOOL_NAME_MAX} characters per skill (same limits as work experience skills).
+            {STACK_TOOL_NAME_MIN}–{STACK_TOOL_NAME_MAX} characters per skill (same limits as work
+            experience skills).
           </p>
         </div>
 
@@ -299,7 +328,10 @@ export function StackAndToolsContent() {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className={cn(settingsBtnBlockPrimaryMd, 'px-6 py-2.5 text-[11px] tracking-widest disabled:opacity-60')}
+            className={cn(
+              settingsBtnBlockPrimaryMd,
+              'px-6 py-2.5 text-[11px] tracking-widest disabled:opacity-60'
+            )}
           >
             {saving ? 'Saving…' : 'Save changes'}
           </button>
@@ -323,4 +355,3 @@ export function StackAndToolsContent() {
     </SettingsTabRoot>
   );
 }
-

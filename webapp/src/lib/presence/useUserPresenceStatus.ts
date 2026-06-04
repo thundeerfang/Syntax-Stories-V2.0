@@ -13,7 +13,7 @@ function readPresenceStatus(): UserPresenceStatus {
 
 export function useUserPresenceStatus(): UserPresenceStatus {
   const [status, setStatus] = useState<UserPresenceStatus>(() =>
-    typeof window === 'undefined' ? 'online' : readPresenceStatus(),
+    typeof window === 'undefined' ? 'online' : readPresenceStatus()
   );
 
   useEffect(() => {

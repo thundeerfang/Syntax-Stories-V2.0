@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
-
 type ArticleCrumb = { slug: string; title: string; canonicalPath?: string };
 
 function articleHref(a: ArticleCrumb): string {
@@ -30,7 +29,7 @@ export function DocsBreadcrumb({ articles }: { articles: ArticleCrumb[] }) {
   const match = slug
     ? articles.find((a) => a.slug === slug || normalizePath(articleHref(a)) === pathname)
     : null;
-  const tail = isIndex ? 'Entry_Node' : match?.title ?? slug?.replace(/-/g, ' ') ?? 'Entry_Node';
+  const tail = isIndex ? 'Entry_Node' : (match?.title ?? slug?.replace(/-/g, ' ') ?? 'Entry_Node');
 
   return (
     <div className="flex min-w-0 items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-tight text-muted-foreground">

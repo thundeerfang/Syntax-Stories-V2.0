@@ -1,6 +1,5 @@
 import type { ElementType } from 'react';
 
-
 export function SettingsSectionEmptyState({
   icon: Icon,
   title,

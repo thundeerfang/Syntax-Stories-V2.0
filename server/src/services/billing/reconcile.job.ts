@@ -14,6 +14,7 @@ function shardHit(userId: string, pct: number): boolean {
 
 export function startReconcileJob(): void {
   const run = async () => {
+    try {
     const stripe = getStripe();
     if (!stripe) return;
     const cutoff = new Date(Date.now() - RECONCILE_AGE_MS);
@@ -41,6 +42,9 @@ export function startReconcileJob(): void {
       } catch (e) {
         console.warn('[billing reconcile] skip', sub.stripeSubscriptionId, e);
       }
+    }
+    } catch (e) {
+      console.warn('[billing reconcile] run failed:', (e as Error).message);
     }
   };
 

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { burstConfettiAtRect } from '@/lib/core/confettiBurst';
+import { useAuthStore } from '@/store/auth';
 
 export type LightningAnchor = Readonly<{
   top: number;
@@ -36,14 +37,20 @@ export const useEngagementEffectsStore = create<EngagementEffectsState>((set) =>
 
 /** Compact lightning burst above the Respect control. */
 export function triggerRespectLightning(origin: Element | DOMRect): void {
-  if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
     return;
   }
   useEngagementEffectsStore.getState().showLightning(toAnchor(origin));
 }
 
-/** Local confetti burst on follow / squad join (not unfollow). */
+/** Local confetti burst on follow / squad join (not unfollow). Signed-in users only. */
 export function triggerFollowConfetti(origin: Element | DOMRect): void {
+  if (!useAuthStore.getState().token) {
+    return;
+  }
   const rect = origin instanceof DOMRect ? origin : origin.getBoundingClientRect();
   burstConfettiAtRect(rect);
 }

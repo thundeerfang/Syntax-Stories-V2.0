@@ -10,7 +10,11 @@ import { squadsApi, type SquadSummary } from '@/api/squads';
 import { ExploreSectionHeaderCard } from '@/features/explore';
 import { SquadDiscoverCard } from '../components/SquadDiscoverCard';
 import { SquadDirectoryCard } from '../components/SquadDirectoryCard';
-import { type SquadCategory, SQUAD_CATEGORIES, squadCategoryLabel } from '@/lib/squads/squadCategory';
+import {
+  type SquadCategory,
+  SQUAD_CATEGORIES,
+  squadCategoryLabel,
+} from '@/lib/squads/squadCategory';
 import { SQUAD_DISCOVER_CARD_SLIDE_CLASS } from '@/lib/squads/squadDiscoverCardLayout';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
@@ -31,7 +35,7 @@ type SquadCategoryLaneRowProps = Readonly<{
   squads: SquadSummary[];
   isMember: (s: SquadSummary) => boolean;
   joinBusySlug: string | null;
-  onJoin: (slug: string) => void;
+  onJoin: (slug: string) => void | boolean | Promise<void | boolean>;
   onEditSquad?: (s: SquadSummary) => void;
   token: string | null;
 }>;
@@ -90,7 +94,10 @@ function SquadCategoryLaneRow({
       />
 
       <div className="relative">
-        <div ref={scrollerRef} className="ss-scrollbar-hide flex flex-nowrap gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth">
+        <div
+          ref={scrollerRef}
+          className="ss-scrollbar-hide flex flex-nowrap gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth"
+        >
           {squads.map((s) => (
             <div key={s._id} className={SQUAD_DISCOVER_CARD_SLIDE_CLASS}>
               <SquadDirectoryCard
@@ -99,7 +106,11 @@ function SquadCategoryLaneRow({
                 isAdmin={s.viewerRole === 'admin'}
                 joinBusy={joinBusySlug === s.slug}
                 onJoin={onJoin}
-                onEditSquad={token && s.viewerRole === 'admin' && onEditSquad ? () => onEditSquad(s) : undefined}
+                onEditSquad={
+                  token && s.viewerRole === 'admin' && onEditSquad
+                    ? () => onEditSquad(s)
+                    : undefined
+                }
               />
             </div>
           ))}
@@ -119,7 +130,7 @@ function NavChip({ label, href }: { label: string; href: string }) {
       className={cn(
         'relative shrink-0  border-2 border-border bg-background px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest',
         'text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground',
-        RETRO_SHADOW_SM,
+        RETRO_SHADOW_SM
       )}
     >
       {label}
@@ -132,7 +143,7 @@ type SquadsDiscoverFeaturedRailProps = Readonly<{
   loading: boolean;
   isMember: (s: SquadSummary) => boolean;
   joinBusySlug: string | null;
-  onJoin: (slug: string) => void;
+  onJoin: (slug: string) => void | boolean | Promise<void | boolean>;
 }>;
 
 /**
@@ -152,7 +163,7 @@ function SquadsDiscoverFeaturedRail({
       [...squads]
         .filter((s) => s.visibility === 'public')
         .sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name)),
-    [squads],
+    [squads]
   );
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -183,13 +194,15 @@ function SquadsDiscoverFeaturedRail({
             <div
               className={cn(
                 'flex size-11 shrink-0 items-center justify-center border-2 border-primary bg-background text-primary sm:size-12',
-                RETRO_SHADOW_SM,
+                RETRO_SHADOW_SM
               )}
             >
               <Sparkles className="size-5 sm:size-6" strokeWidth={2.25} aria-hidden />
             </div>
             <div className="min-w-0">
-              <h1 className="font-mono text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">Featured</h1>
+              <h1 className="font-mono text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
+                Featured
+              </h1>
               <p className="mt-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Elite Squads Network
               </p>
@@ -221,7 +234,11 @@ function SquadsDiscoverFeaturedRail({
           aria-label="Squad categories"
         >
           {SQUAD_CATEGORIES.map((c) => (
-            <NavChip key={c} label={squadCategoryLabel(c)} href={`/squads/${encodeURIComponent(c)}`} />
+            <NavChip
+              key={c}
+              label={squadCategoryLabel(c)}
+              href={`/squads/${encodeURIComponent(c)}`}
+            />
           ))}
         </nav>
       </div>
@@ -231,7 +248,7 @@ function SquadsDiscoverFeaturedRail({
         className={cn(
           'ss-scrollbar-hide pointer-events-auto absolute inset-x-0 bottom-0 z-20',
           'flex w-full snap-x snap-mandatory scroll-smooth gap-3 overflow-x-auto px-3 pb-1 pt-1 sm:gap-4 sm:px-4 md:px-6',
-          'translate-y-1/2',
+          'translate-y-1/2'
         )}
       >
         {items.length === 0 ? (
@@ -244,7 +261,7 @@ function SquadsDiscoverFeaturedRail({
               key={squad._id}
               className={cn(
                 SQUAD_DISCOVER_CARD_SLIDE_CLASS,
-                'flex items-end justify-center self-stretch',
+                'flex items-end justify-center self-stretch'
               )}
             >
               <SquadDiscoverCard
@@ -304,13 +321,17 @@ export function SquadsFeaturedPage() {
   const merged = useMemo(() => mergeCatalog(publicSquads, mine), [publicSquads, mine]);
   const isMember = useCallback((s: SquadSummary) => s.viewerRole != null, []);
 
-  const handleJoin = async (slug: string) => {
-    if (!token) return openAuth('login');
+  const handleJoin = async (slug: string): Promise<boolean> => {
+    if (!token) {
+      openAuth('login');
+      return false;
+    }
     setJoinBusySlug(slug);
     try {
       await squadsApi.join(slug, token);
       toast.success('Joined');
       await load();
+      return true;
     } catch (e) {
       toast.error('Action failed');
       throw e;
@@ -323,7 +344,7 @@ export function SquadsFeaturedPage() {
     <div
       className={cn(
         SHELL_CONTENT_RAIL_CLASS,
-        'flex min-h-0 flex-1 flex-col gap-10 overflow-visible pb-24 md:gap-12',
+        'flex min-h-0 flex-1 flex-col gap-10 overflow-visible pb-24 md:gap-12'
       )}
     >
       <SquadsDiscoverFeaturedRail

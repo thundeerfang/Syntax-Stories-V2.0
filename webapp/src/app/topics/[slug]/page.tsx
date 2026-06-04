@@ -1,12 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Hash } from 'lucide-react';
+import { Compass, FileStack, Hash } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { BlogCard } from '@/features/blog';
-import { RailFeedErrorState, ShellPageIntroHeader } from '@/components/layout';
+import { RailFeedEmptyState, RailFeedErrorState, ShellPageIntroHeader } from '@/components/layout';
 import { FollowingPostsGridSkeleton } from '@/components/skeletons';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
@@ -14,11 +13,9 @@ import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 import { useAuthStore } from '@/store/auth';
 
-
 /** Tag stream under Topics: `/topics/{slug}` (e.g. `/topics/javascript`). */
 export default function TopicsTagFeedPage() {
   const token = useAuthStore((s) => s.token);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
   const params = useParams();
   const raw = params?.slug;
   const tagSlug = typeof raw === 'string' ? decodeURIComponent(raw) : '';
@@ -46,9 +43,8 @@ export default function TopicsTagFeedPage() {
   }, [tagSlug, token]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     void load();
-  }, [load, isHydrated]);
+  }, [load]);
 
   return (
     <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
@@ -62,7 +58,11 @@ export default function TopicsTagFeedPage() {
           description="Stories published with this tag across the community."
           title={
             <h1 className="flex items-center gap-2 text-2xl font-black uppercase italic tracking-tighter text-foreground sm:text-3xl lg:text-4xl">
-              <Hash className="size-7 shrink-0 text-primary sm:size-8" strokeWidth={2.5} aria-hidden />
+              <Hash
+                className="size-7 shrink-0 text-primary sm:size-8"
+                strokeWidth={2.5}
+                aria-hidden
+              />
               <span className="min-w-0 break-words normal-case not-italic tracking-tight text-foreground">
                 {tagSlug || '…'}
               </span>
@@ -84,12 +84,19 @@ export default function TopicsTagFeedPage() {
           ) : loading ? (
             <FollowingPostsGridSkeleton />
           ) : posts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No published posts with this tag yet.{' '}
-              <Link href="/topics" className="font-medium text-primary underline-offset-4 hover:underline">
-                Browse topics
-              </Link>
-            </p>
+            <RailFeedEmptyState
+              icon={FileStack}
+              title="No published posts yet"
+              description="When someone publishes a story with this tag, it will show up here."
+              actions={[
+                {
+                  label: 'Browse topics',
+                  href: '/topics',
+                  variant: 'primary',
+                  icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+                },
+              ]}
+            />
           ) : (
             <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
               {posts.map((post) => (

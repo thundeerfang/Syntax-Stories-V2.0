@@ -13,7 +13,6 @@ import {
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/core/utils';
 
-
 export interface BottomToolbarItem {
   id: string;
   label: string;
@@ -171,12 +170,7 @@ export function BottomToolbar({
 
   return (
     <div className={cn('w-full', className)}>
-      <div
-        className={cn(
-          'mx-auto w-full px-4 flex justify-center',
-          maxWidthClassName
-        )}
-      >
+      <div className={cn('mx-auto w-full px-4 flex justify-center', maxWidthClassName)}>
         <div
           className={cn(
             'flex items-center justify-between gap-2 px-4 py-2',
@@ -191,11 +185,7 @@ export function BottomToolbar({
           )}
           <nav className="flex flex-wrap items-center gap-1.5 justify-end">
             {resolvedItems.map((item) => (
-              <ToolbarItemCard
-                key={item.id}
-                item={item}
-                onClick={onItemClick}
-              />
+              <ToolbarItemCard key={item.id} item={item} onClick={onItemClick} />
             ))}
           </nav>
         </div>

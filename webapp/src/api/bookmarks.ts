@@ -11,12 +11,22 @@ async function readJson<T>(r: Response): Promise<T> {
 }
 
 export type { BookmarkGroupRow } from '@contracts/bookmarksApi';
-import type { BookmarkGroupRow } from '@contracts/bookmarksApi';
+import type { BookmarkGroupRow, PatchBookmarkGroupBody } from '@contracts/bookmarksApi';
 
 export const bookmarksApi = {
-  listGroups: async (accessToken: string): Promise<{ success: boolean; groups: BookmarkGroupRow[] }> => {
-    const r = await blogAuthFetch(`${getApiBase()}/api/bookmarks/groups`, { method: 'GET' }, accessToken);
-    const data = (await readJson(r)) as { success?: boolean; groups?: BookmarkGroupRow[]; message?: string };
+  listGroups: async (
+    accessToken: string
+  ): Promise<{ success: boolean; groups: BookmarkGroupRow[] }> => {
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/bookmarks/groups`,
+      { method: 'GET' },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      groups?: BookmarkGroupRow[];
+      message?: string;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     const groups = (data.groups ?? []).map((g) => ({
       ...g,
@@ -29,7 +39,7 @@ export const bookmarksApi = {
   createGroup: async (
     name: string,
     accessToken: string,
-    opts?: { emoji?: string; makeDefault?: boolean },
+    opts?: { emoji?: string; makeDefault?: boolean }
   ): Promise<{ success: boolean; group: BookmarkGroupRow }> => {
     const body: { name: string; emoji?: string; makeDefault?: boolean } = { name: name.trim() };
     if (opts?.emoji != null && opts.emoji !== '') body.emoji = opts.emoji;
@@ -37,7 +47,7 @@ export const bookmarksApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/bookmarks/groups`,
       { method: 'POST', body: JSON.stringify(body) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -53,17 +63,40 @@ export const bookmarksApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/bookmarks/groups/${encodeURIComponent(groupId)}`,
       { method: 'PATCH', body: JSON.stringify({ isDefault: true }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
+  },
+
+  updateGroup: async (
+    groupId: string,
+    accessToken: string,
+    patch: PatchBookmarkGroupBody
+  ): Promise<{ success: boolean; group: BookmarkGroupRow }> => {
+    const body: PatchBookmarkGroupBody = {};
+    if (patch.name != null) body.name = patch.name.trim();
+    if (patch.emoji !== undefined) body.emoji = patch.emoji;
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/bookmarks/groups/${encodeURIComponent(groupId)}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      group?: BookmarkGroupRow;
+      message?: string;
+    };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    if (!data.group) throw new Error('Invalid response');
+    return { success: true, group: data.group };
   },
 
   deleteGroup: async (groupId: string, accessToken: string): Promise<void> => {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/bookmarks/groups/${encodeURIComponent(groupId)}`,
       { method: 'DELETE' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -71,7 +104,7 @@ export const bookmarksApi = {
 
   listBookmarkedPosts: async (
     accessToken: string,
-    options?: { groupId?: string; q?: string; limit?: number; sort?: 'newest' | 'oldest' },
+    options?: { groupId?: string; q?: string; limit?: number; sort?: 'newest' | 'oldest' }
   ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
     const sp = new URLSearchParams();
     if (options?.groupId) sp.set('groupId', options.groupId);
@@ -82,7 +115,7 @@ export const bookmarksApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/bookmarks/posts${q ? `?${q}` : ''}`,
       { method: 'GET' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;

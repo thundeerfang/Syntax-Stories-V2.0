@@ -1,47 +1,29 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import {
-  Button,
-  Chip,
-  FormControlLabel,
-  IconButton,
-  Paper,
-  Stack,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
+import { AdminBlinkSectionHeader } from '@/components/ui/AdminBlinkSectionHeader';
+import { AdminFeedbackMessage } from '@/components/ui/AdminFeedbackMessage';
+import { useAdminStepUpRetry } from '@/lib/auth/useAdminStepUpRetry';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
-import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
+import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
 import type { AdminRoleRow } from '@/admin';
 import {
   archiveRole,
   createRole,
   listRoles,
   restoreRole,
+  simulateIamPermission,
   updateRole,
 } from '@/admin';
 import { AdminDialog } from '@/components/ui/AdminDialog';
+import { AdminDataTable } from '@/components/ui/AdminDataTable';
 import { ConfirmArchiveDialog } from '@/components/ui/ConfirmArchiveDialog';
+import { rolesTableColumns } from './accessCrudColumns';
+import { RolePermissionsPicker } from './RolePermissionsPicker';
+import { AdminDialogInfo } from '@/components/ui/AdminDialogInfo';
 
-function parsePermissionLines(raw: string): string[] {
-  return raw
-    .split(/[\n,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-export function RolesCrudSection({ token }: { token: string }) {
+export function RolesCrudSection({ token }: { token: string | null }) {
   const [roles, setRoles] = useState<AdminRoleRow[]>([]);
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +34,12 @@ export function RolesCrudSection({ token }: { token: string }) {
   const [name, setName] = useState('');
   const [level, setLevel] = useState('100');
   const [description, setDescription] = useState('');
-  const [permText, setPermText] = useState('');
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [simulateRoleId, setSimulateRoleId] = useState('');
+  const [simulateAction, setSimulateAction] = useState('user:list');
+  const [simulateResult, setSimulateResult] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -73,11 +59,13 @@ export function RolesCrudSection({ token }: { token: string }) {
     void refresh();
   }, [refresh]);
 
+  useAdminStepUpRetry(refresh);
+
   function openCreate() {
     setName('');
     setLevel('100');
     setDescription('');
-    setPermText('');
+    setPermissions([]);
     setCreateOpen(true);
     setError(null);
   }
@@ -87,7 +75,7 @@ export function RolesCrudSection({ token }: { token: string }) {
     setName(row.name);
     setLevel(String(row.level));
     setDescription(row.description ?? '');
-    setPermText(row.permissions.join('\n'));
+    setPermissions([...row.permissions]);
     setError(null);
   }
 
@@ -104,7 +92,7 @@ export function RolesCrudSection({ token }: { token: string }) {
       await createRole(token, {
         name: name.trim(),
         level: lv,
-        permissions: parsePermissionLines(permText),
+        permissions,
         description: description.trim() || undefined,
       });
       setCreateOpen(false);
@@ -130,7 +118,7 @@ export function RolesCrudSection({ token }: { token: string }) {
       await updateRole(token, editRow.id, {
         name: name.trim(),
         level: lv,
-        permissions: parsePermissionLines(permText),
+        permissions,
         description: description.trim() || null,
       });
       setEditRow(null);
@@ -157,6 +145,31 @@ export function RolesCrudSection({ token }: { token: string }) {
     }
   }
 
+  async function runSimulate() {
+    if (!simulateRoleId.trim() || !simulateAction.trim()) {
+      setSimulateResult('Select a role and enter a permission action.');
+      return;
+    }
+    setSimulating(true);
+    setSimulateResult(null);
+    try {
+      const r = await simulateIamPermission(token, {
+        roleId: simulateRoleId,
+        action: simulateAction.trim(),
+      });
+      const zones = r.securityZones.length ? r.securityZones.join(', ') : 'none';
+      setSimulateResult(
+        r.allowed
+          ? `Allowed — zones: ${zones}; capabilities: ${r.capabilityIds.length}`
+          : `Denied (${r.code ?? 'unknown'}): ${r.reason ?? 'No reason'}`
+      );
+    } catch (e) {
+      setSimulateResult(e instanceof Error ? e.message : 'Simulation failed');
+    } finally {
+      setSimulating(false);
+    }
+  }
+
   async function doRestore(row: AdminRoleRow) {
     setError(null);
     try {
@@ -167,126 +180,107 @@ export function RolesCrudSection({ token }: { token: string }) {
     }
   }
 
+  const columns = useMemo(
+    () =>
+      rolesTableColumns({
+        onEdit: openEdit,
+        onArchive: setArchiveRow,
+        onRestore: (row) => void doRestore(row),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   return (
     <Stack spacing={2}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} justifyContent="space-between">
-        <FormControlLabel
-          control={
-            <Switch checked={includeDeleted} onChange={(_, v) => setIncludeDeleted(v)} size="small" />
-          }
-          label="Show archived roles"
-        />
-        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreate} sx={{ borderRadius: 2 }}>
-          Add role
-        </Button>
-      </Stack>
-
       {error ? (
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
+        <AdminFeedbackMessage severity="error" message={error} onClose={() => setError(null)} />
       ) : null}
 
-      <TableContainer component={Paper} elevation={0} className="border border-[var(--color-border)]" sx={{ borderColor: 'divider', borderRadius: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'action.hover' }}>
-              <TableCell>Role</TableCell>
-              <TableCell width={72}>Level</TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Permissions</TableCell>
-              <TableCell width={120} align="right">
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4}>Loading…</TableCell>
-              </TableRow>
-            ) : roles.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4}>
-                  <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 2 }}>
-                    No roles yet. Create one to assign to dashboard operators.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              roles.map((row) => (
-                <TableRow key={row.id} hover sx={{ opacity: row.deletedAt ? 0.65 : 1 }}>
-                  <TableCell>
-                    <Typography fontWeight={600}>{row.name}</Typography>
-                    {row.description ? (
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {row.description}
-                      </Typography>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>{row.level}</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                    <Stack direction="row" flexWrap="wrap" gap={0.5} useFlexGap>
-                      {row.permissions.slice(0, 6).map((p) => (
-                        <Chip key={p} label={p} size="small" variant="outlined" />
-                      ))}
-                      {row.permissions.length > 6 ? (
-                        <Chip label={`+${row.permissions.length - 6}`} size="small" />
-                      ) : null}
-                    </Stack>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={0} justifyContent="flex-end">
-                      {!row.deletedAt ? (
-                        <>
-                          <Tooltip title="Edit">
-                            <IconButton size="small" onClick={() => openEdit(row)} aria-label="Edit">
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Archive role">
-                            <IconButton size="small" onClick={() => setArchiveRow(row)} aria-label="Archive">
-                              <ArchiveOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      ) : (
-                        <Tooltip title="Restore role">
-                          <IconButton size="small" onClick={() => void doRestore(row)} aria-label="Restore">
-                            <UnarchiveOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <AdminBlinkSectionHeader
+        title="Roles"
+        right={
+          <>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={includeDeleted}
+                  onChange={(_, v) => setIncludeDeleted(v)}
+                  size="small"
+                />
+              }
+              label="Archived"
+            />
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<AddRoundedIcon />}
+              onClick={openCreate}
+            >
+              Add role
+            </Button>
+          </>
+        }
+      />
+
+      <AdminDataTable
+        data={roles}
+        columns={columns}
+        loading={loading}
+        getRowId={(row) => row.id}
+        emptyMessage="No roles yet. Create one to assign to dashboard operators."
+        totalLabel="roles"
+        pageSize={25}
+        dense
+      />
 
       <AdminDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         title="Create role"
-        maxWidth="sm"
+        headerIcon={<BadgeRoundedIcon />}
+        footerStart={
+          <AdminDialogInfo title="Role permissions" tooltip="How permissions work">
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                Assign permission keys from the catalog below. Click a badge to add it, or drag it
+                into the permissions box. Use the × on a selected badge to remove it.
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Keys follow resource:action (for example user:list). Only keys defined under Access
+                → Permissions are valid for new roles.
+              </Typography>
+            </Stack>
+          </AdminDialogInfo>
+        }
+        maxWidth="md"
         primaryButton={{ label: 'Create', onClick: () => void submitCreate(), disabled: saving }}
         secondaryButton={{ label: 'Cancel', onClick: () => setCreateOpen(false), disabled: saving }}
       >
         <Stack spacing={2} sx={{ pt: 0.5 }}>
-          <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} required fullWidth />
-          <TextField label="Level (0–1000)" value={level} onChange={(e) => setLevel(e.target.value)} type="number" fullWidth />
-          <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth multiline minRows={2} />
           <TextField
-            label="Permission keys"
-            value={permText}
-            onChange={(e) => setPermText(e.target.value)}
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            fullWidth
+          />
+          <TextField
+            label="Level (0–1000)"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            type="number"
+            fullWidth
+          />
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             fullWidth
             multiline
-            minRows={6}
-            placeholder={'One per line or comma-separated, e.g.\nuser:list\nadmin_role:manage'}
-            helperText="Keys must exist in the permission catalog (Access → Permissions)."
+            minRows={2}
           />
+          <RolePermissionsPicker token={token} value={permissions} onChange={setPermissions} />
         </Stack>
       </AdminDialog>
 
@@ -294,22 +288,43 @@ export function RolesCrudSection({ token }: { token: string }) {
         open={Boolean(editRow)}
         onClose={() => setEditRow(null)}
         title="Edit role"
-        maxWidth="sm"
+        headerIcon={<BadgeRoundedIcon />}
+        footerStart={
+          <AdminDialogInfo title="Role permissions" tooltip="How permissions work">
+            <Typography variant="body2" color="text.secondary">
+              Click or drag permission badges to add them. Remove selected keys with the × on each
+              badge.
+            </Typography>
+          </AdminDialogInfo>
+        }
+        maxWidth="md"
         primaryButton={{ label: 'Save', onClick: () => void submitEdit(), disabled: saving }}
         secondaryButton={{ label: 'Cancel', onClick: () => setEditRow(null), disabled: saving }}
       >
         <Stack spacing={2} sx={{ pt: 0.5 }}>
-          <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} required fullWidth />
-          <TextField label="Level (0–1000)" value={level} onChange={(e) => setLevel(e.target.value)} type="number" fullWidth />
-          <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth multiline minRows={2} />
           <TextField
-            label="Permission keys"
-            value={permText}
-            onChange={(e) => setPermText(e.target.value)}
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            fullWidth
+          />
+          <TextField
+            label="Level (0–1000)"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+            type="number"
+            fullWidth
+          />
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             fullWidth
             multiline
-            minRows={6}
+            minRows={2}
           />
+          <RolePermissionsPicker token={token} value={permissions} onChange={setPermissions} />
         </Stack>
       </AdminDialog>
 
@@ -321,6 +336,68 @@ export function RolesCrudSection({ token }: { token: string }) {
         onConfirm={() => void confirmArchive()}
         loading={saving}
       />
+
+      <Paper
+        elevation={0}
+        className="border border-[var(--color-border)]"
+        sx={{ borderColor: 'divider', borderRadius: 2, p: 2 }}
+      >
+        <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+          Permission simulator
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Preview whether a role would be allowed to perform an action (uses the policy engine).
+        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'flex-end' }}>
+          <TextField
+            select
+            SelectProps={{ native: true }}
+            label="Role"
+            value={simulateRoleId}
+            onChange={(e) => setSimulateRoleId(e.target.value)}
+            fullWidth
+            size="small"
+          >
+            <option value="">Select role…</option>
+            {roles
+              .filter((r) => !r.deletedAt)
+              .map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+          </TextField>
+          <TextField
+            label="Permission action"
+            value={simulateAction}
+            onChange={(e) => setSimulateAction(e.target.value)}
+            fullWidth
+            size="small"
+            placeholder="user:list"
+          />
+          <Button
+            variant="outlined"
+            onClick={() => void runSimulate()}
+            disabled={simulating || !simulateRoleId}
+            sx={{ borderRadius: 2, flexShrink: 0 }}
+          >
+            {simulating ? 'Simulating…' : 'Simulate'}
+          </Button>
+        </Stack>
+        {simulateResult ? (
+          <AdminFeedbackMessage
+            severity={
+              simulateResult.startsWith('Allowed')
+                ? 'success'
+                : simulateResult.startsWith('Denied')
+                  ? 'warning'
+                  : 'info'
+            }
+            message={simulateResult}
+            sx={{ mt: 2 }}
+          />
+        ) : null}
+      </Paper>
     </Stack>
   );
 }

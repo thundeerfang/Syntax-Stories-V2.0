@@ -16,7 +16,6 @@ import { cn } from '@/lib/core/utils';
 import { HoverCard } from '@/components/ui/popover';
 import { LinkPreviewCardContent } from '@/components/ui/popover';
 
-
 type MediaItem = { url: string; title?: string };
 
 type ProjectCardProps = Readonly<{
@@ -52,13 +51,14 @@ export function ProjectCard({
   const isPub = e.type === 'publication';
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
-  const projectStableKey = String(e.title ?? e.publicationUrl ?? e.id ?? `project-${String(index)}`);
+  const projectStableKey = String(
+    e.title ?? e.publicationUrl ?? e.id ?? `project-${String(index)}`
+  );
 
   return (
     <div className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
       {/* Archive-style Industrial Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card overflow-hidden">
-        
         {/* Hardware Corner Brackets */}
         <div className="absolute -top-[3px] -left-[3px] size-4 border-t-[3px] border-l-[3px] border-primary z-20" />
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-20" />
@@ -68,27 +68,29 @@ export function ProjectCard({
           <div className="flex items-center gap-3 min-w-0 shrink">
             <Archive className="size-3.5 text-primary" />
             <span className="text-[10px] font-black font-mono tracking-widest text-foreground uppercase truncate">
-              {isPub ? 'PUB_ID' : 'PRJ_ID'}: <span className="text-primary">#{String(index + 1).padStart(2, '0')}</span>
+              {isPub ? 'PUB_ID' : 'PRJ_ID'}:{' '}
+              <span className="text-primary">#{String(index + 1).padStart(2, '0')}</span>
             </span>
           </div>
 
           {/* Type Badge - project or publication */}
-          <div className={cn(
-            "px-2 py-0.5 border border-border text-[8px] font-black font-mono tracking-tighter uppercase",
-            isPub ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"
-          )}>
+          <div
+            className={cn(
+              'px-2 py-0.5 border border-border text-[8px] font-black font-mono tracking-tighter uppercase',
+              isPub ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'
+            )}
+          >
             {isPub ? 'publication' : 'project'}
           </div>
         </div>
 
         {/* Main Body */}
         <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10 min-w-0">
-          
           {/* Content Type Icon Viewport — reduced size */}
           <div className="ss-card-logo-box relative size-12 shrink-0 border-2 border-border bg-background flex items-center justify-center overflow-hidden">
             {/* CRT Grid Effect */}
             <div className="absolute inset-0 opacity-[0.1] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:4px_4px]" />
-            
+
             {isPub ? (
               <BookOpen className="ss-card-title size-5 text-primary/60" />
             ) : (
@@ -173,7 +175,9 @@ export function ProjectCard({
                   }}
                   className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                   aria-expanded={isSummaryExpanded}
-                  aria-label={isSummaryExpanded ? 'Collapse summary' : 'Expand to read full summary'}
+                  aria-label={
+                    isSummaryExpanded ? 'Collapse summary' : 'Expand to read full summary'
+                  }
                 >
                   {isSummaryExpanded ? (
                     <div
@@ -207,7 +211,11 @@ export function ProjectCard({
                       className="ss-cert-media-wrap size-8 border-2 border-border bg-background overflow-hidden flex items-center justify-center relative"
                     >
                       {isImageUrl(m.url) ? (
-                        <img src={m.url} alt={m.title?.trim() || ''} className="size-full object-cover" />
+                        <img
+                          src={m.url}
+                          alt={m.title?.trim() || ''}
+                          className="size-full object-cover"
+                        />
                       ) : (
                         <Link2 className="size-3.5 text-muted-foreground/40" />
                       )}
@@ -223,7 +231,7 @@ export function ProjectCard({
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1.5 items-center">
             <div className="h-2 w-8 bg-muted-foreground/10 overflow-hidden">
-               <div className="h-full bg-primary/40 w-2/3" />
+              <div className="h-full bg-primary/40 w-2/3" />
             </div>
             <span className="text-[8px] font-mono font-bold text-muted-foreground/40 tracking-widest uppercase">
               V.ARCHIVE_ENTRY

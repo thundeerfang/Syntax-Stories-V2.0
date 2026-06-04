@@ -42,14 +42,19 @@ function discordRedirectError(): string {
 }
 
 /** Registry order is stable; use this for route factories and future shared OAuth service. */
-export function getOAuthProviderRegistrations(
-  flags: {
-    hasDiscordConfig: boolean;
-    hasFacebookConfig: boolean;
-    hasXConfig: boolean;
-  }
-): OAuthProviderRegistration[] {
-  const { hasDiscordConfig, hasFacebookConfig, hasXConfig } = flags;
+function twitchRedirectError(): string {
+  return encodeURIComponent(
+    'Twitch OAuth is not configured (set TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, BACKEND_URL).'
+  );
+}
+
+export function getOAuthProviderRegistrations(flags: {
+  hasDiscordConfig: boolean;
+  hasFacebookConfig: boolean;
+  hasXConfig: boolean;
+  hasTwitchConfig: boolean;
+}): OAuthProviderRegistration[] {
+  const { hasDiscordConfig, hasFacebookConfig, hasXConfig, hasTwitchConfig } = flags;
   return [
     {
       routeKey: 'google',
@@ -110,6 +115,19 @@ export function getOAuthProviderRegistrations(
       optional: true,
       isEnabled: () => hasXConfig,
       whenDisabled: 'stubRoot501',
+    },
+    {
+      routeKey: 'twitch',
+      strategy: 'twitch',
+      failureLabel: 'Twitch auth failed',
+      auditProvider: 'twitch',
+      clientCallbackSlug: 'auth/callback/twitch',
+      idField: 'twitchId',
+      scopes: ['user:read:email'],
+      optional: true,
+      isEnabled: () => hasTwitchConfig,
+      whenDisabled: 'redirectLoginSignup',
+      redirectErrorMessage: twitchRedirectError(),
     },
   ];
 }

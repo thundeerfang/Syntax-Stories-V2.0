@@ -7,20 +7,25 @@ import {
 
 export {
   FOLLOWED_CATEGORIES_CHANGED_EVENT,
+  canSyncCategoryFollowState,
+  isCategoryFollowedForViewer,
   isCategorySlugFollowed,
   readFollowedCategorySlugs,
   writeFollowedCategorySlugs,
   toggleFollowedCategorySlug,
+  shouldHandleFollowedCategoriesEvent,
 } from '@/lib/feeds/followedCategoriesStorage';
 
 /** Toggle category follow — persists to localStorage and server when signed in. */
 export async function toggleCategoryFollowWithSync(
   slug: string,
   userId: string | null | undefined,
-  token: string | null | undefined,
+  token: string | null | undefined
 ): Promise<boolean> {
+  if (!token || !userId?.trim()) {
+    return false;
+  }
   const nowFollowing = toggleFollowedCategorySlug(slug, userId);
-  if (!token) return nowFollowing;
 
   try {
     if (nowFollowing) {
@@ -38,7 +43,7 @@ export async function toggleCategoryFollowWithSync(
 /** Pull server follows into localStorage (after sync-up). */
 export async function refreshFollowedCategoriesFromServer(
   userId: string | null | undefined,
-  token: string | null | undefined,
+  token: string | null | undefined
 ): Promise<void> {
   if (!token || !userId?.trim()) return;
   const localSlugs = readFollowedCategorySlugs(userId);

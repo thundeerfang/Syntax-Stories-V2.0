@@ -29,7 +29,11 @@ export type {
   SquadFeedRow,
 } from '@contracts/squadsApi';
 
-async function optionalAuthFetch(url: string, init: RequestInit | undefined, accessToken: string | null) {
+async function optionalAuthFetch(
+  url: string,
+  init: RequestInit | undefined,
+  accessToken: string | null
+) {
   if (accessToken) {
     return blogAuthFetch(url, init, accessToken);
   }
@@ -37,14 +41,17 @@ async function optionalAuthFetch(url: string, init: RequestInit | undefined, acc
 }
 
 export const squadsApi = {
-  listPublic: async (
-    opts?: { limit?: number; offset?: number },
-  ): Promise<{ success: boolean; squads: SquadSummary[]; total: number }> => {
+  listPublic: async (opts?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<{ success: boolean; squads: SquadSummary[]; total: number }> => {
     const q = new URLSearchParams();
     if (opts?.limit != null) q.set('limit', String(opts.limit));
     if (opts?.offset != null) q.set('offset', String(opts.offset));
     const qs = q.toString();
-    const r = await blogPublicFetch(`${getApiBase()}/api/squads${qs ? `?${qs}` : ''}`, { method: 'GET' });
+    const r = await blogPublicFetch(`${getApiBase()}/api/squads${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+    });
     const data = (await readJson(r)) as {
       success?: boolean;
       squads?: SquadSummary[];
@@ -56,8 +63,16 @@ export const squadsApi = {
   },
 
   listMine: async (accessToken: string): Promise<{ success: boolean; squads: SquadSummary[] }> => {
-    const r = await blogAuthFetch(`${getApiBase()}/api/squads/mine`, { method: 'GET' }, accessToken);
-    const data = (await readJson(r)) as { success?: boolean; squads?: SquadSummary[]; message?: string };
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/squads/mine`,
+      { method: 'GET' },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      squads?: SquadSummary[];
+      message?: string;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, squads: data.squads ?? [] };
   },
@@ -65,11 +80,19 @@ export const squadsApi = {
   /** Squads a profile user belongs to (`GET /api/squads/u/:username`). */
   listForUser: async (
     username: string,
-    accessToken: string | null,
+    accessToken: string | null
   ): Promise<{ success: boolean; squads: SquadSummary[] }> => {
     const slug = encodeURIComponent(username.trim().toLowerCase());
-    const r = await optionalAuthFetch(`${getApiBase()}/api/squads/u/${slug}`, { method: 'GET' }, accessToken);
-    const data = (await readJson(r)) as { success?: boolean; squads?: SquadSummary[]; message?: string };
+    const r = await optionalAuthFetch(
+      `${getApiBase()}/api/squads/u/${slug}`,
+      { method: 'GET' },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      squads?: SquadSummary[];
+      message?: string;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, squads: data.squads ?? [] };
   },
@@ -86,12 +109,12 @@ export const squadsApi = {
       requirePostApproval?: boolean;
       invitePermission?: SquadInvitePermission;
     },
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; squad: SquadSummary; inviteToken?: string }> => {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/squads`,
       { method: 'POST', body: JSON.stringify(body) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -104,10 +127,21 @@ export const squadsApi = {
     return { success: true, squad: data.squad, inviteToken: data.inviteToken };
   },
 
-  getBySlug: async (slug: string, accessToken: string | null): Promise<{ success: boolean; squad: SquadSummary }> => {
+  getBySlug: async (
+    slug: string,
+    accessToken: string | null
+  ): Promise<{ success: boolean; squad: SquadSummary }> => {
     const s = encodeURIComponent(slug);
-    const r = await optionalAuthFetch(`${getApiBase()}/api/squads/s/${s}`, { method: 'GET' }, accessToken);
-    const data = (await readJson(r)) as { success?: boolean; squad?: SquadSummary; message?: string };
+    const r = await optionalAuthFetch(
+      `${getApiBase()}/api/squads/s/${s}`,
+      { method: 'GET' },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      squad?: SquadSummary;
+      message?: string;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     if (!data.squad) throw new Error('Invalid response');
     return { success: true, squad: data.squad };
@@ -125,15 +159,19 @@ export const squadsApi = {
       requirePostApproval?: boolean;
       invitePermission?: SquadInvitePermission;
     },
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; squad: SquadSummary }> => {
     const s = encodeURIComponent(slug);
     const r = await blogAuthFetch(
       `${getApiBase()}/api/squads/s/${s}`,
       { method: 'PATCH', body: JSON.stringify(body) },
-      accessToken,
+      accessToken
     );
-    const data = (await readJson(r)) as { success?: boolean; squad?: SquadSummary; message?: string };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      squad?: SquadSummary;
+      message?: string;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     if (!data.squad) throw new Error('Invalid response');
     return { success: true, squad: data.squad };
@@ -144,7 +182,7 @@ export const squadsApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/squads/s/${s}/leave`,
       { method: 'POST', body: '{}' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -152,7 +190,11 @@ export const squadsApi = {
 
   delete: async (slug: string, accessToken: string): Promise<void> => {
     const s = encodeURIComponent(slug);
-    const r = await blogAuthFetch(`${getApiBase()}/api/squads/s/${s}`, { method: 'DELETE' }, accessToken);
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/squads/s/${s}`,
+      { method: 'DELETE' },
+      accessToken
+    );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
   },
@@ -162,7 +204,7 @@ export const squadsApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/squads/s/${s}/join`,
       { method: 'POST', body: JSON.stringify(inviteToken ? { inviteToken } : {}) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -173,7 +215,7 @@ export const squadsApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/squads/s/${s}/members`,
       { method: 'POST', body: JSON.stringify({ username: username.trim() }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -184,7 +226,7 @@ export const squadsApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/squads/s/${s}/shares`,
       { method: 'POST', body: JSON.stringify({ postId }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -193,7 +235,7 @@ export const squadsApi = {
   getFeed: async (
     slug: string,
     accessToken: string | null,
-    opts?: { limit?: number },
+    opts?: { limit?: number }
   ): Promise<{ success: boolean; feed: SquadFeedRow[]; pinnedCount: number }> => {
     const s = encodeURIComponent(slug);
     const q = new URLSearchParams();
@@ -202,7 +244,7 @@ export const squadsApi = {
     const r = await optionalAuthFetch(
       `${getApiBase()}/api/squads/s/${s}/feed${qs ? `?${qs}` : ''}`,
       { method: 'GET' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -211,7 +253,11 @@ export const squadsApi = {
       message?: string;
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
-    return { success: true, feed: data.feed ?? [], pinnedCount: typeof data.pinnedCount === 'number' ? data.pinnedCount : 0 };
+    return {
+      success: true,
+      feed: data.feed ?? [],
+      pinnedCount: typeof data.pinnedCount === 'number' ? data.pinnedCount : 0,
+    };
   },
 
   pinFeedPost: async (slug: string, postId: string, accessToken: string): Promise<void> => {
@@ -219,7 +265,7 @@ export const squadsApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/squads/s/${s}/pins`,
       { method: 'POST', body: JSON.stringify({ postId }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -228,14 +274,18 @@ export const squadsApi = {
   unpinFeedPost: async (slug: string, postId: string, accessToken: string): Promise<void> => {
     const s = encodeURIComponent(slug);
     const pid = encodeURIComponent(postId);
-    const r = await blogAuthFetch(`${getApiBase()}/api/squads/s/${s}/pins/${pid}`, { method: 'DELETE' }, accessToken);
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/squads/s/${s}/pins/${pid}`,
+      { method: 'DELETE' },
+      accessToken
+    );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
   },
 
   listMembers: async (
     slug: string,
-    accessToken: string | null,
+    accessToken: string | null
   ): Promise<{
     success: boolean;
     members: Array<{
@@ -247,7 +297,11 @@ export const squadsApi = {
     }>;
   }> => {
     const s = encodeURIComponent(slug);
-    const r = await optionalAuthFetch(`${getApiBase()}/api/squads/s/${s}/members`, { method: 'GET' }, accessToken);
+    const r = await optionalAuthFetch(
+      `${getApiBase()}/api/squads/s/${s}/members`,
+      { method: 'GET' },
+      accessToken
+    );
     const data = (await readJson(r)) as {
       success?: boolean;
       members?: Array<{

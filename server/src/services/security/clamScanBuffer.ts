@@ -5,7 +5,9 @@ import { env } from '../../config/env.js';
  * Send buffer to clamd via INSTREAM (TCP).
  * @see https://manpages.debian.org/testing/clamav-daemon/clamd.8.en.html
  */
-export async function scanBufferWithClamAV(buffer: Buffer): Promise<{ ok: boolean; detail: string }> {
+export async function scanBufferWithClamAV(
+  buffer: Buffer
+): Promise<{ ok: boolean; detail: string }> {
   const host = env.CLAMAV_HOST?.trim();
   if (!host) {
     return { ok: true, detail: 'clamav_disabled' };

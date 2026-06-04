@@ -20,6 +20,7 @@ const UPDATE_PROFILE_KEYS = [
   'coverBanner',
   'coverBannerAlt',
   'job',
+  'profileLocation',
   'portfolioUrl',
   'linkedin',
   'instagram',
@@ -88,7 +89,12 @@ async function applyProfileUpdate(
   if (hasBasicKey) {
     const basicResult = await applyBasicProfileRules(userId, updates);
     if (!basicResult.ok) {
-      return { ok: false, status: basicResult.status, message: basicResult.message, code: basicResult.code };
+      return {
+        ok: false,
+        status: basicResult.status,
+        message: basicResult.message,
+        code: basicResult.code,
+      };
     }
   }
 
@@ -111,7 +117,12 @@ async function applyProfileUpdate(
     normalizeProjectsPrjLog(updates);
   }
 
-  const updated = await profileRepository.updateBySection(userId, section, updates, expectedVersion);
+  const updated = await profileRepository.updateBySection(
+    userId,
+    section,
+    updates,
+    expectedVersion
+  );
   if (!updated) {
     if (expectedVersion !== undefined) {
       return {
@@ -157,7 +168,11 @@ export const profileService = {
     return { ok: true, user: toAccountUser(found as Record<string, unknown>) };
   },
 
-  async updateProfile(req: Request, user: AuthUser, body: Record<string, unknown>): Promise<ProfileUpdateResult> {
+  async updateProfile(
+    req: Request,
+    user: AuthUser,
+    body: Record<string, unknown>
+  ): Promise<ProfileUpdateResult> {
     return applyProfileUpdate(req, user, body, UPDATE_PROFILE_KEYS, 'legacy');
   },
 
@@ -176,7 +191,9 @@ export const profileService = {
     missingFields: string[];
     incompleteItemHints: Record<string, unknown>;
   }> {
-    const pdfParse = (await import('pdf-parse')).default as (buf: Buffer) => Promise<{ text: string }>;
+    const pdfParse = (await import('pdf-parse')).default as (
+      buf: Buffer
+    ) => Promise<{ text: string }>;
     const { text } = await pdfParse(buffer);
     const { parseCvFromText } = await import('../../utils/parseCvFromPdf.js');
     const { extracted, missingFields, incompleteItemHints } = parseCvFromText(text ?? '');

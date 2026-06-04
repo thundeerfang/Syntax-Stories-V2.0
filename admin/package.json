@@ -12,11 +12,15 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@lottiefiles/dotlottie-react": "^0.18.10",
     "@mui/icons-material": "^6.4.0",
     "@mui/material": "^6.4.0",
+    "@simplewebauthn/browser": "^13.2.2",
+    "@tanstack/react-table": "^8.21.3",
     "next": "^16.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

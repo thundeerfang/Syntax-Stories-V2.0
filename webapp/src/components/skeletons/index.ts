@@ -35,5 +35,7 @@ export {
   TrendingStackedHeroSkeleton,
   TrendingCategoryLaneSkeleton,
   TrendingPageSkeletonInner,
+  InvitePageSkeletonInner,
+  AchievementsPageSkeletonInner,
 } from './PageSkeletons';
 export { RouteLoadingSkeleton } from './RouteLoadingSkeleton';

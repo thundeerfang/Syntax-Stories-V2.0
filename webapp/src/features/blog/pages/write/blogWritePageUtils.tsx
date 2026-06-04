@@ -25,9 +25,6 @@ import { blockTypeDisplayName } from '@/lib/blog/writeWorkspaceStats';
 import { Block, stripLegacyGifBlocks } from '@/components/ui/editor';
 import { motion, AnimatePresence } from 'framer-motion';
 
-
-
-
 export function thumbnailPreviewFromApi(raw: string | undefined | null): string | null {
   if (raw == null || typeof raw !== 'string') return null;
   const t = raw.trim();
@@ -93,7 +90,10 @@ export function collapseSpacesInElement(el: HTMLElement): void {
 }
 
 /** Get (node, offset) for the position that is `charOffset` characters from the start of the range */
-export function getRangePositionAtOffset(range: Range, charOffset: number): { node: Node; offset: number } | null {
+export function getRangePositionAtOffset(
+  range: Range,
+  charOffset: number
+): { node: Node; offset: number } | null {
   if (charOffset <= 0) return { node: range.startContainer, offset: range.startOffset };
   const totalLen = range.toString().length;
   if (charOffset >= totalLen) return { node: range.endContainer, offset: range.endOffset };
@@ -112,8 +112,7 @@ export function getRangePositionAtOffset(range: Range, charOffset: number): { no
     const nStart = node === sc ? so : 0;
     const nEnd = node === ec ? eo : node.length;
     const len = nEnd - nStart;
-    if (count + len > charOffset)
-      return { node, offset: nStart + (charOffset - count) };
+    if (count + len > charOffset) return { node, offset: nStart + (charOffset - count) };
     count += len;
     node = walker.nextNode() as Text | null;
   }
@@ -180,7 +179,11 @@ export function setSelectionToOffset(el: HTMLElement, offset: number): void {
   sel.addRange(range);
 }
 
-export function finalizeSummaryLinkInsertion(el: HTMLElement, sel: Selection | null, syncToState: () => void): void {
+export function finalizeSummaryLinkInsertion(
+  el: HTMLElement,
+  sel: Selection | null,
+  syncToState: () => void
+): void {
   const links = el.getElementsByTagName('a');
   const lastLink = links.length > 0 ? links.item(links.length - 1) : null;
   if (lastLink && el.contains(lastLink)) {
@@ -243,7 +246,13 @@ export function draftSyncBadgeLabel(status: DraftSyncUi): string {
 
 export const MAX_BLOCKS_PER_SECTION = 20;
 
-export type RevisionKind = 'initial' | 'opened' | 'draft_saved' | 'autosynced' | 'edited' | 'published';
+export type RevisionKind =
+  | 'initial'
+  | 'opened'
+  | 'draft_saved'
+  | 'autosynced'
+  | 'edited'
+  | 'published';
 
 export type RevisionEntry = {
   id: string;
@@ -420,7 +429,8 @@ export function SummaryEditor({
     const isFocused = document.activeElement && el.contains(document.activeElement);
     const savedOffset = isFocused ? getSelectionStartOffset(el) : -1;
     collapseSpacesInElement(el);
-    if (savedOffset >= 0) setSelectionToOffset(el, Math.min(savedOffset, (el.textContent ?? '').length));
+    if (savedOffset >= 0)
+      setSelectionToOffset(el, Math.min(savedOffset, (el.textContent ?? '').length));
     let html = el.innerHTML;
     if (html === '\n' || (el.childNodes.length === 1 && el.querySelector('br'))) html = '';
     if (summaryWordCount(html) > maxWords) {
@@ -446,10 +456,13 @@ export function SummaryEditor({
       }));
       syncToState();
     },
-    [syncToState],
+    [syncToState]
   );
 
-  const normalizeLinkInput = useCallback((v: string) => v.replaceAll(/^https?:\/\//gi, '').trim(), []);
+  const normalizeLinkInput = useCallback(
+    (v: string) => v.replaceAll(/^https?:\/\//gi, '').trim(),
+    []
+  );
   const applyLink = useCallback(() => {
     const el = ref.current;
     if (!el) return;
@@ -485,13 +498,17 @@ export function SummaryEditor({
   const toggleBtn = (active: boolean) =>
     cn(
       'p-2  border-2 focus:outline-none focus:ring-2 focus:ring-primary/30',
-      active ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/50',
+      active
+        ? 'border-primary bg-primary/15 text-primary'
+        : 'border-border bg-muted/30 hover:bg-muted/60 hover:border-primary/50'
     );
 
   return (
     <>
       <div className="relative">
-        <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">P1</span>
+        <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">
+          P1
+        </span>
         <div className="flex items-center justify-end text-[10px] font-bold text-muted-foreground mb-0.5">
           <span>
             {summaryWordCount(value)}/{maxWords} words
@@ -520,7 +537,13 @@ export function SummaryEditor({
             if (e.key === ' ') {
               const sel = document.getSelection();
               const anchor = sel?.anchorNode;
-              if (sel && sel.rangeCount > 0 && ref.current && anchor && ref.current.contains(anchor)) {
+              if (
+                sel &&
+                sel.rangeCount > 0 &&
+                ref.current &&
+                anchor &&
+                ref.current.contains(anchor)
+              ) {
                 const startRange = document.createRange();
                 startRange.selectNodeContents(ref.current);
                 startRange.setEnd(anchor, sel.anchorOffset);
@@ -535,7 +558,9 @@ export function SummaryEditor({
             e.preventDefault();
             const raw = e.clipboardData.getData('text/plain') ?? '';
             const lines = raw.replace(/\r\n/g, '\n').split('\n');
-            const htmlPaste = lines.map((line) => (line.length ? escapeHtmlPlain(line) : '')).join('<br>');
+            const htmlPaste = lines
+              .map((line) => (line.length ? escapeHtmlPlain(line) : ''))
+              .join('<br>');
             richExecCommand('insertHTML', false, htmlPaste || '<br>');
             handleInput();
           }}
@@ -543,7 +568,7 @@ export function SummaryEditor({
             'w-full bg-transparent border-b-2 border-border py-3 text-base font-medium focus:outline-none focus:border-primary ss-summary-editor',
             (!value || value === '<br>') && 'ss-editor-empty',
             'ss-editor-empty:before:content-[attr(data-placeholder)] ss-editor-empty:before:text-muted-foreground ss-editor-empty:before:uppercase ss-editor-empty:before:tracking-tighter',
-            '[&_strong]:font-bold [&_em]:italic [&_u]:underline',
+            '[&_strong]:font-bold [&_em]:italic [&_u]:underline'
           )}
         />
       </div>
@@ -562,11 +587,16 @@ export function SummaryEditor({
           >
             {linkMode ? (
               <div className="flex items-center gap-2 px-2 py-1.5 min-w-[200px]">
-                <span className="flex items-center justify-center w-7 h-7 border-2 border-border bg-primary text-primary-foreground shrink-0" aria-hidden>
+                <span
+                  className="flex items-center justify-center w-7 h-7 border-2 border-border bg-primary text-primary-foreground shrink-0"
+                  aria-hidden
+                >
                   <Link2 className="h-3.5 w-3.5" />
                 </span>
                 <div className="flex flex-1 items-center border-2 border-border overflow-hidden bg-muted/30 focus-within:border-primary min-w-0">
-                  <span className="flex items-center px-1.5 py-1.5 text-[9px] font-bold text-muted-foreground bg-muted/50 border-r-2 border-border shrink-0 pointer-events-none">https://</span>
+                  <span className="flex items-center px-1.5 py-1.5 text-[9px] font-bold text-muted-foreground bg-muted/50 border-r-2 border-border shrink-0 pointer-events-none">
+                    https://
+                  </span>
                   <input
                     ref={linkInputRef}
                     type="text"
@@ -574,35 +604,78 @@ export function SummaryEditor({
                     onChange={(e) => setLinkInput(normalizeLinkInput(e.target.value))}
                     onPaste={(e) => {
                       e.preventDefault();
-                      const pasted = (e.clipboardData.getData('text/plain') ?? '').replace(/^https?:\/\//i, '').trim();
+                      const pasted = (e.clipboardData.getData('text/plain') ?? '')
+                        .replace(/^https?:\/\//i, '')
+                        .trim();
                       setLinkInput((prev) => normalizeLinkInput(prev + pasted));
                     }}
                     placeholder="example.com"
                     className="flex-1 min-w-0 px-1.5 py-1.5 text-xs bg-transparent border-0 focus:outline-none placeholder:text-muted-foreground"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') { e.preventDefault(); applyLink(); }
-                      if (e.key === 'Escape') { setLinkMode(false); setLinkInput(''); }
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyLink();
+                      }
+                      if (e.key === 'Escape') {
+                        setLinkMode(false);
+                        setLinkInput('');
+                      }
                     }}
                   />
                 </div>
-                <button type="button" onClick={applyLink} className="shrink-0 h-7 px-2 border-2 border-primary bg-primary text-primary-foreground font-bold text-[9px] uppercase tracking-wider hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary/50" title="Insert link" aria-label="Insert link">
+                <button
+                  type="button"
+                  onClick={applyLink}
+                  className="shrink-0 h-7 px-2 border-2 border-primary bg-primary text-primary-foreground font-bold text-[9px] uppercase tracking-wider hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  title="Insert link"
+                  aria-label="Insert link"
+                >
                   Apply
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1.5">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mr-1 shrink-0">Format</span>
-                <button type="button" onClick={() => applyFormat('bold')} className={toggleBtn(formatState.bold)} title="Bold" aria-label="Bold">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mr-1 shrink-0">
+                  Format
+                </span>
+                <button
+                  type="button"
+                  onClick={() => applyFormat('bold')}
+                  className={toggleBtn(formatState.bold)}
+                  title="Bold"
+                  aria-label="Bold"
+                >
                   <Bold className="h-3.5 w-3.5" />
                 </button>
-                <button type="button" onClick={() => applyFormat('italic')} className={toggleBtn(formatState.italic)} title="Italic" aria-label="Italic">
+                <button
+                  type="button"
+                  onClick={() => applyFormat('italic')}
+                  className={toggleBtn(formatState.italic)}
+                  title="Italic"
+                  aria-label="Italic"
+                >
                   <Italic className="h-3.5 w-3.5" />
                 </button>
-                <button type="button" onClick={() => applyFormat('underline')} className={toggleBtn(formatState.underline)} title="Underline" aria-label="Underline">
+                <button
+                  type="button"
+                  onClick={() => applyFormat('underline')}
+                  className={toggleBtn(formatState.underline)}
+                  title="Underline"
+                  aria-label="Underline"
+                >
                   <UnderlineIcon className="h-3.5 w-3.5" />
                 </button>
                 <span className="w-px h-5 bg-border mx-0.5 shrink-0" aria-hidden />
-                <button type="button" onClick={() => { setLinkMode(true); setLinkInput(''); }} className="p-1.5 border-2 border-border hover:bg-muted/50 hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30" title="Link" aria-label="Link">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkMode(true);
+                    setLinkInput('');
+                  }}
+                  className="p-1.5 border-2 border-border hover:bg-muted/50 hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  title="Link"
+                  aria-label="Link"
+                >
                   <Link2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -614,19 +687,24 @@ export function SummaryEditor({
   );
 }
 
-export function resolveCentreMaxWidthClass(leftSidebarOpen: boolean, rightSidebarOpen: boolean): string {
+export function resolveCentreMaxWidthClass(
+  leftSidebarOpen: boolean,
+  rightSidebarOpen: boolean
+): string {
   if (leftSidebarOpen && rightSidebarOpen) return 'max-w-3xl';
   if (leftSidebarOpen || rightSidebarOpen) return 'max-w-5xl';
   return 'max-w-7xl';
 }
 
 export type BlogWriteSyncRefs = {
-  latestForSyncRef: { current: {
-    title: string;
-    summary: string;
-    blocks: Block[];
-    thumbnailPreviewUrl: string | null;
-  } };
+  latestForSyncRef: {
+    current: {
+      title: string;
+      summary: string;
+      blocks: Block[];
+      thumbnailPreviewUrl: string | null;
+    };
+  };
   tokenRef: { current: string | null | undefined };
   skipNextPopStateRef: { current: boolean };
 };
@@ -740,7 +818,11 @@ export function useBlogWritePageSyncEffects(input: BlogWritePageSyncEffectsInput
   }, [latestForSyncRef, syncDraftToServer, tokenRef]);
 }
 
-export function taxonomyApiFields(t: BlogPublishTaxonomy): { category: string; tags: string[]; language: string } {
+export function taxonomyApiFields(t: BlogPublishTaxonomy): {
+  category: string;
+  tags: string[];
+  language: string;
+} {
   const cat = t.category
     .trim()
     .toLowerCase()
@@ -750,11 +832,19 @@ export function taxonomyApiFields(t: BlogPublishTaxonomy): { category: string; t
   return {
     category: cat,
     tags: t.tags.slice(0, 20),
-    language: (t.language || 'en').toLowerCase().replaceAll(/[^a-z-]/g, '').slice(0, 12) || 'en',
+    language:
+      (t.language || 'en')
+        .toLowerCase()
+        .replaceAll(/[^a-z-]/g, '')
+        .slice(0, 12) || 'en',
   };
 }
 
-export function taxonomyPayload(t: BlogPublishTaxonomy): { category: string; tags: string[]; language: string } {
+export function taxonomyPayload(t: BlogPublishTaxonomy): {
+  category: string;
+  tags: string[];
+  language: string;
+} {
   const tf = taxonomyApiFields(t);
   return {
     category: tf.category || '',
@@ -763,27 +853,29 @@ export function taxonomyPayload(t: BlogPublishTaxonomy): { category: string; tag
   };
 }
 
-export async function runBlogWriteSubmit(args: Readonly<{
-  status: 'draft' | 'published';
-  token: string;
-  title: string;
-  summary: string;
-  blocks: Block[];
-  thumbnailFile: File | null;
-  thumbnailPreviewUrl: string | null;
-  clearThumbnail: () => void;
-  activePostId: string | null;
-  setActivePostId: React.Dispatch<React.SetStateAction<string | null>>;
-  setLoadedPostStatus: React.Dispatch<React.SetStateAction<'draft' | 'published' | null>>;
-  setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
-  setTitle: React.Dispatch<React.SetStateAction<string>>;
-  setSummary: React.Dispatch<React.SetStateAction<string>>;
-  setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
-  /** When set on draft saves, persists category/tags/language. Omit on autosync paths. */
-  taxonomy?: BlogPublishTaxonomy | null;
-  /** When set, attaches the draft / publish to this squad (Mongo id). */
-  squadMongoId?: string | null;
-}>): Promise<void> {
+export async function runBlogWriteSubmit(
+  args: Readonly<{
+    status: 'draft' | 'published';
+    token: string;
+    title: string;
+    summary: string;
+    blocks: Block[];
+    thumbnailFile: File | null;
+    thumbnailPreviewUrl: string | null;
+    clearThumbnail: () => void;
+    activePostId: string | null;
+    setActivePostId: React.Dispatch<React.SetStateAction<string | null>>;
+    setLoadedPostStatus: React.Dispatch<React.SetStateAction<'draft' | 'published' | null>>;
+    setDraftSyncStatus: React.Dispatch<React.SetStateAction<DraftSyncUi>>;
+    setTitle: React.Dispatch<React.SetStateAction<string>>;
+    setSummary: React.Dispatch<React.SetStateAction<string>>;
+    setBlocks: React.Dispatch<React.SetStateAction<Block[]>>;
+    /** When set on draft saves, persists category/tags/language. Omit on autosync paths. */
+    taxonomy?: BlogPublishTaxonomy | null;
+    /** When set, attaches the draft / publish to this squad (Mongo id). */
+    squadMongoId?: string | null;
+  }>
+): Promise<void> {
   const {
     status,
     token,
@@ -824,7 +916,7 @@ export async function runBlogWriteSubmit(args: Readonly<{
           ...taxBody,
           ...squadBody,
         },
-        token,
+        token
       );
       setActivePostId(post._id);
       setLoadedPostStatus('draft');
@@ -844,7 +936,7 @@ export async function runBlogWriteSubmit(args: Readonly<{
           ...taxBody,
           ...squadBody,
         },
-        token,
+        token
       );
       setActivePostId(post._id);
       setLoadedPostStatus('draft');
@@ -878,7 +970,7 @@ export async function runBlogWriteSubmit(args: Readonly<{
         ...publishTax,
         ...squadBody,
       },
-      token,
+      token
     );
   } else {
     await blogApi.createPost(
@@ -891,7 +983,7 @@ export async function runBlogWriteSubmit(args: Readonly<{
         ...publishTax,
         ...squadBody,
       },
-      token,
+      token
     );
   }
   toast.success('POST_LIVE');
@@ -905,12 +997,14 @@ export async function runBlogWriteSubmit(args: Readonly<{
 }
 
 export type BlogWriteDraftRefs = Readonly<{
-  latestForSyncRef: { current: {
-    title: string;
-    summary: string;
-    blocks: Block[];
-    thumbnailPreviewUrl: string | null;
-  } };
+  latestForSyncRef: {
+    current: {
+      title: string;
+      summary: string;
+      blocks: Block[];
+      thumbnailPreviewUrl: string | null;
+    };
+  };
   tokenRef: { current: string | null | undefined };
   squadMongoIdRef: { current: string | null };
 }>;
@@ -924,7 +1018,9 @@ export type BlogWriteDraftHandlersInput = Readonly<{
   refs: BlogWriteDraftRefs;
 }>;
 
-export function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): { syncDraftToServer: () => Promise<void> } {
+export function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput): {
+  syncDraftToServer: () => Promise<void>;
+} {
   const {
     setDraftSyncStatus,
     setActivePostId,
@@ -945,7 +1041,12 @@ export function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput):
     if (!navigator.onLine) return Promise.resolve();
     const currentToken = tokenRef.current;
     if (!currentToken) return Promise.resolve();
-    const { title: t, summary: s, blocks: b, thumbnailPreviewUrl: thumb } = latestForSyncRef.current;
+    const {
+      title: t,
+      summary: s,
+      blocks: b,
+      thumbnailPreviewUrl: thumb,
+    } = latestForSyncRef.current;
     if (!t.trim() && b.length === 0) return Promise.resolve();
     setDraftSyncStatus('syncing');
     const content = JSON.stringify(stripLegacyGifBlocks(b));
@@ -975,7 +1076,7 @@ export function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput):
             silent: true,
             ...squadPayload,
           },
-          currentToken,
+          currentToken
         )
         .then(() => {
           setDraftSyncStatus('synced');
@@ -994,7 +1095,7 @@ export function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput):
           thumbnailUrl: thumbUrl,
           ...squadPayload,
         },
-        currentToken,
+        currentToken
       )
       .then((res) => {
         setActivePostId(res.post._id);
@@ -1004,7 +1105,14 @@ export function useBlogWriteServerDraftSync(input: BlogWriteDraftHandlersInput):
       .catch(() => {
         onErr();
       });
-  }, [latestForSyncRef, tokenRef, squadMongoIdRef, setDraftSyncStatus, setActivePostId, setLoadedPostStatus]);
+  }, [
+    latestForSyncRef,
+    tokenRef,
+    squadMongoIdRef,
+    setDraftSyncStatus,
+    setActivePostId,
+    setLoadedPostStatus,
+  ]);
 
   return { syncDraftToServer };
 }
@@ -1058,7 +1166,10 @@ export function BlogWriteTopNav({
           <ChevronRight className="h-3 w-3 opacity-30 shrink-0" />
           <span className="text-primary text-[9px] font-semibold shrink-0">{username}</span>
           <ChevronRight className="h-3 w-3 opacity-30 shrink-0" />
-          <span className="bg-muted px-2 border border-border truncate max-w-[120px] sm:max-w-[200px] md:max-w-[280px]" title={title.trim() || 'new_entry.log'}>
+          <span
+            className="bg-muted px-2 border border-border truncate max-w-[120px] sm:max-w-[200px] md:max-w-[280px]"
+            title={title.trim() || 'new_entry.log'}
+          >
             {title.trim() ? title.trim().replaceAll(/\s+/g, '_') : 'new_entry.log'}
           </span>
         </div>
@@ -1066,8 +1177,13 @@ export function BlogWriteTopNav({
 
       <div className="hidden min-w-0 flex-1 flex-col gap-0.5 border-l border-border pl-3 sm:flex">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active</span>
-          <span className="min-w-0 truncate text-[10px] font-bold text-foreground" title={activeLabel}>
+          <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+            Active
+          </span>
+          <span
+            className="min-w-0 truncate text-[10px] font-bold text-foreground"
+            title={activeLabel}
+          >
             {activeLabel}
           </span>
         </div>
@@ -1081,7 +1197,11 @@ export function BlogWriteTopNav({
           title={leftSidebarOpen ? 'Close left panel' : 'Open left panel'}
           aria-label={leftSidebarOpen ? 'Close left panel' : 'Open left panel'}
         >
-          {leftSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+          {leftSidebarOpen ? (
+            <PanelLeftClose className="h-4 w-4" />
+          ) : (
+            <PanelLeft className="h-4 w-4" />
+          )}
         </button>
         <button
           type="button"
@@ -1090,7 +1210,11 @@ export function BlogWriteTopNav({
           title={rightSidebarOpen ? 'Close right panel' : 'Open right panel'}
           aria-label={rightSidebarOpen ? 'Close right panel' : 'Open right panel'}
         >
-          {rightSidebarOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
+          {rightSidebarOpen ? (
+            <PanelRightClose className="h-4 w-4" />
+          ) : (
+            <PanelRight className="h-4 w-4" />
+          )}
         </button>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-[8px] font-medium text-muted-foreground">
@@ -1109,10 +1233,13 @@ export function BlogWriteTopNav({
               <span
                 className={cn(
                   'text-[8px] font-medium px-1.5 py-0.5  border',
-                  draftSyncStatus === 'offline' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
-                  draftSyncStatus === 'syncing' && 'text-amber-600 border-amber-500/50 bg-amber-500/10',
+                  draftSyncStatus === 'offline' &&
+                    'text-amber-600 border-amber-500/50 bg-amber-500/10',
+                  draftSyncStatus === 'syncing' &&
+                    'text-amber-600 border-amber-500/50 bg-amber-500/10',
                   draftSyncStatus === 'local' && 'text-muted-foreground border-border',
-                  draftSyncStatus === 'synced' && 'text-green-600 border-green-500/50 bg-green-500/10',
+                  draftSyncStatus === 'synced' &&
+                    'text-green-600 border-green-500/50 bg-green-500/10'
                 )}
                 title={draftSyncBadgeTitle(draftSyncStatus)}
               >
@@ -1128,4 +1255,3 @@ export function BlogWriteTopNav({
     </div>
   );
 }
-

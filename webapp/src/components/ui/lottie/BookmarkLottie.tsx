@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
-
 const DotLottieReact = dynamic(
   () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false },
+  { ssr: false }
 );
 
 type DotLottieHandle = {

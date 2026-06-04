@@ -1,15 +1,16 @@
-@import "tailwindcss";
-@import "react-vertical-timeline-component/style.min.css";
+@import 'tailwindcss';
+@import 'react-vertical-timeline-component/style.min.css';
 
 /* Theme: purple primary, accent yellow, light/dark */
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-head: "Inter", system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-head: 'Inter', system-ui, sans-serif;
   --radius: 0;
 
   /* Single block shadow — import `SHADOW` from `@/lib/shadows.js` */
   --shadow: 2px 2px 0 0 var(--shadow-color);
-  --shadow-block-hover: 2px 2px 0 0 var(--shadow-color), inset 0 0 0 100vmax var(--block-btn-hover-inset);
+  --shadow-block-hover:
+    2px 2px 0 0 var(--shadow-color), inset 0 0 0 100vmax var(--block-btn-hover-inset);
   --shadow-ghost-inset: inset 0 0 0 100vmax var(--ghost-btn-hover-inset);
 
   --color-background: var(--background);
@@ -32,6 +33,7 @@
 /* Settings: primary actions use `BlockShadowButton` styles via `settings/buttonStyles.ts`. */
 
 html {
+  color-scheme: light dark;
   /* Sticky navbar + in-page anchors: keep focused targets out from under the chrome. */
   scroll-padding-top: var(--header-height, calc(4rem + 2px));
 }
@@ -60,6 +62,8 @@ html {
   --shadow-color: #7c7c86;
   --rail-frost-bg: rgba(255, 255, 255, 0.78);
   --dock-frost-bg: rgba(255, 255, 255, 0.28);
+  --auth-dialog-frost-bg: rgba(255, 255, 255, 0.88);
+  --auth-dialog-surface-bg: rgba(255, 255, 255, 0.55);
   /** Block shadow buttons: subtle gray hover wash (inset spread + outer block shadow). */
   --block-btn-hover-inset: color-mix(in srgb, var(--foreground) 14%, transparent);
   /** Ghost outline buttons: hover wash only (no outer block shadow). */
@@ -97,6 +101,8 @@ altcha-widget {
   --shadow-color: #54545e;
   --rail-frost-bg: rgba(12, 12, 16, 0.72);
   --dock-frost-bg: rgba(12, 12, 16, 0.3);
+  --auth-dialog-frost-bg: rgba(16, 16, 22, 0.88);
+  --auth-dialog-surface-bg: rgba(24, 24, 30, 0.55);
   --scrollbar-track: #0a0a0b;
   --scrollbar-thumb-border: #0a0a0b;
 }
@@ -135,7 +141,10 @@ altcha-widget {
 /* Theme transition app-wide so dark/light switch is smooth on every page */
 html,
 html * {
-  transition: background-color 0.12s ease-out, color 0.12s ease-out, border-color 0.12s ease-out;
+  transition:
+    background-color 0.12s ease-out,
+    color 0.12s ease-out,
+    border-color 0.12s ease-out;
 }
 
 @layer base {
@@ -322,7 +331,10 @@ html * {
 /* Smooth theme transition for write page: only theme-related properties to avoid lag */
 .ss-write-theme-transition,
 .ss-write-theme-transition * {
-  transition: background-color 0.25s ease-out, color 0.25s ease-out, border-color 0.25s ease-out;
+  transition:
+    background-color 0.25s ease-out,
+    color 0.25s ease-out,
+    border-color 0.25s ease-out;
 }
 
 /* Retro UI scrollbar: purple thumb; track follows theme (white in light, dark in dark) */
@@ -390,22 +402,34 @@ html * {
 
 /* Animated gradient background for profile cover / Open Source */
 @keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .gradient-auto {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 25%, var(--primary) 50%, var(--accent) 75%, var(--primary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--accent) 25%,
+    var(--primary) 50%,
+    var(--accent) 75%,
+    var(--primary) 100%
+  );
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
 }
 
 /* Public blog read-only paragraphs: @mentions are clickable (profile) */
-.ss-read-only-rich [data-mention="true"] {
+.ss-read-only-rich [data-mention='true'] {
   cursor: pointer;
 }
 
-.ss-rich-paragraph-editor [data-inline-gif="true"] {
+.ss-rich-paragraph-editor [data-inline-gif='true'] {
   cursor: default;
 }
 
@@ -448,7 +472,11 @@ html * {
   will-change: transform;
 }
 
-.public-blog-post-page .public-blog-body figure .ss-blog-raster-hover-group:hover img.ss-blog-raster-hover {
+.public-blog-post-page
+  .public-blog-body
+  figure
+  .ss-blog-raster-hover-group:hover
+  img.ss-blog-raster-hover {
   transform: scale(1.05);
 }
 
@@ -458,7 +486,11 @@ html * {
     will-change: auto;
   }
 
-  .public-blog-post-page .public-blog-body figure .ss-blog-raster-hover-group:hover img.ss-blog-raster-hover {
+  .public-blog-post-page
+    .public-blog-body
+    figure
+    .ss-blog-raster-hover-group:hover
+    img.ss-blog-raster-hover {
     transform: scale(1);
   }
 }
@@ -541,11 +573,7 @@ html * {
       color-mix(in srgb, var(--primary) 2.5%, transparent) 52%,
       transparent 100%
     ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--primary) 5%, transparent) 0%,
-      transparent 75%
-    );
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 5%, transparent) 0%, transparent 75%);
 }
 
 .dark .ss-empty-dashed-panel {
@@ -556,11 +584,7 @@ html * {
       color-mix(in srgb, var(--primary) 3.5%, transparent) 52%,
       transparent 100%
     ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--primary) 7%, transparent) 0%,
-      transparent 75%
-    );
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 7%, transparent) 0%, transparent 75%);
 }
 
 /**
@@ -572,6 +596,33 @@ html * {
   backdrop-filter: saturate(1.2) blur(40px);
   -webkit-backdrop-filter: saturate(1.2) blur(40px);
   transform: translateZ(0);
+}
+
+/* Auth dialog — frosted panel + inset surfaces (sign-in / sign-up flows) */
+.auth-dialog-panel {
+  background-color: var(--auth-dialog-frost-bg);
+  background-image: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--primary) 14%, transparent) 0%,
+    transparent 42%,
+    color-mix(in srgb, var(--primary) 4%, transparent) 100%
+  );
+  backdrop-filter: saturate(1.45) blur(28px);
+  -webkit-backdrop-filter: saturate(1.45) blur(28px);
+  transform: translateZ(0);
+}
+
+.auth-dialog-surface {
+  border: 2px solid color-mix(in srgb, var(--border) 85%, transparent);
+  background-color: var(--auth-dialog-surface-bg);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+}
+
+.auth-dialog-input {
+  background-color: color-mix(in srgb, var(--auth-dialog-surface-bg) 92%, var(--background));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* Animations */
@@ -650,9 +701,18 @@ html * {
 }
 
 @keyframes ss-we-pulse {
-  0% { transform: scale(1); opacity: 1; }
-  75% { transform: scale(1.55); opacity: 0; }
-  100% { transform: scale(1.55); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
 }
 
 .ss-we-timeline .ss-we-pulse-ring {
@@ -665,8 +725,15 @@ html * {
 }
 
 @keyframes ss-we-dot-blink {
-  0%, 100% { opacity: 0.25; transform: scale(1); }
-  45% { opacity: 1; transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 /* Use only .ss-we-node-dot span in JSX (no ::after) so only last promotion blinks */
@@ -676,21 +743,45 @@ html * {
 
 /* ========== Settings list – animations & transitions (moved from raw component code) ========== */
 @keyframes ss-scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
 }
 @keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
 }
 
 /* Card root: border and header transitions */
-.ss-settings-card.group:hover .ss-card-border { border-color: var(--primary); }
-.ss-settings-card .ss-card-border { transition: border-color 0.2s, color 0.2s; }
-.ss-settings-card.group:hover .ss-card-header { background-color: color-mix(in srgb, var(--muted) 50%, transparent); }
-.ss-settings-card .ss-card-header { transition: background-color 0.2s, color 0.2s; }
-.ss-settings-card.group:hover .ss-card-logo-box { border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
-.ss-settings-card .ss-card-logo-box { transition: border-color 0.2s; }
+.ss-settings-card.group:hover .ss-card-border {
+  border-color: var(--primary);
+}
+.ss-settings-card .ss-card-border {
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+.ss-settings-card.group:hover .ss-card-header {
+  background-color: color-mix(in srgb, var(--muted) 50%, transparent);
+}
+.ss-settings-card .ss-card-header {
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.ss-settings-card.group:hover .ss-card-logo-box {
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+.ss-settings-card .ss-card-logo-box {
+  transition: border-color 0.2s;
+}
 /* Work card logo: dot pattern as background so icon/image stays on top */
 .ss-settings-card--work .ss-card-logo-box--work {
   background-color: var(--background);
@@ -700,31 +791,87 @@ html * {
 .dark .ss-settings-card--work .ss-card-logo-box--work {
   background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 }
-.ss-settings-card .ss-card-logo-img { transition: filter 0.2s; }
-.ss-settings-card .ss-card-logo-img-bright { transition: filter 0.2s; }
+.ss-settings-card .ss-card-logo-img {
+  transition: filter 0.2s;
+}
+.ss-settings-card .ss-card-logo-img-bright {
+  transition: filter 0.2s;
+}
 /* Work card: title uses same hover color as border (var(--primary)) */
 /* Work experience card title keeps its base color on hover; only the card border changes to primary. */
-.ss-settings-card .ss-card-title { transition: color 0.2s; }
-.ss-settings-card .ss-btn-action { transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
-.ss-settings-card .ss-btn-action:hover { background-color: var(--primary); color: var(--primary-foreground); }
-.ss-settings-card .ss-btn-remove { transition: background-color 0.2s, color 0.2s; }
-.ss-settings-card .ss-btn-remove:hover { background-color: var(--destructive); color: var(--destructive-foreground); }
-.ss-settings-card.group:hover .ss-meta-pill { border-color: color-mix(in srgb, var(--primary) 30%, transparent); color: var(--primary); }
-.ss-settings-card .ss-meta-pill { transition: border-color 0.2s, color 0.2s; }
-.ss-settings-card .ss-link-pill { transition: background-color 0.2s; }
-.ss-settings-card .ss-link-pill:hover { background-color: color-mix(in srgb, var(--primary) 10%, transparent); }
-.ss-settings-card .ss-media-thumb { transition: border-color 0.2s; }
-.ss-settings-card .ss-media-thumb:hover { border-color: var(--primary); }
-.ss-settings-card .ss-scanline-overlay { transition: opacity 0.2s; }
-.ss-settings-card.group:hover .ss-scanline-overlay { opacity: 1; }
-.ss-settings-card .ss-scanline-line { animation: ss-scanline 4s linear infinite; }
-.ss-settings-card .ss-project-accent { transition: background-color 0.2s; }
-.ss-settings-card .ss-icon-scale { transition: transform 0.3s; }
-.ss-settings-card.group:hover .ss-icon-scale { transform: scale(1.1); }
-.ss-settings-card .ss-cert-media-wrap { transition: border-color 0.2s; }
-.ss-settings-card .ss-cert-media-wrap:hover { border-color: var(--primary); }
-.ss-settings-card .ss-cert-media-wrap .ss-overlay { transition: opacity 0.2s; }
-.ss-settings-card .ss-cert-media-wrap:hover .ss-overlay { opacity: 1; }
+.ss-settings-card .ss-card-title {
+  transition: color 0.2s;
+}
+.ss-settings-card .ss-btn-action {
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+.ss-settings-card .ss-btn-action:hover {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.ss-settings-card .ss-btn-remove {
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.ss-settings-card .ss-btn-remove:hover {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+.ss-settings-card.group:hover .ss-meta-pill {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--primary);
+}
+.ss-settings-card .ss-meta-pill {
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+.ss-settings-card .ss-link-pill {
+  transition: background-color 0.2s;
+}
+.ss-settings-card .ss-link-pill:hover {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.ss-settings-card .ss-media-thumb {
+  transition: border-color 0.2s;
+}
+.ss-settings-card .ss-media-thumb:hover {
+  border-color: var(--primary);
+}
+.ss-settings-card .ss-scanline-overlay {
+  transition: opacity 0.2s;
+}
+.ss-settings-card.group:hover .ss-scanline-overlay {
+  opacity: 1;
+}
+.ss-settings-card .ss-scanline-line {
+  animation: ss-scanline 4s linear infinite;
+}
+.ss-settings-card .ss-project-accent {
+  transition: background-color 0.2s;
+}
+.ss-settings-card .ss-icon-scale {
+  transition: transform 0.3s;
+}
+.ss-settings-card.group:hover .ss-icon-scale {
+  transform: scale(1.1);
+}
+.ss-settings-card .ss-cert-media-wrap {
+  transition: border-color 0.2s;
+}
+.ss-settings-card .ss-cert-media-wrap:hover {
+  border-color: var(--primary);
+}
+.ss-settings-card .ss-cert-media-wrap .ss-overlay {
+  transition: opacity 0.2s;
+}
+.ss-settings-card .ss-cert-media-wrap:hover .ss-overlay {
+  opacity: 1;
+}
 
 /* Profile page: reuse settings cards but hide edit/remove buttons */
 .ss-profile-readonly button.ss-btn-action,
@@ -826,3 +973,79 @@ html.ss-scroll-locked body {
   transform: translateY(-50%) !important;
   margin: 0 !important;
 }
+
+/* Electron desktop shell — native title bar drag region + traffic-light inset */
+html[data-desktop-shell] {
+  --desktop-titlebar-height: calc(2.5rem + 2px);
+  scroll-padding-top: var(--desktop-titlebar-height);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html[data-desktop-shell] .desktop-titlebar {
+  -webkit-app-region: drag;
+  user-select: none;
+  background-color: var(--card);
+  position: relative;
+  z-index: 60;
+  overflow: visible;
+}
+
+/* Opaque title bar — frost/backdrop-blur shows dialog dimming through traffic-light inset. */
+html[data-desktop-shell] .desktop-titlebar .shell-rail-frost {
+  background-color: var(--card);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-desktop-shell] .desktop-titlebar-control,
+html[data-desktop-shell] .desktop-titlebar a,
+html[data-desktop-shell] .desktop-titlebar nav,
+html[data-desktop-shell] [data-desktop-titlebar] .relative.inline-block,
+html[data-desktop-shell] [data-desktop-titlebar] button.w-10.h-10 {
+  -webkit-app-region: no-drag;
+}
+
+html[data-desktop-shell][data-platform='darwin'] .desktop-titlebar {
+  padding-left: 72px;
+}
+
+html[data-desktop-shell][data-platform='darwin'] .desktop-titlebar [data-desktop-titlebar] > div > div,
+html[data-desktop-shell][data-platform='darwin'] .desktop-titlebar > div > div {
+  width: 100%;
+  max-width: none;
+}
+
+html[data-desktop-shell][data-platform='win32'] .desktop-titlebar {
+  padding-right: 138px;
+}
+
+/* Desktop title bar stays above dialog overlays (z-100 / z-120). */
+html[data-desktop-shell] [data-app-shell-chrome] {
+  z-index: 150;
+}
+
+/* Compact sharp triggers for notifications + account in desktop title bar */
+html[data-desktop-shell] [data-desktop-titlebar] .relative > button,
+html[data-desktop-shell] [data-desktop-titlebar] button.w-10.h-10 {
+  height: 2rem;
+  width: 2rem;
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+html[data-desktop-shell] [data-desktop-titlebar] button.w-10.h-10 > div {
+  height: 100%;
+  width: 100%;
+}
+
+html[data-desktop-shell] [data-desktop-titlebar] button.w-10.h-10 img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+

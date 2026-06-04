@@ -1,44 +1,52 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import {
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { listUsers, searchUsers, type AdminUserListItem } from '@/admin';
+  listUsers,
+  searchUsers,
+  type AdminUserAccountFilter,
+  type AdminUserListItem,
+} from '@/admin';
+import { AdminBlinkSectionHeader } from '@/components/ui/AdminBlinkSectionHeader';
+import { AdminDataTable } from '@/components/ui/AdminDataTable';
+import { AdminFeedbackMessage } from '@/components/ui/AdminFeedbackMessage';
+import { AdminFilterSelect } from '@/components/ui/AdminFilterSelect';
+import { AdminSearchField } from '@/components/ui/AdminSearchField';
+import { isAdminAuthActive, resolveAdminApiToken } from '@/lib/auth/adminAuthSession';
+import { ADMIN_ACCOUNT_FILTER_OPTIONS } from '@/lib/users/adminAccountFilterOptions';
+import { useAdminAccountsSearchQuery } from '@/lib/users/useAdminAccountsSearchQuery';
+import { useSessionStore } from '@/store/session';
+import { platformAccountsColumns } from './platformAccountsColumns';
 
 export function PlatformAccountsPanel({ token }: { token: string | null }) {
-  const [query, setQuery] = useState('');
+  const httpOnlyCookies = useSessionStore((s) => s.httpOnlyCookies);
+  const apiToken = resolveAdminApiToken(token, httpOnlyCookies);
+  const { query, setQuery } = useAdminAccountsSearchQuery();
+  const [accountFilter, setAccountFilter] = useState<AdminUserAccountFilter>('all');
   const [items, setItems] = useState<AdminUserListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const columns = useMemo(() => platformAccountsColumns, []);
+
   const load = useCallback(
     async (cursor?: string | null) => {
-      if (!token) return;
+      if (!isAdminAuthActive(token, httpOnlyCookies)) return;
       setLoading(true);
       setError(null);
       try {
         if (query.trim().length >= 2) {
-          const r = await searchUsers(token, query.trim(), 50);
+          const r = await searchUsers(apiToken, query.trim(), 50, accountFilter);
           setItems(r.items);
           setNextCursor(null);
         } else {
-          const r = await listUsers(token, { limit: 25, cursor: cursor ?? undefined });
+          const r = await listUsers(apiToken, {
+            limit: 100,
+            cursor: cursor ?? undefined,
+            accountType: accountFilter,
+          });
           if (cursor) {
             setItems((prev) => [...prev, ...r.items]);
           } else {
@@ -52,104 +60,65 @@ export function PlatformAccountsPanel({ token }: { token: string | null }) {
         setLoading(false);
       }
     },
-    [token, query]
+    [apiToken, httpOnlyCookies, query, token, accountFilter]
   );
 
   useEffect(() => {
-    if (!token) return;
-    const t = setTimeout(() => {
-      void load();
-    }, query.trim().length >= 2 ? 300 : 0);
+    if (!isAdminAuthActive(token, httpOnlyCookies)) return;
+    const t = setTimeout(
+      () => {
+        void load();
+      },
+      query.trim().length >= 2 ? 300 : 0
+    );
     return () => clearTimeout(t);
-  }, [token, query, load]);
+  }, [token, httpOnlyCookies, query, accountFilter, load]);
+
+  if (!isAdminAuthActive(token, httpOnlyCookies)) return null;
 
   return (
     <Stack spacing={2.5}>
-      <TextField
-        size="small"
-        label="Search accounts"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Email, username, or name (min. 2 characters)"
-        sx={{ maxWidth: 440 }}
+      <AdminBlinkSectionHeader
+        title="Platform accounts"
+        right={
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ sm: 'center' }}
+            sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: { sm: 420 } }}
+          >
+            <AdminSearchField
+              value={query}
+              onChange={setQuery}
+              placeholder="Search email, username, or name"
+              sx={{ minWidth: { xs: '100%', sm: 240 }, maxWidth: { sm: 360 }, flex: 1 }}
+            />
+            <AdminFilterSelect
+              aria-label="Account type"
+              value={accountFilter}
+              onChange={setAccountFilter}
+              options={ADMIN_ACCOUNT_FILTER_OPTIONS}
+              disabled={loading}
+            />
+          </Stack>
+        }
       />
 
-      {error && (
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
-      )}
 
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        className="border border-[var(--color-border)]"
-        sx={{ borderColor: 'divider', borderRadius: 2 }}
-      >
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'action.hover' }}>
-              <TableCell>Account</TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Email</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Plan</TableCell>
-              <TableCell align="right" width={100}>
-                {' '}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading && items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
-                  <CircularProgress size={28} />
-                </TableCell>
-              </TableRow>
-            ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    No accounts match your filters.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              items.map((row) => (
-                <TableRow key={row.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                  <TableCell>
-                    <Typography fontWeight={600}>{row.fullName}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      @{row.username}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{row.email}</TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                      <Chip
-                        size="small"
-                        label={row.isActive ? 'Active' : 'Locked'}
-                        color={row.isActive ? 'success' : 'default'}
-                        variant="outlined"
-                      />
-                      {row.staffRole ? (
-                        <Chip size="small" label={row.staffRole} color="primary" variant="outlined" />
-                      ) : null}
-                    </Stack>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                    {row.subscriptionPlanKey ?? '—'}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button component={Link} href={`/users/${row.id}`} size="small" variant="outlined">
-                      Open
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {error ? (
+        <AdminFeedbackMessage severity="error" message={error} onClose={() => setError(null)} />
+      ) : null}
+
+      <AdminDataTable
+        data={items}
+        columns={columns}
+        loading={loading}
+        getRowId={(row) => row.id}
+        emptyMessage="No accounts match your filters."
+        totalLabel="accounts"
+        pageSize={25}
+        dense
+      />
 
       {nextCursor && query.trim().length < 2 ? (
         <Box>

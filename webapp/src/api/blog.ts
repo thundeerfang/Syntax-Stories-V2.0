@@ -27,7 +27,11 @@ export function pickRemoteThumbnailForApi(preview: string | null | undefined): s
 export type { CreatePostPayload, BlogPostResponse, GetDraftResponse } from '@contracts/blogApi';
 
 export const blogApi = {
-  getTaxonomy: async (): Promise<{ success: boolean; categories: BlogTaxonomyRow[]; tags: BlogTaxonomyRow[] }> => {
+  getTaxonomy: async (): Promise<{
+    success: boolean;
+    categories: BlogTaxonomyRow[];
+    tags: BlogTaxonomyRow[];
+  }> => {
     const r = await blogPublicFetch(`${getApiBase()}/api/blog/taxonomy`);
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -46,7 +50,7 @@ export const blogApi = {
   getPublishedFeed: async (
     limit = 24,
     opts?: { tag?: string; category?: string; sort?: 'recent' | 'views'; month?: string },
-    accessToken?: string | null,
+    accessToken?: string | null
   ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
     const sp = new URLSearchParams();
     sp.set('limit', String(limit));
@@ -60,7 +64,11 @@ export const blogApi = {
       accessToken != null && accessToken !== ''
         ? await blogAuthFetch(url, { method: 'GET' }, accessToken)
         : await blogPublicFetch(url);
-    const data = (await readJson(r)) as { success?: boolean; message?: string; posts?: PublicFeedPost[] };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      posts?: PublicFeedPost[];
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, posts: data.posts ?? [] };
   },
@@ -68,7 +76,7 @@ export const blogApi = {
   getUserPublishedPosts: async (
     username: string,
     limit = 24,
-    accessToken?: string | null,
+    accessToken?: string | null
   ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
     const u = encodeURIComponent(username);
     const url = `${getApiBase()}/api/blog/u/${u}/posts?limit=${encodeURIComponent(String(limit))}`;
@@ -76,7 +84,11 @@ export const blogApi = {
       accessToken != null && accessToken !== ''
         ? await blogAuthFetch(url, { method: 'GET' }, accessToken)
         : await blogPublicFetch(url);
-    const data = (await readJson(r)) as { success?: boolean; message?: string; posts?: PublicFeedPost[] };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      posts?: PublicFeedPost[];
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, posts: data.posts ?? [] };
   },
@@ -84,7 +96,7 @@ export const blogApi = {
   getPublishedPost: async (
     username: string,
     slug: string,
-    accessToken?: string | null,
+    accessToken?: string | null
   ): Promise<{ success: boolean; post: PublicBlogPostDetail }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
@@ -107,26 +119,35 @@ export const blogApi = {
     username: string,
     slug: string,
     respecting: boolean,
-    accessToken: string,
-  ): Promise<{ success: boolean; respecting: boolean; respectCount: number }> => {
+    accessToken: string
+  ): Promise<{
+    success: boolean;
+    respecting: boolean;
+    respectCount: number;
+    achievements?: { newlyUnlocked: import('@/contracts/achievementsApi').AchievementUnlockDto[] };
+  }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/respect`,
       { method: 'POST', body: JSON.stringify({ respecting }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
       message?: string;
       respecting?: boolean;
       respectCount?: number;
+      achievements?: {
+        newlyUnlocked: import('@/contracts/achievementsApi').AchievementUnlockDto[];
+      };
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return {
       success: true,
       respecting: data.respecting === true,
       respectCount: data.respectCount ?? 0,
+      achievements: data.achievements,
     };
   },
 
@@ -134,14 +155,14 @@ export const blogApi = {
     username: string,
     slug: string,
     reposting: boolean,
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; reposting: boolean; repostCount: number }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/repost`,
       { method: 'POST', body: JSON.stringify({ reposting }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -162,7 +183,7 @@ export const blogApi = {
     slug: string,
     bookmarked: boolean,
     accessToken: string,
-    options?: { groupId?: string },
+    options?: { groupId?: string }
   ): Promise<{ success: boolean; bookmarked: boolean; bookmarkCount: number }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
@@ -171,7 +192,7 @@ export const blogApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/bookmark`,
       { method: 'POST', body: JSON.stringify(body) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -190,7 +211,7 @@ export const blogApi = {
   /** Batch Respect + Repost + Bookmark flags for feed cards (max 50 ids). */
   postEngagementViewerState: async (
     postIds: string[],
-    accessToken: string,
+    accessToken: string
   ): Promise<{
     viewerRespectStates: Record<string, boolean>;
     viewerRepostStates: Record<string, boolean>;
@@ -199,7 +220,7 @@ export const blogApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/engagement/viewer-state`,
       { method: 'POST', body: JSON.stringify({ postIds }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -220,7 +241,7 @@ export const blogApi = {
   startReadView: async (
     username: string,
     slug: string,
-    accessToken: string,
+    accessToken: string
   ): Promise<
     | { kind: 'session'; sessionId: string; minDwellMs: number }
     | { kind: 'self' }
@@ -231,7 +252,7 @@ export const blogApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/read/start`,
       { method: 'POST' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -255,7 +276,7 @@ export const blogApi = {
     username: string,
     slug: string,
     accessToken: string,
-    sessionId: string,
+    sessionId: string
   ): Promise<{
     success: boolean;
     counted?: boolean;
@@ -263,13 +284,14 @@ export const blogApi = {
     dayBucket?: string;
     reason?: string;
     redisApplied?: boolean;
+    achievements?: { newlyUnlocked: import('@/contracts/achievementsApi').AchievementUnlockDto[] };
   }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/read/commit`,
       { method: 'POST', body: JSON.stringify({ sessionId }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -279,6 +301,9 @@ export const blogApi = {
       dayBucket?: string;
       reason?: string;
       redisApplied?: boolean;
+      achievements?: {
+        newlyUnlocked: import('@/contracts/achievementsApi').AchievementUnlockDto[];
+      };
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return {
@@ -288,6 +313,7 @@ export const blogApi = {
       dayBucket: data.dayBucket,
       reason: data.reason,
       redisApplied: data.redisApplied,
+      achievements: data.achievements,
     };
   },
 
@@ -295,14 +321,14 @@ export const blogApi = {
   recordReadDay: async (
     username: string,
     slug: string,
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; counted?: boolean; reason?: string }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/read-day`,
       { method: 'POST' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -318,7 +344,7 @@ export const blogApi = {
     username: string,
     slug: string,
     limit = 80,
-    accessToken?: string | null,
+    accessToken?: string | null
   ): Promise<{ success: boolean; comments: PublicBlogComment[]; total: number }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
@@ -334,7 +360,11 @@ export const blogApi = {
       total?: number;
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
-    return { success: true, comments: data.comments ?? [], total: typeof data.total === 'number' ? data.total : 0 };
+    return {
+      success: true,
+      comments: data.comments ?? [],
+      total: typeof data.total === 'number' ? data.total : 0,
+    };
   },
 
   postComment: async (
@@ -342,7 +372,7 @@ export const blogApi = {
     slug: string,
     text: string,
     accessToken: string,
-    parentId?: string | null,
+    parentId?: string | null
   ): Promise<{ success: boolean; comment: PublicBlogComment }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
@@ -355,7 +385,7 @@ export const blogApi = {
           ...(parentId != null && parentId.trim() !== '' ? { parentId } : {}),
         }),
       },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -372,7 +402,7 @@ export const blogApi = {
     slug: string,
     commentId: string,
     text: string,
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; comment: PublicBlogComment }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
@@ -380,7 +410,7 @@ export const blogApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/comments/${id}`,
       { method: 'PATCH', body: JSON.stringify({ text }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -396,7 +426,7 @@ export const blogApi = {
     username: string,
     slug: string,
     commentId: string,
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
@@ -404,7 +434,7 @@ export const blogApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/comments/${id}`,
       { method: 'DELETE' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -415,7 +445,7 @@ export const blogApi = {
     username: string,
     slug: string,
     commentId: string,
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; likeCount: number; likedByViewer: boolean }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
@@ -423,7 +453,7 @@ export const blogApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/p/${u}/${s}/comments/${id}/like`,
       { method: 'POST' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -441,7 +471,7 @@ export const blogApi = {
 
   createPost: async (
     payload: CreatePostPayload,
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; post: BlogPostResponse }> => {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog`,
@@ -449,20 +479,28 @@ export const blogApi = {
         method: 'POST',
         body: JSON.stringify(payload),
       },
-      accessToken,
+      accessToken
     );
-    const data = (await readJson(r)) as { success?: boolean; message?: string; post?: BlogPostResponse };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      post?: BlogPostResponse;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return data as { success: boolean; post: BlogPostResponse };
   },
 
   listMyPosts: async (
     accessToken: string,
-    status?: 'draft' | 'published' | 'deleted',
+    status?: 'draft' | 'published' | 'deleted'
   ): Promise<{ success: boolean; posts: BlogPostResponse[] }> => {
     const qs = status ? `?status=${encodeURIComponent(status)}` : '';
     const r = await blogAuthFetch(`${getApiBase()}/api/blog${qs}`, { method: 'GET' }, accessToken);
-    const data = (await readJson(r)) as { success?: boolean; message?: string; posts?: BlogPostResponse[] };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      posts?: BlogPostResponse[];
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return data as { success: boolean; posts: BlogPostResponse[] };
   },
@@ -485,7 +523,7 @@ export const blogApi = {
       language?: string;
       squadId?: string | null;
     },
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; post: BlogPostResponse }> => {
     const body = { ...payload };
     if (body.squadId === undefined) delete body.squadId;
@@ -495,17 +533,32 @@ export const blogApi = {
         method: 'PUT',
         body: JSON.stringify(body),
       },
-      accessToken,
+      accessToken
     );
-    const data = (await readJson(r)) as { success?: boolean; message?: string; post?: BlogPostResponse };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      post?: BlogPostResponse;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return data as { success: boolean; post: BlogPostResponse };
   },
 
-  getMyPost: async (postId: string, accessToken: string): Promise<{ success: boolean; post: BlogPostResponse }> => {
+  getMyPost: async (
+    postId: string,
+    accessToken: string
+  ): Promise<{ success: boolean; post: BlogPostResponse }> => {
     const id = encodeURIComponent(postId.trim());
-    const r = await blogAuthFetch(`${getApiBase()}/api/blog/post/${id}`, { method: 'GET' }, accessToken);
-    const data = (await readJson(r)) as { success?: boolean; message?: string; post?: BlogPostResponse };
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/blog/post/${id}`,
+      { method: 'GET' },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      post?: BlogPostResponse;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     if (!data.post) throw new Error('Invalid response');
     return data as { success: boolean; post: BlogPostResponse };
@@ -525,7 +578,7 @@ export const blogApi = {
       language?: string;
       squadId?: string | null;
     },
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; post: BlogPostResponse; forkedFromPublished?: boolean }> => {
     const id = encodeURIComponent(postId.trim());
     const r = await blogAuthFetch(
@@ -534,7 +587,7 @@ export const blogApi = {
         method: 'PUT',
         body: JSON.stringify(payload),
       },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;
@@ -553,31 +606,45 @@ export const blogApi = {
 
   deletePost: async (postId: string, accessToken: string): Promise<{ success: boolean }> => {
     const id = encodeURIComponent(postId.trim());
-    const r = await blogAuthFetch(`${getApiBase()}/api/blog/post/${id}`, { method: 'DELETE' }, accessToken);
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/blog/post/${id}`,
+      { method: 'DELETE' },
+      accessToken
+    );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true };
   },
 
-  restorePost: async (postId: string, accessToken: string): Promise<{ success: boolean; post: BlogPostResponse }> => {
+  restorePost: async (
+    postId: string,
+    accessToken: string
+  ): Promise<{ success: boolean; post: BlogPostResponse }> => {
     const id = encodeURIComponent(postId.trim());
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/post/${id}/restore`,
       { method: 'PUT' },
-      accessToken,
+      accessToken
     );
-    const data = (await readJson(r)) as { success?: boolean; message?: string; post?: BlogPostResponse };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      post?: BlogPostResponse;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     if (!data.post) throw new Error('Invalid response');
     return { success: true, post: data.post };
   },
 
-  purgePostPermanent: async (postId: string, accessToken: string): Promise<{ success: boolean }> => {
+  purgePostPermanent: async (
+    postId: string,
+    accessToken: string
+  ): Promise<{ success: boolean }> => {
     const id = encodeURIComponent(postId.trim());
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/post/${id}/permanent`,
       { method: 'DELETE' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
@@ -585,10 +652,13 @@ export const blogApi = {
   },
 
   getCategoryMembersPreview: async (
-    slugs: readonly string[],
+    slugs: readonly string[]
   ): Promise<{
     success: boolean;
-    categories: Record<string, { totalCount: number; members: { username: string; profileImg: string }[] }>;
+    categories: Record<
+      string,
+      { totalCount: number; members: { username: string; profileImg: string }[] }
+    >;
   }> => {
     const unique = [...new Set(slugs.map((s) => s.trim().toLowerCase()).filter(Boolean))];
     if (unique.length === 0) {
@@ -596,18 +666,29 @@ export const blogApi = {
     }
     const sp = new URLSearchParams();
     sp.set('slugs', unique.join(','));
-    const r = await blogPublicFetch(`${getApiBase()}/api/blog/categories/members-preview?${sp.toString()}`);
+    const r = await blogPublicFetch(
+      `${getApiBase()}/api/blog/categories/members-preview?${sp.toString()}`
+    );
     const data = (await readJson(r)) as {
       success?: boolean;
       message?: string;
-      categories?: Record<string, { totalCount: number; members: { username: string; profileImg: string }[] }>;
+      categories?: Record<
+        string,
+        { totalCount: number; members: { username: string; profileImg: string }[] }
+      >;
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, categories: data.categories ?? {} };
   },
 
-  listFollowedCategories: async (accessToken: string): Promise<{ success: boolean; slugs: string[] }> => {
-    const r = await blogAuthFetch(`${getApiBase()}/api/blog/categories/following`, { method: 'GET' }, accessToken);
+  listFollowedCategories: async (
+    accessToken: string
+  ): Promise<{ success: boolean; slugs: string[] }> => {
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/blog/categories/following`,
+      { method: 'GET' },
+      accessToken
+    );
     const data = (await readJson(r)) as { success?: boolean; message?: string; slugs?: string[] };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, slugs: data.slugs ?? [] };
@@ -615,34 +696,52 @@ export const blogApi = {
 
   syncFollowedCategories: async (
     slugs: string[],
-    accessToken: string,
+    accessToken: string
   ): Promise<{ success: boolean; synced: number }> => {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/categories/following/sync`,
       { method: 'POST', body: JSON.stringify({ slugs }) },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as { success?: boolean; message?: string; synced?: number };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, synced: data.synced ?? 0 };
   },
 
-  followCategory: async (slug: string, accessToken: string): Promise<{ success: boolean; following: boolean }> => {
+  followCategory: async (
+    slug: string,
+    accessToken: string
+  ): Promise<{ success: boolean; following: boolean }> => {
     const s = encodeURIComponent(slug.trim().toLowerCase());
-    const r = await blogAuthFetch(`${getApiBase()}/api/blog/categories/${s}/follow`, { method: 'POST' }, accessToken);
-    const data = (await readJson(r)) as { success?: boolean; message?: string; following?: boolean };
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/blog/categories/${s}/follow`,
+      { method: 'POST' },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      following?: boolean;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, following: data.following === true };
   },
 
-  unfollowCategory: async (slug: string, accessToken: string): Promise<{ success: boolean; following: boolean }> => {
+  unfollowCategory: async (
+    slug: string,
+    accessToken: string
+  ): Promise<{ success: boolean; following: boolean }> => {
     const s = encodeURIComponent(slug.trim().toLowerCase());
     const r = await blogAuthFetch(
       `${getApiBase()}/api/blog/categories/${s}/follow`,
       { method: 'DELETE' },
-      accessToken,
+      accessToken
     );
-    const data = (await readJson(r)) as { success?: boolean; message?: string; following?: boolean };
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      following?: boolean;
+    };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, following: false };
   },

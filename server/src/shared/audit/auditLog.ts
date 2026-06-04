@@ -1,6 +1,7 @@
 import type { Request } from 'express';
 import mongoose from 'mongoose';
 import { AuditLogModel } from '../../models/AuditLog.js';
+import { appendAuditStream } from '../../admin-platform/iam/auditStream.service.js';
 
 function toObjectId(id: string | mongoose.Types.ObjectId): mongoose.Types.ObjectId {
   return typeof id === 'string' ? new mongoose.Types.ObjectId(id) : id;
@@ -41,6 +42,24 @@ export async function writeAuditLog(
 ): Promise<void> {
   const { actorId, targetType, targetId, metadata } = options;
   const { ip, userAgent } = getClientMeta(req);
+  const at = new Date().toISOString();
+  const actorIdStr = actorId != null ? String(actorId) : undefined;
+  const targetIdStr = targetId != null ? String(targetId) : undefined;
+  const traceId =
+    req?.headers['x-trace-id']?.toString() ?? req?.headers['x-request-id']?.toString();
+
+  void appendAuditStream({
+    action,
+    actorId: actorIdStr,
+    targetType,
+    targetId: targetIdStr,
+    metadata: metadata ?? {},
+    ip,
+    userAgent,
+    traceId,
+    at,
+  });
+
   try {
     await AuditLogModel.create({
       action,

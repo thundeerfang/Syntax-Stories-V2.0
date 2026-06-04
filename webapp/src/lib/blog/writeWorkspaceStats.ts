@@ -70,7 +70,7 @@ export function countWordsForBlock(block: Block): number {
     case 'githubRepo': {
       const g = p as GithubRepoPayload | undefined;
       return countWordsInPlainText(
-        [g?.name, g?.description, g?.owner, g?.repo].filter(Boolean).join(' '),
+        [g?.name, g?.description, g?.owner, g?.repo].filter(Boolean).join(' ')
       );
     }
     case 'unsplashImage': {

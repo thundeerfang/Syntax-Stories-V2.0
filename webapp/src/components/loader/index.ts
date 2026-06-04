@@ -1,1 +1,6 @@
-export { GlobalLoader, GlobalLoaderOverlay, TerminalLoaderPage, pathnameToPageName } from './GlobalLoader';
+export {
+  GlobalLoader,
+  GlobalLoaderOverlay,
+  TerminalLoaderPage,
+  pathnameToPageName,
+} from './GlobalLoader';

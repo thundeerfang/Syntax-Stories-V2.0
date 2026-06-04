@@ -70,8 +70,9 @@ const ProfileDailyMetricsSchema = new Schema<IProfileDailyMetrics>(
 ProfileDailyMetricsSchema.index({ profileUserId: 1, date: 1 }, { unique: true });
 
 export const ProfileViewEventModel: Model<IProfileViewEvent> =
-  mongoose.models?.profile_view_events ?? mongoose.model<IProfileViewEvent>('profile_view_events', ProfileViewEventSchema);
+  mongoose.models?.profile_view_events ??
+  mongoose.model<IProfileViewEvent>('profile_view_events', ProfileViewEventSchema);
 
 export const ProfileDailyMetricsModel: Model<IProfileDailyMetrics> =
-  mongoose.models?.profile_daily_metrics ?? mongoose.model<IProfileDailyMetrics>('profile_daily_metrics', ProfileDailyMetricsSchema);
-
+  mongoose.models?.profile_daily_metrics ??
+  mongoose.model<IProfileDailyMetrics>('profile_daily_metrics', ProfileDailyMetricsSchema);

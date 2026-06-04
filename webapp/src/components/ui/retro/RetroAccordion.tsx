@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
-
 interface RetroAccordionProps {
   label: React.ReactNode;
   subtitle?: React.ReactNode;
@@ -38,12 +37,7 @@ export function RetroAccordion({
             </span>
           )}
         </div>
-        <ChevronRight
-          className={cn(
-            'size-3 shrink-0 transition-transform',
-            open && 'rotate-90'
-          )}
-        />
+        <ChevronRight className={cn('size-3 shrink-0 transition-transform', open && 'rotate-90')} />
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -63,4 +57,3 @@ export function RetroAccordion({
     </div>
   );
 }
-

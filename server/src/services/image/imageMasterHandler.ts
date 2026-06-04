@@ -43,7 +43,10 @@ export async function processUploadedImageBuffer(
     throw new ImageMasterError('Empty file.', 'invalid_image');
   }
   if (input.length > cfg.maxInputBytes) {
-    throw new ImageMasterError(`Image too large (max ${Math.round(cfg.maxInputBytes / (1024 * 1024))} MB).`, 'too_large');
+    throw new ImageMasterError(
+      `Image too large (max ${Math.round(cfg.maxInputBytes / (1024 * 1024))} MB).`,
+      'too_large'
+    );
   }
   if (!isAllowedImageMime(mime)) {
     throw new ImageMasterError('Unsupported image type.', 'invalid_image');
@@ -53,7 +56,10 @@ export async function processUploadedImageBuffer(
   }
 
   if (env.CLAMAV_REQUIRED && !env.CLAMAV_HOST?.trim()) {
-    throw new ImageMasterError('Virus scanning is required but CLAMAV_HOST is not set.', 'clamav_config');
+    throw new ImageMasterError(
+      'Virus scanning is required but CLAMAV_HOST is not set.',
+      'clamav_config'
+    );
   }
 
   let scan: { ok: boolean; detail: string };
@@ -62,9 +68,7 @@ export async function processUploadedImageBuffer(
   } catch (e) {
     const msg = (e as Error)?.message ?? 'scanner_error';
     throw new ImageMasterError(
-      env.CLAMAV_HOST?.trim()
-        ? `Virus scanner unavailable (${msg}).`
-        : `Scanner error (${msg}).`,
+      env.CLAMAV_HOST?.trim() ? `Virus scanner unavailable (${msg}).` : `Scanner error (${msg}).`,
       'internal'
     );
   }
@@ -103,7 +107,9 @@ export async function processUploadedImageBuffer(
   let outMime: ProcessedImageResult['mime'];
   try {
     if (cfg.outputFormat === 'webp') {
-      out = await pipeline.webp({ quality: cfg.webpQuality, effort: 5, smartSubsample: true }).toBuffer();
+      out = await pipeline
+        .webp({ quality: cfg.webpQuality, effort: 5, smartSubsample: true })
+        .toBuffer();
       outMime = 'image/webp';
     } else {
       out = await pipeline.jpeg({ quality: cfg.jpegQuality, mozjpeg: true }).toBuffer();

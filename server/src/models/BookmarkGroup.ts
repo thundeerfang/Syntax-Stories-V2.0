@@ -19,7 +19,7 @@ const BookmarkGroupSchema = new Schema<IBookmarkGroup>(
     emoji: { type: String, trim: true, maxlength: 8, default: '' },
     isDefault: { type: Boolean, default: false },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 BookmarkGroupSchema.index({ userId: 1, name: 1 }, { unique: true });

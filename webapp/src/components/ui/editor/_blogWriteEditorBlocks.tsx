@@ -90,8 +90,9 @@ function TableBlockHelpDialog({ open, onClose }: Readonly<TableBlockHelpDialogPr
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
           <div className="min-w-0 space-y-1">
             <p>
-              Use <strong className="text-foreground">Paste &amp; table</strong> for TSV or pipe markdown, or{' '}
-              <strong className="text-foreground">Visual grid</strong> to edit cells directly.
+              Use <strong className="text-foreground">Paste &amp; table</strong> for TSV or pipe
+              markdown, or <strong className="text-foreground">Visual grid</strong> to edit cells
+              directly.
             </p>
             <p className="font-mono text-[10px] text-foreground/85">
               Limits: {MAX_ROWS}×{MAX_COLS} · paste {MAX_TABLE_PASTE_CHARS.toLocaleString()} chars ·{' '}
@@ -178,7 +179,10 @@ function Section({
   );
 }
 
-export function ParagraphBlockHelpDialog({ open, onClose }: Readonly<ParagraphBlockHelpDialogProps>) {
+export function ParagraphBlockHelpDialog({
+  open,
+  onClose,
+}: Readonly<ParagraphBlockHelpDialogProps>) {
   return (
     <Dialog
       open={open}
@@ -191,51 +195,71 @@ export function ParagraphBlockHelpDialog({ open, onClose }: Readonly<ParagraphBl
       contentClassName="flex min-h-0 flex-1 flex-col p-0"
     >
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-6">
-      <Section icon={Keyboard} title="Line breaks & paragraphs">
-        <p>
-          Press <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">Enter</kbd> to start a
-          new paragraph or a new list item when you are inside a list.
-        </p>
-        <p>
-          Extra blank lines are normalized: you will not stack many empty rows—only one empty line is kept at a time in
-          most cases.
-        </p>
-      </Section>
+        <Section icon={Keyboard} title="Line breaks & paragraphs">
+          <p>
+            Press{' '}
+            <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">
+              Enter
+            </kbd>{' '}
+            to start a new paragraph or a new list item when you are inside a list.
+          </p>
+          <p>
+            Extra blank lines are normalized: you will not stack many empty rows—only one empty line
+            is kept at a time in most cases.
+          </p>
+        </Section>
 
-      <Section icon={List} title="Lists">
-        <p>
-          Start a line with <code className="text-[11px] bg-muted px-1 py-0.5">1. </code> (number, dot, space) for a
-          numbered list, or <code className="text-[11px] bg-muted px-1 py-0.5">- </code> for bullets—then keep typing.
-        </p>
-        <p>
-          When the list keeps going with the next number or bullet, press{' '}
-          <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">Enter</kbd> to stop that and
-          return to normal paragraphs—often on an empty line at the end of the list, or press Enter again if a new empty
-          list row appears first.
-        </p>
-        <p>
-          <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">Backspace</kbd> at the
-          start of an empty list line can merge or lift in some cases, but exiting list continuation is usually done with
-          Enter, not Backspace.
-        </p>
-      </Section>
+        <Section icon={List} title="Lists">
+          <p>
+            Start a line with <code className="text-[11px] bg-muted px-1 py-0.5">1. </code> (number,
+            dot, space) for a numbered list, or{' '}
+            <code className="text-[11px] bg-muted px-1 py-0.5">- </code> for bullets—then keep
+            typing.
+          </p>
+          <p>
+            When the list keeps going with the next number or bullet, press{' '}
+            <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">
+              Enter
+            </kbd>{' '}
+            to stop that and return to normal paragraphs—often on an empty line at the end of the
+            list, or press Enter again if a new empty list row appears first.
+          </p>
+          <p>
+            <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">
+              Backspace
+            </kbd>{' '}
+            at the start of an empty list line can merge or lift in some cases, but exiting list
+            continuation is usually done with Enter, not Backspace.
+          </p>
+        </Section>
 
-      <Section icon={Link2} title="Formatting & links">
-        <p>Use the toolbar for bold, italic, underline, and links. Ctrl/Cmd-click a link to open it in a new tab.</p>
-        <p>Pasted plain text that looks like a list (e.g. lines starting with <code className="text-[11px] bg-muted px-1">1.</code> or{' '}
-          <code className="text-[11px] bg-muted px-1">-</code>) can turn into a real list automatically.</p>
-      </Section>
+        <Section icon={Link2} title="Formatting & links">
+          <p>
+            Use the toolbar for bold, italic, underline, and links. Ctrl/Cmd-click a link to open it
+            in a new tab.
+          </p>
+          <p>
+            Pasted plain text that looks like a list (e.g. lines starting with{' '}
+            <code className="text-[11px] bg-muted px-1">1.</code> or{' '}
+            <code className="text-[11px] bg-muted px-1">-</code>) can turn into a real list
+            automatically.
+          </p>
+        </Section>
 
-      <Section icon={AtSign} title="Mentions & GIFs">
-        <p>
-          Use the toolbar buttons to insert a <strong className="text-foreground">mention</strong> or{' '}
-          <strong className="text-foreground">GIF</strong>. Search picks from your app’s GIF search and user search.
-        </p>
-      </Section>
+        <Section icon={AtSign} title="Mentions & GIFs">
+          <p>
+            Use the toolbar buttons to insert a <strong className="text-foreground">mention</strong>{' '}
+            or <strong className="text-foreground">GIF</strong>. Search picks from your app’s GIF
+            search and user search.
+          </p>
+        </Section>
 
-      <Section icon={Save} title="Saving">
-        <p>Your draft saves as you edit. You do not need a separate “save paragraph” action for the rich text itself.</p>
-      </Section>
+        <Section icon={Save} title="Saving">
+          <p>
+            Your draft saves as you edit. You do not need a separate “save paragraph” action for the
+            rich text itself.
+          </p>
+        </Section>
       </div>
       <footer className={cn(DIALOG_FOOTER_ACTIONS_CLASS, 'px-6')}>
         <button
@@ -298,15 +322,18 @@ export function CodeBlockEditor({
         languageSource: langSource,
       });
     },
-    [onUpdate, payload],
+    [onUpdate, payload]
   );
 
-  const runHighlightPreview = useCallback((text: string, lang: string, langSource: 'auto' | 'manual') => {
-    const effectiveLang = langSource === 'manual' ? lang : inferCodeLanguage(text);
-    const { language, html } = highlightCodeToHtml(text, effectiveLang);
-    setPreviewLang(language);
-    setPreviewHtml(html);
-  }, []);
+  const runHighlightPreview = useCallback(
+    (text: string, lang: string, langSource: 'auto' | 'manual') => {
+      const effectiveLang = langSource === 'manual' ? lang : inferCodeLanguage(text);
+      const { language, html } = highlightCodeToHtml(text, effectiveLang);
+      setPreviewLang(language);
+      setPreviewHtml(html);
+    },
+    []
+  );
 
   useEffect(() => {
     runHighlightPreview(localCode, storedLang, manualLock ? 'manual' : 'auto');
@@ -322,7 +349,7 @@ export function CodeBlockEditor({
         pushUpdate(nextCode, lang, src);
       }, DEBOUNCE_MS);
     },
-    [manualLock, storedLang, pushUpdate],
+    [manualLock, storedLang, pushUpdate]
   );
 
   const handleChange = (next: string) => {
@@ -372,7 +399,7 @@ export function CodeBlockEditor({
         className={cn(
           'min-h-[140px] w-full resize-y  bg-muted/25 p-3 font-mono text-xs leading-relaxed text-foreground',
           'ring-1 ring-inset ring-border/45 placeholder:text-muted-foreground placeholder:italic',
-          'focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-inset',
+          'focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-inset'
         )}
       />
 
@@ -443,7 +470,8 @@ export function MermaidBlockEditor({
   onUpdate: (p: MermaidDiagramPayload) => void;
   onRemove: () => void;
 }>) {
-  const initial = typeof payload.source === 'string' && payload.source.trim() ? payload.source : DEFAULT;
+  const initial =
+    typeof payload.source === 'string' && payload.source.trim() ? payload.source : DEFAULT;
   const [source, setSource] = useState(initial);
   const [parseHint, setParseHint] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -453,7 +481,7 @@ export function MermaidBlockEditor({
       setSource(next);
       onUpdate({ source: next });
     },
-    [onUpdate],
+    [onUpdate]
   );
 
   useEffect(() => {
@@ -497,7 +525,7 @@ export function MermaidBlockEditor({
         className={cn(
           'min-h-[160px] w-full resize-y  border-0 bg-muted/25 p-3 font-mono text-[11px] leading-relaxed ring-1 ring-border/40',
           'text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35',
-          parseHint ? 'ring-destructive/50' : '',
+          parseHint ? 'ring-destructive/50' : ''
         )}
       />
       {parseHint ? (
@@ -507,8 +535,8 @@ export function MermaidBlockEditor({
       ) : null}
       <p className="text-[10px] text-muted-foreground">
         Validated before publish. Use quotes for labels with spaces:{' '}
-        <code className="border border-border px-1">B[&quot;Supabase API&quot;]</code>. One statement per line after{' '}
-        <code className="border border-border px-1">graph TD</code>.
+        <code className="border border-border px-1">B[&quot;Supabase API&quot;]</code>. One
+        statement per line after <code className="border border-border px-1">graph TD</code>.
       </p>
     </div>
   );
@@ -529,7 +557,9 @@ export function TableBlockEditor({
 }>) {
   const rows = useMemo(() => {
     const base =
-      Array.isArray(payload.rows) && payload.rows.length ? payload.rows : [['Column A', 'Column B'], ['']];
+      Array.isArray(payload.rows) && payload.rows.length
+        ? payload.rows
+        : [['Column A', 'Column B'], ['']];
     return clampTableMatrix(base, MAX_ROWS, MAX_COLS, MAX_TABLE_CELL_CHARS);
   }, [payload.rows]);
   const [caption, setCaption] = useState(payload.caption ?? '');
@@ -545,7 +575,7 @@ export function TableBlockEditor({
         rows: clampTableMatrix(nextRows, MAX_ROWS, MAX_COLS, MAX_TABLE_CELL_CHARS),
       });
     },
-    [caption, onUpdate],
+    [caption, onUpdate]
   );
 
   const applyParsed = useCallback(
@@ -572,7 +602,7 @@ export function TableBlockEditor({
       setRawPaste('');
       toast.success('Table updated from paste');
     },
-    [sync],
+    [sync]
   );
 
   const limitsSummary = `Up to ${MAX_ROWS} rows · ${MAX_COLS} columns · paste box ${MAX_TABLE_PASTE_CHARS.toLocaleString()} characters · ${MAX_TABLE_CELL_CHARS.toLocaleString()} characters per cell`;
@@ -635,7 +665,7 @@ export function TableBlockEditor({
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
             tableTab === 'paste'
               ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground'
           )}
           onClick={() => setTableTab('paste')}
         >
@@ -653,7 +683,7 @@ export function TableBlockEditor({
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
             tableTab === 'grid'
               ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground'
           )}
           onClick={() => setTableTab('grid')}
         >
@@ -667,7 +697,12 @@ export function TableBlockEditor({
       </p>
 
       {tableTab === 'paste' ? (
-        <div id="table-panel-paste" role="tabpanel" aria-labelledby="table-tab-paste" className="space-y-2">
+        <div
+          id="table-panel-paste"
+          role="tabpanel"
+          aria-labelledby="table-tab-paste"
+          className="space-y-2"
+        >
           <textarea
             value={rawPaste}
             maxLength={MAX_TABLE_PASTE_CHARS}
@@ -684,7 +719,7 @@ export function TableBlockEditor({
             spellCheck={false}
             className={cn(
               'min-h-[100px] w-full resize-y border-0 bg-muted/25 p-2 font-mono text-[11px] leading-relaxed ring-1 ring-border/35',
-              'text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35',
+              'text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35'
             )}
           />
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -709,7 +744,10 @@ export function TableBlockEditor({
                   {rows.map((r, ri) => (
                     <tr key={`r-${ri}`} className="border-b border-border last:border-b-0">
                       {r.map((c, ci) => (
-                        <td key={`c-${ri}-${ci}`} className="border-r border-border px-2 py-1 font-mono last:border-r-0">
+                        <td
+                          key={`c-${ri}-${ci}`}
+                          className="border-r border-border px-2 py-1 font-mono last:border-r-0"
+                        >
                           {c}
                         </td>
                       ))}
@@ -721,10 +759,15 @@ export function TableBlockEditor({
           </div>
         </div>
       ) : (
-        <div id="table-panel-grid" role="tabpanel" aria-labelledby="table-tab-grid" className="space-y-2">
+        <div
+          id="table-panel-grid"
+          role="tabpanel"
+          aria-labelledby="table-tab-grid"
+          className="space-y-2"
+        >
           <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Edit cells below. Size controls change the grid; changes apply to the block immediately. Use{' '}
-            <strong className="text-foreground">Paste & table</strong> for TSV or pipe tables.
+            Edit cells below. Size controls change the grid; changes apply to the block immediately.
+            Use <strong className="text-foreground">Paste & table</strong> for TSV or pipe tables.
           </p>
           <div className="overflow-hidden border-0 bg-muted/15 p-2 ring-1 ring-border/30">
             <TableVisualGrid

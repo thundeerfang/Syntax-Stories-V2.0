@@ -10,6 +10,7 @@ import {
   ensureDefaultBookmarkGroup,
   listGroupsForUser,
   setDefaultGroupForUser,
+  updateGroupForUser,
 } from '../services/bookmarkGroups.service.js';
 
 function paramString(v: string | string[] | undefined): string | undefined {
@@ -36,10 +37,10 @@ export async function listBookmarkGroups(req: Request, res: Response): Promise<v
     const defaultRow = rows.find((g) => g.isDefault);
     const defaultIdStr = defaultRow ? String(defaultRow._id) : null;
 
-    const agg = await BlogBookmarkModel.aggregate<{ _id: mongoose.Types.ObjectId | null; c: number }>([
-      { $match: { userId: userOid } },
-      { $group: { _id: '$groupId', c: { $sum: 1 } } },
-    ]);
+    const agg = await BlogBookmarkModel.aggregate<{
+      _id: mongoose.Types.ObjectId | null;
+      c: number;
+    }>([{ $match: { userId: userOid } }, { $group: { _id: '$groupId', c: { $sum: 1 } } }]);
     const countByGroup = new Map<string, number>();
     for (const row of agg) {
       const key = row._id ? String(row._id) : defaultIdStr;
@@ -52,7 +53,10 @@ export async function listBookmarkGroups(req: Request, res: Response): Promise<v
       groups: rows.map((g) => ({
         _id: String(g._id),
         name: g.name,
-        emoji: typeof (g as { emoji?: string }).emoji === 'string' ? (g as { emoji?: string }).emoji : '',
+        emoji:
+          typeof (g as { emoji?: string }).emoji === 'string'
+            ? (g as { emoji?: string }).emoji
+            : '',
         isDefault: !!g.isDefault,
         bookmarkCount: countByGroup.get(String(g._id)) ?? 0,
       })),
@@ -88,7 +92,7 @@ export async function createBookmarkGroup(req: Request, res: Response): Promise<
   }
 }
 
-/** PATCH /api/bookmarks/groups/:groupId — body `{ isDefault?: boolean }` */
+/** PATCH /api/bookmarks/groups/:groupId — body `{ name?, emoji?, isDefault? }` */
 export async function patchBookmarkGroup(req: Request, res: Response): Promise<void> {
   try {
     const user = (req as Request & { user: AuthUser }).user;
@@ -101,7 +105,7 @@ export async function patchBookmarkGroup(req: Request, res: Response): Promise<v
       res.status(400).json({ success: false, message: 'Invalid group' });
       return;
     }
-    const body = req.body as { isDefault?: unknown };
+    const body = req.body as { isDefault?: unknown; name?: unknown; emoji?: unknown };
     const userOid = new mongoose.Types.ObjectId(user._id);
     if (body.isDefault === true) {
       const r = await setDefaultGroupForUser(userOid, gid.trim());
@@ -112,7 +116,28 @@ export async function patchBookmarkGroup(req: Request, res: Response): Promise<v
       res.status(200).json({ success: true });
       return;
     }
-    res.status(400).json({ success: false, message: 'Only isDefault: true is supported' });
+    const hasName = typeof body.name === 'string';
+    const hasEmoji = body.emoji !== undefined;
+    if (hasName || hasEmoji) {
+      const patch: { name?: string; emoji?: string | null } = {};
+      if (hasName) patch.name = body.name as string;
+      if (hasEmoji) {
+        patch.emoji =
+          body.emoji === null || body.emoji === ''
+            ? ''
+            : typeof body.emoji === 'string'
+              ? body.emoji
+              : null;
+      }
+      const r = await updateGroupForUser(userOid, gid.trim(), patch);
+      if (!r.ok) {
+        res.status(400).json({ success: false, message: r.message ?? 'Failed' });
+        return;
+      }
+      res.status(200).json({ success: true, group: r.group });
+      return;
+    }
+    res.status(400).json({ success: false, message: 'No supported fields in body' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to update group' });

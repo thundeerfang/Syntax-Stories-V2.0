@@ -4,7 +4,6 @@ import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/api/p
 import { DocsBreadcrumb } from '@/components/docs/DocsBreadcrumb';
 import { DocsSidebarNav } from '@/components/docs/DocsSidebarNav';
 
-
 const MIN_BELOW_HEADER = 'min-h-[calc(100vh-var(--header-height))]';
 
 export default async function DocsLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +35,9 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
                 <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-4 [&::-webkit-details-marker]:hidden">
                   <div className="flex items-center gap-3">
                     <Terminal size={18} className="text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest">Browse topics</span>
+                    <span className="text-xs font-black uppercase tracking-widest">
+                      Browse topics
+                    </span>
                   </div>
                   <span className="border-2 border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow group-open:bg-muted">
                     Menu
@@ -53,7 +54,9 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
                       </Link>
                     </li>
                     {articles.map((a) => {
-                      const href = a.canonicalPath.startsWith('/docs') ? a.canonicalPath : `/docs/${a.slug}`;
+                      const href = a.canonicalPath.startsWith('/docs')
+                        ? a.canonicalPath
+                        : `/docs/${a.slug}`;
                       return (
                         <li key={a.slug}>
                           <Link
@@ -85,7 +88,9 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
               <DocsBreadcrumb articles={navArticles} />
             </div>
 
-            <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-10 lg:py-14">{children}</div>
+            <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-10 lg:py-14">
+              {children}
+            </div>
           </main>
         </div>
       </div>

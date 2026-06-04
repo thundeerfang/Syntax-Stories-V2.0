@@ -23,7 +23,7 @@ if (existsSync(lockfile)) {
   execSync('npm ci', { cwd: sharedRoot, stdio: 'inherit' });
 } else {
   console.warn(
-    '[install-shared-deps] no package-lock.json in webapp/packages/shared — npm install --omit=dev',
+    '[install-shared-deps] no package-lock.json in webapp/packages/shared — npm install --omit=dev'
   );
   execSync('npm install --omit=dev', { cwd: sharedRoot, stdio: 'inherit' });
 }

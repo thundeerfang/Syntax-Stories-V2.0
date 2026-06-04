@@ -10,5 +10,9 @@ export {
   DIALOG_TITLE_ICON_BOX_CLASS,
 } from './dialogs';
 export { FormDialog, type FormDialogProps } from './FormDialog';
-export { InfoSwiperDialog, type InfoSwiperDialogProps, type InfoSwiperSlide } from './InfoSwiperDialog';
+export {
+  InfoSwiperDialog,
+  type InfoSwiperDialogProps,
+  type InfoSwiperSlide,
+} from './InfoSwiperDialog';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';

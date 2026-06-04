@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 
-
 type ProfileSectionHeaderProps = Readonly<{
   icon: React.ComponentType<{ className?: string }>;
   title: string;
@@ -19,7 +18,7 @@ const ADD_BTN_CLASS =
 function renderAddControl(
   showAdd: boolean,
   settingsSection: string | undefined,
-  settingsUrl: (section: string) => string,
+  settingsUrl: (section: string) => string
 ): React.ReactNode {
   if (!showAdd) return null;
   if (settingsSection) {

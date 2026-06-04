@@ -39,7 +39,9 @@ export type FeedbackAttachmentValidation = { ok: true } | { ok: false; message: 
  * Client-side checks before upload: size, MIME allowlist, magic bytes vs declared type.
  * Server still runs ClamAV + Sharp (authoritative malware / malformed image handling).
  */
-export async function validateFeedbackAttachmentFile(file: File): Promise<FeedbackAttachmentValidation> {
+export async function validateFeedbackAttachmentFile(
+  file: File
+): Promise<FeedbackAttachmentValidation> {
   const mime = (file.type || '').toLowerCase().trim();
   if (!mime || !ALLOWED.has(mime)) {
     return { ok: false, message: 'Use a JPEG, PNG, GIF, or WebP image.' };
@@ -55,7 +57,10 @@ export async function validateFeedbackAttachmentFile(file: File): Promise<Feedba
   }
   const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
   if (!matchesMime(head, mime)) {
-    return { ok: false, message: 'File content does not match an image type (possible spoofed extension).' };
+    return {
+      ok: false,
+      message: 'File content does not match an image type (possible spoofed extension).',
+    };
   }
   return { ok: true };
 }

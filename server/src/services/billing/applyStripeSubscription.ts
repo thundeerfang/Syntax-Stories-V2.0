@@ -2,7 +2,11 @@ import type { ClientSession } from 'mongoose';
 import mongoose from 'mongoose';
 import type Stripe from 'stripe';
 import { UserModel } from '../../models/User.js';
-import { SubscriptionModel, type ISubscription, type SubscriptionPlan } from '../../models/Subscription.js';
+import {
+  SubscriptionModel,
+  type ISubscription,
+  type SubscriptionPlan,
+} from '../../models/Subscription.js';
 import { BillingAuditLogModel } from '../../models/BillingAuditLog.js';
 import { getStripe } from '../stripe/stripeClient.js';
 import { priceIdToPlanKey } from './planConfig.js';
@@ -22,7 +26,8 @@ export type ApplyStripeSubscriptionCtx = {
 function stripeCustomerId(sub: Stripe.Subscription): string | null {
   const c = sub.customer;
   if (typeof c === 'string') return c;
-  if (c && typeof c === 'object' && 'deleted' in c && (c as { deleted?: boolean }).deleted) return null;
+  if (c && typeof c === 'object' && 'deleted' in c && (c as { deleted?: boolean }).deleted)
+    return null;
   if (c && typeof c === 'object' && 'id' in c) return (c as Stripe.Customer).id;
   return null;
 }
@@ -42,7 +47,10 @@ function mapStripeStatus(s: Stripe.Subscription.Status): ISubscription['status']
   return 'canceled';
 }
 
-function planFromPriceId(priceId: string | undefined, fallback: SubscriptionPlan): SubscriptionPlan {
+function planFromPriceId(
+  priceId: string | undefined,
+  fallback: SubscriptionPlan
+): SubscriptionPlan {
   const pk = priceIdToPlanKey(priceId);
   if (!pk) return fallback;
   return pk;
@@ -71,7 +79,13 @@ async function applyInSession(
   subDocId: mongoose.Types.ObjectId,
   patch: Partial<ISubscription>,
   userPatch: Record<string, unknown>,
-  audit: { action: string; source: ApplySource; before: unknown; after: unknown; stripeSubscriptionId: string } | null
+  audit: {
+    action: string;
+    source: ApplySource;
+    before: unknown;
+    after: unknown;
+    stripeSubscriptionId: string;
+  } | null
 ): Promise<void> {
   const opts = session ? { session } : {};
   await SubscriptionModel.findByIdAndUpdate(subDocId, { $set: patch }, { ...opts });
@@ -140,7 +154,9 @@ export async function applyStripeSubscription(
     const priceId = fresh.items.data[0]?.price?.id;
     const nextPlan = planFromPriceId(priceId, subDoc.plan);
     const nextStatus = mapStripeStatus(fresh.status);
-    const cps = fresh.current_period_start ? new Date(fresh.current_period_start * 1000) : undefined;
+    const cps = fresh.current_period_start
+      ? new Date(fresh.current_period_start * 1000)
+      : undefined;
     const cpe = fresh.current_period_end ? new Date(fresh.current_period_end * 1000) : undefined;
     const trialEnd = fresh.trial_end ? new Date(fresh.trial_end * 1000) : undefined;
 

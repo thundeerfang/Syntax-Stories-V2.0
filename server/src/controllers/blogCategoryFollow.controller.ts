@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 import { Request, Response } from 'express';
+import {
+  attachAchievementsToResponse,
+  dispatchAchievementEvents,
+} from '../achievements/achievement.service.js';
 import { BlogCategoryFollowModel } from '../models/BlogCategoryFollow.js';
 import { UserModel, normalizeProfileImg } from '../models/User.js';
 import type { AuthUser } from '../middlewares/auth/index.js';
@@ -62,9 +66,7 @@ export async function getCategoryMembersPreview(req: Request, res: Response): Pr
     ]);
 
     const previewUserIds = [
-      ...new Set(
-        grouped.flatMap((g) => g.userIds.map((id) => String(id))).filter(Boolean),
-      ),
+      ...new Set(grouped.flatMap((g) => g.userIds.map((id) => String(id))).filter(Boolean)),
     ].map((id) => new mongoose.Types.ObjectId(id));
 
     const users =
@@ -75,18 +77,20 @@ export async function getCategoryMembersPreview(req: Request, res: Response): Pr
         : [];
 
     const userById = new Map(
-      users.map((u) => {
-        const row = u as { _id: mongoose.Types.ObjectId; username?: string; profileImg?: string };
-        const username = typeof row.username === 'string' ? row.username.trim() : '';
-        if (!username) return null;
-        return [
-          String(row._id),
-          {
-            username,
-            profileImg: normalizeProfileImg(row.profileImg),
-          } satisfies MemberPreview,
-        ] as const;
-      }).filter((x): x is [string, MemberPreview] => x != null),
+      users
+        .map((u) => {
+          const row = u as { _id: mongoose.Types.ObjectId; username?: string; profileImg?: string };
+          const username = typeof row.username === 'string' ? row.username.trim() : '';
+          if (!username) return null;
+          return [
+            String(row._id),
+            {
+              username,
+              profileImg: normalizeProfileImg(row.profileImg),
+            } satisfies MemberPreview,
+          ] as const;
+        })
+        .filter((x): x is [string, MemberPreview] => x != null)
     );
 
     const categories: Record<string, { totalCount: number; members: MemberPreview[] }> = {};
@@ -119,7 +123,9 @@ export async function listMyFollowedCategories(req: Request, res: Response): Pro
       res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
     }
-    const rows = await BlogCategoryFollowModel.find({ userId: new mongoose.Types.ObjectId(user._id) })
+    const rows = await BlogCategoryFollowModel.find({
+      userId: new mongoose.Types.ObjectId(user._id),
+    })
       .sort({ createdAt: -1 })
       .select('categorySlug')
       .lean();
@@ -143,7 +149,14 @@ export async function syncMyFollowedCategories(req: Request, res: Response): Pro
     }
     const body = req.body as { slugs?: unknown };
     const slugs = Array.isArray(body.slugs)
-      ? [...new Set(body.slugs.filter((x): x is string => typeof x === 'string').map((s) => s.trim().toLowerCase()).filter(Boolean))]
+      ? [
+          ...new Set(
+            body.slugs
+              .filter((x): x is string => typeof x === 'string')
+              .map((s) => s.trim().toLowerCase())
+              .filter(Boolean)
+          ),
+        ]
       : [];
     if (slugs.length === 0) {
       res.status(200).json({ success: true, synced: 0 });
@@ -182,12 +195,20 @@ export async function followCategory(req: Request, res: Response): Promise<void>
       return;
     }
     const userId = new mongoose.Types.ObjectId(user._id);
-    await BlogCategoryFollowModel.updateOne(
+    const result = await BlogCategoryFollowModel.updateOne(
       { userId, categorySlug: slug },
       { $setOnInsert: { userId, categorySlug: slug } },
-      { upsert: true },
+      { upsert: true }
     );
-    res.status(200).json({ success: true, following: true, slug });
+    const newlyUnlocked =
+      result.upsertedCount === 1
+        ? await dispatchAchievementEvents(String(user._id), [{ type: 'profile_sync' }])
+        : [];
+    res
+      .status(200)
+      .json(
+        attachAchievementsToResponse({ success: true, following: true, slug }, newlyUnlocked)
+      );
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to follow category' });

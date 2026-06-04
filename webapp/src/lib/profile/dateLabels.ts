@@ -75,7 +75,7 @@ export function formatMonthYearMedium(val: string): string {
 
 export function yearOptionsFromMin(
   minYear: string | undefined,
-  endYear = new Date().getFullYear(),
+  endYear = new Date().getFullYear()
 ) {
   const all = profileYearOptions(endYear);
   const n = parseInt(minYear ?? '', 10);

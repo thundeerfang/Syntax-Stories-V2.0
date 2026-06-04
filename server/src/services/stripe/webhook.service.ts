@@ -13,7 +13,9 @@ function graceUntilFromInvoice(invoice: Stripe.Invoice): Date {
   return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 }
 
-async function resolveUserIdForCustomer(customerId: string): Promise<mongoose.Types.ObjectId | null> {
+async function resolveUserIdForCustomer(
+  customerId: string
+): Promise<mongoose.Types.ObjectId | null> {
   const u = await UserModel.findOne({ stripeCustomerId: customerId });
   return u?._id ?? null;
 }
@@ -91,9 +93,7 @@ export async function dispatchStripeWebhookEvent(event: Stripe.Event): Promise<v
       }
 
       const subRef =
-        typeof invoice.subscription === 'string'
-          ? invoice.subscription
-          : invoice.subscription?.id;
+        typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
       if (subRef) {
         const sub = await stripe.subscriptions.retrieve(subRef, {
           expand: ['items.data.price'],

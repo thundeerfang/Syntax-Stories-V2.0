@@ -4,9 +4,7 @@ import type { ReactNode } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-
-const EXPLORE_SECTION_HEADER_CARD =
-  'w-full border-2 border-border bg-card p-4 shadow sm:p-5';
+const EXPLORE_SECTION_HEADER_CARD = 'w-full border-2 border-border bg-card p-4 shadow sm:p-5';
 
 export function PanelSectionHeader({
   eyebrow,
@@ -17,11 +15,17 @@ export function PanelSectionHeader({
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
       <div className="flex items-center gap-2">
         <div className="h-[2px] w-6 bg-primary" />
-        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-primary">{eyebrow}</p>
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-primary">
+          {eyebrow}
+        </p>
       </div>
-      <h2 className="font-mono text-lg font-black uppercase tracking-tight text-foreground sm:text-xl">{title}</h2>
+      <h2 className="font-mono text-lg font-black uppercase tracking-tight text-foreground sm:text-xl">
+        {title}
+      </h2>
       {description ? (
-        <p className="max-w-2xl text-[11px] font-mono uppercase leading-relaxed text-muted-foreground">{description}</p>
+        <p className="max-w-2xl text-[11px] font-mono uppercase leading-relaxed text-muted-foreground">
+          {description}
+        </p>
       ) : null}
     </div>
   );

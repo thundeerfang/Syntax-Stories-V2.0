@@ -35,7 +35,9 @@ router.get('/repo-info/:owner/:repo', async (req: Request, res: Response) => {
     });
     if (!ghRes.ok) {
       const text = await ghRes.text().catch(() => '');
-      res.status(ghRes.status).json({ success: false, message: 'Repo not found or not public.', detail: text });
+      res
+        .status(ghRes.status)
+        .json({ success: false, message: 'Repo not found or not public.', detail: text });
       return;
     }
     const repoData = (await ghRes.json()) as GitHubRepo;
@@ -51,7 +53,9 @@ router.get('/repo-info/:owner/:repo', async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+    res
+      .status(500)
+      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
   }
 });
 
@@ -80,22 +84,29 @@ router.get('/repos', verifyToken, async (req: Request, res: Response) => {
       return;
     }
 
-    const ghRes = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated&visibility=public&affiliation=owner', {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: 'application/vnd.github+json',
-      },
-    });
+    const ghRes = await fetch(
+      'https://api.github.com/user/repos?per_page=100&sort=updated&visibility=public&affiliation=owner',
+      {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+        },
+      }
+    );
     if (!ghRes.ok) {
       const text = await ghRes.text().catch(() => '');
-      res.status(ghRes.status).json({ success: false, message: 'Failed to fetch repos from GitHub.', detail: text });
+      res
+        .status(ghRes.status)
+        .json({ success: false, message: 'Failed to fetch repos from GitHub.', detail: text });
       return;
     }
     const repos = (await ghRes.json()) as GitHubRepo[];
     const cleaned = (Array.isArray(repos) ? repos : []).filter((r) => r && !r.archived);
     res.json({ success: true, repos: cleaned });
   } catch (err) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+    res
+      .status(500)
+      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
   }
 });
 
@@ -124,7 +135,9 @@ router.get('/repo/:fullName', verifyToken, async (req: Request, res: Response) =
     });
     if (!ghRes.ok) {
       const text = await ghRes.text().catch(() => '');
-      res.status(ghRes.status).json({ success: false, message: 'Failed to fetch repo from GitHub.', detail: text });
+      res
+        .status(ghRes.status)
+        .json({ success: false, message: 'Failed to fetch repo from GitHub.', detail: text });
       return;
     }
     const repo = (await ghRes.json()) as GitHubRepo;
@@ -134,7 +147,9 @@ router.get('/repo/:fullName', verifyToken, async (req: Request, res: Response) =
       repo,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+    res
+      .status(500)
+      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
   }
 });
 
@@ -237,9 +252,10 @@ router.post('/repos/import-batch', verifyToken, async (req: Request, res: Respon
       failed,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+    res
+      .status(500)
+      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
   }
 });
 
 export default router;
-

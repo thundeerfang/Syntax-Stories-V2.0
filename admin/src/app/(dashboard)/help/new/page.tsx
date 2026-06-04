@@ -1,112 +1,186 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button, Paper, Stack, TextField } from '@mui/material';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
+import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import {
-  Alert,
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import { createHelpArticle } from '@/lib/api';
+  createHelpArticle,
+  patchHelpArticle,
+  publishHelpArticle,
+} from '@/lib/api';
+import { CentricPageHeader } from '@/components/layout/CentricPageHeader';
+import { nestedPageBreadcrumbs } from '@/components/layout/pageHeaderBreadcrumbs';
+import { AdminBlinkSectionHeader } from '@/components/ui/AdminBlinkSectionHeader';
+import { AdminFeedbackMessage } from '@/components/ui/AdminFeedbackMessage';
+import { HelpIconSelect } from '@/components/help/HelpIconSelect';
+import { DEFAULT_HELP_ICON, normalizeHelpIconKey } from '@/lib/help/helpIcons';
+import { resolveAdminApiToken } from '@/lib/auth/adminAuthSession';
 import { useSessionStore } from '@/store/session';
 
-export default function NewArticlePage() {
+export default function NewFaqItemPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = useSessionStore((s) => s.token);
-  const [slug, setSlug] = useState('');
-  const [title, setTitle] = useState('');
-  const [summary, setSummary] = useState('');
-  const [category, setCategory] = useState('general');
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const httpOnlyCookies = useSessionStore((s) => s.httpOnlyCookies);
+  const apiToken = resolveAdminApiToken(token, httpOnlyCookies);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!token) {
+  const initialIcon = normalizeHelpIconKey(searchParams.get('icon') ?? DEFAULT_HELP_ICON);
+
+  const [title, setTitle] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [icon, setIcon] = useState(initialIcon);
+  const [articleId, setArticleId] = useState<string | null>(null);
+  const [draftVersion, setDraftVersion] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function persistDraft(): Promise<{ id: string; created: boolean }> {
+    if (!apiToken) {
       router.replace('/login');
-      return;
+      throw new Error('Not authenticated');
     }
-    setErr(null);
-    setLoading(true);
-    try {
-      const created = await createHelpArticle(token, {
-        slug: slug.trim(),
-        title: title.trim(),
-        summary: summary.trim() || undefined,
-        category: category.trim() || undefined,
+    const trimmedTitle = title.trim();
+    const trimmedAnswer = answer.trim();
+    if (!trimmedTitle) {
+      throw new Error('Title is required');
+    }
+
+    let id = articleId;
+    let version = draftVersion;
+    let created = false;
+
+    if (!id) {
+      const result = await createHelpArticle(apiToken, {
+        title: trimmedTitle,
+        summary: trimmedAnswer,
+        icon,
       });
-      router.replace(`/help/${created.id}/edit`);
+      id = result.id;
+      created = true;
+      setArticleId(id);
+    }
+
+    const r = await patchHelpArticle(apiToken, id, {
+      draftTitle: trimmedTitle,
+      draftSummary: trimmedAnswer,
+      icon,
+      expectedDraftVersion: version,
+    });
+    setDraftVersion(r.draftVersion);
+    return { id, created };
+  }
+
+  async function saveDraft() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { id, created } = await persistDraft();
+      if (created) {
+        router.replace(`/help/${id}/edit`);
+        return;
+      }
+      setMessage('Draft saved');
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed');
+      setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
-      setLoading(false);
+      setBusy(false);
+    }
+  }
+
+  async function publish() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { id } = await persistDraft();
+      await publishHelpArticle(apiToken!, id, 0);
+      router.replace(`/help/${id}/edit`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Publish failed');
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <Box className="mx-auto max-w-lg">
-      <Button
-        component={Link}
-        href="/help"
-        startIcon={<ArrowBackRoundedIcon />}
-        size="small"
-        className="mb-4"
-        sx={{ color: 'text.secondary' }}
-      >
-        Articles
-      </Button>
-      <Typography variant="h4" component="h1" fontWeight={800} className="mb-6 tracking-tight">
-        New help article
-      </Typography>
-      <Paper elevation={0} className="border border-[var(--color-border)] p-6" sx={{ borderColor: 'divider' }}>
-        <Box component="form" onSubmit={submit}>
-          <Stack spacing={3}>
-            {err && <Alert severity="error">{err}</Alert>}
-            <TextField
-              label="Slug (URL)"
-              required
-              fullWidth
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="sign-in-troubleshooting"
+    <Stack spacing={3}>
+      <CentricPageHeader
+        title="New FAQ item"
+        description="Add a question and markdown answer for the public /help page."
+        icon={<QuizRoundedIcon />}
+        breadcrumbs={[...nestedPageBreadcrumbs({ label: 'FAQ', href: '/help' }, 'New FAQ item')]}
+      />
+
+      {error ? (
+        <AdminFeedbackMessage severity="error" message={error} onClose={() => setError(null)} />
+      ) : null}
+      {message ? (
+        <AdminFeedbackMessage severity="success" message={message} onClose={() => setMessage(null)} />
+      ) : null}
+
+      <AdminBlinkSectionHeader
+        title="FAQ content"
+        right={
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Button
+              variant="outlined"
               size="small"
-            />
-            <TextField label="Title" required fullWidth value={title} onChange={(e) => setTitle(e.target.value)} size="small" />
-            <FormControl fullWidth size="small">
-              <InputLabel id="article-category-label">Category</InputLabel>
-              <Select
-                labelId="article-category-label"
-                label="Category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                <MenuItem value="general">general (help center)</MenuItem>
-                <MenuItem value="documentation">documentation (/docs)</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label="Summary (optional)"
-              fullWidth
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
+              startIcon={<SaveRoundedIcon />}
+              disabled={busy || !title.trim()}
+              onClick={() => void saveDraft()}
+            >
+              Save draft
+            </Button>
+            <Button
+              variant="contained"
               size="small"
-            />
-            <Button type="submit" variant="contained" disabled={loading} className="self-start">
-              {loading ? 'Creating…' : 'Create draft'}
+              startIcon={<PublishRoundedIcon />}
+              disabled={busy || !title.trim() || !answer.trim()}
+              onClick={() => void publish()}
+            >
+              Publish
             </Button>
           </Stack>
-        </Box>
+        }
+      />
+
+      <Paper variant="outlined" sx={{ borderRadius: 2, p: { xs: 2, sm: 2.5 } }}>
+        <Stack spacing={2}>
+          <HelpIconSelect label="Accordion icon" value={icon} onChange={setIcon} disabled={busy} />
+          <TextField
+            label="Title"
+            required
+            fullWidth
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            size="small"
+            disabled={busy}
+          />
+          <TextField
+            label="Answer (Markdown)"
+            required
+            fullWidth
+            multiline
+            minRows={10}
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            size="small"
+            disabled={busy}
+            helperText="This text appears in the FAQ accordion on /help."
+            sx={{
+              '& textarea': {
+                fontFamily: 'ui-monospace, monospace',
+                fontSize: '0.8125rem',
+              },
+            }}
+          />
+        </Stack>
       </Paper>
-    </Box>
+    </Stack>
   );
 }

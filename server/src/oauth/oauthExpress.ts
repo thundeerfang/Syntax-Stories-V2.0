@@ -1,7 +1,7 @@
 import type { Request, RequestHandler, Response, NextFunction } from 'express';
 import passport from 'passport';
 import type { AuthenticateOptions } from 'passport';
-import { getFrontendRedirectBase } from '../config/frontendUrl.js';
+import { resolveOAuthRedirectBase } from './oauthReturnOrigin.js';
 import { getRedis } from '../config/redis.js';
 import { UserModel } from '../models/User.js';
 import { createAuthChallenge } from '../utils/authChallenge.js';
@@ -13,9 +13,12 @@ import { redisKeys } from '../shared/redis/keys.js';
 import { storeOAuthExchange } from './oauth.exchange.service.js';
 
 /** Validate link key in Redis, then Passport with `state: link:<key>`. */
-export function oauthLinkHandler(strategy: string, authenticateOptions: AuthenticateOptions = {}): RequestHandler {
+export function oauthLinkHandler(
+  strategy: string,
+  authenticateOptions: AuthenticateOptions = {}
+): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const base = getFrontendRedirectBase();
+    const base = resolveOAuthRedirectBase(req, res);
     const k = req.query.k as string;
     if (!k?.trim()) {
       return res.redirect(`${base}/settings?error=${encodeURIComponent('Invalid link request')}`);
@@ -26,7 +29,9 @@ export function oauthLinkHandler(strategy: string, authenticateOptions: Authenti
     }
     const userId = await redis.get(redisKeys.oauth.link(k));
     if (!userId) {
-      return res.redirect(`${base}/settings?error=${encodeURIComponent('Link expired or invalid')}`);
+      return res.redirect(
+        `${base}/settings?error=${encodeURIComponent('Link expired or invalid')}`
+      );
     }
     passport.authenticate(strategy, { ...authenticateOptions, state: `link:${k}` })(req, res, next);
   };
@@ -43,7 +48,7 @@ export type OAuthCallbackParams = {
 export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandler {
   const { strategy, failureLabel, auditProvider, clientCallbackSlug, idField } = params;
   return (req: Request, res: Response, next: NextFunction) => {
-    const base = getFrontendRedirectBase();
+    const base = resolveOAuthRedirectBase(req, res);
     passport.authenticate(strategy, { session: false }, async (err: unknown, userObj?: unknown) => {
       if (err) {
         const msg = err instanceof Error ? err.message : failureLabel;
@@ -61,10 +66,15 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
             `${base}/${clientCallbackSlug}?twoFactorRequired=1&challengeToken=${encodeURIComponent(challengeToken)}`
           );
         } catch {
-          return res.redirect(`${base}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`);
+          return res.redirect(
+            `${base}/login?error=${encodeURIComponent('2FA temporarily unavailable')}`
+          );
         }
       }
-      const { accessToken, refreshToken, session } = await createSessionAndTokens(String(u._id), req);
+      const { accessToken, refreshToken, session } = await createSessionAndTokens(
+        String(u._id),
+        req
+      );
       void writeAuditLog(req, AuditAction.SESSION_CREATED, {
         actorId: String(u._id),
         metadata: {
@@ -74,8 +84,14 @@ export function oauthCallbackHandler(params: OAuthCallbackParams): RequestHandle
           expiresAt: session.expiresAt?.toISOString?.(),
         },
       });
-      void writeAuditLog(req, AuditAction.OAUTH_LOGIN, { actorId: String(u._id), metadata: { provider: auditProvider } });
-      void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: String(u._id), metadata: { source: auditProvider } });
+      void writeAuditLog(req, AuditAction.OAUTH_LOGIN, {
+        actorId: String(u._id),
+        metadata: { provider: auditProvider },
+      });
+      void writeAuditLog(req, AuditAction.USER_SIGNIN, {
+        actorId: String(u._id),
+        metadata: { source: auditProvider },
+      });
       emitAppEvent('auth.signin.success', { userId: String(u._id), source: auditProvider });
       const rawId = u[idField];
       const providerId =

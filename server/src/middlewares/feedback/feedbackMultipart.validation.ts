@@ -66,8 +66,10 @@ export function parseMultipartFeedback(
     const fn = parsed.data.firstName?.trim() ?? '';
     const ln = parsed.data.lastName?.trim() ?? '';
     const em = parsed.data.email?.trim().toLowerCase() ?? '';
-    if (fn.length < 1 || fn.length > 80) return { ok: false, message: 'firstName: First name is required (1–80 characters).' };
-    if (ln.length < 1 || ln.length > 80) return { ok: false, message: 'lastName: Last name is required (1–80 characters).' };
+    if (fn.length < 1 || fn.length > 80)
+      return { ok: false, message: 'firstName: First name is required (1–80 characters).' };
+    if (ln.length < 1 || ln.length > 80)
+      return { ok: false, message: 'lastName: Last name is required (1–80 characters).' };
     if (!isValidEmail(em)) return { ok: false, message: 'email: Valid email is required.' };
     return {
       ok: true,

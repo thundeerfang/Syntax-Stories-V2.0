@@ -60,12 +60,7 @@ export const boundariesConfig = {
   settings: {
     'boundaries/elements': elements,
     'boundaries/include': ['src/**/*'],
-    'boundaries/ignore': [
-      '**/*.test.ts',
-      '**/*.test.tsx',
-      '**/*.spec.ts',
-      '**/*.spec.tsx',
-    ],
+    'boundaries/ignore': ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
   },
   rules: {
     ...boundaries.configs.recommended.rules,
@@ -84,7 +79,14 @@ export const boundariesConfig = {
             from: { type: 'app' },
             allow: {
               to: {
-                type: ['app', 'features', 'features-settings', 'shared', 'feature-shim', 'infrastructure'],
+                type: [
+                  'app',
+                  'features',
+                  'features-settings',
+                  'shared',
+                  'feature-shim',
+                  'infrastructure',
+                ],
               },
             },
           },

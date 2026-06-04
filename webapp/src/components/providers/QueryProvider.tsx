@@ -3,7 +3,6 @@
 import { type ReactNode, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-
 /**
  * TanStack Query for profile/settings mutations and future server-state caching.
  * Default options keep errors on the mutation object (callers use toast etc.).

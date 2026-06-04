@@ -7,13 +7,24 @@ import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
 import { Button, Dialog, DIALOG_Z_INDEX_STACKED, useGlobalAltchaBusy } from '@/components/ui';
+import { cn } from '@/lib/core/utils';
 import { clearLegalSignupAckCookie } from '@/lib/auth/legalSignupAckCookie';
+import { resolveAuthWelcomeTitle, type AuthWelcomeTitle } from '@/lib/auth/authWelcomeVisitor';
 import { AltchaField } from './AltchaField';
 import { readAltchaPayload, useOtpFlow } from '../hooks/useOtpFlow';
+import { useSignupReferralCode } from '../hooks/useSignupReferralCode';
 import type { AuthDialogView } from '@/store/authDialog';
 import type { AuthDialogStep as Step } from './authDialogStep';
 import { authDialogRenderStep } from './authDialogRender';
-
+import {
+  AUTH_DIALOG_BACKDROP_CLASS,
+  AUTH_DIALOG_BODY_CLASS,
+  AUTH_DIALOG_CONTENT_CLASS,
+  AUTH_DIALOG_PANEL_CLASS,
+  AUTH_DIALOG_PANEL_SCROLL_CLASS,
+  AuthDialogTopBar,
+  getAuthDialogBackConfig,
+} from './authDialogUi';
 
 /** Avoid deprecated `React.FormEvent` (Sonar S1874); matches what submit handlers use. */
 type FormSubmit = { preventDefault(): void; currentTarget: HTMLFormElement };
@@ -31,7 +42,7 @@ function seedAuthDialogOnOpen(
     setSignupEmail: (v: string) => void;
     setResendCooldownSec: (n: number) => void;
     setOtpAttemptsLeft: (n: number | null) => void;
-  },
+  }
 ): void {
   if (storeTwoFactor) {
     a.setStep('verify-email');
@@ -61,8 +72,15 @@ const authStepTransition = {
 
 export function AuthDialog() {
   const { isOpen, initialView, close } = useAuthDialogStore();
-  const { sendLoginOtp, signUp, verifyCode, verifyTwoFactor, isLoading, twoFactor, resetEphemeralOtpState } =
-    useAuth();
+  const {
+    sendLoginOtp,
+    signUp,
+    verifyCode,
+    verifyTwoFactor,
+    isLoading,
+    twoFactor,
+    resetEphemeralOtpState,
+  } = useAuth();
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const storeTwoFactor = useAuthStore((s) => s.twoFactor);
@@ -89,7 +107,13 @@ export function AuthDialog() {
   const [stepBeforeVerify, setStepBeforeVerify] = useState<Step>('login-email');
   const [legalTermsAccepted, setLegalTermsAccepted] = useState(false);
   const [legalPrivacyAccepted, setLegalPrivacyAccepted] = useState(false);
+  const [welcomeTitle, setWelcomeTitle] = useState<AuthWelcomeTitle>('Welcome.');
   const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setWelcomeTitle(resolveAuthWelcomeTitle());
+  }, [isOpen]);
 
   const {
     altchaOn,
@@ -114,6 +138,16 @@ export function AuthDialog() {
     twoFactor,
     setCode,
   });
+
+  const {
+    referralInput,
+    setReferralInputValue,
+    validationState: referralValidationState,
+    referrer: referralReferrer,
+    errorMessage: referralErrorMessage,
+    ensureReferralReadyForSignup,
+    referralBlocksSignup,
+  } = useSignupReferralCode({ isOpen });
 
   const goToStep = useCallback((next: Step) => {
     setStep(next);
@@ -155,8 +189,7 @@ export function AuthDialog() {
       setStep('verify-email');
       setResendCooldownSec(60);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to send code. Please try again.';
+      const message = err instanceof Error ? err.message : 'Failed to send code. Please try again.';
       toast.error(message);
     }
   };
@@ -168,6 +201,11 @@ export function AuthDialog() {
       if (!legalTermsAccepted) missing.push('Terms of Service');
       if (!legalPrivacyAccepted) missing.push('Privacy Policy');
       toast.error(`Please accept the ${missing.join(' and ')} before continuing.`);
+      return;
+    }
+    const referralOk = await ensureReferralReadyForSignup();
+    if (!referralOk) {
+      toast.error(referralErrorMessage ?? 'Enter a valid referral code or leave the field empty.');
       return;
     }
     const altcha = altchaOn ? readAltchaPayload(e.currentTarget) : undefined;
@@ -182,8 +220,7 @@ export function AuthDialog() {
       setStep('verify-email');
       setResendCooldownSec(60);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Sign up failed. Please try again.';
+      const message = err instanceof Error ? err.message : 'Sign up failed. Please try again.';
       toast.error(message);
     }
   };
@@ -196,11 +233,7 @@ export function AuthDialog() {
         toast.error('Please go back and accept both the Terms of Service and the Privacy Policy.');
         return;
       }
-      await verifyCode(
-        verifyEmail,
-        code,
-        isSignupEmailFlow ? { acceptPolicies: true } : undefined,
-      );
+      await verifyCode(verifyEmail, code, isSignupEmailFlow ? { acceptPolicies: true } : undefined);
       setOtpAttemptsLeft(null);
       const tf = useAuthStore.getState().twoFactor;
       if (!tf) {
@@ -213,8 +246,7 @@ export function AuthDialog() {
       }
     } catch (err) {
       applyVerifyError(err);
-      const message =
-        err instanceof Error ? err.message : 'Invalid code. Please try again.';
+      const message = err instanceof Error ? err.message : 'Invalid code. Please try again.';
       toast.error(message);
     }
   };
@@ -228,26 +260,33 @@ export function AuthDialog() {
       toast.success('Signed in successfully.');
       close();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Invalid 2FA code. Please try again.';
+      const message = err instanceof Error ? err.message : 'Invalid 2FA code. Please try again.';
       toast.error(message);
     }
   };
 
-  const stepMotionTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : authStepTransition;
+  const stepMotionTransition = prefersReducedMotion ? { duration: 0 } : authStepTransition;
 
   const twoFactorActive = twoFactor != null;
   const altchaBusy = useGlobalAltchaBusy();
 
   /** Block dismiss and chrome interaction while OTP step, auth requests, or ALTCHA is running. */
   const blockAuthDialogDismiss =
-    altchaBusy ||
-    isLoading ||
-    (step === 'verify-email' && !twoFactorActive);
+    altchaBusy || isLoading || (step === 'verify-email' && !twoFactorActive);
 
   const blockResendDialogDismiss = altchaBusy || isLoading;
+
+  const backConfig = getAuthDialogBackConfig(step, stepBeforeVerify);
+
+  const handleAuthDialogBack = useCallback(() => {
+    if (!backConfig.target) return;
+    setCode('');
+    if (step === 'verify-email') {
+      if (stepBeforeVerify === 'login-email') setEmail(verifyEmail);
+      if (stepBeforeVerify === 'signup-email') setSignupEmail(verifyEmail);
+    }
+    setStep(backConfig.target);
+  }, [backConfig.target, step, stepBeforeVerify, verifyEmail, setEmail, setSignupEmail, setCode]);
 
   return (
     <>
@@ -255,13 +294,25 @@ export function AuthDialog() {
         open={isOpen}
         onClose={close}
         titleId="auth-dialog-title"
-        panelClassName="max-h-[min(92vh,calc(100dvh-2rem))] overflow-y-auto overscroll-y-contain ss-scrollbar-hide"
-        contentClassName="relative overflow-x-hidden p-5 sm:p-6"
+        panelClassName={cn(
+          AUTH_DIALOG_PANEL_CLASS,
+          step === 'verify-email' && AUTH_DIALOG_PANEL_SCROLL_CLASS
+        )}
+        backdropClassName={AUTH_DIALOG_BACKDROP_CLASS}
+        contentClassName={AUTH_DIALOG_CONTENT_CLASS}
         closeOnBackdropClick={!blockAuthDialogDismiss}
         closeOnEscape={!blockAuthDialogDismiss}
-        showCloseButton={!blockAuthDialogDismiss}
+        showCloseButton={false}
+        legacyCloseContentInset={false}
       >
-        <div className="relative">
+        <AuthDialogTopBar
+          showBack={backConfig.show}
+          backLabel={backConfig.label}
+          onBack={handleAuthDialogBack}
+          onClose={close}
+          closeDisabled={blockAuthDialogDismiss}
+        />
+        <div className={AUTH_DIALOG_BODY_CLASS}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={step}
@@ -303,6 +354,13 @@ export function AuthDialog() {
                 setLegalTermsAccepted,
                 legalPrivacyAccepted,
                 setLegalPrivacyAccepted,
+                welcomeTitle,
+                referralInput,
+                setReferralInputValue,
+                referralValidationState,
+                referralReferrer,
+                referralErrorMessage,
+                referralBlocksSignup,
               })}
             </motion.div>
           </AnimatePresence>
@@ -313,45 +371,57 @@ export function AuthDialog() {
         open={resendOtpOpen}
         onClose={() => setResendOtpOpen(false)}
         titleId="resend-otp-title"
-        panelClassName="max-w-sm border-2 border-border bg-card shadow"
-        contentClassName="p-5 sm:p-6"
+        panelClassName={cn(AUTH_DIALOG_PANEL_CLASS, 'max-w-sm')}
+        backdropClassName={AUTH_DIALOG_BACKDROP_CLASS}
+        contentClassName={AUTH_DIALOG_CONTENT_CLASS}
         closeOnBackdropClick={!blockResendDialogDismiss}
         closeOnEscape={!blockResendDialogDismiss}
-        showCloseButton={!blockResendDialogDismiss}
+        showCloseButton={false}
+        legacyCloseContentInset={false}
         zIndex={DIALOG_Z_INDEX_STACKED}
       >
-        <h3 id="resend-otp-title" className="pr-8 text-sm font-black uppercase tracking-tight text-card-foreground">
-          Resend code
-        </h3>
-        <p className="mt-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground leading-relaxed">
-          Complete the quick check — we&apos;ll email a new code to {verifyEmail}.
-        </p>
-        <form
-          ref={resendAltchaFormRef}
-          className="mt-4 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void runResendWithOptionalAltcha();
-          }}
-        >
-          <div className="flex w-full flex-col">
-            <AltchaField
-              key={resendDialogNonce}
-              enabled={altchaOn}
-              floating="bottom"
-              floatingAnchor="#auth-resend-send-code"
-              floatingOffset={8}
-            />
-            <Button
-              id="auth-resend-send-code"
-              type="submit"
-              className="w-full py-5 text-xs font-black uppercase tracking-widest"
-              disabled={isLoading}
-            >
-              Send new code
-            </Button>
-          </div>
-        </form>
+        <AuthDialogTopBar
+          showBack={false}
+          onClose={() => setResendOtpOpen(false)}
+          closeDisabled={blockResendDialogDismiss}
+        />
+        <div className={AUTH_DIALOG_BODY_CLASS}>
+          <h3
+            id="resend-otp-title"
+            className="text-sm font-black uppercase tracking-tight text-card-foreground"
+          >
+            Resend code
+          </h3>
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground leading-relaxed">
+            Complete the quick check — we&apos;ll email a new code to {verifyEmail}.
+          </p>
+          <form
+            ref={resendAltchaFormRef}
+            className="mt-4 space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runResendWithOptionalAltcha();
+            }}
+          >
+            <div className="flex w-full flex-col">
+              <AltchaField
+                key={resendDialogNonce}
+                enabled={altchaOn}
+                floating="bottom"
+                floatingAnchor="#auth-resend-send-code"
+                floatingOffset={8}
+              />
+              <Button
+                id="auth-resend-send-code"
+                type="submit"
+                className="w-full py-5 text-xs font-black uppercase tracking-widest"
+                disabled={isLoading}
+              >
+                Send new code
+              </Button>
+            </div>
+          </form>
+        </div>
       </Dialog>
     </>
   );

@@ -31,8 +31,14 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
-import { BLOG_POST_THUMBNAIL_ASPECT, BLOG_POST_THUMBNAIL_ASPECT_CLASS } from '@/lib/blog/blogPostThumbnailAspect';
-import { getWriteEditorSessionPostId, setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
+import {
+  BLOG_POST_THUMBNAIL_ASPECT,
+  BLOG_POST_THUMBNAIL_ASPECT_CLASS,
+} from '@/lib/blog/blogPostThumbnailAspect';
+import {
+  getWriteEditorSessionPostId,
+  setWriteEditorSessionPostId,
+} from '@/lib/blog/writeBlogSession';
 import { totalWorkspaceWordCount } from '@/lib/blog/writeWorkspaceStats';
 import {
   BlogWriteEditor,
@@ -43,9 +49,6 @@ import {
 } from '@/components/ui/editor';
 import { DEFAULT_ITEMS } from '@/components/ui/editor';
 import { motion, AnimatePresence } from 'framer-motion';
-
-
-
 
 import {
   SummaryEditor,
@@ -87,12 +90,15 @@ export default function WriteBlogPage() {
   const [taxonomyTags, setTaxonomyTags] = useState<BlogTaxonomyRow[]>([]);
   const [deployOverlayOpen, setDeployOverlayOpen] = useState(false);
   /** Snapshot for deploy overlay squad dropdown seed when it opens. */
-  const [deployOverlayInitialSquadId, setDeployOverlayInitialSquadId] = useState<string | null>(null);
+  const [deployOverlayInitialSquadId, setDeployOverlayInitialSquadId] = useState<string | null>(
+    null
+  );
   const [mySquadsForPublish, setMySquadsForPublish] = useState<
     Pick<SquadSummary, '_id' | 'name' | 'slug'>[]
   >([]);
   const [publishDialogSnapshot, setPublishDialogSnapshot] = useState<BlogPublishTaxonomy>({
-    category: '', tags: [],
+    category: '',
+    tags: [],
     language: 'en',
   });
   const [summary, setSummary] = useState('');
@@ -105,7 +111,9 @@ export default function WriteBlogPage() {
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
-  const [draftSyncStatus, setDraftSyncStatus] = useState<'idle' | 'offline' | 'local' | 'syncing' | 'synced'>('idle');
+  const [draftSyncStatus, setDraftSyncStatus] = useState<
+    'idle' | 'offline' | 'local' | 'syncing' | 'synced'
+  >('idle');
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const [loadedPostStatus, setLoadedPostStatus] = useState<'draft' | 'published' | null>(null);
   const [workspaceReady, setWorkspaceReady] = useState(false);
@@ -118,7 +126,12 @@ export default function WriteBlogPage() {
   const revisionHistorySectionRef = useRef<HTMLDivElement>(null);
   const prevRightSidebarOpenRef = useRef(true);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
-  const latestForSyncRef = useRef({ title: '', summary: '', blocks: [] as Block[], thumbnailPreviewUrl: null as string | null });
+  const latestForSyncRef = useRef({
+    title: '',
+    summary: '',
+    blocks: [] as Block[],
+    thumbnailPreviewUrl: null as string | null,
+  });
   const tokenRef = useRef<string | undefined>(token);
   const squadMongoIdRef = useRef<string | null>(null);
   const skipNextPopStateRef = useRef(false);
@@ -184,7 +197,10 @@ export default function WriteBlogPage() {
       const wasClosed = !prevRightSidebarOpenRef.current;
       if (wasClosed) {
         requestAnimationFrame(() => {
-          revisionHistorySectionRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          revisionHistorySectionRef.current?.scrollIntoView({
+            block: 'nearest',
+            behavior: 'smooth',
+          });
         });
       }
     }
@@ -200,12 +216,12 @@ export default function WriteBlogPage() {
 
   const primarySectionBlocks = useMemo(
     () => blocks.filter((b) => (b.sectionId ?? PRIMARY_SECTION_ID) === PRIMARY_SECTION_ID),
-    [blocks],
+    [blocks]
   );
 
   const totalWords = useMemo(
     () => totalWorkspaceWordCount({ title, summaryHtml: summary, blocks }),
-    [title, summary, blocks],
+    [title, summary, blocks]
   );
 
   const handleBodyActiveBlock = useCallback((b: Block | null) => {
@@ -369,7 +385,7 @@ export default function WriteBlogPage() {
               summary: nextSummary,
               blocks: nextBlocks,
               thumbnailPreviewUrl: nextThumb,
-            }),
+            })
           );
         } else {
           setActivePostId(null);
@@ -405,7 +421,7 @@ export default function WriteBlogPage() {
                 summary: nextSummary,
                 blocks: nextBlocks,
                 thumbnailPreviewUrl: nextThumb,
-              }),
+              })
             );
           } else {
             setTitle('');
@@ -420,9 +436,11 @@ export default function WriteBlogPage() {
             setWriteEditorSessionPostId(null);
             setContentBaseline(
               serializeWriteWorkspace({
-                title: '', summary: '', blocks: [],
+                title: '',
+                summary: '',
+                blocks: [],
                 thumbnailPreviewUrl: null,
-              }),
+              })
             );
           }
         }
@@ -486,7 +504,7 @@ export default function WriteBlogPage() {
       setThumbnailFile(file);
       setThumbnailPreviewUrl(URL.createObjectURL(file));
     },
-    [thumbnailPreviewUrl, token],
+    [thumbnailPreviewUrl, token]
   );
 
   const clearThumbnail = useCallback(() => {
@@ -498,7 +516,7 @@ export default function WriteBlogPage() {
   const addBlock = useCallback(
     (type: BlockType) => {
       const count = blocks.filter(
-        (b) => (b.sectionId ?? PRIMARY_SECTION_ID) === PRIMARY_SECTION_ID,
+        (b) => (b.sectionId ?? PRIMARY_SECTION_ID) === PRIMARY_SECTION_ID
       ).length;
       if (count >= MAX_BLOCKS_PER_SECTION) {
         toast.error(`Limit reached (${MAX_BLOCKS_PER_SECTION} blocks)`);
@@ -506,7 +524,7 @@ export default function WriteBlogPage() {
       }
       setBlocks((prev) => [...prev, createBlockInSection(type, PRIMARY_SECTION_ID)]);
     },
-    [blocks],
+    [blocks]
   );
 
   useBlogWritePageSyncEffects({
@@ -619,7 +637,7 @@ export default function WriteBlogPage() {
       setPostCategory,
       setPostTags,
       setPostLanguage,
-    ],
+    ]
   );
 
   const handleSavePostDetailsFromDialog = useCallback(
@@ -633,7 +651,9 @@ export default function WriteBlogPage() {
       try {
         const content = JSON.stringify(stripLegacyGifBlocks(blocks));
         const summaryToSend =
-          summary && summary !== '<br>' && summaryWordCount(summary) > 0 ? summary.trim() : undefined;
+          summary && summary !== '<br>' && summaryWordCount(summary) > 0
+            ? summary.trim()
+            : undefined;
         const tr = taxonomyPayload(tax);
         const thumbUrl = pickRemoteThumbnailForApi(thumbnailPreviewUrl);
         const sq = squadMongoIdRef.current?.trim();
@@ -653,7 +673,7 @@ export default function WriteBlogPage() {
               language: tr.language,
               ...squadPayload,
             },
-            token,
+            token
           );
         } else {
           const { post } = await blogApi.saveDraft(
@@ -667,7 +687,7 @@ export default function WriteBlogPage() {
               language: tr.language,
               ...squadPayload,
             },
-            token,
+            token
           );
           setActivePostId(post._id);
           setLoadedPostStatus('draft');
@@ -694,65 +714,62 @@ export default function WriteBlogPage() {
       appendRevision,
       setActivePostId,
       setLoadedPostStatus,
-    ],
+    ]
   );
 
-  const handleSaveDraft = useCallback(
-    async () => {
-      if (!title.trim()) {
-        toast.error('ERROR: TITLE_REQUIRED');
-        return;
-      }
-      if (!token) return;
-      setSubmitting(true);
-      setSubmitAction('draft');
-      try {
-        await runBlogWriteSubmit({
-          status: 'draft',
-          token,
-          title,
-          summary,
-          blocks,
-          thumbnailFile,
-          thumbnailPreviewUrl,
-          clearThumbnail,
-          activePostId,
-          setActivePostId,
-          setLoadedPostStatus,
-          setDraftSyncStatus,
-          setTitle,
-          setSummary,
-          setBlocks,
-          taxonomy: { category: postCategory, tags: postTags, language: postLanguage },
-          squadMongoId: squadMongoIdRef.current,
-        });
-        appendRevision({ kind: 'draft_saved', label: 'Draft saved', at: Date.now() });
-        captureBaseline();
-      } catch (e) {
-        console.error(e);
-        toast.error('FATAL: UPLOAD_FAILED');
-      } finally {
-        setSubmitting(false);
-        setSubmitAction(null);
-      }
-    },
-    [
-      title,
-      token,
-      summary,
-      blocks,
-      thumbnailFile,
-      thumbnailPreviewUrl,
-      clearThumbnail,
-      setDraftSyncStatus,
-      activePostId,
-      captureBaseline,
-      appendRevision,
-      postCategory,
-      postTags,
-      postLanguage,
-    ],
-  );
+  const handleSaveDraft = useCallback(async () => {
+    if (!title.trim()) {
+      toast.error('ERROR: TITLE_REQUIRED');
+      return;
+    }
+    if (!token) return;
+    setSubmitting(true);
+    setSubmitAction('draft');
+    try {
+      await runBlogWriteSubmit({
+        status: 'draft',
+        token,
+        title,
+        summary,
+        blocks,
+        thumbnailFile,
+        thumbnailPreviewUrl,
+        clearThumbnail,
+        activePostId,
+        setActivePostId,
+        setLoadedPostStatus,
+        setDraftSyncStatus,
+        setTitle,
+        setSummary,
+        setBlocks,
+        taxonomy: { category: postCategory, tags: postTags, language: postLanguage },
+        squadMongoId: squadMongoIdRef.current,
+      });
+      appendRevision({ kind: 'draft_saved', label: 'Draft saved', at: Date.now() });
+      captureBaseline();
+    } catch (e) {
+      console.error(e);
+      toast.error('FATAL: UPLOAD_FAILED');
+    } finally {
+      setSubmitting(false);
+      setSubmitAction(null);
+    }
+  }, [
+    title,
+    token,
+    summary,
+    blocks,
+    thumbnailFile,
+    thumbnailPreviewUrl,
+    clearThumbnail,
+    setDraftSyncStatus,
+    activePostId,
+    captureBaseline,
+    appendRevision,
+    postCategory,
+    postTags,
+    postLanguage,
+  ]);
 
   if (shouldBlock) return <BlogWritePageSkeletonInner />;
   if (token && !workspaceReady) return <BlogWritePageSkeletonInner />;
@@ -762,7 +779,7 @@ export default function WriteBlogPage() {
   return (
     <div
       className={cn(
-        'ss-write-theme-transition flex h-screen max-h-screen w-full flex-col overflow-hidden border-2 border-border bg-background font-mono text-foreground shadow',
+        'ss-write-theme-transition flex h-screen max-h-screen w-full flex-col overflow-hidden border-2 border-border bg-background font-mono text-foreground shadow'
       )}
     >
       <BlogWriteTopNav
@@ -794,7 +811,6 @@ export default function WriteBlogPage() {
 
       {/* 2. MAIN WORKBENCH - flex so centre expands when sidebars collapse */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-
         {/* LEFT SIDEBAR: animated width, icon strip when collapsed */}
         <motion.div
           initial={false}
@@ -802,7 +818,7 @@ export default function WriteBlogPage() {
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className={cn(
             'flex-shrink-0 flex flex-col border-r-2 border-border bg-muted/20 overflow-hidden min-h-full',
-            'hidden lg:flex',
+            'hidden lg:flex'
           )}
         >
           <AnimatePresence mode="wait">
@@ -857,10 +873,13 @@ export default function WriteBlogPage() {
                     </div>
                     <div className="flex justify-between gap-2 text-[9px]">
                       <span className="text-muted-foreground">Words (workspace)</span>
-                      <span className="shrink-0 font-mono font-bold text-primary">{totalWords.toLocaleString()}</span>
+                      <span className="shrink-0 font-mono font-bold text-primary">
+                        {totalWords.toLocaleString()}
+                      </span>
                     </div>
                     <p className="text-[8px] leading-snug text-muted-foreground">
-                      Title, summary, and every block (paragraphs, headings, code, tables, captions, …).
+                      Title, summary, and every block (paragraphs, headings, code, tables, captions,
+                      …).
                     </p>
                   </div>
                 </section>
@@ -893,9 +912,19 @@ export default function WriteBlogPage() {
                 <div className="shrink-0 mt-2 pt-2 border-t border-border/50 w-full flex flex-col items-center gap-1.5">
                   <div className="relative w-9 h-9">
                     <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-border" />
                       <circle
-                        cx="18" cy="18" r="14"
+                        cx="18"
+                        cy="18"
+                        r="14"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        className="text-border"
+                      />
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="14"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="3"
@@ -909,7 +938,9 @@ export default function WriteBlogPage() {
                     </span>
                   </div>
                   <div className="space-y-0.5 text-center text-[8px] text-muted-foreground">
-                    <div className="font-semibold text-foreground">{totalWords.toLocaleString()}</div>
+                    <div className="font-semibold text-foreground">
+                      {totalWords.toLocaleString()}
+                    </div>
                     <div>words</div>
                   </div>
                 </div>
@@ -921,74 +952,80 @@ export default function WriteBlogPage() {
         {/* CENTRE: expands to fill space */}
         <div className="flex-1 min-w-0 flex flex-col bg-background overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 md:p-8 ss-center-scroll">
-          <div className={cn('mx-auto transition-[max-width] duration-300', centreMaxWidthClass)}>
-             <div className="mb-8">
-               <div className="relative mb-8">
-                 <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">H1</span>
-                 <div className="flex items-center justify-end text-[10px] font-bold text-muted-foreground mb-0.5">
-                   <span>{title.length}/{TITLE_MAX}</span>
-                 </div>
-                 <textarea
-                  ref={titleInputRef}
-                  value={title}
-                  onFocus={() => {
-                    setFocusChrome('title');
+            <div className={cn('mx-auto transition-[max-width] duration-300', centreMaxWidthClass)}>
+              <div className="mb-8">
+                <div className="relative mb-8">
+                  <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">
+                    H1
+                  </span>
+                  <div className="flex items-center justify-end text-[10px] font-bold text-muted-foreground mb-0.5">
+                    <span>
+                      {title.length}/{TITLE_MAX}
+                    </span>
+                  </div>
+                  <textarea
+                    ref={titleInputRef}
+                    value={title}
+                    onFocus={() => {
+                      setFocusChrome('title');
+                      setActiveBodyBlock(null);
+                    }}
+                    onChange={(e) => {
+                      const next = e.target.value.slice(0, TITLE_MAX).replaceAll(/\s+/g, ' ');
+                      setTitle(next);
+                      resizeTitleInput();
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const raw = e.clipboardData.getData('text/plain') ?? '';
+                      const plain = raw.replaceAll(/\s+/g, ' ').trim();
+                      const ta = titleInputRef.current;
+                      if (!ta) return;
+                      const start = ta.selectionStart ?? 0;
+                      const end = ta.selectionEnd ?? start;
+                      const before = title.slice(0, start);
+                      const after = title.slice(end);
+                      const maxInsert = TITLE_MAX - before.length - after.length;
+                      const toInsert = plain.slice(0, Math.max(0, maxInsert));
+                      const newTitle = (before + toInsert + after)
+                        .replaceAll(/\s+/g, ' ')
+                        .slice(0, TITLE_MAX);
+                      setTitle(newTitle);
+                      requestAnimationFrame(() => {
+                        resizeTitleInput();
+                        const newPos = Math.min(before.length + toInsert.length, newTitle.length);
+                        ta.setSelectionRange(newPos, newPos);
+                      });
+                    }}
+                    placeholder="INPUT_TITLE_HERE..."
+                    className="w-full min-h-[3rem] overflow-hidden bg-transparent border-b-2 border-border text-4xl md:text-5xl font-black uppercase tracking-tighter focus:outline-none focus:border-primary placeholder:text-muted-foreground py-4 resize-none"
+                    rows={1}
+                  />
+                </div>
+                <SummaryEditor
+                  value={summary}
+                  onChange={setSummary}
+                  maxWords={SUMMARY_MAX_WORDS}
+                  onFocusCapture={() => {
+                    setFocusChrome('summary');
                     setActiveBodyBlock(null);
                   }}
-                  onChange={(e) => {
-                    const next = e.target.value.slice(0, TITLE_MAX).replaceAll(/\s+/g, ' ');
-                    setTitle(next);
-                    resizeTitleInput();
-                  }}
-                  onPaste={(e) => {
-                    e.preventDefault();
-                    const raw = e.clipboardData.getData('text/plain') ?? '';
-                    const plain = raw.replaceAll(/\s+/g, ' ').trim();
-                    const ta = titleInputRef.current;
-                    if (!ta) return;
-                    const start = ta.selectionStart ?? 0;
-                    const end = ta.selectionEnd ?? start;
-                    const before = title.slice(0, start);
-                    const after = title.slice(end);
-                    const maxInsert = TITLE_MAX - before.length - after.length;
-                    const toInsert = plain.slice(0, Math.max(0, maxInsert));
-                    const newTitle = (before + toInsert + after).replaceAll(/\s+/g, ' ').slice(0, TITLE_MAX);
-                    setTitle(newTitle);
-                    requestAnimationFrame(() => {
-                      resizeTitleInput();
-                      const newPos = Math.min(before.length + toInsert.length, newTitle.length);
-                      ta.setSelectionRange(newPos, newPos);
-                    });
-                  }}
-                  placeholder="INPUT_TITLE_HERE..."
-                  className="w-full min-h-[3rem] overflow-hidden bg-transparent border-b-2 border-border text-4xl md:text-5xl font-black uppercase tracking-tighter focus:outline-none focus:border-primary placeholder:text-muted-foreground py-4 resize-none"
-                  rows={1}
-                 />
-               </div>
-               <SummaryEditor
-                 value={summary}
-                 onChange={setSummary}
-                 maxWords={SUMMARY_MAX_WORDS}
-                 onFocusCapture={() => {
-                   setFocusChrome('summary');
-                   setActiveBodyBlock(null);
-                 }}
-               />
-             </div>
+                />
+              </div>
 
-             <BlogWriteEditor
-               blocks={blocks}
-               onBlocksChange={setBlocks}
-               token={token ?? null}
-               currentUserUsername={user?.username}
-               currentUserHasGithub={user?.isGitAccount}
-               isSidebarOpen={isOpen}
-               maxWidthClassName="max-w-full"
-               activeSectionId={PRIMARY_SECTION_ID}
-               onActiveBlockChange={handleBodyActiveBlock}
-             />
+              <BlogWriteEditor
+                blocks={blocks}
+                onBlocksChange={setBlocks}
+                token={token ?? null}
+                currentUserUsername={user?.username}
+                currentUserHasGithub={user?.isGitAccount}
+                isSidebarOpen={isOpen}
+                maxWidthClassName="max-w-full"
+                activeSectionId={PRIMARY_SECTION_ID}
+                onActiveBlockChange={handleBodyActiveBlock}
+              />
+            </div>
           </div>
-        </div>
         </div>
 
         {/* RIGHT SIDEBAR: animated width, icon strip when collapsed */}
@@ -998,7 +1035,7 @@ export default function WriteBlogPage() {
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className={cn(
             'flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-l-2 border-border bg-card',
-            'hidden lg:flex',
+            'hidden lg:flex'
           )}
         >
           <AnimatePresence mode="wait">
@@ -1023,7 +1060,8 @@ export default function WriteBlogPage() {
                       className="group relative bg-primary text-primary-foreground border-2 border-black p-3 font-black uppercase text-xs shadow active:shadow-none active:translate-x-1 active:translate-y-1 transition-all disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <div className="flex items-center justify-center gap-2">
-                        <Send className="h-4 w-4" /> {submitAction === 'published' ? 'Deploying...' : 'Deploy_Post'}
+                        <Send className="h-4 w-4" />{' '}
+                        {submitAction === 'published' ? 'Deploying...' : 'Deploy_Post'}
                       </div>
                     </button>
                     <button
@@ -1033,7 +1071,8 @@ export default function WriteBlogPage() {
                       className="bg-muted border-2 border-border p-3 font-black uppercase text-xs shadow active:shadow-none active:translate-x-1 active:translate-y-1 transition-all hover:bg-card disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <div className="flex items-center justify-center gap-2">
-                        <Save className="h-4 w-4" /> {submitAction === 'draft' ? 'Saving...' : 'Save_Draft'}
+                        <Save className="h-4 w-4" />{' '}
+                        {submitAction === 'draft' ? 'Saving...' : 'Save_Draft'}
                       </div>
                     </button>
                   </div>
@@ -1043,15 +1082,18 @@ export default function WriteBlogPage() {
                     <Globe className="h-4 w-4 text-primary" /> Asset_Configuration
                   </h3>
                   <div>
-
                     {thumbnailPreviewUrl ? (
                       <div
                         className={cn(
                           'group/thumb relative overflow-hidden bg-muted border-2 border-dashed border-neutral-300 dark:border-neutral-600',
-                          BLOG_POST_THUMBNAIL_ASPECT_CLASS,
+                          BLOG_POST_THUMBNAIL_ASPECT_CLASS
                         )}
                       >
-                        <img src={thumbnailPreviewUrl} alt="Thumbnail preview" className="h-full w-full object-cover" />
+                        <img
+                          src={thumbnailPreviewUrl}
+                          alt="Thumbnail preview"
+                          className="h-full w-full object-cover"
+                        />
                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover/thumb:opacity-100 md:group-focus-within/thumb:opacity-100">
                           <button
                             type="button"
@@ -1059,7 +1101,7 @@ export default function WriteBlogPage() {
                             aria-label="Change thumbnail"
                             className={cn(
                               'pointer-events-auto inline-flex h-10 w-10 items-center justify-center border-2 border-border bg-card text-foreground shadow',
-                              'transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                              'transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
                             )}
                           >
                             <Pencil className="h-4 w-4 shrink-0" aria-hidden />
@@ -1070,7 +1112,7 @@ export default function WriteBlogPage() {
                             aria-label="Remove thumbnail"
                             className={cn(
                               'pointer-events-auto inline-flex h-10 w-10 items-center justify-center border-2 border-destructive/40 bg-destructive/15 text-destructive shadow',
-                              'transition-colors hover:bg-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive',
+                              'transition-colors hover:bg-destructive/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive'
                             )}
                           >
                             <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
@@ -1085,12 +1127,16 @@ export default function WriteBlogPage() {
                         className={cn(
                           'w-full flex flex-col items-center justify-center gap-2 cursor-pointer shadow  border border-dashed border-border ',
                           'hover:bg-muted/35 transition-colors text-left',
-                          BLOG_POST_THUMBNAIL_ASPECT_CLASS,
+                          BLOG_POST_THUMBNAIL_ASPECT_CLASS
                         )}
                       >
                         <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Upload thumbnail</span>
-                        <span className="text-[9px] text-muted-foreground">JPEG, PNG, GIF, WebP · max {THUMB_MAX_MB}MB</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                          Upload thumbnail
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">
+                          JPEG, PNG, GIF, WebP · max {THUMB_MAX_MB}MB
+                        </span>
                       </button>
                     )}
                   </div>
@@ -1104,7 +1150,9 @@ export default function WriteBlogPage() {
                       <History className="h-3.5 w-3.5 shrink-0 text-primary" /> Revision history
                     </h4>
                     {revisions.length > 0 ? (
-                      <span className="shrink-0 font-mono text-[8px] text-muted-foreground">{revisions.length}</span>
+                      <span className="shrink-0 font-mono text-[8px] text-muted-foreground">
+                        {revisions.length}
+                      </span>
                     ) : null}
                   </div>
                   <ul className="min-h-0 max-h-[min(42vh,15rem)] flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-1 [scrollbar-width:thin]">
@@ -1116,14 +1164,16 @@ export default function WriteBlogPage() {
                         <span
                           className={cn(
                             'mt-0.5 shrink-0  border px-1 py-0.5 text-[7px] font-black uppercase tracking-wider',
-                            revisionKindBadgeClass(r.kind),
+                            revisionKindBadgeClass(r.kind)
                           )}
                         >
                           {r.kind.replaceAll('_', ' ')}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="font-semibold text-foreground">{r.label}</div>
-                          <div className="mt-0.5 font-mono text-[8px] text-muted-foreground">{formatRevisionWhen(r.at)}</div>
+                          <div className="mt-0.5 font-mono text-[8px] text-muted-foreground">
+                            {formatRevisionWhen(r.at)}
+                          </div>
                         </div>
                       </li>
                     ))}
@@ -1191,7 +1241,9 @@ export default function WriteBlogPage() {
         onClose={() => setThumbnailDialogOpen(false)}
         titleId="thumbnail-crop-title"
         title="Upload thumbnail"
-        titleIcon={<ImageIcon className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />}
+        titleIcon={
+          <ImageIcon className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
+        }
         subtitle={`16∶10 · Same frame as feed cards · JPEG, PNG, GIF or WebP · max ${THUMB_MAX_MB} MB · uploads when you publish`}
         subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
         maxSizeBytes={THUMB_MAX_MB * 1024 * 1024}
@@ -1229,12 +1281,15 @@ export default function WriteBlogPage() {
         titleId="revision-history-all-title"
         panelClassName={cn(
           'pointer-events-auto flex h-[min(90vh,560px)] max-h-[min(90vh,560px)] w-full max-w-lg flex-col overflow-hidden',
-          'border-2 border-border bg-card shadow',
+          'border-2 border-border bg-card shadow'
         )}
         contentClassName="relative flex h-full min-h-0 flex-1 flex-col p-0"
       >
         <div className="shrink-0 border-b-2 border-border px-5 py-4 sm:px-6">
-          <h2 id="revision-history-all-title" className="text-sm font-black uppercase tracking-widest">
+          <h2
+            id="revision-history-all-title"
+            className="text-sm font-black uppercase tracking-widest"
+          >
             All revision history
           </h2>
           <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1254,14 +1309,16 @@ export default function WriteBlogPage() {
                 <span
                   className={cn(
                     'mt-0.5 shrink-0  border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider',
-                    revisionKindBadgeClass(r.kind),
+                    revisionKindBadgeClass(r.kind)
                   )}
                 >
                   {r.kind.replaceAll('_', ' ')}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-foreground">{r.label}</div>
-                  <div className="mt-0.5 font-mono text-[9px] text-muted-foreground">{formatRevisionWhen(r.at)}</div>
+                  <div className="mt-0.5 font-mono text-[9px] text-muted-foreground">
+                    {formatRevisionWhen(r.at)}
+                  </div>
                 </div>
               </li>
             ))}
@@ -1292,5 +1349,3 @@ export default function WriteBlogPage() {
     </div>
   );
 }
-
-

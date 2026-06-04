@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
 
-
 /** Outer spacing for every settings tab (heading + panel). */
 export const settingsTabRootClassName = 'space-y-5';
 

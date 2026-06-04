@@ -37,7 +37,8 @@ export async function sendViaResend(
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     const status = res.status;
-    const kind: 'transient' | 'provider' = status >= 500 || status === 429 ? 'transient' : 'provider';
+    const kind: 'transient' | 'provider' =
+      status >= 500 || status === 429 ? 'transient' : 'provider';
     throw new MailSendError(`Resend HTTP ${status}: ${body || res.statusText}`, kind);
   }
 }

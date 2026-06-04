@@ -8,7 +8,9 @@ const MAX_CAPTURE_EDGE = 1920;
  */
 export async function captureScreenToFeedbackFile(): Promise<File> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getDisplayMedia) {
-    throw new Error('Screen capture is not supported in this browser. Try Chrome or Edge, or use Upload instead.');
+    throw new Error(
+      'Screen capture is not supported in this browser. Try Chrome or Edge, or use Upload instead.'
+    );
   }
 
   const stream = await navigator.mediaDevices.getDisplayMedia({

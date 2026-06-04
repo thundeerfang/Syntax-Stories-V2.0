@@ -7,7 +7,6 @@ import { X, UsersRound } from 'lucide-react';
 import { Dialog } from './dialogs';
 import { cn } from '@/lib/core/utils';
 
-
 export type InfoSwiperSlide = {
   id: string;
   title: string;
@@ -110,7 +109,7 @@ export function InfoSwiperDialog({
       closeOnEscape
       panelClassName={cn(
         'max-w-lg overflow-hidden -3xl border-2 border-violet-500 bg-black p-0 text-white shadow',
-        panelClassName,
+        panelClassName
       )}
       contentClassName="p-0 flex flex-col max-h-[min(90vh,640px)]"
     >
@@ -146,7 +145,9 @@ export function InfoSwiperDialog({
               {slide?.title}
             </h2>
             {slide?.body != null ? (
-              <div className="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">{slide.body}</div>
+              <div className="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">
+                {slide.body}
+              </div>
             ) : null}
           </motion.div>
         </AnimatePresence>
@@ -155,7 +156,7 @@ export function InfoSwiperDialog({
       {/* Footer */}
       <div
         className={cn(
-          'flex shrink-0 items-center gap-3 border-t border-white/10 bg-zinc-950 px-5 py-4 sm:px-6',
+          'flex shrink-0 items-center gap-3 border-t border-white/10 bg-zinc-950 px-5 py-4 sm:px-6'
         )}
       >
         <button
@@ -172,7 +173,7 @@ export function InfoSwiperDialog({
               role="presentation"
               className={cn(
                 'h-2 w-2  transition-colors',
-                i === safeIndex ? 'bg-white' : 'bg-zinc-600',
+                i === safeIndex ? 'bg-white' : 'bg-zinc-600'
               )}
             />
           ))}

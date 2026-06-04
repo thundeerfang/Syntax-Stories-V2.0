@@ -3,8 +3,10 @@
 import * as React from 'react';
 import { cn } from '@/lib/core/utils';
 
-
-export interface ToggleProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onChange'> {
+export interface ToggleProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'onChange'
+> {
   /** Controlled pressed state */
   pressed?: boolean;
   /** Uncontrolled default */
@@ -18,7 +20,18 @@ export interface ToggleProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
  * Use for one on/off state, or use two Toggles side-by-side for a two-option switch (e.g. Project | Publication).
  */
 export const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
-  ({ pressed: controlledPressed, defaultPressed = false, onPressedChange, className, children, onClick, ...props }, ref) => {
+  (
+    {
+      pressed: controlledPressed,
+      defaultPressed = false,
+      onPressedChange,
+      className,
+      children,
+      onClick,
+      ...props
+    },
+    ref
+  ) => {
     const [uncontrolled, setUncontrolled] = React.useState(defaultPressed);
     const isControlled = controlledPressed !== undefined;
     const pressed = isControlled ? controlledPressed : uncontrolled;
@@ -42,10 +55,8 @@ export const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
           'disabled:pointer-events-none disabled:opacity-50',
           // Neomorphism: unpressed = soft raised, pressed = inset / filled
-          !pressed &&
-            'bg-muted/40 text-muted-foreground shadow hover:bg-muted/60',
-          pressed &&
-            'bg-primary text-primary-foreground border-primary shadow',
+          !pressed && 'bg-muted/40 text-muted-foreground shadow hover:bg-muted/60',
+          pressed && 'bg-primary text-primary-foreground border-primary shadow',
           className
         )}
         {...props}

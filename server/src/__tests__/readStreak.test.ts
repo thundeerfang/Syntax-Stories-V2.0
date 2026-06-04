@@ -17,7 +17,11 @@ describe('read streak helpers', () => {
 
   it('computeDailyStreak: current counts consecutive days from today or yesterday', () => {
     const now = new Date(Date.UTC(2026, 4, 4));
-    const dates = [new Date(Date.UTC(2026, 4, 4)), new Date(Date.UTC(2026, 4, 3)), new Date(Date.UTC(2026, 4, 2))];
+    const dates = [
+      new Date(Date.UTC(2026, 4, 4)),
+      new Date(Date.UTC(2026, 4, 3)),
+      new Date(Date.UTC(2026, 4, 2)),
+    ];
     const r = computeDailyStreak(dates, now);
     expect(r.current).toBe(3);
     expect(r.longest).toBe(3);
@@ -89,7 +93,11 @@ describe('read streak helpers', () => {
 
   it('computeMonthlyStreak: consecutive calendar months', () => {
     const now = new Date(Date.UTC(2026, 4, 15));
-    const dates = [new Date(Date.UTC(2026, 4, 1)), new Date(Date.UTC(2026, 3, 10)), new Date(Date.UTC(2026, 2, 5))];
+    const dates = [
+      new Date(Date.UTC(2026, 4, 1)),
+      new Date(Date.UTC(2026, 3, 10)),
+      new Date(Date.UTC(2026, 2, 5)),
+    ];
     const r = computeMonthlyStreak(dates, now);
     expect(r.current).toBe(3);
     expect(r.longest).toBe(3);

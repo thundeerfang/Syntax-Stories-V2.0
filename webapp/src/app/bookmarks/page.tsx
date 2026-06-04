@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Bookmark, Compass, FolderPlus, Search } from 'lucide-react';
@@ -8,19 +7,22 @@ import { RetroSortDropdown } from '@/components/ui/retro';
 import { toast } from 'sonner';
 import { bookmarksApi, type BookmarkGroupRow } from '@/api/bookmarks';
 import { BlogCard } from '@/features/blog';
-import { RailFeedEmptyState, ShellPageIntroHeader } from '@/components/layout';
+import { RailFeedEmptyState, ShellPageIntroHeader, SignInRequiredPanel } from '@/components/layout';
 import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
+import {
+  BookmarkFolderChip,
+} from '@/components/bookmarks/BookmarkFolderChip';
+import {
+  BookmarkFolderFormDialog,
+  type BookmarkFolderFormValues,
+} from '@/components/bookmarks/BookmarkFolderFormDialog';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import { Dialog, DIALOG_Z_INDEX_STACKED } from '@/components/ui/dialog';
 import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
-
-
-const LOGIN_NEXT = '/bookmarks';
 
 const BOOKMARK_SORT_OPTIONS = [
   { value: 'newest' as const, label: 'Newest saved', shortLabel: 'Newest' },
@@ -53,15 +55,23 @@ export default function BookmarksPage() {
   const [searchDebounced, setSearchDebounced] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createName, setCreateName] = useState('');
-  const [createEmoji, setCreateEmoji] = useState('');
-  const [createMakeDefault, setCreateMakeDefault] = useState(false);
-  const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [folderDialogMode, setFolderDialogMode] = useState<'create' | 'edit'>('create');
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [folderForm, setFolderForm] = useState<BookmarkFolderFormValues>({
+    name: '',
+    emoji: '',
+    makeDefault: false,
+  });
+  const [folderSubmitting, setFolderSubmitting] = useState(false);
 
   const [defaultConfirmOpen, setDefaultConfirmOpen] = useState(false);
   const [pendingDefault, setPendingDefault] = useState<{ id: string; name: string } | null>(null);
   const [defaultConfirming, setDefaultConfirming] = useState(false);
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<BookmarkGroupRow | null>(null);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
 
   /** After first successful groups+posts cycle, only the grid shows a loading skeleton (folder bar stays). */
   const [initialLoadDone, setInitialLoadDone] = useState(false);
@@ -140,26 +150,90 @@ export default function BookmarksPage() {
     void loadPosts();
   }, [token, loadPosts]);
 
-  const handleCreateGroup = useCallback(async () => {
-    if (!token || !createName.trim()) return;
-    setCreateSubmitting(true);
+  const openCreateFolder = useCallback(() => {
+    setFolderDialogMode('create');
+    setEditingGroupId(null);
+    setFolderForm({ name: '', emoji: '', makeDefault: false });
+    setFolderDialogOpen(true);
+  }, []);
+
+  const openEditFolder = useCallback((g: BookmarkGroupRow) => {
+    setFolderDialogMode('edit');
+    setEditingGroupId(g._id);
+    setFolderForm({
+      name: g.name,
+      emoji: g.emoji ?? '',
+      makeDefault: false,
+    });
+    setFolderDialogOpen(true);
+  }, []);
+
+  const closeFolderDialog = useCallback(() => {
+    if (folderSubmitting) return;
+    setFolderDialogOpen(false);
+    setEditingGroupId(null);
+  }, [folderSubmitting]);
+
+  const handleFolderFormSubmit = useCallback(async () => {
+    if (!token || !folderForm.name.trim()) return;
+    setFolderSubmitting(true);
     try {
-      await bookmarksApi.createGroup(createName.trim(), token, {
-        emoji: createEmoji.trim() || undefined,
-        makeDefault: createMakeDefault,
-      });
-      setCreateOpen(false);
-      setCreateName('');
-      setCreateEmoji('');
-      setCreateMakeDefault(false);
+      if (folderDialogMode === 'create') {
+        await bookmarksApi.createGroup(folderForm.name.trim(), token, {
+          emoji: folderForm.emoji || undefined,
+          makeDefault: folderForm.makeDefault,
+        });
+        toast.success('Folder created');
+      } else if (editingGroupId) {
+        await bookmarksApi.updateGroup(editingGroupId, token, {
+          name: folderForm.name.trim(),
+          emoji: folderForm.emoji,
+        });
+        toast.success('Folder updated');
+      }
+      setFolderDialogOpen(false);
+      setEditingGroupId(null);
+      setFolderForm({ name: '', emoji: '', makeDefault: false });
       await loadGroups();
-      toast.success('Folder created');
     } catch (e) {
-      toastApiError(e, 'Could not create folder');
+      toastApiError(
+        e,
+        folderDialogMode === 'create' ? 'Could not create folder' : 'Could not update folder'
+      );
     } finally {
-      setCreateSubmitting(false);
+      setFolderSubmitting(false);
     }
-  }, [token, createName, createEmoji, createMakeDefault, loadGroups]);
+  }, [token, folderForm, folderDialogMode, editingGroupId, loadGroups]);
+
+  const openDeleteConfirm = useCallback((g: BookmarkGroupRow) => {
+    if (g.isDefault) return;
+    setPendingDelete(g);
+    setDeleteConfirmOpen(true);
+  }, []);
+
+  const closeDeleteConfirm = useCallback(() => {
+    if (deleteConfirming) return;
+    setDeleteConfirmOpen(false);
+    setPendingDelete(null);
+  }, [deleteConfirming]);
+
+  const confirmDeleteFolder = useCallback(async () => {
+    if (!token || !pendingDelete) return;
+    setDeleteConfirming(true);
+    try {
+      await bookmarksApi.deleteGroup(pendingDelete._id, token);
+      if (selectedFilter === pendingDelete._id) setSelectedFilter('all');
+      setDeleteConfirmOpen(false);
+      setPendingDelete(null);
+      await loadGroups();
+      await loadPosts();
+      toast.success('Folder deleted');
+    } catch (e) {
+      toastApiError(e, 'Could not delete folder');
+    } finally {
+      setDeleteConfirming(false);
+    }
+  }, [token, pendingDelete, selectedFilter, loadGroups, loadPosts]);
 
   const closeDefaultConfirm = useCallback(() => {
     if (defaultConfirming) return;
@@ -191,8 +265,7 @@ export default function BookmarksPage() {
   const showGate = isHydrated && (!token || !user);
 
   const showFullPageSkeleton =
-    !isHydrated ||
-    (Boolean(token && user) && !initialLoadDone && (groupsLoading || postsLoading));
+    !isHydrated || (Boolean(token && user) && !initialLoadDone && (groupsLoading || postsLoading));
 
   return (
     <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
@@ -221,17 +294,10 @@ export default function BookmarksPage() {
             </section>
           </div>
         ) : showGate ? (
-          <div className="max-w-lg space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Sign in to see posts you have bookmarked and manage folders.
-            </p>
-            <Link
-              href={`/login?next=${encodeURIComponent(LOGIN_NEXT)}`}
-              className="inline-block border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-            >
-              Sign in
-            </Link>
-          </div>
+          <SignInRequiredPanel
+            icon={Bookmark}
+            description="Sign in to see posts you have bookmarked and manage folders."
+          />
         ) : (
           <>
             <div className="w-full min-w-0 border-[3px] border-border bg-white p-3 dark:bg-card sm:p-4">
@@ -245,67 +311,26 @@ export default function BookmarksPage() {
                         'shrink-0  border-2 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest transition-colors transition-transform active:translate-x-0.5 active:translate-y-0.5',
                         selectedFilter === 'all'
                           ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border bg-card text-foreground hover:bg-muted/60',
+                          : 'border-border bg-card text-foreground hover:bg-muted/60'
                       )}
                     >
                       All saved
                     </button>
-                    {groups.map((g) => {
-                      const active = selectedFilter === g._id;
-                      return (
-                        <div
-                          key={g._id}
-                          className={cn(
-                            'flex shrink-0 items-center gap-1  border-2 px-1 py-1',
-                            active ? 'border-primary bg-primary/10' : 'border-border bg-card',
-                          )}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setSelectedFilter(g._id)}
-                            className={cn(
-                              'flex max-w-[10rem] items-center gap-1.5 truncate px-2 py-1.5 font-mono text-[10px] font-black uppercase tracking-widest transition-colors',
-                              active ? 'text-primary' : 'text-foreground hover:bg-muted/50',
-                            )}
-                          >
-                            {g.emoji ? (
-                              <span className="shrink-0 text-base leading-none normal-case" aria-hidden>
-                                {g.emoji}
-                              </span>
-                            ) : null}
-                            <span className="truncate">{g.name}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              openDefaultConfirm(g);
-                            }}
-                            disabled={groupsLoading || g.isDefault}
-                            title={
-                              g.isDefault
-                                ? 'Default folder for new bookmarks'
-                                : 'Make default for new bookmarks'
-                            }
-                            aria-label={
-                              g.isDefault
-                                ? 'Default folder for new bookmarks'
-                                : `Make ${g.name} the default folder for new bookmarks`
-                            }
-                            className={cn(
-                              'relative mr-1 shrink-0  border-2 transition-colors disabled:opacity-100',
-                              g.isDefault
-                                ? 'pointer-events-none size-2.5 cursor-default border-purple-600 bg-purple-600 shadow'
-                                : 'size-2.5 border-muted-foreground/35 bg-transparent hover:border-purple-500 disabled:opacity-50',
-                            )}
-                          />
-                        </div>
-                      );
-                    })}
+                    {groups.map((g) => (
+                      <BookmarkFolderChip
+                        key={g._id}
+                        group={g}
+                        active={selectedFilter === g._id}
+                        groupsLoading={groupsLoading}
+                        onSelect={() => setSelectedFilter(g._id)}
+                        onMakeDefault={() => openDefaultConfirm(g)}
+                        onEdit={() => openEditFolder(g)}
+                        onDelete={() => openDeleteConfirm(g)}
+                      />
+                    ))}
                     <button
                       type="button"
-                      onClick={() => setCreateOpen(true)}
+                      onClick={openCreateFolder}
                       className="ml-auto inline-flex shrink-0 items-center gap-2 border-2 border-border bg-card px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest shadow hover:bg-muted/50"
                     >
                       <FolderPlus className="size-4 shrink-0" strokeWidth={2.25} aria-hidden />
@@ -406,81 +431,33 @@ export default function BookmarksPage() {
               onConfirm={confirmSetDefault}
             />
 
-            <Dialog
-              open={createOpen}
-              onClose={() => !createSubmitting && setCreateOpen(false)}
-              titleId="bookmark-new-folder-title"
-              title="New folder"
-              description="Name it, add add new bookmark."
-              titleIcon={<Bookmark strokeWidth={2.25} />}
-              panelClassName="max-w-md"
-              contentClassName="px-6 pb-6 pt-2"
-              showCloseButton={true}
-              zIndex={DIALOG_Z_INDEX_STACKED}
-            >
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="bookmark-folder-name" className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                    Folder name
-                  </label>
-                  <input
-                    id="bookmark-folder-name"
-                    value={createName}
-                    onChange={(e) => setCreateName(e.target.value)}
-                    placeholder="e.g. Research"
-                    maxLength={80}
-                    className="w-full border-2 border-border bg-background px-3 py-2 font-mono text-xs outline-none ring-primary focus-visible:ring-2"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="bookmark-folder-emoji" className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                    Emoji (optional)
-                  </label>
-                  <input
-                    id="bookmark-folder-emoji"
-                    value={createEmoji}
-                    onChange={(e) => setCreateEmoji(e.target.value.slice(0, 8))}
-                    placeholder="📚"
-                    maxLength={8}
-                    className="w-full border-2 border-border bg-background px-3 py-2 font-mono text-sm outline-none ring-primary focus-visible:ring-2"
-                    autoComplete="off"
-                  />
-                </div>
-                <label className="flex cursor-pointer items-start gap-3 border-2 border-border bg-muted/20 px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={createMakeDefault}
-                    onChange={(e) => setCreateMakeDefault(e.target.checked)}
-                    className="mt-0.5 size-4 shrink-0 accent-primary"
-                  />
-                  <span className="text-left text-xs leading-snug text-foreground">
-                    <span className="font-bold">Default folder</span>
-                    <span className="block text-muted-foreground">
-                      New bookmarks from your feed and story pages save here unless you pick another folder.
-                    </span>
-                  </span>
-                </label>
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    disabled={createSubmitting}
-                    onClick={() => setCreateOpen(false)}
-                    className="border-2 border-border bg-background px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide shadow transition-colors hover:bg-muted/40 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={createSubmitting || !createName.trim()}
-                    onClick={() => void handleCreateGroup()}
-                    className="border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 disabled:opacity-40"
-                  >
-                    {createSubmitting ? 'Creating…' : 'Create'}
-                  </button>
-                </div>
-              </div>
-            </Dialog>
+            <ConfirmDialog
+              open={deleteConfirmOpen}
+              onClose={closeDeleteConfirm}
+              titleId="bookmark-delete-folder-title"
+              title="Delete this folder?"
+              variant="danger"
+              message={
+                pendingDelete
+                  ? `“${pendingDelete.name}” will be removed. Saved posts in this folder move to your default folder.`
+                  : undefined
+              }
+              confirmLabel="Delete folder"
+              closeOnConfirm={false}
+              loading={deleteConfirming}
+              onConfirm={confirmDeleteFolder}
+            />
+
+            <BookmarkFolderFormDialog
+              open={folderDialogOpen}
+              mode={folderDialogMode}
+              submitting={folderSubmitting}
+              values={folderForm}
+              onClose={closeFolderDialog}
+              onChange={(patch) => setFolderForm((prev) => ({ ...prev, ...patch }))}
+              onSubmit={() => void handleFolderFormSubmit()}
+              showMakeDefault={folderDialogMode === 'create'}
+            />
           </>
         )}
       </div>

@@ -6,6 +6,10 @@ import {
   viewerRespectStatesForPosts,
 } from '../services/blogRespect.service.js';
 import { publishBlogPostStatsSnapshot } from '../services/blogStatsPublish.service.js';
+import {
+  attachAchievementsToResponse,
+  dispatchAchievementEvents,
+} from '../achievements/achievement.service.js';
 
 function paramString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
@@ -29,7 +33,9 @@ export async function setBlogRespect(req: Request, res: Response): Promise<void>
     }
     const body = req.body as { respecting?: unknown };
     if (typeof body.respecting !== 'boolean') {
-      res.status(400).json({ success: false, message: 'Body must include respecting: true | false' });
+      res
+        .status(400)
+        .json({ success: false, message: 'Body must include respecting: true | false' });
       return;
     }
 
@@ -53,12 +59,35 @@ export async function setBlogRespect(req: Request, res: Response): Promise<void>
 
     void publishBlogPostStatsSnapshot(found.postId);
 
-    res.status(200).json({
-      success: true,
-      respecting: result.respecting,
-      respectCount: result.respectCount,
-      authorBlogRespectReceivedCount: result.authorBlogRespectReceivedCount,
-    });
+    const events =
+      result.newRespectEdge && result.respecting
+        ? ([{ type: 'respect_given' as const }] as const)
+        : [];
+    const [viewerUnlocks, authorUnlocks] = await Promise.all([
+      events.length > 0
+        ? dispatchAchievementEvents(String(user._id), [...events])
+        : Promise.resolve([]),
+      result.newRespectEdge && result.respecting
+        ? dispatchAchievementEvents(String(found.authorId), [{ type: 'profile_sync' }])
+        : Promise.resolve([]),
+    ]);
+
+    res.status(200).json(
+      attachAchievementsToResponse(
+        {
+          success: true,
+          respecting: result.respecting,
+          respectCount: result.respectCount,
+          authorBlogRespectReceivedCount: result.authorBlogRespectReceivedCount,
+        },
+        viewerUnlocks
+      )
+    );
+
+    if (authorUnlocks.length > 0) {
+      // Author unlocks (e.g. respect received) are not shown to the viewer in this response.
+      void authorUnlocks;
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to update Respect' });

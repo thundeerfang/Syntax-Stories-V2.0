@@ -71,7 +71,8 @@ function shapePublicComment(c: LeanPopulatedComment, viewerId?: string) {
   const liked = c.likedBy ?? [];
   const likeCount = liked.length;
   const likedByViewer = Boolean(viewerId && liked.some((id) => String(id) === viewerId));
-  const editedAt = c.editedAt instanceof Date && !Number.isNaN(c.editedAt.getTime()) ? c.editedAt : null;
+  const editedAt =
+    c.editedAt instanceof Date && !Number.isNaN(c.editedAt.getTime()) ? c.editedAt : null;
   return {
     _id: String(c._id),
     parentId: c.parentId ? String(c.parentId) : null,
@@ -153,7 +154,9 @@ export async function addBlogComment(req: Request, res: Response): Promise<void>
         res.status(400).json({ success: false, message: 'Invalid parent comment' });
         return;
       }
-      const parent = await BlogCommentModel.findOne({ _id: pid, postId: resolved.postId }).select('_id').lean();
+      const parent = await BlogCommentModel.findOne({ _id: pid, postId: resolved.postId })
+        .select('_id')
+        .lean();
       if (!parent) {
         res.status(400).json({ success: false, message: 'Invalid parent comment' });
         return;
@@ -191,7 +194,7 @@ export async function addBlogComment(req: Request, res: Response): Promise<void>
 async function loadCommentOnPublishedPost(
   usernameParam: string,
   slug: string,
-  commentId: string,
+  commentId: string
 ): Promise<{ postId: mongoose.Types.ObjectId; comment: LeanPopulatedComment } | null> {
   if (!mongoose.isValidObjectId(commentId)) return null;
   const resolved = await resolvePublishedPost(usernameParam, slug);

@@ -5,7 +5,10 @@ export {
   resolveSquadMediaUrl,
   type SquadDiscoverCardProps,
 } from './components/SquadDiscoverCard';
-export { SquadsPageBrowseSkeleton, SquadsPageContentSkeleton } from './components/SquadsPageSkeleton';
+export {
+  SquadsPageBrowseSkeleton,
+  SquadsPageContentSkeleton,
+} from './components/SquadsPageSkeleton';
 export { SQUADS_INTRO_SLIDES } from './components/squadsIntroSlides';
 export { default as SquadsBrowsePage } from './pages/SquadsBrowsePage';
 export { default as SquadDetailPage } from './pages/SquadDetailPage';

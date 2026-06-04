@@ -49,7 +49,11 @@ export function normalizeTaxonomyInput(body: {
 
   let language: string | undefined;
   if (typeof body.language === 'string' && body.language.trim()) {
-    const l = body.language.trim().toLowerCase().replaceAll(/[^a-z-]/g, '').slice(0, LANGUAGE_MAX);
+    const l = body.language
+      .trim()
+      .toLowerCase()
+      .replaceAll(/[^a-z-]/g, '')
+      .slice(0, LANGUAGE_MAX);
     if (l) language = l;
   }
 

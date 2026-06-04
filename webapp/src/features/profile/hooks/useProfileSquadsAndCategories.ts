@@ -11,13 +11,15 @@ import type { BlogTaxonomyRow } from '@/types/blog';
 
 export type FollowedCategoryRow = { slug: string; name: string; postCount: number };
 
-export function useProfileSquadsAndCategories(opts: Readonly<{
-  username: string | null;
-  userId: string | null;
-  token: string | null;
-  isSelf: boolean;
-  enabled?: boolean;
-}>) {
+export function useProfileSquadsAndCategories(
+  opts: Readonly<{
+    username: string | null;
+    userId: string | null;
+    token: string | null;
+    isSelf: boolean;
+    enabled?: boolean;
+  }>
+) {
   const { username, userId, token, isSelf, enabled = true } = opts;
   const [squads, setSquads] = useState<SquadSummary[]>([]);
   const [categories, setCategories] = useState<FollowedCategoryRow[]>([]);
@@ -59,7 +61,7 @@ export function useProfileSquadsAndCategories(opts: Readonly<{
       }
       const tax = await blogApi.getTaxonomy();
       const bySlug = new Map(
-        (tax.categories ?? []).map((c: BlogTaxonomyRow) => [c.slug.toLowerCase(), c] as const),
+        (tax.categories ?? []).map((c: BlogTaxonomyRow) => [c.slug.toLowerCase(), c] as const)
       );
       const rows: FollowedCategoryRow[] = slugs
         .map((slug) => {

@@ -1,19 +1,10 @@
 'use client';
 
 import React from 'react';
-import {
-  Briefcase,
-  FolderGit2,
-  Github,
-  GraduationCap,
-  Plus,
-  RefreshCw,
-  Award,
-} from 'lucide-react';
+import { Briefcase, FolderGit2, Github, GraduationCap, Plus, RefreshCw, Award } from 'lucide-react';
 import { BlockShadowButton } from '@/components/ui';
 import { cn } from '@/lib/core/utils';
 import { SettingsSectionHeading } from './SettingsSectionHeading';
-
 
 type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';
 
@@ -58,7 +49,7 @@ function HeaderWrapper({
     <header
       className={cn(
         'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-6',
-        border && 'border-b-4 border-border mb-6',
+        border && 'border-b-4 border-border mb-6'
       )}
     >
       {children}
@@ -66,7 +57,11 @@ function HeaderWrapper({
   );
 }
 
-export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: SettingsSectionHeaderProps) {
+export function SettingsSectionHeader({
+  variant,
+  onPrimaryAction,
+  disabled,
+}: SettingsSectionHeaderProps) {
   if (variant === 'work') {
     return (
       <HeaderWrapper>
@@ -75,7 +70,12 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
           title="Work Experience"
           description="Professional history and career milestones."
         />
-        <HeaderActionButton onClick={onPrimaryAction} disabled={disabled} icon={Plus} label="Add Experience" />
+        <HeaderActionButton
+          onClick={onPrimaryAction}
+          disabled={disabled}
+          icon={Plus}
+          label="Add Experience"
+        />
       </HeaderWrapper>
     );
   }
@@ -88,7 +88,12 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
           title="Education"
           description="Academic background and qualifications."
         />
-        <HeaderActionButton onClick={onPrimaryAction} disabled={disabled} icon={Plus} label="Add Education" />
+        <HeaderActionButton
+          onClick={onPrimaryAction}
+          disabled={disabled}
+          icon={Plus}
+          label="Add Education"
+        />
       </HeaderWrapper>
     );
   }
@@ -101,7 +106,12 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
           title="Licenses & Certifications"
           description="Technical licenses and industry credentials."
         />
-        <HeaderActionButton onClick={onPrimaryAction} disabled={disabled} icon={Plus} label="Issue License" />
+        <HeaderActionButton
+          onClick={onPrimaryAction}
+          disabled={disabled}
+          icon={Plus}
+          label="Issue License"
+        />
       </HeaderWrapper>
     );
   }
@@ -114,7 +124,12 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
           title="Projects & Publications"
           description="Open source builds, research papers, and case studies."
         />
-        <HeaderActionButton onClick={onPrimaryAction} disabled={disabled} icon={Plus} label="New Entry" />
+        <HeaderActionButton
+          onClick={onPrimaryAction}
+          disabled={disabled}
+          icon={Plus}
+          label="New Entry"
+        />
       </HeaderWrapper>
     );
   }
@@ -127,7 +142,12 @@ export function SettingsSectionHeader({ variant, onPrimaryAction, disabled }: Se
           title="Open Source Sync"
           description="Live synchronization with GitHub repositories."
         />
-        <HeaderActionButton onClick={onPrimaryAction} disabled={disabled} icon={RefreshCw} label="Sync Repos" />
+        <HeaderActionButton
+          onClick={onPrimaryAction}
+          disabled={disabled}
+          icon={RefreshCw}
+          label="Sync Repos"
+        />
       </HeaderWrapper>
     );
   }

@@ -2,14 +2,38 @@ import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
 const base = () => resolvePublicApiBase();
 
-export type { BillingPlanKey, BillingSubscriptionDto, BillingTransactionRow } from '@contracts/billingApi';
-import type { BillingSubscriptionDto, BillingTransactionRow } from '@contracts/billingApi';
+export type {
+  BillingPaidPlanKey,
+  BillingPlanCatalogItem,
+  BillingPlanKey,
+  BillingSubscriptionDto,
+  BillingTransactionRow,
+} from '@contracts/billingApi';
+import type {
+  BillingPaidPlanKey,
+  BillingPlanCatalogItem,
+  BillingSubscriptionDto,
+  BillingTransactionRow,
+} from '@contracts/billingApi';
 
 function authHeaders(token: string): HeadersInit {
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+}
+
+export async function fetchBillingPlans(): Promise<BillingPlanCatalogItem[]> {
+  const res = await fetch(`${base()}/api/billing/plans`, { credentials: 'include' });
+  const data = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    plans?: BillingPlanCatalogItem[];
+    message?: string;
+  };
+  if (!res.ok || !data.plans) {
+    throw new Error(data.message || 'Failed to load plans');
+  }
+  return data.plans;
 }
 
 export async function fetchBillingSubscription(
@@ -32,7 +56,10 @@ export async function fetchBillingSubscription(
   return data.subscription;
 }
 
-export async function verifyCheckout(token: string, sessionId: string): Promise<BillingSubscriptionDto> {
+export async function verifyCheckout(
+  token: string,
+  sessionId: string
+): Promise<BillingSubscriptionDto> {
   const res = await fetch(`${base()}/api/billing/verify-checkout`, {
     method: 'POST',
     headers: authHeaders(token),
@@ -50,14 +77,21 @@ export async function verifyCheckout(token: string, sessionId: string): Promise<
   return data.subscription;
 }
 
-export async function createCheckoutSession(token: string, planKey: 'pro' | 'proplus' | 'ultra'): Promise<string> {
+export async function createCheckoutSession(
+  token: string,
+  planKey: BillingPaidPlanKey
+): Promise<string> {
   const res = await fetch(`${base()}/api/billing/checkout-session`, {
     method: 'POST',
     headers: authHeaders(token),
     credentials: 'include',
     body: JSON.stringify({ planKey }),
   });
-  const data = (await res.json().catch(() => ({}))) as { success?: boolean; url?: string; message?: string };
+  const data = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    url?: string;
+    message?: string;
+  };
   if (!res.ok || !data.url) {
     throw new Error(data.message || 'Could not start checkout');
   }
@@ -70,7 +104,11 @@ export async function createPortalSession(token: string): Promise<string> {
     headers: authHeaders(token),
     credentials: 'include',
   });
-  const data = (await res.json().catch(() => ({}))) as { success?: boolean; url?: string; message?: string };
+  const data = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    url?: string;
+    message?: string;
+  };
   if (!res.ok || !data.url) {
     throw new Error(data.message || 'Could not open billing portal');
   }

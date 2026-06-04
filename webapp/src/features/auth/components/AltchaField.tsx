@@ -5,7 +5,6 @@ import { cn } from '@/lib/core/utils';
 import { getAltchaChallengeUrl } from '@/api/auth';
 import { acquireGlobalAltchaBusy, releaseGlobalAltchaBusy } from '@/components/ui/feedback';
 
-
 function isAltchaBusyState(state: string): boolean {
   return state === 'verifying' || state === 'code';
 }

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
-
 export type RectangleAppBreadcrumbItem = {
   /** Omit on the current page segment */
   href?: string;
@@ -20,17 +19,14 @@ type RectangleAppBreadcrumbProps = Readonly<{
  * Rectangular bordered breadcrumb for app shells — matches retro card chrome.
  * First link to `/` shows a home icon next to the label.
  */
-export function RectangleAppBreadcrumb({
-  items,
-  className,
-}: RectangleAppBreadcrumbProps) {
+export function RectangleAppBreadcrumb({ items, className }: RectangleAppBreadcrumbProps) {
   if (!items.length) return null;
 
   return (
     <div
       className={cn(
         'inline-flex w-fit min-w-0 max-w-full shrink-0 items-center border-2 border-border bg-card px-2.5 py-1.5 shadow',
-        className,
+        className
       )}
     >
       <nav aria-label="Breadcrumb">
@@ -39,7 +35,11 @@ export function RectangleAppBreadcrumb({
             return (
               <li key={`${item.label}-${i}`} className="flex min-w-0 items-center gap-1.5">
                 {i > 0 ? (
-                  <ChevronRight className="size-3 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden />
+                  <ChevronRight
+                    className="size-3 shrink-0 text-muted-foreground/60"
+                    strokeWidth={2.5}
+                    aria-hidden
+                  />
                 ) : null}
                 {item.href ? (
                   <Link
@@ -47,7 +47,11 @@ export function RectangleAppBreadcrumb({
                     className="flex min-w-0 items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
                   >
                     {item.href === '/' ? (
-                      <Home className="size-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                      <Home
+                        className="size-3.5 shrink-0 text-primary"
+                        strokeWidth={2.5}
+                        aria-hidden
+                      />
                     ) : null}
                     <span className="truncate">{item.label}</span>
                   </Link>

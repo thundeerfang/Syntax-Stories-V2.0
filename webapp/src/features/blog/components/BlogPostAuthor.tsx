@@ -4,11 +4,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { computeHoverCardPositionAuto, HOVER_CARD_Z_INDEX, motionAxisOffset, type HoverCardSide } from '@/components/ui/popover';
+import {
+  computeHoverCardPositionAuto,
+  HOVER_CARD_Z_INDEX,
+  motionAxisOffset,
+  type HoverCardSide,
+} from '@/components/ui/popover';
 import { MentionPopoverCard } from '@/components/ui/popover';
 import { cn } from '@/lib/core/utils';
 import type { PublicFeedPostAuthor } from '@/types/blog';
-
 
 const EXIT_MS = 180;
 
@@ -55,7 +59,14 @@ export function BlogPostAuthor({
       const el = wrapRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'start', 155, 260, 0);
+      const { top, left, side } = computeHoverCardPositionAuto(
+        rect,
+        'bottom',
+        'start',
+        155,
+        260,
+        0
+      );
       setPosition({ top, left });
       setResolvedSide(side);
       setOpen(true);
@@ -93,7 +104,14 @@ export function BlogPostAuthor({
       const el = wrapRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'start', 155, 260, 0);
+      const { top, left, side } = computeHoverCardPositionAuto(
+        rect,
+        'bottom',
+        'start',
+        155,
+        260,
+        0
+      );
       setPosition({ top, left });
       setResolvedSide(side);
     };
@@ -146,7 +164,7 @@ export function BlogPostAuthor({
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body,
+      document.body
     );
 
   return (
@@ -156,7 +174,7 @@ export function BlogPostAuthor({
         className={cn(
           customTrigger
             ? cn('group/blog-author-popover inline-flex max-w-full min-w-0', className)
-            : 'inline-flex w-fit max-w-full items-center gap-3',
+            : 'inline-flex w-fit max-w-full items-center gap-3'
         )}
         role="group"
         aria-label="Post author"
@@ -171,15 +189,16 @@ export function BlogPostAuthor({
               href={profilePath}
               className={cn(
                 'shrink-0 overflow-hidden ',
-                variant === 'sideRail'
-                  ? 'bg-transparent shadow'
-                  : 'border-2 border-border shadow',
+                variant === 'sideRail' ? 'bg-transparent shadow' : 'border-2 border-border shadow'
               )}
             >
               <img
                 src={author.profileImg}
                 alt=""
-                className={cn('object-cover', variant === 'sideRail' ? 'h-11 w-11 md:h-12 md:w-12' : 'h-12 w-12 md:h-14 md:w-14')}
+                className={cn(
+                  'object-cover',
+                  variant === 'sideRail' ? 'h-11 w-11 md:h-12 md:w-12' : 'h-12 w-12 md:h-14 md:w-14'
+                )}
               />
             </Link>
             <div className="min-w-0">
@@ -191,7 +210,7 @@ export function BlogPostAuthor({
               <p
                 className={cn(
                   'font-mono font-black uppercase leading-tight text-foreground',
-                  variant === 'sideRail' ? 'text-xs md:text-sm' : 'mt-1 text-sm md:text-base',
+                  variant === 'sideRail' ? 'text-xs md:text-sm' : 'mt-1 text-sm md:text-base'
                 )}
               >
                 {author.fullName?.trim() || author.username}
@@ -200,7 +219,7 @@ export function BlogPostAuthor({
                 href={profilePath}
                 className={cn(
                   'mt-0.5 block font-mono font-bold text-primary hover:underline',
-                  variant === 'sideRail' ? 'text-xs md:text-sm' : 'text-sm md:text-base',
+                  variant === 'sideRail' ? 'text-xs md:text-sm' : 'text-sm md:text-base'
                 )}
               >
                 @{author.username}
@@ -213,4 +232,3 @@ export function BlogPostAuthor({
     </>
   );
 }
-

@@ -28,14 +28,6 @@ export interface MarketingFeatureItem {
   sortOrder: number;
 }
 
-export interface MarketingPlanItem {
-  name: string;
-  price: string;
-  priceSuffix: string;
-  features: string[];
-  sortOrder: number;
-}
-
 export interface MarketingTeamMember {
   name: string;
   role: string;
@@ -57,7 +49,6 @@ export interface IMarketingPage extends Document {
   journey: MarketingJourneyItem[];
   techStack: MarketingTechItem[];
   features: MarketingFeatureItem[];
-  membershipPlans: MarketingPlanItem[];
   team: MarketingTeamMember[];
   cta: MarketingCta;
   footerNote: string;
@@ -71,7 +62,7 @@ const journeySchema = new Schema<MarketingJourneyItem>(
     event: { type: String, required: true, trim: true, maxlength: 500 },
     sortOrder: { type: Number, required: true, default: 0 },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const techSchema = new Schema<MarketingTechItem>(
@@ -80,7 +71,7 @@ const techSchema = new Schema<MarketingTechItem>(
     icon: { type: String, required: true, trim: true, maxlength: 40 },
     sortOrder: { type: Number, required: true, default: 0 },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const featureSchema = new Schema<MarketingFeatureItem>(
@@ -90,18 +81,7 @@ const featureSchema = new Schema<MarketingFeatureItem>(
     icon: { type: String, required: true, trim: true, maxlength: 40 },
     sortOrder: { type: Number, required: true, default: 0 },
   },
-  { _id: false },
-);
-
-const planSchema = new Schema<MarketingPlanItem>(
-  {
-    name: { type: String, required: true, trim: true, maxlength: 80 },
-    price: { type: String, required: true, trim: true, maxlength: 32 },
-    priceSuffix: { type: String, required: true, trim: true, maxlength: 16, default: '/mo' },
-    features: { type: [String], default: [] },
-    sortOrder: { type: Number, required: true, default: 0 },
-  },
-  { _id: false },
+  { _id: false }
 );
 
 const teamSchema = new Schema<MarketingTeamMember>(
@@ -113,7 +93,7 @@ const teamSchema = new Schema<MarketingTeamMember>(
     xUrl: { type: String, trim: true, maxlength: 500 },
     sortOrder: { type: Number, required: true, default: 0 },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const MarketingPageSchema = new Schema<IMarketingPage>(
@@ -128,7 +108,6 @@ const MarketingPageSchema = new Schema<IMarketingPage>(
     journey: { type: [journeySchema], default: [] },
     techStack: { type: [techSchema], default: [] },
     features: { type: [featureSchema], default: [] },
-    membershipPlans: { type: [planSchema], default: [] },
     team: { type: [teamSchema], default: [] },
     cta: {
       title: { type: String, required: true, trim: true, maxlength: 200 },
@@ -137,7 +116,7 @@ const MarketingPageSchema = new Schema<IMarketingPage>(
     },
     footerNote: { type: String, trim: true, maxlength: 2000, default: '' },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 export const MarketingPageModel: Model<IMarketingPage> =

@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/store/auth';
 import { useUiProcessingLockStore } from '@/store/uiProcessingLock';
 
-
 /** Above `Dialog` (100) and route loader (100). */
 const SHIELD_Z = 110;
 

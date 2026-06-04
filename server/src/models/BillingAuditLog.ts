@@ -17,7 +17,11 @@ const BillingAuditLogSchema = new Schema<IBillingAuditLog>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'users', required: true, index: true },
     action: { type: String, required: true, index: true },
-    source: { type: String, enum: ['webhook', 'verify', 'sync', 'reconcile', 'admin'], required: true },
+    source: {
+      type: String,
+      enum: ['webhook', 'verify', 'sync', 'reconcile', 'admin'],
+      required: true,
+    },
     stripeSubscriptionId: { type: String },
     stripeInvoiceId: { type: String },
     before: { type: Schema.Types.Mixed },

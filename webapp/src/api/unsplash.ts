@@ -24,7 +24,9 @@ export async function searchUnsplashPhotos(
 ): Promise<UnsplashSearchResponse> {
   const key = process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
   if (!key) {
-    throw new Error('NEXT_PUBLIC_UNSPLASH_ACCESS_KEY is not set. Add it to .env.local to enable Unsplash search.');
+    throw new Error(
+      'NEXT_PUBLIC_UNSPLASH_ACCESS_KEY is not set. Add it to .env.local to enable Unsplash search.'
+    );
   }
   const params = new URLSearchParams({
     query: query.trim(),
@@ -39,7 +41,7 @@ export async function searchUnsplashPhotos(
     const err = await res.json().catch(() => ({}));
     const msg = Array.isArray((err as { errors?: string[] }).errors)
       ? (err as { errors: string[] }).errors[0]
-      : (err as { message?: string }).message ?? res.statusText;
+      : ((err as { message?: string }).message ?? res.statusText);
     throw new Error(msg);
   }
   return res.json() as Promise<UnsplashSearchResponse>;

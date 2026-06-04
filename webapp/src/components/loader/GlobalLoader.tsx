@@ -7,7 +7,6 @@ import 'loaders.css/loaders.min.css';
 import { consumeOAuthNavigationPending, OAUTH_LEAVING_EVENT } from '@/lib/auth/oauthNavigation';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
-
 const TITLE = 'SYSTEM SYNTAX STORIES — BASH';
 const MIN_SHOW_MS = 5000;
 const FADE_DURATION_MS = 300;
@@ -16,7 +15,7 @@ function scheduleRouteLoaderFadeOut(
   timeouts: ReturnType<typeof setTimeout>[],
   shownAt: number,
   setExiting: React.Dispatch<React.SetStateAction<boolean>>,
-  setShow: React.Dispatch<React.SetStateAction<boolean>>,
+  setShow: React.Dispatch<React.SetStateAction<boolean>>
 ) {
   const elapsed = Date.now() - shownAt;
   const waitMin = Math.max(0, MIN_SHOW_MS - elapsed);
@@ -27,16 +26,24 @@ function scheduleRouteLoaderFadeOut(
         setTimeout(() => {
           setShow(false);
           setExiting(false);
-        }, FADE_DURATION_MS),
+        }, FADE_DURATION_MS)
       );
-    }, waitMin),
+    }, waitMin)
   );
 }
 
 const PATH_MAP: Record<string, string> = {
-  about: 'about', profile: 'profile', settings: 'settings', login: 'login',
-  signup: 'signup', explore: 'explore', trending: 'trending', u: 'profile',
-  terms: 'terms', policy: 'policy', privacy: 'privacy',
+  about: 'about',
+  profile: 'profile',
+  settings: 'settings',
+  login: 'login',
+  signup: 'signup',
+  explore: 'explore',
+  trending: 'trending',
+  u: 'profile',
+  terms: 'terms',
+  policy: 'policy',
+  privacy: 'privacy',
 };
 
 export function pathnameToPageName(pathname: string): string {
@@ -93,7 +100,9 @@ export function GlobalLoader({ pageName = 'app', status }: Readonly<GlobalLoader
                   {status || `INITIALIZING_${pageName.toUpperCase()}`}
                   <span className="inline-block w-2 ml-1">{dots}</span>
                 </span>
-                <span className="text-[11px] text-white/30 uppercase tracking-widest">Memory: 256MB / Latency: 14ms</span>
+                <span className="text-[11px] text-white/30 uppercase tracking-widest">
+                  Memory: 256MB / Latency: 14ms
+                </span>
               </div>
             </div>
             <div className="w-full h-[2px] bg-white/5 overflow-hidden">
@@ -201,7 +210,9 @@ export function GlobalLoaderOverlay() {
         style={{ WebkitBackdropFilter: 'blur(20px) saturate(1.5)' }}
         aria-hidden
       />
-      <div className={`relative z-[1] flex w-full items-center justify-center p-4 ${exiting ? 'opacity-0 transition-opacity duration-300' : 'loader-scale-in'}`}>
+      <div
+        className={`relative z-[1] flex w-full items-center justify-center p-4 ${exiting ? 'opacity-0 transition-opacity duration-300' : 'loader-scale-in'}`}
+      >
         <GlobalLoader pageName={pageName} />
       </div>
     </div>
@@ -217,5 +228,7 @@ export function TerminalLoaderPage({
 }: Readonly<TerminalLoaderPageProps>) {
   const content = <GlobalLoader pageName={pageName} status={status} />;
   if (inline) return <div className="flex items-center justify-center py-12">{content}</div>;
-  return <div className="min-h-screen flex items-center justify-center bg-background p-4">{content}</div>;
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">{content}</div>
+  );
 }

@@ -2,7 +2,7 @@ import { env } from './env.js';
 
 /** First `FRONTEND_URL` entry — OAuth redirects and similar. */
 export function getFrontendRedirectBase(): string {
-  return (env.FRONTEND_URL ?? '').split(',')[0]?.trim() ?? (env.FRONTEND_URL ?? '');
+  return (env.FRONTEND_URL ?? '').split(',')[0]?.trim() ?? env.FRONTEND_URL ?? '';
 }
 
 /** Comma-separated production frontends for CORS. */

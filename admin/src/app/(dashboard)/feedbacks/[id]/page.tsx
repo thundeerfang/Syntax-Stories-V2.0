@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import { getApiOrigin, getFeedbackSubmission, type FeedbackSubmissionDetail } from '@/lib/api';
+import { userProfilePath } from '@/lib/users/userProfilePath';
 import { useSessionStore } from '@/store/session';
 
 export default function FeedbackDetailPage() {
@@ -58,7 +59,7 @@ export default function FeedbackDetailPage() {
   const attachmentSrc =
     submission?.attachmentUrl && submission.attachmentUrl.startsWith('/')
       ? `${getApiOrigin()}${submission.attachmentUrl}`
-      : submission?.attachmentUrl ?? null;
+      : (submission?.attachmentUrl ?? null);
 
   if (!id) return null;
 
@@ -84,7 +85,13 @@ export default function FeedbackDetailPage() {
       ) : (
         <>
           <Box>
-            <Typography variant="h4" component="h1" fontWeight={800} className="tracking-tight" gutterBottom>
+            <Typography
+              variant="h4"
+              component="h1"
+              fontWeight={800}
+              className="tracking-tight"
+              gutterBottom
+            >
               {submission.subject}
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
@@ -128,13 +135,19 @@ export default function FeedbackDetailPage() {
                 <Stack spacing={1.5}>
                   <Row label="Name" value={`${submission.firstName} ${submission.lastName}`} />
                   <Row label="Email" value={submission.email} />
-                  <Row label="Category" value={`${submission.categoryLabel} (${submission.categorySlug})`} />
+                  <Row
+                    label="Category"
+                    value={`${submission.categoryLabel} (${submission.categorySlug})`}
+                  />
                   {submission.username ? (
                     <Row
                       label="Account"
                       value={
-                        submission.userId ? (
-                          <Link href={`/users/${submission.userId}`} className="underline-offset-4 hover:underline">
+                        submission.userRef ? (
+                          <Link
+                            href={userProfilePath(submission.userRef)}
+                            className="underline-offset-4 hover:underline"
+                          >
                             @{submission.username}
                           </Link>
                         ) : (
@@ -238,7 +251,8 @@ export default function FeedbackDetailPage() {
                     {submission.attachmentMeta ? (
                       <Typography variant="caption" color="text.secondary" component="div">
                         {submission.attachmentMeta.mime ?? ''}{' '}
-                        {submission.attachmentMeta.width != null && submission.attachmentMeta.height != null
+                        {submission.attachmentMeta.width != null &&
+                        submission.attachmentMeta.height != null
                           ? `· ${submission.attachmentMeta.width}×${submission.attachmentMeta.height}`
                           : ''}
                         {submission.attachmentMeta.originalName
@@ -251,7 +265,13 @@ export default function FeedbackDetailPage() {
                         component="img"
                         src={attachmentSrc}
                         alt={submission.attachmentTitle || 'Attachment'}
-                        sx={{ maxWidth: '100%', maxHeight: 480, borderRadius: 1, border: 1, borderColor: 'divider' }}
+                        sx={{
+                          maxWidth: '100%',
+                          maxHeight: 480,
+                          borderRadius: 1,
+                          border: 1,
+                          borderColor: 'divider',
+                        }}
                       />
                     ) : (
                       <Typography variant="body2">
@@ -278,13 +298,20 @@ export default function FeedbackDetailPage() {
                     label="Notification email"
                     value={submission.emailDelivered ? 'Sent' : 'Not confirmed sent'}
                   />
-                  {submission.emailError ? <Row label="Send error" value={submission.emailError} /> : null}
+                  {submission.emailError ? (
+                    <Row label="Send error" value={submission.emailError} />
+                  ) : null}
                 </Stack>
               </CardContent>
             </Card>
           ) : null}
 
-          <Button component={Link} href="/feedbacks" variant="text" sx={{ alignSelf: 'flex-start' }}>
+          <Button
+            component={Link}
+            href="/feedbacks"
+            variant="text"
+            sx={{ alignSelf: 'flex-start' }}
+          >
             ← Back to list
           </Button>
         </>

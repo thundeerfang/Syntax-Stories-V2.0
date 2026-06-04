@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { searchReferenceEntities, searchTechStackReference } from '../controllers/reference.controller.js';
+import {
+  searchReferenceEntities,
+  searchTechStackReference,
+} from '../controllers/reference.controller.js';
 
 const router = Router();
 

@@ -17,10 +17,19 @@ import feedbackRoutes from './feedback.routes.js';
 import contactRoutes from './contact.routes.js';
 import inviteRoutes from './invite.routes.js';
 import billingRoutes from './billing.routes.js';
-import { helpAdminRouter, helpPublicRouter } from '../modules/help/help.routes.js';
-import { trashAdminRouter } from '../modules/trash/trash.routes.js';
-import { adminManagementRouter } from '../modules/admin/routes/management.routes.js';
-import { legalAdminRouter, legalPublicRouter, legalUserRouter } from '../modules/legal/legal.routes.js';
+import achievementsRoutes from './achievements.routes.js';
+import searchRoutes from './search.routes.js';
+import {
+  adminManagementRouter,
+  helpAdminRouter,
+  helpPublicRouter,
+  legalAdminRouter,
+  legalPublicRouter,
+  legalUserRouter,
+  trashAdminRouter,
+} from '../admin-platform/index.js';
+import { samlAdminRouter } from '../admin-platform/federation/saml.routes.js';
+import { scimAdminRouter } from '../admin-platform/federation/scim.routes.js';
 
 const router = Router();
 router.use('/health', healthRoutes);
@@ -39,10 +48,14 @@ router.use('/feedback', feedbackRoutes);
 router.use('/contact', contactRoutes);
 router.use('/invites', inviteRoutes);
 router.use('/billing', billingRoutes);
+router.use('/achievements', achievementsRoutes);
+router.use('/search', searchRoutes);
 router.use('/v1/help', helpPublicRouter);
 router.use('/v1/admin/help', helpAdminRouter);
 router.use('/v1/admin/trash', trashAdminRouter);
 router.use('/v1/admin/management', adminManagementRouter);
+router.use('/v1/admin/saml', samlAdminRouter);
+router.use('/v1/admin/scim/v2', scimAdminRouter);
 router.use('/v1/legal', legalPublicRouter);
 router.use('/v1/legal', legalUserRouter);
 router.use('/v1/admin/legal', legalAdminRouter);

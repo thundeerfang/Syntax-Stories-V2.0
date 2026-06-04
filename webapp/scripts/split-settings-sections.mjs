@@ -17,13 +17,28 @@ const sections = [
   { file: 'SyntaxCardSection.tsx', start: 135, end: 176, exportName: 'SyntaxCardContent' },
   { file: 'EditProfileSection.tsx', start: 176, end: 847, exportName: 'EditProfileContent' },
   { file: 'SecurityEmailSection.tsx', start: 847, end: 1034, exportName: 'SecurityEmailContent' },
-  { file: 'ConnectedAccountsSection.tsx', start: 1034, end: 1179, exportName: 'ConnectedAccountsContent' },
+  {
+    file: 'ConnectedAccountsSection.tsx',
+    start: 1034,
+    end: 1179,
+    exportName: 'ConnectedAccountsContent',
+  },
   { file: 'StackAndToolsSection.tsx', start: 1179, end: 1479, exportName: 'StackAndToolsContent' },
   { file: 'MySetupSection.tsx', start: 1479, end: 1716, exportName: 'MySetupContent' },
   { file: 'workExperienceForm.ts', start: 1716, end: 2190, exportName: null, lib: true },
-  { file: 'WorkExperiencesSection.tsx', start: 2190, end: 3111, exportName: 'WorkExperiencesContent' },
+  {
+    file: 'WorkExperiencesSection.tsx',
+    start: 2190,
+    end: 3111,
+    exportName: 'WorkExperiencesContent',
+  },
   { file: 'EducationSection.tsx', start: 3111, end: 3453, exportName: 'EducationContent' },
-  { file: 'CertificationsSection.tsx', start: 3453, end: 3967, exportName: 'CertificationsContent' },
+  {
+    file: 'CertificationsSection.tsx',
+    start: 3453,
+    end: 3967,
+    exportName: 'CertificationsContent',
+  },
   { file: 'ProjectsSection.tsx', start: 3967, end: 4381, exportName: 'ProjectsContent' },
   { file: 'OpenSourceSection.tsx', start: 4382, end: 4632, exportName: 'OpenSourceContent' },
 ];
@@ -42,7 +57,11 @@ for (const s of sections) {
   const exportLine = s.exportName ? `\nexport { ${s.exportName} };\n` : '';
   const renamedBody = s.exportName
     ? body.replace(new RegExp(`^function ${s.exportName}`, 'm'), `export function ${s.exportName}`)
-    : body.replace(/^type /gm, 'export type ').replace(/^const /gm, 'export const ').replace(/^function /gm, 'export function ').replace(/^interface /gm, 'export interface ');
+    : body
+        .replace(/^type /gm, 'export type ')
+        .replace(/^const /gm, 'export const ')
+        .replace(/^function /gm, 'export function ')
+        .replace(/^interface /gm, 'export interface ');
 
   const content = isLib
     ? `'use client';\n\n${importBlock}\n\n${renamedBody}\n`

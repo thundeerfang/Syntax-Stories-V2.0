@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useAuthStore } from '@/store/auth';
 
-
 type AuthContextValue = {
   user: ReturnType<typeof useAuthStore.getState>['user'];
   token: string | null;

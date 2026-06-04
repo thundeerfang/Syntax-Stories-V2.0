@@ -21,7 +21,7 @@ export class BlogApiConnectionError extends Error {
 export async function blogAuthFetch(
   url: string,
   init: RequestInit | undefined,
-  accessToken: string,
+  accessToken: string
 ): Promise<Response> {
   const baseHeaders: Record<string, string> = {
     ...(init?.headers as Record<string, string> | undefined),

@@ -10,7 +10,14 @@ import { AuditAction } from '../shared/audit/events.js';
 import { redisKeys } from '../shared/redis/keys.js';
 import { RateLimitHttpError, isAppHttpError } from '../errors/httpErrors.js';
 import { sendAppHttpError } from '../errors/sendAppHttpError.js';
-import { computeReadStreakPayload, loadReadDayBucketsForHeatmap } from '../services/readStreak.service.js';
+import {
+  computeReadStreakPayload,
+  loadReadDayBucketsForHeatmap,
+} from '../services/readStreak.service.js';
+import {
+  attachAchievementsToResponse,
+  dispatchAchievementEvents,
+} from '../achievements/achievement.service.js';
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
 const PUBLIC_PROFILE_FIELDS =
@@ -20,7 +27,9 @@ const DAILY_FOLLOW_LIMIT = 500;
 
 function secondsUntilUtcMidnight(): number {
   const now = new Date();
-  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+  const next = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0)
+  );
   return Math.max(1, Math.ceil((next.getTime() - now.getTime()) / 1000));
 }
 
@@ -57,12 +66,19 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
       res.status(400).json({ success: false, message: 'Username required' });
       return;
     }
-    const user = await UserModel.findOne({ username, isActive: true }).select(PUBLIC_PROFILE_FIELDS).lean();
+    const user = await UserModel.findOne({ username, isActive: true })
+      .select(PUBLIC_PROFILE_FIELDS)
+      .lean();
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    const u = user as { _id: mongoose.Types.ObjectId; profileImg?: string; followersCount?: number; followingCount?: number };
+    const u = user as {
+      _id: mongoose.Types.ObjectId;
+      profileImg?: string;
+      followersCount?: number;
+      followingCount?: number;
+    };
     const counts = await ensureStoredFollowCounts(u._id, u.followersCount, u.followingCount);
     const profileImg = normalizeProfileImg(u.profileImg);
     const modeRaw = (user as { blogStreakMode?: string }).blogStreakMode;
@@ -85,7 +101,9 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
     }
     const blogRespectReceivedCount = Math.max(
       0,
-      Math.floor(Number((user as { blogRespectReceivedCount?: number }).blogRespectReceivedCount ?? 0))
+      Math.floor(
+        Number((user as { blogRespectReceivedCount?: number }).blogRespectReceivedCount ?? 0)
+      )
     );
     res.status(200).json({
       success: true,
@@ -109,14 +127,26 @@ export async function getFollowCounts(req: Request, res: Response): Promise<void
       res.status(400).json({ success: false, message: 'Username required' });
       return;
     }
-    const user = await UserModel.findOne({ username }).select('_id followersCount followingCount').lean();
+    const user = await UserModel.findOne({ username })
+      .select('_id followersCount followingCount')
+      .lean();
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
     }
-    const u = user as { _id: mongoose.Types.ObjectId; followersCount?: number; followingCount?: number };
+    const u = user as {
+      _id: mongoose.Types.ObjectId;
+      followersCount?: number;
+      followingCount?: number;
+    };
     const counts = await ensureStoredFollowCounts(u._id, u.followersCount, u.followingCount);
-    res.status(200).json({ success: true, followersCount: counts.followersCount, followingCount: counts.followingCount });
+    res
+      .status(200)
+      .json({
+        success: true,
+        followersCount: counts.followersCount,
+        followingCount: counts.followingCount,
+      });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -230,7 +260,9 @@ async function followUserNonTransactionalFallback(
       await enforceFollowDailyCap(redis, currentUser._id, dayKey);
     } catch (e) {
       if (isAppHttpError(e)) {
-        await FollowModel.deleteOne({ follower: currentUser._id, following: target._id }).catch(() => {});
+        await FollowModel.deleteOne({ follower: currentUser._id, following: target._id }).catch(
+          () => {}
+        );
         sendAppHttpError(res, e);
         return { done: true, created: false };
       }
@@ -243,7 +275,10 @@ async function followUserNonTransactionalFallback(
 }
 
 /** Parses limit + optional cursor + sort order + shuffle; sends 400 on bad cursor and returns null. */
-function parseFollowListQuery(req: Request, res: Response): {
+function parseFollowListQuery(
+  req: Request,
+  res: Response
+): {
   limit: number;
   cursor?: Date;
   sortDir: 1 | -1;
@@ -328,9 +363,7 @@ async function paginatedFollowEdges(
   });
   const last = slice.at(-1) as { createdAt?: Date } | undefined;
   const nextCursor =
-    hasMore && slice.length > 0 && last?.createdAt
-      ? last.createdAt.toISOString() ?? null
-      : null;
+    hasMore && slice.length > 0 && last?.createdAt ? (last.createdAt.toISOString() ?? null) : null;
   return { list, nextCursor };
 }
 
@@ -442,7 +475,14 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       // If transactions aren't supported (standalone Mongo), fallback to non-transactional behavior
       if (!isMongooseTransactionUnsupportedError(e)) throw e;
 
-      const fb = await followUserNonTransactionalFallback(res, currentUser, target, redis, dayKey, now);
+      const fb = await followUserNonTransactionalFallback(
+        res,
+        currentUser,
+        target,
+        redis,
+        dayKey,
+        now
+      );
       if (fb.done) return;
       created = fb.created;
     } finally {
@@ -460,7 +500,15 @@ export async function followUser(req: Request, res: Response): Promise<void> {
       targetId: String(target._id),
       metadata: {},
     });
-    res.status(201).json({ success: true, message: 'Following' });
+    void dispatchAchievementEvents(String(target._id), [{ type: 'profile_sync' }]).catch((e) =>
+      console.error('[achievements] follow', e)
+    );
+    const newlyUnlocked = await dispatchAchievementEvents(String(currentUser._id), [
+      { type: 'profile_sync' },
+    ]);
+    res
+      .status(201)
+      .json(attachAchievementsToResponse({ success: true, message: 'Following' }, newlyUnlocked));
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -501,23 +549,35 @@ export async function unfollowUser(req: Request, res: Response): Promise<void> {
 
         await Promise.all([
           UserModel.updateOne({ _id: target._id }, { $inc: { followersCount: -1 } }, { session }),
-          UserModel.updateOne({ _id: currentUser._id }, { $inc: { followingCount: -1 } }, { session }),
+          UserModel.updateOne(
+            { _id: currentUser._id },
+            { $inc: { followingCount: -1 } },
+            { session }
+          ),
         ]);
 
-        await AnalyticsEventModel.create([{
-          type: 'unfollow',
-          actorId: new mongoose.Types.ObjectId(String(currentUser._id)),
-          targetType: 'profile',
-          targetId: new mongoose.Types.ObjectId(String(target._id)),
-          visitorId: `user:${currentUser._id}`,
-          metadata: { day: dayKey },
-          timestamp: now,
-        }], { session });
+        await AnalyticsEventModel.create(
+          [
+            {
+              type: 'unfollow',
+              actorId: new mongoose.Types.ObjectId(String(currentUser._id)),
+              targetType: 'profile',
+              targetId: new mongoose.Types.ObjectId(String(target._id)),
+              visitorId: `user:${currentUser._id}`,
+              metadata: { day: dayKey },
+              timestamp: now,
+            },
+          ],
+          { session }
+        );
       });
     } catch (e) {
       if (!isMongooseTransactionUnsupportedError(e)) throw e;
 
-      const deleteResult = await FollowModel.deleteOne({ follower: currentUser._id, following: target._id });
+      const deleteResult = await FollowModel.deleteOne({
+        follower: currentUser._id,
+        following: target._id,
+      });
       deleted = (deleteResult.deletedCount ?? 0) > 0;
       if (deleted) {
         await Promise.all([

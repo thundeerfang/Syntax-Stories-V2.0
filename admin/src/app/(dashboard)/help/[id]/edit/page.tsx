@@ -1,53 +1,69 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
   Paper,
   Stack,
   TextField,
-  Typography,
 } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import PublishRoundedIcon from '@mui/icons-material/PublishRounded';
+import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
 import {
   getHelpArticle,
   patchHelpArticle,
   publishHelpArticle,
   type HelpArticleDetail,
 } from '@/lib/api';
+import { CentricPageHeader } from '@/components/layout/CentricPageHeader';
+import { nestedPageBreadcrumbs } from '@/components/layout/pageHeaderBreadcrumbs';
+import { AdminBlinkSectionHeader } from '@/components/ui/AdminBlinkSectionHeader';
+import { AdminFeedbackMessage } from '@/components/ui/AdminFeedbackMessage';
+import { HelpIconSelect } from '@/components/help/HelpIconSelect';
+import { DEFAULT_HELP_ICON } from '@/lib/help/helpIcons';
+import { resolveAdminApiToken } from '@/lib/auth/adminAuthSession';
 import { useSessionStore } from '@/store/session';
+
+function faqAnswerFromArticle(a: HelpArticleDetail): string {
+  return (a.draftSummary ?? a.summary ?? a.draftBody ?? a.body ?? '').trim();
+}
 
 export default function EditArticlePage() {
   const params = useParams();
-  const id = typeof params.id === 'string' ? params.id : params.id?.[0] ?? '';
+  const id = typeof params.id === 'string' ? params.id : (params.id?.[0] ?? '');
   const router = useRouter();
   const token = useSessionStore((s) => s.token);
+  const httpOnlyCookies = useSessionStore((s) => s.httpOnlyCookies);
+  const apiToken = resolveAdminApiToken(token, httpOnlyCookies);
+
   const [article, setArticle] = useState<HelpArticleDetail | null>(null);
-  const [draftTitle, setDraftTitle] = useState('');
-  const [draftSummary, setDraftSummary] = useState('');
-  const [draftBody, setDraftBody] = useState('');
-  const [err, setErr] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [icon, setIcon] = useState(DEFAULT_HELP_ICON);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!token || !id) return;
+    if (!apiToken || !id) return;
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
-        const a = await getHelpArticle(token, id);
+        const a = await getHelpArticle(apiToken, id);
         if (cancelled) return;
         setArticle(a);
-        setDraftTitle(a.draftTitle ?? a.title);
-        setDraftSummary(a.draftSummary ?? a.summary);
-        setDraftBody(a.draftBody ?? a.body);
+        setTitle(a.draftTitle ?? a.title);
+        setAnswer(faqAnswerFromArticle(a));
+        setIcon(a.icon ?? DEFAULT_HELP_ICON);
       } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : 'Load failed');
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Load failed');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -55,52 +71,63 @@ export default function EditArticlePage() {
     return () => {
       cancelled = true;
     };
-  }, [token, id]);
+  }, [apiToken, id]);
 
   async function save() {
-    if (!token || !article) return;
-    setErr(null);
-    setMsg(null);
+    if (!apiToken || !article) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
     try {
-      const r = await patchHelpArticle(token, id, {
-        draftTitle,
-        draftSummary,
-        draftBody,
+      const r = await patchHelpArticle(apiToken, id, {
+        draftTitle: title.trim(),
+        draftSummary: answer.trim(),
+        icon,
         expectedDraftVersion: article.draftVersion,
       });
-      setMsg(`Saved (draft v${r.draftVersion})`);
-      const a = await getHelpArticle(token, id);
+      setMessage(`Draft saved (v${r.draftVersion})`);
+      const a = await getHelpArticle(apiToken, id);
       setArticle(a);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Save failed');
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setBusy(false);
     }
   }
 
   async function publish() {
-    if (!token || !article) return;
-    setErr(null);
-    setMsg(null);
+    if (!apiToken || !article) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
     try {
-      await publishHelpArticle(token, id, article.publishedVersion);
-      setMsg('Published');
-      const a = await getHelpArticle(token, id);
+      await patchHelpArticle(apiToken, id, {
+        draftTitle: title.trim(),
+        draftSummary: answer.trim(),
+        icon,
+        expectedDraftVersion: article.draftVersion,
+      });
+      await publishHelpArticle(apiToken, id, article.publishedVersion);
+      setMessage('FAQ item published');
+      const a = await getHelpArticle(apiToken, id);
       setArticle(a);
-      setDraftTitle(a.draftTitle ?? a.title);
-      setDraftSummary(a.draftSummary ?? a.summary);
-      setDraftBody(a.draftBody ?? a.body);
+      setTitle(a.draftTitle ?? a.title);
+      setAnswer(faqAnswerFromArticle(a));
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Publish failed');
+      setError(e instanceof Error ? e.message : 'Publish failed');
+    } finally {
+      setBusy(false);
     }
   }
 
-  if (!token) {
+  if (!apiToken) {
     router.replace('/login');
     return null;
   }
 
   if (loading) {
     return (
-      <Box className="flex justify-center py-16">
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
         <CircularProgress />
       </Box>
     );
@@ -108,65 +135,90 @@ export default function EditArticlePage() {
 
   if (!article) {
     return (
-      <Box>
-        <Typography color="error">{err ?? 'Not found'}</Typography>
-        <Button component={Link} href="/help" className="mt-4">
-          Back
-        </Button>
-      </Box>
+      <Stack spacing={2}>
+        <AdminFeedbackMessage
+          severity="error"
+          message={error ?? 'Article not found'}
+          onClose={() => setError(null)}
+        />
+      </Stack>
     );
   }
 
+  const displayTitle = title.trim() || article.title || article.slug;
+
   return (
-    <Box className="mx-auto max-w-3xl">
-      <Button
-        component={Link}
-        href="/help"
-        startIcon={<ArrowBackRoundedIcon />}
-        size="small"
-        className="mb-4"
-        sx={{ color: 'text.secondary' }}
-      >
-        Articles
-      </Button>
-      <Box className="mb-4 flex flex-wrap items-center gap-3">
-        <Typography variant="h4" component="h1" fontWeight={800} className="tracking-tight">
-          Edit: {article.slug}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          draft v{article.draftVersion} · published v{article.publishedVersion}
-        </Typography>
-      </Box>
+    <Stack spacing={3}>
+      <CentricPageHeader
+        title={displayTitle}
+        description="Edit the FAQ question and markdown answer, then save or publish to /help."
+        icon={<QuizRoundedIcon />}
+        breadcrumbs={[...nestedPageBreadcrumbs({ label: 'FAQ', href: '/help' }, displayTitle)]}
+      />
 
-      {err && <Alert severity="error" className="mb-3">{err}</Alert>}
-      {msg && <Alert severity="success" className="mb-3">{msg}</Alert>}
+      {error ? (
+        <AdminFeedbackMessage severity="error" message={error} onClose={() => setError(null)} />
+      ) : null}
+      {message ? (
+        <AdminFeedbackMessage severity="success" message={message} onClose={() => setMessage(null)} />
+      ) : null}
 
-      <Paper elevation={0} className="border border-[var(--color-border)] p-6" sx={{ borderColor: 'divider' }}>
-        <Stack spacing={3}>
-          <TextField label="Draft title" fullWidth value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} size="small" />
-          <TextField label="Draft summary" fullWidth value={draftSummary} onChange={(e) => setDraftSummary(e.target.value)} size="small" />
-          <TextField
-            label="Draft body (markdown)"
-            fullWidth
-            multiline
-            minRows={16}
-            value={draftBody}
-            onChange={(e) => setDraftBody(e.target.value)}
-            InputProps={{ sx: { fontFamily: 'ui-monospace, monospace', fontSize: '0.875rem' } }}
-          />
-          <Typography variant="caption" color="text.secondary">
-            Publish requires title + body ≥ 50 characters (see CMS blueprint).
-          </Typography>
-          <Stack direction="row" spacing={2} flexWrap="wrap">
-            <Button type="button" variant="outlined" color="inherit" onClick={() => void save()}>
+      <AdminBlinkSectionHeader
+        title="FAQ content"
+        right={
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SaveRoundedIcon />}
+              disabled={busy || !title.trim()}
+              onClick={() => void save()}
+            >
               Save draft
             </Button>
-            <Button type="button" variant="contained" onClick={() => void publish()}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<PublishRoundedIcon />}
+              disabled={busy || !title.trim() || !answer.trim()}
+              onClick={() => void publish()}
+            >
               Publish
             </Button>
           </Stack>
+        }
+      />
+
+      <Paper variant="outlined" sx={{ borderRadius: 2, p: { xs: 2, sm: 2.5 } }}>
+        <Stack spacing={2}>
+          <HelpIconSelect label="Accordion icon" value={icon} onChange={setIcon} disabled={busy} />
+          <TextField
+            label="Title"
+            fullWidth
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            size="small"
+            disabled={busy}
+          />
+          <TextField
+            label="Answer (Markdown)"
+            fullWidth
+            multiline
+            minRows={10}
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            size="small"
+            disabled={busy}
+            helperText="This text appears in the FAQ accordion on /help."
+            sx={{
+              '& textarea': {
+                fontFamily: 'ui-monospace, monospace',
+                fontSize: '0.8125rem',
+              },
+            }}
+          />
         </Stack>
       </Paper>
-    </Box>
+    </Stack>
   );
 }

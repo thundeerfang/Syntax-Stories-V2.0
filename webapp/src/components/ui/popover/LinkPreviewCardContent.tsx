@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, Globe } from 'lucide-react';
 
-
 function normalizeDomain(domain: string | undefined): string {
   if (!domain?.trim()) return '';
   const t = domain.trim();
@@ -83,7 +82,13 @@ export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCa
         )}
         <div className="min-w-0 flex-1">
           {title && <p className="text-xs font-black truncate leading-tight">{title}</p>}
-          <p className={title ? 'text-[10px] font-bold text-muted-foreground truncate leading-tight' : 'text-xs font-bold truncate leading-tight'}>
+          <p
+            className={
+              title
+                ? 'text-[10px] font-bold text-muted-foreground truncate leading-tight'
+                : 'text-xs font-bold truncate leading-tight'
+            }
+          >
             {displayDomain}
           </p>
         </div>

@@ -1,6 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { optionalVerifyToken, type RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
+import {
+  optionalVerifyToken,
+  type RequestWithOptionalAuth,
+} from '../middlewares/auth/optionalVerifyToken.js';
 import { verifyAltchaIfConfigured } from '../middlewares/auth/verifyAltcha.js';
 import { rateLimitFeedback } from '../middlewares/auth/rateLimitAuth.js';
 import { listFeedbackCategories, submitFeedback } from '../controllers/feedback.controller.js';

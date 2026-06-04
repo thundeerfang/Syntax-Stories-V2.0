@@ -104,7 +104,10 @@ export async function pollQrLogin(req: Request, res: Response): Promise<void> {
         expiresAt: session.expiresAt?.toISOString?.(),
       },
     });
-    void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: userId, metadata: { source: 'qr_login' } });
+    void writeAuditLog(req, AuditAction.USER_SIGNIN, {
+      actorId: userId,
+      metadata: { source: 'qr_login' },
+    });
 
     res.status(200).json({
       success: true,

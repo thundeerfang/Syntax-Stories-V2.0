@@ -41,9 +41,11 @@ export function applyDailyStreakTransition(input: DailyStreakState): DailyStreak
  * Fold sorted unique day buckets (ascending) through the same transition as incremental commits.
  * Used for reconciliation / cold recompute (§33).
  */
-export function recomputeDailyStreakFromSortedDays(
-  sortedUniqueDayBuckets: string[]
-): { current: number; longest: number; lastDay: string } {
+export function recomputeDailyStreakFromSortedDays(sortedUniqueDayBuckets: string[]): {
+  current: number;
+  longest: number;
+  lastDay: string;
+} {
   let lastDay = '';
   let current = 0;
   let longest = 0;

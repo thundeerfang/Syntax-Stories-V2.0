@@ -1,4 +1,8 @@
-export { ProfileHeatmap, buildReadHeatmapActivityData, type ProfileHeatmapProps } from './components/ProfileHeatmap';
+export {
+  ProfileHeatmap,
+  buildReadHeatmapActivityData,
+  type ProfileHeatmapProps,
+} from './components/ProfileHeatmap';
 export { ProfileSectionHeader } from './components/ProfileSectionHeader';
 export { ProfileSquadsCategoriesCard } from './components/ProfileSquadsCategoriesCard';
 export type { ProfileSquadsCategoriesCardProps } from './components/ProfileSquadsCategoriesCard';

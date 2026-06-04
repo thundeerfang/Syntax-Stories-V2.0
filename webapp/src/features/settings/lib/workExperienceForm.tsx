@@ -13,9 +13,6 @@ import { Input, Label } from '@/components/retroui';
 import { buildLocationString } from '@/lib/profile/profileLocation';
 import { monthYearToValue, profileYearOptions } from '@/lib/profile/dateLabels';
 
-
-
-
 export type MediaItem = {
   url: string;
   title?: string;
@@ -64,7 +61,10 @@ export function normalizeMediaLinkInput(raw: string): string | null {
 }
 
 /** Non-empty lines from a textarea; each normalized to a URL. */
-export function parseMediaLinkLineInput(block: string): { urls: string[]; skippedNonEmpty: number } {
+export function parseMediaLinkLineInput(block: string): {
+  urls: string[];
+  skippedNonEmpty: number;
+} {
   const lines = block.split(/\r?\n/);
   const urls: string[] = [];
   let skippedNonEmpty = 0;
@@ -254,11 +254,24 @@ export function MediaThumbnailRow({
           onClick={onPreview}
           className="size-12 border-2 border-border shrink-0 overflow-hidden focus:ring-2 focus:ring-primary"
         >
-          <img src={item.url} alt={item.title ?? ''} className="size-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; setImgError(true); }} />
+          <img
+            src={item.url}
+            alt={item.title ?? ''}
+            className="size-full object-cover"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+              setImgError(true);
+            }}
+          />
         </button>
       ) : isImage && imgError ? (
         <div className="size-12 border-2 border-border bg-muted/30 shrink-0 flex items-center justify-center p-1">
-          <span className="text-[9px] font-bold text-muted-foreground text-center leading-tight line-clamp-2" title={fallbackText}>{fallbackText}</span>
+          <span
+            className="text-[9px] font-bold text-muted-foreground text-center leading-tight line-clamp-2"
+            title={fallbackText}
+          >
+            {fallbackText}
+          </span>
         </div>
       ) : (
         <HoverCard
@@ -277,7 +290,12 @@ export function MediaThumbnailRow({
         <p className="text-[10px] text-muted-foreground truncate">{item.url}</p>
       </div>
       {onRemove && (
-        <button type="button" onClick={onRemove} className="p-2 border-2 border-border hover:bg-muted shrink-0" aria-label="Remove media">
+        <button
+          type="button"
+          onClick={onRemove}
+          className="p-2 border-2 border-border hover:bg-muted shrink-0"
+          aria-label="Remove media"
+        >
           <Trash2 className="size-4 text-muted-foreground" />
         </button>
       )}
@@ -322,13 +340,36 @@ export type WorkExpForm = {
 };
 
 export const PROMOTION_DEFAULT: PromotionForm = {
-  jobTitle: '', startMonth: '', startYear: '', endMonth: '', endYear: '', currentPosition: false,
+  jobTitle: '',
+  startMonth: '',
+  startYear: '',
+  endMonth: '',
+  endYear: '',
+  currentPosition: false,
   mediaItems: [],
 };
 
 export const WORK_EXP_DEFAULT: WorkExpForm = {
-  jobTitle: '', employmentType: '', company: '', companyDomain: '', companyLogo: '', companyLogoAlt: '', currentPosition: false,
-  startDate: '', endDate: '', startMonth: '', startYear: '', endMonth: '', endYear: '', location: '', locationType: '', locationCountry: '', locationState: '', locationCity: '', description: '', skills: [],
+  jobTitle: '',
+  employmentType: '',
+  company: '',
+  companyDomain: '',
+  companyLogo: '',
+  companyLogoAlt: '',
+  currentPosition: false,
+  startDate: '',
+  endDate: '',
+  startMonth: '',
+  startYear: '',
+  endMonth: '',
+  endYear: '',
+  location: '',
+  locationType: '',
+  locationCountry: '',
+  locationState: '',
+  locationCity: '',
+  description: '',
+  skills: [],
   promotions: [],
   mediaItems: [],
 };
@@ -340,25 +381,33 @@ export const YEAR_OPTIONS = profileYearOptions(END_YEAR);
 /** Strip all work arrangement parts like "(On-site)" or "(Remote)" from location string (handles duplicated/legacy data). */
 export function locationWithoutType(location: string | undefined): string {
   if (!location?.trim()) return '';
-  return location.trim().replace(/\s*\([^)]+\)/g, '').replace(/\s+/g, ' ').trim();
+  return location
+    .trim()
+    .replace(/\s*\([^)]+\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Normalize domain for display and iframe (add https if missing). */
 export function normalizeDomain(domain: string | undefined): string {
   if (!domain?.trim()) return '';
-  const d = domain.trim().replace(/^https?:\/\//i, '').replace(/\/$/, '');
+  const d = domain
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/$/, '');
   return d ? `https://${d}` : '';
 }
 
 export type WorkExpFilledPromo = { p: PromotionForm; idx: number };
 
 export function getFilledWorkExpPromotions(form: WorkExpForm): WorkExpFilledPromo[] {
-  return form.promotions
-    .map((p, idx) => ({ p, idx }))
-    .filter(({ p }) => p.jobTitle.trim());
+  return form.promotions.map((p, idx) => ({ p, idx })).filter(({ p }) => p.jobTitle.trim());
 }
 
-export function collectWorkExpRequiredFieldErrors(form: WorkExpForm, startDateVal: string): Record<string, string> {
+export function collectWorkExpRequiredFieldErrors(
+  form: WorkExpForm,
+  startDateVal: string
+): Record<string, string> {
   const err: Record<string, string> = {};
   if (!form.jobTitle.trim()) err.jobTitle = 'Job title is required.';
   if (!form.employmentType.trim()) err.employmentType = 'Employment type is required.';
@@ -369,11 +418,15 @@ export function collectWorkExpRequiredFieldErrors(form: WorkExpForm, startDateVa
   return err;
 }
 
-export function workExpEndDateFieldErrors(form: WorkExpForm, startDateVal: string): Record<string, string> {
+export function workExpEndDateFieldErrors(
+  form: WorkExpForm,
+  startDateVal: string
+): Record<string, string> {
   if (form.currentPosition) return {};
   const endDateVal = monthYearToValue(form.endMonth, form.endYear);
   if (!endDateVal) return { endDate: 'End date is required when not currently working here.' };
-  if (startDateVal && endDateVal < startDateVal) return { endDate: 'End date cannot be earlier than start date.' };
+  if (startDateVal && endDateVal < startDateVal)
+    return { endDate: 'End date cannot be earlier than start date.' };
   return {};
 }
 
@@ -398,7 +451,10 @@ export function workExpPromotionValidationError(filledPromos: WorkExpFilledPromo
   return null;
 }
 
-export function workExpJobEndAfterLatestPromotionMessage(form: WorkExpForm, filledPromos: WorkExpFilledPromo[]): string | undefined {
+export function workExpJobEndAfterLatestPromotionMessage(
+  form: WorkExpForm,
+  filledPromos: WorkExpFilledPromo[]
+): string | undefined {
   if (form.currentPosition || filledPromos.length === 0) return undefined;
   const jobEnd = monthYearToValue(form.endMonth, form.endYear);
   const latestPromoEnd = filledPromos
@@ -421,7 +477,7 @@ export function mapWorkExpPromotionsForSubmit(form: WorkExpForm) {
       return {
         jobTitle: p.jobTitle.trim(),
         startDate: monthYearToValue(p.startMonth, p.startYear) || undefined,
-        endDate: currentPosition ? undefined : (promoEndVal || undefined),
+        endDate: currentPosition ? undefined : promoEndVal || undefined,
         currentPosition,
         media: (p.mediaItems ?? [])
           .filter((m) => m.url.trim())
@@ -441,7 +497,11 @@ export function buildWorkExperienceProfileEntry(
   endDateVal: string | undefined,
   promotionsVal: ReturnType<typeof mapWorkExpPromotionsForSubmit>
 ) {
-  const locationStr = buildLocationString(form.locationCity, form.locationState, form.locationCountry);
+  const locationStr = buildLocationString(
+    form.locationCity,
+    form.locationState,
+    form.locationCountry
+  );
   return {
     jobTitle: form.jobTitle.trim(),
     employmentType: form.employmentType.trim() || undefined,
@@ -466,4 +526,3 @@ export function buildWorkExperienceProfileEntry(
       })),
   };
 }
-

@@ -23,4 +23,5 @@ BlogBookmarkSchema.index({ postId: 1 });
 BlogBookmarkSchema.index({ userId: 1, groupId: 1 });
 
 export const BlogBookmarkModel: Model<IBlogBookmark> =
-  mongoose.models?.blogbookmarks ?? mongoose.model<IBlogBookmark>('blogbookmarks', BlogBookmarkSchema);
+  mongoose.models?.blogbookmarks ??
+  mongoose.model<IBlogBookmark>('blogbookmarks', BlogBookmarkSchema);

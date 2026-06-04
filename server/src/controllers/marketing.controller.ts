@@ -21,7 +21,6 @@ export async function getAboutMarketingPage(req: Request, res: Response): Promis
       journey: sortByOrder(doc.journey ?? []),
       techStack: sortByOrder(doc.techStack ?? []),
       features: sortByOrder(doc.features ?? []),
-      membershipPlans: sortByOrder(doc.membershipPlans ?? []),
       team: sortByOrder(doc.team ?? []),
       cta: doc.cta,
       footerNote: doc.footerNote ?? '',

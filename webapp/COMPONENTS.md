@@ -52,23 +52,23 @@ webapp/src/
 
 **Related UI outside `components/`**
 
-| Path | Role |
-|------|------|
-| `src/features/auth/components/` | Auth dialog, Altcha, steps |
-| `src/features/settings/` | Settings page sections |
+| Path                              | Role                                          |
+| --------------------------------- | --------------------------------------------- |
+| `src/features/auth/components/`   | Auth dialog, Altcha, steps                    |
+| `src/features/settings/`          | Settings page sections                        |
 | `src/app/settings/settings-list/` | Per-settings cards (Education, OpenSource, …) |
 
 ---
 
 ## 2. When to keep a file vs inline
 
-| Situation | Action |
-|-----------|--------|
-| Used on **one route only** (`app/.../page.tsx` or `layout.tsx`) | **Inline** into that page (or a single `page.client.tsx` beside it). |
-| Used by **one parent component** only | **Inline** at the bottom of the parent file as `function XxxSection()` (not exported). |
-| Used **2+ unrelated routes/features** | **Keep** a shared file under `components/`. |
-| Primitive (Button, Dialog, Skeleton, form field) | **Always keep** in `ui/` or `retroui/`. |
-| File would exceed **~500–700 lines** after merge | Co-locate one file next to the route: `app/foo/_sections/Bar.tsx` — still one import from the page, but avoid a 2k-line `page.tsx`. |
+| Situation                                                       | Action                                                                                                                              |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Used on **one route only** (`app/.../page.tsx` or `layout.tsx`) | **Inline** into that page (or a single `page.client.tsx` beside it).                                                                |
+| Used by **one parent component** only                           | **Inline** at the bottom of the parent file as `function XxxSection()` (not exported).                                              |
+| Used **2+ unrelated routes/features**                           | **Keep** a shared file under `components/`.                                                                                         |
+| Primitive (Button, Dialog, Skeleton, form field)                | **Always keep** in `ui/` or `retroui/`.                                                                                             |
+| File would exceed **~500–700 lines** after merge                | Co-locate one file next to the route: `app/foo/_sections/Bar.tsx` — still one import from the page, but avoid a 2k-line `page.tsx`. |
 
 **Naming after inline:** drop the redundant prefix when the symbol lives inside the page, e.g. `BlogPostSidebarStats` → `SidebarStats` inside `blogs/[username]/[slug]/page.tsx`.
 
@@ -78,28 +78,28 @@ webapp/src/
 
 Each row is imported **only** by the listed route/layout. Target: merge into that file (or one sibling `*.client.tsx`).
 
-| Component | Merge into |
-|-----------|------------|
-| ~~`explore/ExplorePageContent`~~ | **Done** → `app/explore/_explorePageContent.tsx` |
-| ~~`trending/TrendingPageContent`~~ | **Done** → `app/trending/_trendingPageContent.tsx` |
+| Component                                      | Merge into                                                      |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| ~~`explore/ExplorePageContent`~~               | **Done** → `app/explore/_explorePageContent.tsx`                |
+| ~~`trending/TrendingPageContent`~~             | **Done** → `app/trending/_trendingPageContent.tsx`              |
 | ~~`squads/SquadsDiscoverFeaturedPageContent`~~ | **Done** → `app/squads/featured/_squadsFeaturedPageContent.tsx` |
-| ~~`squads/SquadsDiscoverCategoryView`~~ | **Done** → `app/squads/[slug]/_squadSlugSections.tsx` |
-| ~~`squads/SquadMembersDialog`~~ | **Done** → `app/squads/[slug]/_squadSlugSections.tsx` |
-| `squads/SquadsPageSkeleton` | `app/squads/page.tsx` |
-| `topics/CategoryFollowButton` | `app/topics/category/[slug]/page.tsx` |
-| `profile/ProfileSectionHeader` | `app/profile/page.tsx` |
-| `profile/dialog/MissingFieldsDialog` | `app/profile/page.tsx` |
-| `profile/UserProfileBlogsContent` | `app/u/[username]/blogs/page.tsx` |
-| `legal/UserDataDeletionPanel` | `app/(legal)/user-data-deletion/page.tsx` |
-| `legal/LegalPagesLayout` | `app/(legal)/layout.tsx` |
-| `docs/DocsBreadcrumb` | `app/docs/layout.tsx` |
-| `docs/DocsSidebarNav` | `app/docs/layout.tsx` |
-| `auth/OAuthBrowserCallback` | `app/auth/callback/[provider]/page.tsx` |
-| `ui/BottomToolbar` | `app/blogs/write/page.tsx` |
-| `ui/Header`, `ui/form-fields` | `app/contact/page.tsx` |
-| `ui/Tabs` | `app/squads/[slug]/page.tsx` |
-| `ui/lottie/ProfileActivityIconLottie` | `app/profile/page.tsx` |
-| `blog/BlogWriteDeployOverlay` | `app/blogs/write/page.tsx` |
+| ~~`squads/SquadsDiscoverCategoryView`~~        | **Done** → `app/squads/[slug]/_squadSlugSections.tsx`           |
+| ~~`squads/SquadMembersDialog`~~                | **Done** → `app/squads/[slug]/_squadSlugSections.tsx`           |
+| `squads/SquadsPageSkeleton`                    | `app/squads/page.tsx`                                           |
+| `topics/CategoryFollowButton`                  | `app/topics/category/[slug]/page.tsx`                           |
+| `profile/ProfileSectionHeader`                 | `app/profile/page.tsx`                                          |
+| `profile/dialog/MissingFieldsDialog`           | `app/profile/page.tsx`                                          |
+| `profile/UserProfileBlogsContent`              | `app/u/[username]/blogs/page.tsx`                               |
+| `legal/UserDataDeletionPanel`                  | `app/(legal)/user-data-deletion/page.tsx`                       |
+| `legal/LegalPagesLayout`                       | `app/(legal)/layout.tsx`                                        |
+| `docs/DocsBreadcrumb`                          | `app/docs/layout.tsx`                                           |
+| `docs/DocsSidebarNav`                          | `app/docs/layout.tsx`                                           |
+| `auth/OAuthBrowserCallback`                    | `app/auth/callback/[provider]/page.tsx`                         |
+| `ui/BottomToolbar`                             | `app/blogs/write/page.tsx`                                      |
+| `ui/Header`, `ui/form-fields`                  | `app/contact/page.tsx`                                          |
+| `ui/Tabs`                                      | `app/squads/[slug]/page.tsx`                                    |
+| `ui/lottie/ProfileActivityIconLottie`          | `app/profile/page.tsx`                                          |
+| `blog/BlogWriteDeployOverlay`                  | `app/blogs/write/page.tsx`                                      |
 
 ### Blog post detail — **done** (co-located route module)
 
@@ -109,16 +109,16 @@ Merged into `app/blogs/[username]/[slug]/_blogPostDetailSections.tsx` (imported 
 
 Used only by `app/layout.tsx` / `app/providers.tsx`:
 
-| Component | Note |
-|-----------|------|
-| `layout/shell/LayoutShell` | Large — keep file OR split `layout.tsx` + thin shell |
-| `StoreHydration` | Small — good inline candidate |
-| `connectivity/ConnectivityGate` | Small |
-| `effects/GlobalEngagementEffects` | Small |
-| `search/SearchDialogWrapper` | Medium |
-| `retroui/SonnerToaster` | Tiny |
-| `appwrite/AppwritePing` | Tiny |
-| `providers/QueryProvider` | Tiny → `app/providers.tsx` |
+| Component                         | Note                                                 |
+| --------------------------------- | ---------------------------------------------------- |
+| `layout/shell/LayoutShell`        | Large — keep file OR split `layout.tsx` + thin shell |
+| `StoreHydration`                  | Small — good inline candidate                        |
+| `connectivity/ConnectivityGate`   | Small                                                |
+| `effects/GlobalEngagementEffects` | Small                                                |
+| `search/SearchDialogWrapper`      | Medium                                               |
+| `retroui/SonnerToaster`           | Tiny                                                 |
+| `appwrite/AppwritePing`           | Tiny                                                 |
+| `providers/QueryProvider`         | Tiny → `app/providers.tsx`                           |
 
 ---
 
@@ -197,16 +197,16 @@ squads/SquadsDiscoverFeaturedPageContent   ← Tier A
 
 ### Profile / legal / search / feedback
 
-| Parent | Child to inline |
-|--------|-----------------|
-| `profile/dialog/SyntaxCardDialog` | `syntax-card/SyntaxCardSquare` → `SyntaxCardMiniHeatmap` |
-| `profile/dialog/MissingFieldsDialog` | `CompleteItemDialog` |
-| `legal/LegalPagesLayout` | `LegalPolicyPageHeader`, `LegalTableOfContents` |
-| `legal/LegalPolicyHeaderContext` | `legalPolicyFormat.ts` (move helpers to same file) |
-| `search/SearchDialogWrapper` | `SearchDialog` |
-| `feedback/FeedbackDialogWrapper` | `FeedbackDialog` |
-| `ui/RichParagraphEditor` | `GifPopoverCard` |
-| `ui/form-fields` | `retroui/Label`, `FormField`, `Textarea` (if only via form-fields) |
+| Parent                               | Child to inline                                                    |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| `profile/dialog/SyntaxCardDialog`    | `syntax-card/SyntaxCardSquare` → `SyntaxCardMiniHeatmap`           |
+| `profile/dialog/MissingFieldsDialog` | `CompleteItemDialog`                                               |
+| `legal/LegalPagesLayout`             | `LegalPolicyPageHeader`, `LegalTableOfContents`                    |
+| `legal/LegalPolicyHeaderContext`     | `legalPolicyFormat.ts` (move helpers to same file)                 |
+| `search/SearchDialogWrapper`         | `SearchDialog`                                                     |
+| `feedback/FeedbackDialogWrapper`     | `FeedbackDialog`                                                   |
+| `ui/RichParagraphEditor`             | `GifPopoverCard`                                                   |
+| `ui/form-fields`                     | `retroui/Label`, `FormField`, `Textarea` (if only via form-fields) |
 
 ---
 
@@ -214,22 +214,22 @@ squads/SquadsDiscoverFeaturedPageContent   ← Tier A
 
 Do **not** inline these; they are cross-cutting primitives or heavily reused.
 
-| Imports | Component |
-|--------:|-----------|
-| 26 | `skeletons/PageSkeletons` |
-| 19 | `ui/Dialog` |
-| 17 | `ui/Button` |
-| 11 | `icons/SocialProviderIcons` |
-| 11 | `layout/rail/ShellPageIntroHeader` |
-| 11 | `ui/BlockShadowButton` |
-| 10 | `blog/BlogCard` |
-| 9 | `ui/HoverCard`, `ui/LinkPreviewCardContent` |
-| 8 | `layout/rail/RailSectionSubheader`, `ui/FormDialog`, `ui/delete/ConfirmDialog` |
-| 7 | `layout/rail/RailFeedEmptyState`, `retroui/Label` |
-| 6 | `legal/legalUi`, `ui/lottie/SparkLottie` |
-| 5 | `upload/ImageUploadCropDialog` |
-| 4 | `retroui/Input`, `squads/SquadDirectoryCard`, `ui/Skeleton`, … |
-| 3 | `blog/BlogPostAuthor`, `blog/CompactBlogPostsSwiper`, `ui/BlogWriteEditor`, `squads/SquadDiscoverCard`, `topics/RankCountPill`, … |
+| Imports | Component                                                                                                                         |
+| ------: | --------------------------------------------------------------------------------------------------------------------------------- |
+|      26 | `skeletons/PageSkeletons`                                                                                                         |
+|      19 | `ui/Dialog`                                                                                                                       |
+|      17 | `ui/Button`                                                                                                                       |
+|      11 | `icons/SocialProviderIcons`                                                                                                       |
+|      11 | `layout/rail/ShellPageIntroHeader`                                                                                                |
+|      11 | `ui/BlockShadowButton`                                                                                                            |
+|      10 | `blog/BlogCard`                                                                                                                   |
+|       9 | `ui/HoverCard`, `ui/LinkPreviewCardContent`                                                                                       |
+|       8 | `layout/rail/RailSectionSubheader`, `ui/FormDialog`, `ui/delete/ConfirmDialog`                                                    |
+|       7 | `layout/rail/RailFeedEmptyState`, `retroui/Label`                                                                                 |
+|       6 | `legal/legalUi`, `ui/lottie/SparkLottie`                                                                                          |
+|       5 | `upload/ImageUploadCropDialog`                                                                                                    |
+|       4 | `retroui/Input`, `squads/SquadDirectoryCard`, `ui/Skeleton`, …                                                                    |
+|       3 | `blog/BlogPostAuthor`, `blog/CompactBlogPostsSwiper`, `ui/BlogWriteEditor`, `squads/SquadDiscoverCard`, `topics/RankCountPill`, … |
 
 **Rule of thumb:** anything under `ui/`, `retroui/`, `skeletons/PageSkeletons`, and `layout/rail/*` stays unless audit shows a single route.
 
@@ -237,15 +237,15 @@ Do **not** inline these; they are cross-cutting primitives or heavily reused.
 
 ## 6. Recommended refactor batches (priority)
 
-| Priority | Batch | Files removed (approx.) | Risk |
-|----------|--------|-------------------------|------|
-| P0 | Blog post detail → `blogs/[username]/[slug]/_blogPostDetailSections.tsx` | 8 | **Done** |
-| P1 | BlogCard engagement → `_blogCardEngagement.tsx` | 4 | **Done** |
-| P2 | Explore + Trending → `_explorePageContent.tsx`, `_trendingPageContent.tsx` | 6 | **Done** |
-| P3 | Squads featured + slug sections | 5 | **Done** |
-| P4 | Layout shell overlays → `_layoutShellOverlays.tsx`; status in `Footer.tsx` | 4 | **Done** |
-| P5 | Blog write blocks → `ui/_blogWriteEditorBlocks.tsx` | 5 | **Done** |
-| P6 | Profile syntax-card + missing-fields → `_syntaxCardDialog`, `_missingFieldsDialog` | 4 | **Done** |
+| Priority | Batch                                                                              | Files removed (approx.) | Risk     |
+| -------- | ---------------------------------------------------------------------------------- | ----------------------- | -------- |
+| P0       | Blog post detail → `blogs/[username]/[slug]/_blogPostDetailSections.tsx`           | 8                       | **Done** |
+| P1       | BlogCard engagement → `_blogCardEngagement.tsx`                                    | 4                       | **Done** |
+| P2       | Explore + Trending → `_explorePageContent.tsx`, `_trendingPageContent.tsx`         | 6                       | **Done** |
+| P3       | Squads featured + slug sections                                                    | 5                       | **Done** |
+| P4       | Layout shell overlays → `_layoutShellOverlays.tsx`; status in `Footer.tsx`         | 4                       | **Done** |
+| P5       | Blog write blocks → `ui/_blogWriteEditorBlocks.tsx`                                | 5                       | **Done** |
+| P6       | Profile syntax-card + missing-fields → `_syntaxCardDialog`, `_missingFieldsDialog` | 4                       | **Done** |
 
 After each batch: run `npm run lint` and smoke-test the affected route.
 

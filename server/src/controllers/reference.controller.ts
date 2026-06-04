@@ -17,7 +17,9 @@ function parseKind(raw: unknown): ReferenceEntityKind | null {
 export async function searchReferenceEntities(req: Request, res: Response): Promise<void> {
   const kind = parseKind(req.query.kind);
   if (!kind) {
-    res.status(400).json({ success: false, message: 'kind must be company, school, or organization' });
+    res
+      .status(400)
+      .json({ success: false, message: 'kind must be company, school, or organization' });
     return;
   }
 

@@ -7,7 +7,11 @@ export type BlogPublishTaxonomy = {
 export function blogPublishSummaryPreviewPlain(html: string): string {
   if (!html || html === '<br>') return '';
   if (typeof document === 'undefined') {
-    return html.replaceAll(/<[^>]*>/g, ' ').replaceAll('&nbsp;', ' ').trim().slice(0, 220);
+    return html
+      .replaceAll(/<[^>]*>/g, ' ')
+      .replaceAll('&nbsp;', ' ')
+      .trim()
+      .slice(0, 220);
   }
   const el = document.createElement('div');
   el.innerHTML = html;

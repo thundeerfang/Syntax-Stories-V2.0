@@ -72,7 +72,9 @@ export const profileProjectsPatchSchema = z
   .strict()
   .refine(
     (o: { projects?: unknown; openSourceContributions?: unknown; isGitAccount?: unknown }) =>
-      o.projects !== undefined || o.openSourceContributions !== undefined || o.isGitAccount !== undefined,
+      o.projects !== undefined ||
+      o.openSourceContributions !== undefined ||
+      o.isGitAccount !== undefined,
     {
       message: 'Provide projects, openSourceContributions, and/or isGitAccount',
     }

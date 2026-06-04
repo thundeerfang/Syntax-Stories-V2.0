@@ -29,14 +29,6 @@ export interface MarketingFeatureItem {
   sortOrder: number;
 }
 
-export interface MarketingPlanItem {
-  name: string;
-  price: string;
-  priceSuffix: string;
-  features: string[];
-  sortOrder: number;
-}
-
 export interface MarketingTeamMember {
   name: string;
   role: string;
@@ -58,7 +50,6 @@ export interface AboutMarketingPage {
   journey: MarketingJourneyItem[];
   techStack: MarketingTechItem[];
   features: MarketingFeatureItem[];
-  membershipPlans: MarketingPlanItem[];
   team: MarketingTeamMember[];
   cta: MarketingCta;
   footerNote: string;

@@ -12,6 +12,9 @@ import { AuditAction } from '../../../shared/audit/events.js';
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { logSecurityEvent } from '../securityEventLog.js';
 import { createSession, generateRefreshToken } from '../../../services/session.service.js';
+import { createStaffPermissionSnapshot } from '../../../admin-platform/iam/permissionSnapshot.service.js';
+import { completeAdminStepUp } from '../../../admin-platform/iam/adminSessionIdle.service.js';
+import { markStepUpVerified } from '../../../admin-platform/iam/stepUp.service.js';
 
 const TWO_FA_SETUP_TTL_SECONDS = 10 * 60;
 
@@ -64,7 +67,15 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
 
     const refreshToken = generateRefreshToken();
     const session = await createSession(String(dbUser._id), req, refreshToken);
-    const accessToken = signAccessToken({ _id: String(dbUser._id), sessionId: String(session._id) });
+    const sessionId = String(session._id);
+    const accessToken = signAccessToken({ _id: String(dbUser._id), sessionId });
+    void createStaffPermissionSnapshot(String(dbUser._id), sessionId);
+    const isStaff = dbUser.staffRole === 'editor' || dbUser.staffRole === 'admin';
+    if (isStaff) {
+      await completeAdminStepUp(sessionId, String(dbUser._id));
+    } else {
+      await markStepUpVerified(sessionId, String(dbUser._id));
+    }
     void writeAuditLog(req, AuditAction.SESSION_CREATED, {
       actorId: String(dbUser._id),
       metadata: {
@@ -74,7 +85,10 @@ export async function verifyTwoFactorLogin(req: Request, res: Response): Promise
         expiresAt: session.expiresAt?.toISOString?.(),
       },
     });
-    void writeAuditLog(req, AuditAction.USER_SIGNIN, { actorId: String(dbUser._id), metadata: { source: '2fa' } });
+    void writeAuditLog(req, AuditAction.USER_SIGNIN, {
+      actorId: String(dbUser._id),
+      metadata: { source: '2fa' },
+    });
     res.status(200).json({
       success: true,
       message: 'Signed in successfully 🚀',

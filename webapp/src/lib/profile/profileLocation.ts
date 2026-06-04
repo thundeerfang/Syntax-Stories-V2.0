@@ -25,11 +25,7 @@ export function getCityOptions(countryCode: string, stateCode: string): Searchab
 }
 
 /** Build location string for backend from city, stateCode, countryCode. */
-export function buildLocationString(
-  city: string,
-  stateCode: string,
-  countryCode: string
-): string {
+export function buildLocationString(city: string, stateCode: string, countryCode: string): string {
   const country = Country.getCountryByCode(countryCode);
   const countryName = country?.name ?? countryCode;
   let stateName = stateCode;
@@ -105,7 +101,10 @@ export function parseLocationString(location: string): {
   const trimmed = location?.trim() ?? '';
   if (!trimmed) return { city: '', stateCode: '', countryCode: '' };
 
-  const parts = trimmed.split(',').map((p) => p.trim()).filter(Boolean);
+  const parts = trimmed
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
   if (parts.length === 0) return { city: '', stateCode: '', countryCode: '' };
 
   const countries = Country.getAllCountries();

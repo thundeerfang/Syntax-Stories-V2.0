@@ -2,7 +2,6 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { fetchPublishedHelpList, HELP_CATEGORY_DOCUMENTATION } from '@/lib/api/publicHelp';
 
-
 export const metadata: Metadata = {
   title: 'Documentation — Syntax Stories',
   description: 'Product documentation and guides for Syntax Stories.',
@@ -20,17 +19,20 @@ export default async function DocsHomePage() {
         <h1 className="text-3xl font-black tracking-tight text-foreground">Documentation</h1>
         <p className="text-sm text-muted-foreground">
           Guides and reference material for using Syntax Stories. Articles with category{' '}
-          <code className="border border-border bg-muted px-1.5 py-0.5 text-xs font-mono">documentation</code>{' '}
+          <code className="border border-border bg-muted px-1.5 py-0.5 text-xs font-mono">
+            documentation
+          </code>{' '}
           in the CMS appear here and in the sidebar.
         </p>
       </header>
 
       <section className="space-y-3">
-        <h2 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Published topics</h2>
+        <h2 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+          Published topics
+        </h2>
         {articles.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No documentation articles yet. Staff can publish articles with category &quot;documentation&quot; from the
-            admin help CMS — they will list here automatically.
+            No documentation articles yet. Product docs are managed separately from Help CMS.
           </p>
         ) : (
           <ul className="space-y-2">
@@ -54,7 +56,9 @@ export default async function DocsHomePage() {
       </section>
 
       <section className="ss-empty-dashed-panel p-4">
-        <h2 className="text-[11px] font-black uppercase text-muted-foreground">Need account help?</h2>
+        <h2 className="text-[11px] font-black uppercase text-muted-foreground">
+          Need account help?
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Visit the{' '}
           <Link href="/help" className="font-bold text-primary underline">

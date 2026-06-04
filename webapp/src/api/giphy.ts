@@ -25,7 +25,9 @@ export async function searchGifs(
 ): Promise<GiphySearchResponse> {
   const key = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
   if (!key) {
-    throw new Error('NEXT_PUBLIC_GIPHY_API_KEY is not set. Add it to .env.local to enable GIF search.');
+    throw new Error(
+      'NEXT_PUBLIC_GIPHY_API_KEY is not set. Add it to .env.local to enable GIF search.'
+    );
   }
   const params = new URLSearchParams({
     api_key: key,

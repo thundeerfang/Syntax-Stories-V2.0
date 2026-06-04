@@ -6,11 +6,16 @@ import { getRedis } from '../config/redis.js';
 import { writeAuditLog } from '../shared/audit/auditLog.js';
 import { AuditAction } from '../shared/audit/events.js';
 import { redisKeys } from '../shared/redis/keys.js';
-import type { HandleOAuthInput, NormalizedOAuthProfile, OAuthPassportUser, OAuthProviderKey } from './oauth.types.js';
+import type {
+  HandleOAuthInput,
+  NormalizedOAuthProfile,
+  OAuthPassportUser,
+  OAuthProviderKey,
+} from './oauth.types.js';
 import { sealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
 import { resolveReferralInput, applyReferralOnNewUser } from '../services/referral.service.js';
-import { LEGAL_SIGNUP_ACK_COOKIE } from '../modules/legal/legalSignupCookie.js';
-import { recordSignupLegalAcceptances } from '../modules/legal/recordLegalAcceptances.js';
+import { LEGAL_SIGNUP_ACK_COOKIE } from '../admin-platform/cms/legal/legalSignupCookie.js';
+import { recordSignupLegalAcceptances } from '../admin-platform/cms/legal/recordLegalAcceptances.js';
 
 const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
   google: 'Google',
@@ -18,6 +23,7 @@ const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
   facebook: 'Facebook',
   x: 'X',
   discord: 'Discord',
+  twitch: 'Twitch',
 };
 
 function randomSuffix(): number {
@@ -49,6 +55,8 @@ function signupUsername(provider: OAuthProviderKey, n: NormalizedOAuthProfile): 
       return (n.xHandle ?? 'user') + r;
     case 'discord':
       return `${n.discordUsernameBase ?? 'user'}${r}`;
+    case 'twitch':
+      return `${n.twitchUsernameBase ?? 'user'}${r}`;
     default:
       return `user${r}`;
   }
@@ -84,6 +92,7 @@ function newUserBaseDoc(
     isXAccount: false,
     isAppleAccount: false,
     isDiscordAccount: false,
+    isTwitchAccount: false,
   };
 
   switch (provider) {
@@ -123,6 +132,13 @@ function newUserBaseDoc(
         discordToken: sealTok(accessToken),
         isDiscordAccount: true,
       };
+    case 'twitch':
+      return {
+        ...base,
+        twitchId: n.providerId,
+        twitchToken: sealTok(accessToken),
+        isTwitchAccount: true,
+      };
     default:
       return base;
   }
@@ -135,6 +151,7 @@ function passportShape(provider: OAuthProviderKey, user: IUser): OAuthPassportUs
   if (provider === 'facebook') out.facebookId = user.facebookId;
   if (provider === 'x') out.xId = user.xId;
   if (provider === 'discord') out.discordId = user.discordId;
+  if (provider === 'twitch') out.twitchId = user.twitchId;
   return out;
 }
 
@@ -152,7 +169,18 @@ type FinalizeOAuthLinkInput = {
 };
 
 async function finalizeOAuthAccountLink(input: FinalizeOAuthLinkInput): Promise<OAuthPassportUser> {
-  const { req, redis, linkKey, userId, label, normalized, accessToken, selectFields, provider, apply } = input;
+  const {
+    req,
+    redis,
+    linkKey,
+    userId,
+    label,
+    normalized,
+    accessToken,
+    selectFields,
+    provider,
+    apply,
+  } = input;
   const user = await UserModel.findById(userId).select(selectFields);
   if (!user) throw new Error('User not found');
   const accountEmail = (user.email ?? '').toLowerCase();
@@ -269,6 +297,23 @@ async function handleLink(
           user.isDiscordAccount = true;
         },
       });
+    case 'twitch':
+      return finalizeOAuthAccountLink({
+        req,
+        redis,
+        linkKey,
+        userId,
+        label,
+        normalized: n,
+        accessToken,
+        selectFields: '+twitchToken',
+        provider: 'twitch',
+        apply: (user, tok) => {
+          user.twitchId = n.providerId;
+          user.twitchToken = sealTok(tok);
+          user.isTwitchAccount = true;
+        },
+      });
     default:
       throw new Error('Unknown provider');
   }
@@ -282,7 +327,9 @@ async function handleLogin(
   const label = PROVIDER_LABEL[provider];
   switch (provider) {
     case 'google': {
-      const existingUser = await UserModel.findOne({ googleId: n.providerId }).select('+googleToken');
+      const existingUser = await UserModel.findOne({ googleId: n.providerId }).select(
+        '+googleToken'
+      );
       if (!existingUser || !existingUser.isGoogleAccount) {
         throw new Error(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
@@ -304,7 +351,9 @@ async function handleLogin(
       return passportShape('github', existingUser);
     }
     case 'facebook': {
-      const existingUser = await UserModel.findOne({ facebookId: n.providerId }).select('+facebookToken');
+      const existingUser = await UserModel.findOne({ facebookId: n.providerId }).select(
+        '+facebookToken'
+      );
       if (!existingUser || !existingUser.isFacebookAccount) {
         throw new Error(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
@@ -326,7 +375,9 @@ async function handleLogin(
       return passportShape('x', existingUser);
     }
     case 'discord': {
-      const existingUser = await UserModel.findOne({ discordId: n.providerId }).select('+discordToken');
+      const existingUser = await UserModel.findOne({ discordId: n.providerId }).select(
+        '+discordToken'
+      );
       if (!existingUser || !existingUser.isDiscordAccount) {
         throw new Error(
           `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
@@ -335,6 +386,19 @@ async function handleLogin(
       existingUser.discordToken = sealTok(accessToken);
       await existingUser.save();
       return passportShape('discord', existingUser);
+    }
+    case 'twitch': {
+      const existingUser = await UserModel.findOne({ twitchId: n.providerId }).select(
+        '+twitchToken'
+      );
+      if (!existingUser || !existingUser.isTwitchAccount) {
+        throw new Error(
+          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
+        );
+      }
+      existingUser.twitchToken = sealTok(accessToken);
+      await existingUser.save();
+      return passportShape('twitch', existingUser);
     }
     default:
       throw new Error('Unknown provider');

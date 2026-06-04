@@ -1,11 +1,17 @@
-import { applyDailyStreakTransition, recomputeDailyStreakFromSortedDays } from '../streak/applyDailyStreakTransition.js';
+import {
+  applyDailyStreakTransition,
+  recomputeDailyStreakFromSortedDays,
+} from '../streak/applyDailyStreakTransition.js';
 import {
   assertTodayIsNextUtcDayAfterYesterday,
   isValidUtcDayBucket,
   nextUtcCalendarDay,
   previousUtcCalendarDay,
 } from '../streak/calendarUtc.js';
-import { dailyStreakGoldenCases, dailyStreakGoldenExpected } from '../streak/dailyStreakGoldenCases.js';
+import {
+  dailyStreakGoldenCases,
+  dailyStreakGoldenExpected,
+} from '../streak/dailyStreakGoldenCases.js';
 
 describe('Single Source Streak Engine (§33) — Phase 1', () => {
   describe('Golden Test Contract', () => {
@@ -29,7 +35,9 @@ describe('Single Source Streak Engine (§33) — Phase 1', () => {
     });
 
     it('assertTodayIsNextUtcDayAfterYesterday rejects bad pair', () => {
-      expect(() => assertTodayIsNextUtcDayAfterYesterday('2026-05-05', '2026-05-03')).toThrow('DAY_BUCKET_PAIR_MISMATCH');
+      expect(() => assertTodayIsNextUtcDayAfterYesterday('2026-05-05', '2026-05-03')).toThrow(
+        'DAY_BUCKET_PAIR_MISMATCH'
+      );
     });
 
     it('isValidUtcDayBucket', () => {
@@ -41,7 +49,11 @@ describe('Single Source Streak Engine (§33) — Phase 1', () => {
 
   describe('recomputeDailyStreakFromSortedDays', () => {
     it('empty → zeros', () => {
-      expect(recomputeDailyStreakFromSortedDays([])).toEqual({ current: 0, longest: 0, lastDay: '' });
+      expect(recomputeDailyStreakFromSortedDays([])).toEqual({
+        current: 0,
+        longest: 0,
+        lastDay: '',
+      });
     });
 
     it('single day', () => {

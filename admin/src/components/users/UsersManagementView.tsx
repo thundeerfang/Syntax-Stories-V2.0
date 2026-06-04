@@ -2,15 +2,27 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Box, Paper, Stack, Tab, Tabs } from '@mui/material';
+import { Box, Stack } from '@mui/material';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
+import SupportAgentRoundedIcon from '@mui/icons-material/SupportAgentRounded';
+import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import { useSessionStore } from '@/store/session';
-import { DashboardPageHeader } from '@/components/layout/DashboardPageHeader';
+import { CentricPageHeader } from '@/components/layout/CentricPageHeader';
+import { pageBreadcrumbs } from '@/components/layout/pageHeaderBreadcrumbs';
+import { AdminTabs } from '@/components/ui/AdminTabs';
 import { PlatformAccountsPanel } from './PlatformAccountsPanel';
 import { AccessControlPanel } from '@/components/access/AccessControlPanel';
 import { AdminTeamPanel } from './AdminTeamPanel';
 
 const TAB_KEYS = ['accounts', 'access', 'team'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
+
+const USER_TABS = [
+  { label: 'Accounts', icon: GroupsRoundedIcon },
+  { label: 'Access control', icon: AdminPanelSettingsRoundedIcon },
+  { label: 'Operators', icon: SupportAgentRoundedIcon },
+] as const;
 
 function tabFromQuery(raw: string | null): TabKey {
   if (raw === 'access' || raw === 'team') return raw;
@@ -41,41 +53,22 @@ function UsersManagementViewInner() {
 
   return (
     <Stack spacing={3}>
-      <DashboardPageHeader
+      <CentricPageHeader
         title="Users"
-        subtitle="Customer accounts, role definitions, and dashboard operators in one place."
+        description="All webapp user accounts from the User model, RBAC access control, and dashboard operators."
+        icon={<PeopleRoundedIcon />}
+        breadcrumbs={pageBreadcrumbs('Users', '/users')}
       />
 
-      <Paper
-        elevation={0}
-        className="border border-[var(--color-border)]"
-        sx={{ borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}
+      <AdminTabs
+        tabs={[...USER_TABS]}
+        value={tabIndex}
+        onChange={(v) => setTabAndUrl(TAB_KEYS[v] ?? 'accounts')}
       >
-        <Tabs
-          value={tabIndex}
-          onChange={(_, v) => {
-            const key = TAB_KEYS[v] ?? 'accounts';
-            setTabAndUrl(key);
-          }}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            px: 1,
-            borderBottom: 1,
-            borderColor: 'divider',
-            '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 48 },
-          }}
-        >
-          <Tab label="Platform accounts" disableRipple />
-          <Tab label="Access" disableRipple />
-          <Tab label="Admin team" disableRipple />
-        </Tabs>
-        <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
-          {tab === 'accounts' ? <PlatformAccountsPanel token={token} /> : null}
-          {tab === 'access' ? <AccessControlPanel token={token} /> : null}
-          {tab === 'team' ? <AdminTeamPanel token={token} /> : null}
-        </Box>
-      </Paper>
+        {tab === 'accounts' ? <PlatformAccountsPanel token={token} /> : null}
+        {tab === 'access' ? <AccessControlPanel token={token} /> : null}
+        {tab === 'team' ? <AdminTeamPanel token={token} /> : null}
+      </AdminTabs>
     </Stack>
   );
 }
@@ -86,7 +79,11 @@ export function UsersManagementView() {
     <Suspense
       fallback={
         <Box sx={{ py: 4 }}>
-          <DashboardPageHeader title="Users" />
+          <CentricPageHeader
+            title="Users"
+            icon={<PeopleRoundedIcon />}
+            breadcrumbs={pageBreadcrumbs('Users', '/users')}
+          />
         </Box>
       }
     >

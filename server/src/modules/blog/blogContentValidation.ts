@@ -98,7 +98,13 @@ function sanitizeImagePayload(p: unknown): Record<string, unknown> {
     out.altText = truncateString((p as { altText: string }).altText, MAX_CAPTION);
   }
   const layout = p.layout;
-  if (layout === 'landscape' || layout === 'square' || layout === 'fullWidth' || layout === 'natural' || layout === 'center') {
+  if (
+    layout === 'landscape' ||
+    layout === 'square' ||
+    layout === 'fullWidth' ||
+    layout === 'natural' ||
+    layout === 'center'
+  ) {
     out.layout = layout;
   }
   return out;
@@ -146,7 +152,8 @@ function sanitizeGithubPayload(p: unknown): Record<string, unknown> {
   for (const key of ['owner', 'repo', 'name', 'url', 'avatarUrl'] as const) {
     if (typeof p[key] === 'string') out[key] = truncateString(p[key] as string, MAX_URL_LEN);
   }
-  if (typeof p.description === 'string') out.description = truncateString(p.description, MAX_GITHUB_DESC);
+  if (typeof p.description === 'string')
+    out.description = truncateString(p.description, MAX_GITHUB_DESC);
   return out;
 }
 
@@ -167,7 +174,9 @@ function sanitizeTablePayload(p: unknown): Record<string, unknown> {
     const cells: string[] = [];
     for (let c = 0; c < row.length && c < MAX_TABLE_COLS; c++) {
       const cell = row[c];
-      cells.push(typeof cell === 'string' ? truncateString(cell, MAX_TABLE_CELL_CHARS) : String(cell ?? ''));
+      cells.push(
+        typeof cell === 'string' ? truncateString(cell, MAX_TABLE_CELL_CHARS) : String(cell ?? '')
+      );
     }
     if (cells.length) rows.push(cells);
   }
@@ -192,7 +201,8 @@ function sanitizeUnsplashPayload(p: unknown): Record<string, unknown> {
   if (!isPlainObject(p)) throw new Error('unsplashImage payload must be an object');
   const out: Record<string, unknown> = {};
   if (typeof p.url === 'string') out.url = truncateString(p.url, MAX_URL_LEN);
-  if (typeof p.photographer === 'string') out.photographer = truncateString(p.photographer, MAX_CAPTION);
+  if (typeof p.photographer === 'string')
+    out.photographer = truncateString(p.photographer, MAX_CAPTION);
   if (typeof p.caption === 'string') out.caption = truncateString(p.caption, MAX_CAPTION);
   if (typeof p.unsplashPhotoId === 'string') {
     out.unsplashPhotoId = truncateString(p.unsplashPhotoId, 128);
@@ -238,7 +248,11 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     return { ok: false, status: 400, message: 'Content must be a string' };
   }
   if (raw.length > MAX_CONTENT_CHARS) {
-    return { ok: false, status: 400, message: `Content exceeds maximum length (${MAX_CONTENT_CHARS} characters)` };
+    return {
+      ok: false,
+      status: 400,
+      message: `Content exceeds maximum length (${MAX_CONTENT_CHARS} characters)`,
+    };
   }
   const toParse = raw.trim() === '' ? '[]' : raw.trim();
   let parsed: unknown;
@@ -254,7 +268,12 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     return { ok: false, status: 400, message: `At most ${MAX_BLOCKS} blocks allowed` };
   }
 
-  const out: Array<{ id: string; type: string; sectionId?: string; payload?: Record<string, unknown> }> = [];
+  const out: Array<{
+    id: string;
+    type: string;
+    sectionId?: string;
+    payload?: Record<string, unknown>;
+  }> = [];
 
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i];
@@ -267,7 +286,11 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     const id = item.id;
     const type = item.type;
     if (typeof id !== 'string' || !id.trim()) {
-      return { ok: false, status: 400, message: `Block at index ${i} must have a non-empty string id` };
+      return {
+        ok: false,
+        status: 400,
+        message: `Block at index ${i} must have a non-empty string id`,
+      };
     }
     if (id.length > MAX_BLOCK_ID_LEN) {
       return { ok: false, status: 400, message: `Block id at index ${i} is too long` };
@@ -282,7 +305,11 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     let sectionId: string | undefined;
     if (item.sectionId !== undefined) {
       if (typeof item.sectionId !== 'string') {
-        return { ok: false, status: 400, message: `Block sectionId at index ${i} must be a string` };
+        return {
+          ok: false,
+          status: 400,
+          message: `Block sectionId at index ${i} must be a string`,
+        };
       }
       sectionId = truncateString(item.sectionId, MAX_SECTION_ID_LEN);
     }
@@ -295,7 +322,12 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
         return { ok: false, status: 400, message: `Block ${i} (${type}): ${msg}` };
       }
     }
-    const block: { id: string; type: string; sectionId?: string; payload?: Record<string, unknown> } = {
+    const block: {
+      id: string;
+      type: string;
+      sectionId?: string;
+      payload?: Record<string, unknown>;
+    } = {
       id: id.trim(),
       type,
     };

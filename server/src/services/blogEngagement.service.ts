@@ -28,7 +28,9 @@ export async function setRepostDesiredState(params: {
 }): Promise<SetRepostResult> {
   const viewerOid = new mongoose.Types.ObjectId(params.viewerUserId);
   if (viewerOid.equals(params.authorId)) {
-    const edge = await BlogRepostModel.findOne({ userId: viewerOid, postId: params.postId }).select('_id').lean();
+    const edge = await BlogRepostModel.findOne({ userId: viewerOid, postId: params.postId })
+      .select('_id')
+      .lean();
     const post = await BlogPostModel.findById(params.postId).select('repostCount').lean();
     const count = Math.max(0, post?.repostCount ?? 0);
     return { ok: true, reposting: !!edge, repostCount: count };
@@ -62,12 +64,18 @@ export async function setRepostDesiredState(params: {
       if (params.reposting) {
         if (!existing) {
           try {
-            await BlogRepostModel.create([{ userId: viewerOid, postId: params.postId }], { session });
+            await BlogRepostModel.create([{ userId: viewerOid, postId: params.postId }], {
+              session,
+            });
           } catch (e) {
             const err = e as { code?: number };
             if (err?.code !== 11000) throw e;
           }
-          await BlogPostModel.updateOne({ _id: params.postId }, { $inc: { repostCount: 1 } }, { session });
+          await BlogPostModel.updateOne(
+            { _id: params.postId },
+            { $inc: { repostCount: 1 } },
+            { session }
+          );
         }
       } else if (existing) {
         await BlogRepostModel.deleteOne({ _id: existing._id }).session(session);
@@ -84,7 +92,10 @@ export async function setRepostDesiredState(params: {
         .lean();
       reposting = !!edgeAfter;
 
-      const p = await BlogPostModel.findById(params.postId).session(session).select('repostCount').lean();
+      const p = await BlogPostModel.findById(params.postId)
+        .session(session)
+        .select('repostCount')
+        .lean();
       repostCount = Math.max(0, p?.repostCount ?? 0);
     });
 
@@ -120,7 +131,10 @@ export async function setBookmarkDesiredState(params: {
 
   let targetGroupId: mongoose.Types.ObjectId | null = null;
   if (params.bookmarked) {
-    targetGroupId = await resolveBookmarkGroupForViewer(params.viewerUserId, params.groupIdHex ?? null);
+    targetGroupId = await resolveBookmarkGroupForViewer(
+      params.viewerUserId,
+      params.groupIdHex ?? null
+    );
   }
 
   const session = await mongoose.startSession();
@@ -139,18 +153,25 @@ export async function setBookmarkDesiredState(params: {
           try {
             await BlogBookmarkModel.create(
               [{ userId: viewerOid, postId: params.postId, groupId: targetGroupId! }],
-              { session },
+              { session }
             );
-            await BlogPostModel.updateOne({ _id: params.postId }, { $inc: { bookmarkCount: 1 } }, { session });
+            await BlogPostModel.updateOne(
+              { _id: params.postId },
+              { $inc: { bookmarkCount: 1 } },
+              { session }
+            );
           } catch (e) {
             const err = e as { code?: number };
             if (err?.code !== 11000) throw e;
-            const raced = await BlogBookmarkModel.findOne({ userId: viewerOid, postId: params.postId }).session(session);
+            const raced = await BlogBookmarkModel.findOne({
+              userId: viewerOid,
+              postId: params.postId,
+            }).session(session);
             if (raced && targetGroupId && String(raced.groupId ?? '') !== String(targetGroupId)) {
               await BlogBookmarkModel.updateOne(
                 { _id: raced._id },
                 { $set: { groupId: targetGroupId } },
-                { session },
+                { session }
               );
             }
           }
@@ -158,7 +179,7 @@ export async function setBookmarkDesiredState(params: {
           await BlogBookmarkModel.updateOne(
             { _id: existing._id },
             { $set: { groupId: targetGroupId } },
-            { session },
+            { session }
           );
         }
       } else if (existing) {
@@ -166,17 +187,23 @@ export async function setBookmarkDesiredState(params: {
         await BlogPostModel.updateOne(
           { _id: params.postId, bookmarkCount: { $gt: 0 } },
           { $inc: { bookmarkCount: -1 } },
-          { session },
+          { session }
         );
       }
 
-      const edgeAfter = await BlogBookmarkModel.findOne({ userId: viewerOid, postId: params.postId })
+      const edgeAfter = await BlogBookmarkModel.findOne({
+        userId: viewerOid,
+        postId: params.postId,
+      })
         .session(session)
         .select('_id')
         .lean();
       bookmarked = !!edgeAfter;
 
-      const p = await BlogPostModel.findById(params.postId).session(session).select('bookmarkCount').lean();
+      const p = await BlogPostModel.findById(params.postId)
+        .session(session)
+        .select('bookmarkCount')
+        .lean();
       bookmarkCount = Math.max(0, p?.bookmarkCount ?? 0);
     });
 
@@ -202,7 +229,9 @@ export async function viewerRepostStatesForPosts(
   const out: Record<string, boolean> = {};
   if (!oids.length) return out;
   const viewerOid = new mongoose.Types.ObjectId(viewerUserId);
-  const rows = await BlogRepostModel.find({ userId: viewerOid, postId: { $in: oids } }).select('postId').lean();
+  const rows = await BlogRepostModel.find({ userId: viewerOid, postId: { $in: oids } })
+    .select('postId')
+    .lean();
   for (const oid of oids) {
     out[idByHex.get(oid.toHexString()) ?? String(oid)] = false;
   }
@@ -230,7 +259,9 @@ export async function viewerBookmarkStatesForPosts(
   const out: Record<string, boolean> = {};
   if (!oids.length) return out;
   const viewerOid = new mongoose.Types.ObjectId(viewerUserId);
-  const rows = await BlogBookmarkModel.find({ userId: viewerOid, postId: { $in: oids } }).select('postId').lean();
+  const rows = await BlogBookmarkModel.find({ userId: viewerOid, postId: { $in: oids } })
+    .select('postId')
+    .lean();
   for (const oid of oids) {
     out[idByHex.get(oid.toHexString()) ?? String(oid)] = false;
   }
@@ -243,11 +274,15 @@ export async function viewerBookmarkStatesForPosts(
 }
 
 /** When a post is no longer publicly eligible, zero repost/bookmark counters (edges kept for restore). */
-export async function suspendRepostBookmarkContributionsForPost(postId: mongoose.Types.ObjectId): Promise<void> {
+export async function suspendRepostBookmarkContributionsForPost(
+  postId: mongoose.Types.ObjectId
+): Promise<void> {
   await BlogPostModel.updateOne({ _id: postId }, { $set: { repostCount: 0, bookmarkCount: 0 } });
 }
 
-export async function resumeRepostBookmarkContributionsForPost(postId: mongoose.Types.ObjectId): Promise<void> {
+export async function resumeRepostBookmarkContributionsForPost(
+  postId: mongoose.Types.ObjectId
+): Promise<void> {
   const [repostCount, bookmarkCount] = await Promise.all([
     BlogRepostModel.countDocuments({ postId }),
     BlogBookmarkModel.countDocuments({ postId }),

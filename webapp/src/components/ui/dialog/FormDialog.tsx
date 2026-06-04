@@ -3,9 +3,13 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Skeleton } from '../feedback/Skeleton';
-import { Dialog, DIALOG_FOOTER_TOP_BORDER, DIALOG_TITLE_HEADER_CLASS, DIALOG_TITLE_ICON_BOX_CLASS } from './dialogs';
+import {
+  Dialog,
+  DIALOG_FOOTER_TOP_BORDER,
+  DIALOG_TITLE_HEADER_CLASS,
+  DIALOG_TITLE_ICON_BOX_CLASS,
+} from './dialogs';
 import { cn } from '@/lib/core/utils';
-
 
 export interface FormDialogProps {
   open: boolean;
@@ -104,7 +108,10 @@ export function FormDialog({
           <div className="flex min-w-0 flex-wrap items-end justify-between gap-3">
             {titleIcon == null ? (
               <div className="min-w-0 flex-1 space-y-1">
-                <h2 id={titleId} className="text-base font-black uppercase leading-tight tracking-wide text-foreground">
+                <h2
+                  id={titleId}
+                  className="text-base font-black uppercase leading-tight tracking-wide text-foreground"
+                >
                   {title}
                 </h2>
                 {subtitle == null ? null : (
@@ -124,7 +131,10 @@ export function FormDialog({
                   {titleIcon}
                 </span>
                 <div className="min-w-0 flex-1 space-y-1 pb-px">
-                  <h2 id={titleId} className="text-base font-black uppercase leading-tight tracking-wide text-foreground">
+                  <h2
+                    id={titleId}
+                    className="text-base font-black uppercase leading-tight tracking-wide text-foreground"
+                  >
                     {title}
                   </h2>
                   {subtitle == null ? null : (
@@ -141,14 +151,22 @@ export function FormDialog({
               </div>
             )}
             {headerRight != null && (
-              <div className="flex shrink-0 items-center gap-2 self-end pb-0.5 pr-1 sm:pr-2">{headerRight}</div>
+              <div className="flex shrink-0 items-center gap-2 self-end pb-0.5 pr-1 sm:pr-2">
+                {headerRight}
+              </div>
             )}
           </div>
         </header>
-        <div className={cn('min-h-0 flex-1 overflow-y-auto px-6 py-5', bodyClassName)}>{children}</div>
+        <div className={cn('min-h-0 flex-1 overflow-y-auto px-6 py-5', bodyClassName)}>
+          {children}
+        </div>
         {footer != null && (
           <footer
-            className={cn('flex-shrink-0 bg-muted/20 px-6 py-4', DIALOG_FOOTER_TOP_BORDER, footerClassName)}
+            className={cn(
+              'flex-shrink-0 bg-muted/20 px-6 py-4',
+              DIALOG_FOOTER_TOP_BORDER,
+              footerClassName
+            )}
           >
             {footer}
           </footer>
@@ -166,7 +184,9 @@ export function FormDialog({
             aria-busy="true"
           >
             {interactionLockContent != null ? (
-              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{interactionLockContent}</div>
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                {interactionLockContent}
+              </div>
             ) : (
               <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-6">
                 <FormDialogDefaultInteractionSkeleton />

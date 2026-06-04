@@ -8,14 +8,14 @@ This document specifies a **production-ready, large-scale** role-based access co
 
 **Related code today (inventory):**
 
-| Area | Location / behavior |
-|------|---------------------|
-| End-user + staff profile | `server/src/models/User.ts` — profile, OAuth link flags/IDs, billing denorm fields, `staffRole` (`editor` \| `admin`), `staffPasswordHash`, `isActive`, security fields |
-| Subscriptions | `server/src/models/Subscription.ts` — plan, Stripe ids, periods, status, reconciliation fields |
-| Transactions / invoices | `server/src/models/PaymentLedger.ts` — per-user ledger rows tied to Stripe invoice/payment intent |
-| Blog posts | `server/src/models/BlogPost.ts` — `authorId`, `status` (`draft` \| `published`), soft delete |
-| Sessions (online heuristic) | `server/src/models/Session.ts` — `userId`, `lastActiveAt`, `expiresAt`, `revoked` |
-| Staff gate (coarse) | `server/src/modules/help/requireStaff.middleware.ts` — JWT user must have `staffRole` in `editor` \| `admin` |
+| Area                        | Location / behavior                                                                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| End-user + staff profile    | `server/src/models/User.ts` — profile, OAuth link flags/IDs, billing denorm fields, `staffRole` (`editor` \| `admin`), `staffPasswordHash`, `isActive`, security fields |
+| Subscriptions               | `server/src/models/Subscription.ts` — plan, Stripe ids, periods, status, reconciliation fields                                                                          |
+| Transactions / invoices     | `server/src/models/PaymentLedger.ts` — per-user ledger rows tied to Stripe invoice/payment intent                                                                       |
+| Blog posts                  | `server/src/models/BlogPost.ts` — `authorId`, `status` (`draft` \| `published`), soft delete                                                                            |
+| Sessions (online heuristic) | `server/src/models/Session.ts` — `userId`, `lastActiveAt`, `expiresAt`, `revoked`                                                                                       |
+| Staff gate (coarse)         | `server/src/modules/help/requireStaff.middleware.ts` — JWT user must have `staffRole` in `editor` \| `admin`                                                            |
 
 ---
 
@@ -126,14 +126,14 @@ Use existing `AUDIT_ACTIONS` patterns; extend with **`admin.*`** actions (see §
 
 ### 4.1 Terminology
 
-| Concept | Meaning |
-|--------|---------|
-| **Resource** | A protected object class in the system, e.g. `user`, `help_article`, `subscription`, `payment_ledger`, `blog_post`, `admin_role`, `admin_assignment`. |
-| **Action** | Verb on a resource, e.g. `read`, `list`, `update`, `delete`, `lock`, `reset_email`, `assign_role`, `impersonate` (if ever). |
-| **Permission** | Resource + action (+ optional **field mask** for updates). Example: `user:read`, `user:update_profile`, `billing:read`. |
-| **Role** | Named bundle of permissions, e.g. `Support L1`, `Billing Analyst`, `Content Moderator`. |
-| **Role assignment** | Links **staff user** → **role** (+ optional **scope** JSON: e.g. `categories: ['billing']` or `tenantId` if multi-tenant later). |
-| **Permission override** | Direct **user ↔ permission** grant or deny — **defer to post-v1** unless a concrete support need appears (see §12.1). |
+| Concept                 | Meaning                                                                                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Resource**            | A protected object class in the system, e.g. `user`, `help_article`, `subscription`, `payment_ledger`, `blog_post`, `admin_role`, `admin_assignment`. |
+| **Action**              | Verb on a resource, e.g. `read`, `list`, `update`, `delete`, `lock`, `reset_email`, `assign_role`, `impersonate` (if ever).                           |
+| **Permission**          | Resource + action (+ optional **field mask** for updates). Example: `user:read`, `user:update_profile`, `billing:read`.                               |
+| **Role**                | Named bundle of permissions, e.g. `Support L1`, `Billing Analyst`, `Content Moderator`.                                                               |
+| **Role assignment**     | Links **staff user** → **role** (+ optional **scope** JSON: e.g. `categories: ['billing']` or `tenantId` if multi-tenant later).                      |
+| **Permission override** | Direct **user ↔ permission** grant or deny — **defer to post-v1** unless a concrete support need appears (see §12.1).                                 |
 
 ### 4.1a v1 RBAC scope (finishable “80% system”)
 
@@ -275,24 +275,24 @@ All changes → `AuditLog` with `auth.account.locked` / unlock analogs.
 
 Prefix suggestion: `/api/internal/admin/...` or `/api/admin/...` behind **staff auth + permission middleware**.
 
-| Endpoint | Permission | Notes |
-|----------|------------|--------|
-| `GET /users` | `user:list` | Pagination, filters |
-| `GET /users/search` | `user:search` | Dedicated search |
-| `GET /users/:id` | `user:read` | Include joins as sub-documents |
-| `PATCH /users/:id` | `user:update_profile` | Whitelisted fields |
-| `POST /users/:id/lock` | `user:lock` | |
-| `POST /users/:id/unlock` | `user:unlock` | |
-| `POST /users/:id/email-reset` | `user:reset_email` | Starts flow |
-| `GET /users/:id/billing` | `billing:read_subscription` | Subscription + Stripe snippets |
-| `GET /users/:id/ledger` | `billing:read_ledger` | Paginated |
-| `GET /users/:id/blog-metrics` | `blog:read_metrics` | Counts + optional list |
-| `GET /users/:id/sessions` | `user:read_security` | Devices |
-| `POST /users/:id/revoke-all-sessions` | `user:revoke_sessions` | Revoke all sessions for target user — **§13.11** |
-| `GET /admin/roles` | `admin_role:manage` | |
-| `POST /admin/roles` | `admin_role:manage` | |
-| `PUT /admin/roles/:id/permissions` | `admin_role:manage` | |
-| `POST /admin/assignments` | `admin_assignment:manage` | |
+| Endpoint                              | Permission                  | Notes                                            |
+| ------------------------------------- | --------------------------- | ------------------------------------------------ |
+| `GET /users`                          | `user:list`                 | Pagination, filters                              |
+| `GET /users/search`                   | `user:search`               | Dedicated search                                 |
+| `GET /users/:id`                      | `user:read`                 | Include joins as sub-documents                   |
+| `PATCH /users/:id`                    | `user:update_profile`       | Whitelisted fields                               |
+| `POST /users/:id/lock`                | `user:lock`                 |                                                  |
+| `POST /users/:id/unlock`              | `user:unlock`               |                                                  |
+| `POST /users/:id/email-reset`         | `user:reset_email`          | Starts flow                                      |
+| `GET /users/:id/billing`              | `billing:read_subscription` | Subscription + Stripe snippets                   |
+| `GET /users/:id/ledger`               | `billing:read_ledger`       | Paginated                                        |
+| `GET /users/:id/blog-metrics`         | `blog:read_metrics`         | Counts + optional list                           |
+| `GET /users/:id/sessions`             | `user:read_security`        | Devices                                          |
+| `POST /users/:id/revoke-all-sessions` | `user:revoke_sessions`      | Revoke all sessions for target user — **§13.11** |
+| `GET /admin/roles`                    | `admin_role:manage`         |                                                  |
+| `POST /admin/roles`                   | `admin_role:manage`         |                                                  |
+| `PUT /admin/roles/:id/permissions`    | `admin_role:manage`         |                                                  |
+| `POST /admin/assignments`             | `admin_assignment:manage`   |                                                  |
 
 **Implementation notes:**
 
@@ -313,17 +313,17 @@ Extend audit actions with namespaces such as:
 
 **Standardized payload (minimum):** align new admin audit rows with a consistent shape for compliance and queries:
 
-| Field | Notes |
-|--------|--------|
-| `actorId` | Staff user performing the action |
-| `targetId` | Subject user (or resource id) |
-| `action` | Stable string, e.g. `admin.user.lock` |
-| `resource` | e.g. `user`, `role`, `billing` |
-| `before` | Redacted snapshot (optional) |
-| `after` | Redacted snapshot (optional) |
-| `reason` | **Required** for sensitive actions when policy demands it (locks, email flows, role changes) |
-| `metadata` | `ip`, `userAgent`, correlation ids |
-| `createdAt` | Server time |
+| Field       | Notes                                                                                        |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| `actorId`   | Staff user performing the action                                                             |
+| `targetId`  | Subject user (or resource id)                                                                |
+| `action`    | Stable string, e.g. `admin.user.lock`                                                        |
+| `resource`  | e.g. `user`, `role`, `billing`                                                               |
+| `before`    | Redacted snapshot (optional)                                                                 |
+| `after`     | Redacted snapshot (optional)                                                                 |
+| `reason`    | **Required** for sensitive actions when policy demands it (locks, email flows, role changes) |
+| `metadata`  | `ip`, `userAgent`, correlation ids                                                           |
+| `createdAt` | Server time                                                                                  |
 
 Also store legacy-compatible fields where your existing `AuditLog` schema uses `actorUserId` / `targetUserId` — map names in application layer or migrate schema once.
 
@@ -348,13 +348,13 @@ Also store legacy-compatible fields where your existing `AuditLog` schema uses `
 
 ## 10. Phased delivery plan
 
-| Phase | Deliverable |
-|-------|-------------|
+| Phase | Deliverable                                                                                   |
+| ----- | --------------------------------------------------------------------------------------------- |
 | **1** | User directory + detail read-only + blog metrics + sessions + online heuristic + common table |
-| **2** | Lock/unlock, profile edit (subset), audit |
-| **3** | Billing tab wired to Subscription + Ledger + Stripe payment method read |
-| **4** | RBAC schema + middleware + role/assignment UI + migration from `staffRole` |
-| **5** | Email reset workflow + advanced search + exports |
+| **2** | Lock/unlock, profile edit (subset), audit                                                     |
+| **3** | Billing tab wired to Subscription + Ledger + Stripe payment method read                       |
+| **4** | RBAC schema + middleware + role/assignment UI + migration from `staffRole`                    |
+| **5** | Email reset workflow + advanced search + exports                                              |
 
 For a **finishable v1** cut (users + lock + read-only billing + blog metrics + basic RBAC only), align scope with **§12.16** — defer overrides, broad scopes, and impersonation until after that milestone.
 
@@ -414,14 +414,14 @@ Effective = UNION(role permissions) − DENY(overrides)   // only when overrides
 The spec mentions `requirePermission('user', 'list')`; **standardize on a single string key**:
 
 ```ts
-requirePermission("user:list")
+requirePermission('user:list');
 ```
 
 **Internal behavior (conceptual):**
 
 ```ts
 const perms = await getUserPermissions(userId); // staff operator
-if (!perms.has("user:list")) {
+if (!perms.has('user:list')) {
   logPermissionDenied(/* §13.9 */);
   throw forbidden();
 }
@@ -455,11 +455,11 @@ return {
 
 Define limits **per staff user** (or per IP + staff id) for destructive / sensitive actions. Example starting points (tune in deployment):
 
-| Action | Suggested limit |
-|--------|------------------|
-| Lock / unlock | 10 / min |
-| Email reset | 5 / min |
-| Role assignment | 20 / min |
+| Action          | Suggested limit |
+| --------------- | --------------- |
+| Lock / unlock   | 10 / min        |
+| Email reset     | 5 / min         |
+| Role assignment | 20 / min        |
 
 👉 Reduces internal abuse, runaway scripts, and mistaken bulk operations.
 
@@ -510,14 +510,14 @@ Beyond §8, keep a **strict minimum** for admin rows:
 
 ```ts
 {
-  actorId,
-  targetId,
-  action,
-  resource,
-  before,   // redacted
-  after,    // redacted
-  reason,   // important for compliance / support
-  createdAt
+  (actorId,
+    targetId,
+    action,
+    resource,
+    before, // redacted
+    after, // redacted
+    reason, // important for compliance / support
+    createdAt);
 }
 ```
 
@@ -562,18 +562,18 @@ Constraints beat features: **you need simplification and clear rules**, not an e
 
 **Do only this for RBAC + user management v1:**
 
-1. User list + detail  
-2. Lock / unlock  
-3. Billing **read-only** (+ Stripe-backed actions only, no raw DB subscription edits)  
-4. Blog metrics  
+1. User list + detail
+2. Lock / unlock
+3. Billing **read-only** (+ Stripe-backed actions only, no raw DB subscription edits)
+4. Blog metrics
 5. **Basic RBAC:** roles → permissions **only**
 
 **Explicitly skip for v1:**
 
-- User-level permission **overrides**  
-- General **scopes** (except optional billing-only if required)  
-- **Impersonation**  
-- Advanced audit filters  
+- User-level permission **overrides**
+- General **scopes** (except optional billing-only if required)
+- **Impersonation**
+- Advanced audit filters
 
 After v1 ships, add items from backlog **only** with evidence.
 
@@ -632,8 +632,7 @@ Conceptual RBAC is not enough — **persist** it unambiguously. Prefer **few tab
    ```
 
 3. **Invalidate** cache when:
-
-   - a role’s `permissions` array changes, or  
+   - a role’s `permissions` array changes, or
    - a user’s role assignment (`AdminUserRole`) is added/removed.
 
 Without invalidation rules, stale permissions are a **security bug**.
@@ -646,9 +645,9 @@ Without invalidation rules, stale permissions are a **security bug**.
 
 ```ts
 const ADMIN_PROFILE_ALLOWED = [
-  "fullName",
-  "bio",
-  "job",
+  'fullName',
+  'bio',
+  'job',
   // … never email, oauth ids, tokens, staff fields, billing fields unless separate permission + handler
 ];
 ```
@@ -728,10 +727,10 @@ Use offset pagination only for small internal tools with known low volume.
 
 ```ts
 {
-  actorId,
-  route,               // e.g. GET /api/admin/users
-  requiredPermission,  // e.g. "user:list"
-  timestamp
+  (actorId,
+    route, // e.g. GET /api/admin/users
+    requiredPermission, // e.g. "user:list"
+    timestamp);
 }
 ```
 
@@ -765,14 +764,14 @@ Listing sessions is not enough for account recovery.
 
 Do **not** expand the spec further before shipping the following:
 
-| Area | Deliverable |
-|------|-------------|
-| Users | List + detail |
-| Account | Lock / unlock |
-| Billing | Read-only (+ Stripe-aligned actions only) |
-| Content | Blog metrics |
-| Access | RBAC roles → permissions only (**§13.1**, **§13.2**) |
-| Ops | **§14** transactions, idempotency, audit retention, error contract, kill switches |
+| Area    | Deliverable                                                                       |
+| ------- | --------------------------------------------------------------------------------- |
+| Users   | List + detail                                                                     |
+| Account | Lock / unlock                                                                     |
+| Billing | Read-only (+ Stripe-aligned actions only)                                         |
+| Content | Blog metrics                                                                      |
+| Access  | RBAC roles → permissions only (**§13.1**, **§13.2**)                              |
+| Ops     | **§14** transactions, idempotency, audit retention, error contract, kill switches |
 
 Defer until post-v1: overrides, broad scopes, impersonation, advanced audit UI — **§12.16**.
 
@@ -784,18 +783,18 @@ Specs **§12–§13** are **execution-grade**: RBAC shape, cache, allowlists, co
 
 ### 14.0 Status (what’s already solid)
 
-| Area | Covered in |
-|------|------------|
-| Roles → permissions only | §12, §13 |
-| DB + cache invalidation | §13.1–13.2 |
-| Field allowlists | §13.3 |
-| `profileVersion` | §13.4 |
-| Soft delete | §13.5 |
+| Area                           | Covered in |
+| ------------------------------ | ---------- |
+| Roles → permissions only       | §12, §13   |
+| DB + cache invalidation        | §13.1–13.2 |
+| Field allowlists               | §13.3      |
+| `profileVersion`               | §13.4      |
+| Soft delete                    | §13.5      |
 | Role `level` + self-protection | §13.6–13.7 |
-| Cursor pagination | §13.8 |
-| Permission-denied logs | §13.9 |
-| Search ranking | §13.10 |
-| Revoke all sessions | §13.11 |
+| Cursor pagination              | §13.8      |
+| Permission-denied logs         | §13.9      |
+| Search ranking                 | §13.10     |
+| Revoke all sessions            | §13.11     |
 
 **Verdict:** v4 of this document = **production-oriented** — remaining items below are **tightening**, not redesign.
 
@@ -814,9 +813,9 @@ await session.withTransaction(async () => {
 
 **Especially:**
 
-- Role assignment / removal  
-- Lock / unlock  
-- Email-reset **trigger** (if it writes multiple rows)  
+- Role assignment / removal
+- Lock / unlock
+- Email-reset **trigger** (if it writes multiple rows)
 - Revoke-all-sessions (many `Session` updates + audit)
 
 **Note:** MongoDB transactions require a **replica set** (or Atlas). In dev/single-node, document fallback behavior (e.g. sequential writes + compensating job) or require replica set for staging/prod.
@@ -872,25 +871,25 @@ await session.withTransaction(async () => {
 
 **Fix:** Environment or remote flags, e.g.:
 
-- `FEATURE_ADMIN_RBAC_ENABLED` — if `false`, fall back to **`requireStaff`** only for emergency (document risk).  
+- `FEATURE_ADMIN_RBAC_ENABLED` — if `false`, fall back to **`requireStaff`** only for emergency (document risk).
 - Optional: `FEATURE_ADMIN_USER_WRITE_ENABLED` — disable lock/unlock PATCH without taking API down.
 
 Flags are **operational** — document in runbook; avoid long-term “RBAC off” in production.
 
 ### 14.6 Minor additions (optional, high UX)
 
-- **Bulk actions:** lock/export **multiple** users — **async job** + audit per row or single bulk audit with attachment list (**§14.7**).  
+- **Bulk actions:** lock/export **multiple** users — **async job** + audit per row or single bulk audit with attachment list (**§14.7**).
 - **Export filtered users** — permission-gated, rate-limited, streaming CSV.
 
 ### 14.7 Background jobs (define explicitly)
 
 Move **heavy or flaky** work off the request thread:
 
-| Work | Pattern |
-|------|---------|
-| Stripe sync / reconcile | Queue or existing billing worker |
-| Email reset delivery | Queue + idempotent enqueue |
-| Audit enrichment (geo, UA parsing) | Async |
+| Work                               | Pattern                          |
+| ---------------------------------- | -------------------------------- |
+| Stripe sync / reconcile            | Queue or existing billing worker |
+| Email reset delivery               | Queue + idempotent enqueue       |
+| Audit enrichment (geo, UA parsing) | Async                            |
 
 API returns **202** + job id when appropriate.
 
@@ -898,20 +897,20 @@ API returns **202** + job id when appropriate.
 
 Beyond **§13.9** permission denials:
 
-- **High-frequency** admin actions per actor (possible abuse) — metric + alert threshold.  
+- **High-frequency** admin actions per actor (possible abuse) — metric + alert threshold.
 - **Spike** in `PERMISSION_DENIED` for one actor — investigate misconfigured role or attack.
 
 ### 14.9 Stop improving the spec — execution order
 
 **Do next (only):**
 
-1. Build **backend** (RBAC + user admin APIs per §7, §13–§14).  
-2. Build **admin UI** (users + roles assignments).  
-3. Test on **real** or staging data.  
+1. Build **backend** (RBAC + user admin APIs per §7, §13–§14).
+2. Build **admin UI** (users + roles assignments).
+3. Test on **real** or staging data.
 4. Fix **only** production issues — no RBAC redesign.
 
 **Do not (until post-v1):** scopes, overrides, impersonation, or another full RBAC rewrite — **§12.16**.
 
 ---
 
-*Document version: 1.3 — adds §14 (transactions, idempotency, audit retention, error contract, feature flags, jobs/monitoring, ship gate). Update when schema or auth flows change.*
+_Document version: 1.3 — adds §14 (transactions, idempotency, audit retention, error contract, feature flags, jobs/monitoring, ship gate). Update when schema or auth flows change._

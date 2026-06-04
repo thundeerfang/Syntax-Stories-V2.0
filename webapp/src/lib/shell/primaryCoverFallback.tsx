@@ -4,7 +4,6 @@ import { Newspaper, UsersRound } from 'lucide-react';
 import { SPOTLIGHT_PRIMARY_GRADIENT } from '@/lib/shell/spotlightPrimaryGradient';
 import { cn } from '@/lib/core/utils';
 
-
 export type PrimaryCoverFallbackProps = Readonly<{
   variant?: 'blog' | 'squad';
   showLabel?: boolean;
@@ -23,18 +22,14 @@ export function PrimaryCoverFallback({
   className,
 }: PrimaryCoverFallbackProps) {
   const Icon = variant === 'squad' ? UsersRound : Newspaper;
-  const text =
-    label ?? (variant === 'squad' ? 'No Cover Banner' : 'No Cover Image');
+  const text = label ?? (variant === 'squad' ? 'No Cover Banner' : 'No Cover Image');
 
   return (
     <div
       className={cn('absolute inset-0 overflow-hidden', dimmed && 'opacity-60', className)}
       aria-hidden
     >
-      <div
-        className="absolute inset-0"
-        style={{ backgroundImage: SPOTLIGHT_PRIMARY_GRADIENT }}
-      />
+      <div className="absolute inset-0" style={{ backgroundImage: SPOTLIGHT_PRIMARY_GRADIENT }} />
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
         <Icon
           className="size-7 text-primary-foreground/85"

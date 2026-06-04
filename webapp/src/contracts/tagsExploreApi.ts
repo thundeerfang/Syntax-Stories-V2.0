@@ -15,5 +15,31 @@ export interface TagsExploreResponse {
   trending: TagExploreRow[];
   popular: TagExploreRow[];
   recent: TagExploreRow[];
-  allTags: TagExploreRow[];
+}
+
+export type TagListSort = 'name-asc' | 'name-desc' | 'posts-desc' | 'recent';
+
+export type CategoryListSort = 'name-asc' | 'posts-desc';
+
+export interface PaginatedTagsResponse {
+  success: boolean;
+  list: TagExploreRow[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface PaginatedCategoriesResponse {
+  success: boolean;
+  list: Array<{
+    slug: string;
+    name: string;
+    description: string;
+    postCount: number;
+  }>;
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
 }

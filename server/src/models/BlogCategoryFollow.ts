@@ -12,7 +12,7 @@ const BlogCategoryFollowSchema = new Schema<IBlogCategoryFollow>(
     userId: { type: Schema.Types.ObjectId, ref: 'users', required: true, index: true },
     categorySlug: { type: String, required: true, trim: true, lowercase: true, maxlength: 64 },
   },
-  { timestamps: { createdAt: true, updatedAt: false } },
+  { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 BlogCategoryFollowSchema.index({ userId: 1, categorySlug: 1 }, { unique: true });

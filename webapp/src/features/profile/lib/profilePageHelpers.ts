@@ -12,7 +12,7 @@ export function activityTabLabel(tab: ActivityTab): string {
 export function filterIncompleteHintsAfterIndex(
   prev: IncompleteItemHints | null,
   section: CompleteItemDialogSection,
-  index: number,
+  index: number
 ): IncompleteItemHints | null {
   if (!prev) return null;
   const list = prev[section];
@@ -29,9 +29,7 @@ export function filterIncompleteHintsAfterIndex(
 export function incompleteHintsBlockingCount(h: IncompleteItemHints | null): number {
   if (!h) return 0;
   return (
-    (h.education?.length ?? 0) +
-    (h.certifications?.length ?? 0) +
-    (h.workExperiences?.length ?? 0)
+    (h.education?.length ?? 0) + (h.certifications?.length ?? 0) + (h.workExperiences?.length ?? 0)
   );
 }
 
@@ -42,7 +40,10 @@ export function completeItemSectionToSettingsId(section: CompleteItemDialogSecti
   return 'projects';
 }
 
-export const COMPLETE_ITEM_PROFILE_SECTION: Record<CompleteItemDialogSection, ProfileUpdateSection> = {
+export const COMPLETE_ITEM_PROFILE_SECTION: Record<
+  CompleteItemDialogSection,
+  ProfileUpdateSection
+> = {
   workExperiences: 'work',
   education: 'education',
   certifications: 'certifications',

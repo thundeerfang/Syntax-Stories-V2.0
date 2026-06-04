@@ -6,11 +6,17 @@ import { Flame, Loader2 } from 'lucide-react';
 import { followApi, type ReadStreakPayload } from '@/api/follow';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
-import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from './settings-list/SettingsSectionHeading';
-import { SettingsFullWidthSegmentedControl, SettingsMetricCard } from './settings-list/SettingsFullWidthSegmentedControl';
+import {
+  SettingsSectionHeading,
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from './settings-list/SettingsSectionHeading';
+import {
+  SettingsFullWidthSegmentedControl,
+  SettingsMetricCard,
+} from './settings-list/SettingsFullWidthSegmentedControl';
 import { settingsBtnBlockPrimaryMd } from './buttonStyles';
 import { cn } from '@/lib/core/utils';
-
 
 type Mode = 'daily' | 'weekly' | 'monthly';
 
@@ -89,7 +95,9 @@ export function BlogStreakSettingsContent() {
     return (
       <div className="flex items-center gap-2 py-16 text-muted-foreground">
         <Loader2 className="size-5 animate-spin" />
-        <span className="font-mono text-[10px] uppercase tracking-widest">Loading read streaks…</span>
+        <span className="font-mono text-[10px] uppercase tracking-widest">
+          Loading read streaks…
+        </span>
       </div>
     );
   }
@@ -105,52 +113,57 @@ export function BlogStreakSettingsContent() {
       />
 
       <SettingsTabPanel className="w-full min-w-0">
-      <div className="w-full min-w-0 space-y-2">
-        <SettingsFullWidthSegmentedControl
-          label="Profile display"
-          value={mode}
-          disabled={saving}
-          options={MODE_OPTIONS}
-          onValueChange={(v) => {
-            if (v === 'daily' || v === 'weekly' || v === 'monthly') void saveMode(v);
-          }}
-        />
-      
-      </div>
-
-      <div className="w-full min-w-0 space-y-3">
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current & longest</p>
-        <div
-          className={cn(
-            'grid w-full min-w-0 gap-3',
-            '[grid-template-columns:repeat(auto-fit,minmax(min(100%,10.5rem),1fr))]',
-          )}
-        >
-          {modes.map((m) => {
-            const row = payload?.byMode[m];
-            const isSel = mode === m;
-            return (
-              <SettingsMetricCard key={m} title={modeLabel(m)} highlighted={isSel}>
-                <p className="mt-2 text-2xl font-black italic tabular-nums">{row?.current ?? 0}</p>
-                <p className="text-[8px] font-bold uppercase text-muted-foreground mt-1">current</p>
-                <p className="mt-3 text-lg font-black tabular-nums">{row?.longest ?? 0}</p>
-                <p className="text-[8px] font-bold uppercase text-muted-foreground">longest</p>
-              </SettingsMetricCard>
-            );
-          })}
+        <div className="w-full min-w-0 space-y-2">
+          <SettingsFullWidthSegmentedControl
+            label="Profile display"
+            value={mode}
+            disabled={saving}
+            options={MODE_OPTIONS}
+            onValueChange={(v) => {
+              if (v === 'daily' || v === 'weekly' || v === 'monthly') void saveMode(v);
+            }}
+          />
         </div>
-      </div>
 
-      <div className="pt-2">
-        <button
-          type="button"
-          className={cn(settingsBtnBlockPrimaryMd)}
-          disabled={loading}
-          onClick={() => void load()}
-        >
-          Refresh numbers
-        </button>
-      </div>
+        <div className="w-full min-w-0 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            Current & longest
+          </p>
+          <div
+            className={cn(
+              'grid w-full min-w-0 gap-3',
+              '[grid-template-columns:repeat(auto-fit,minmax(min(100%,10.5rem),1fr))]'
+            )}
+          >
+            {modes.map((m) => {
+              const row = payload?.byMode[m];
+              const isSel = mode === m;
+              return (
+                <SettingsMetricCard key={m} title={modeLabel(m)} highlighted={isSel}>
+                  <p className="mt-2 text-2xl font-black italic tabular-nums">
+                    {row?.current ?? 0}
+                  </p>
+                  <p className="text-[8px] font-bold uppercase text-muted-foreground mt-1">
+                    current
+                  </p>
+                  <p className="mt-3 text-lg font-black tabular-nums">{row?.longest ?? 0}</p>
+                  <p className="text-[8px] font-bold uppercase text-muted-foreground">longest</p>
+                </SettingsMetricCard>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <button
+            type="button"
+            className={cn(settingsBtnBlockPrimaryMd)}
+            disabled={loading}
+            onClick={() => void load()}
+          >
+            Refresh numbers
+          </button>
+        </div>
       </SettingsTabPanel>
     </SettingsTabRoot>
   );

@@ -50,4 +50,5 @@ const PaymentLedgerSchema = new Schema<IPaymentLedger>(
 PaymentLedgerSchema.index({ userId: 1, paidAt: -1 });
 
 export const PaymentLedgerModel: Model<IPaymentLedger> =
-  mongoose.models?.payment_ledgers ?? mongoose.model<IPaymentLedger>('payment_ledgers', PaymentLedgerSchema);
+  mongoose.models?.payment_ledgers ??
+  mongoose.model<IPaymentLedger>('payment_ledgers', PaymentLedgerSchema);

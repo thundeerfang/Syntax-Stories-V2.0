@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/retroui/Checkbox';
 import { Text } from '@/components/retroui/Text';
-import { Mail, ArrowLeft, HelpCircle } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import {
   GoogleIcon,
   GithubIcon,
@@ -13,31 +13,34 @@ import {
   XIcon,
   ICON_DISCORD,
 } from '@/components/icons/SocialProviderIcons';
+import { SOCIAL_ICON_TWITCH } from '@/lib/icons';
 import { cn } from '@/lib/core/utils';
+import type { AuthWelcomeTitle } from '@/lib/auth/authWelcomeVisitor';
 import { markOAuthNavigationPending } from '@/lib/auth/oauthNavigation';
-import { clearLegalSignupAckCookie, setLegalSignupAckCookie } from '@/lib/auth/legalSignupAckCookie';
+import { oauthLoginHref, oauthSignupHref } from '@/lib/auth/oauthStartHref';
+import {
+  clearLegalSignupAckCookie,
+  setLegalSignupAckCookie,
+} from '@/lib/auth/legalSignupAckCookie';
 import { AltchaField } from './AltchaField';
+import { SignupReferralField } from './SignupReferralField';
+import type { ReferralValidationState } from '../hooks/useSignupReferralCode';
+import type { InviteResolveValid } from '@/api/invite';
 import type { AuthDialogStep } from './authDialogStep';
-
+import {
+  AuthEmailOutlineButton,
+  AuthInboxCallout,
+  AuthOrDivider,
+  AuthSocialGrid,
+  AuthSocialGroup,
+  AuthStepHeader,
+  AuthWelcomeHero,
+  authInputClassName,
+  authSocialButtonClassNames,
+} from './authDialogUi';
 
 const TERMS_LINK = '/terms';
 const PRIVACY_LINK = '/privacy';
-const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-
-/** Append `?ref=` from sessionStorage for OAuth signup (invite / ?ref= flows). */
-function oauthSignupHref(providerPath: string): string | undefined {
-  if (!BACKEND_BASE) return undefined;
-  const base = `${BACKEND_BASE.replace(/\/$/, '')}${providerPath}`;
-  let ref = '';
-  try {
-    ref = globalThis.sessionStorage?.getItem('pendingReferralCode')?.trim() ?? '';
-  } catch {
-    ref = '';
-  }
-  if (!ref) return base;
-  return `${base}?ref=${encodeURIComponent(ref)}`;
-}
-
 type FormSubmit = { preventDefault(): void; currentTarget: HTMLFormElement };
 
 function SocialButton({
@@ -66,10 +69,7 @@ function SocialButton({
     iconEl = <Icon className="h-5 w-5 shrink-0" />;
   }
 
-  const enabledClass =
-    'relative flex w-full items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-card-foreground hover:border-primary hover:bg-muted/50 transition-all active:scale-[0.98]';
-  const disabledClass =
-    'relative flex w-full cursor-not-allowed items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-45';
+  const className = authSocialButtonClassNames(disabled);
 
   if (href && !disabled) {
     const oauthStart = href.includes('/auth/');
@@ -84,9 +84,9 @@ function SocialButton({
               }
             : undefined
         }
-        className={enabledClass}
+        className={className}
       >
-        <span className="pointer-events-none absolute left-4 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
+        <span className="pointer-events-none absolute left-3 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center">
           {iconEl}
         </span>
         <span className="text-center">{label}</span>
@@ -95,8 +95,8 @@ function SocialButton({
   }
   if (href && disabled) {
     return (
-      <span role="presentation" className={disabledClass}>
-        <span className="pointer-events-none absolute left-4 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
+      <span role="presentation" className={className}>
+        <span className="pointer-events-none absolute left-3 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center">
           {iconEl}
         </span>
         <span className="text-center">{label}</span>
@@ -104,11 +104,7 @@ function SocialButton({
     );
   }
   return (
-    <button
-      type="button"
-      disabled
-      className="relative flex w-full items-center justify-center border-2 border-border bg-background py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 cursor-not-allowed"
-    >
+    <button type="button" disabled className={authSocialButtonClassNames(true)}>
       <span className="pointer-events-none absolute left-4 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center">
         {iconEl}
       </span>
@@ -135,8 +131,8 @@ function AuthFooter({
   return (
     <div
       className={cn(
-        'border-t-2 border-border text-center',
-        compact ? 'mt-6 space-y-3 pt-5' : 'mt-8 space-y-4 pt-6',
+        'border-t border-muted-foreground/20 text-center',
+        compact ? 'mt-4 space-y-2 pt-3' : 'mt-5 space-y-2.5 pt-4'
       )}
     >
       <div className="space-y-2">
@@ -153,15 +149,15 @@ function AuthFooter({
         )}
       </div>
       {showLegalBlurb ? (
-        <p className="text-[9px] leading-relaxed font-medium uppercase tracking-[0.05em] text-muted-foreground/60 px-4">
+        <p className="text-[8px] leading-snug font-medium uppercase tracking-[0.04em] text-muted-foreground/60 px-2">
           By continuing, you agree to our{' '}
           <Link
             href={TERMS_LINK}
             className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all"
           >
             Terms
-          </Link>
-          {' '}&{' '}
+          </Link>{' '}
+          &{' '}
           <Link
             href={PRIVACY_LINK}
             className="underline decoration-muted-foreground/30 hover:text-card-foreground hover:decoration-primary transition-all"
@@ -182,7 +178,7 @@ function AuthSignupLegalConsent(
     onTermsChange: (next: boolean) => void;
     onPrivacyChange: (next: boolean) => void;
     closeDialog: () => void;
-  }>,
+  }>
 ): ReactNode {
   const syncOAuthCookie = (terms: boolean, privacy: boolean) => {
     if (terms && privacy) setLegalSignupAckCookie();
@@ -190,7 +186,7 @@ function AuthSignupLegalConsent(
   };
 
   return (
-    <div className="space-y-3 border-2 border-border bg-muted/20 px-3 py-3">
+    <div className="space-y-2 border border-border/20 bg-background/15 px-2.5 py-2">
       <div className="flex gap-2 items-center">
         <Checkbox
           checked={p.termsAccepted}
@@ -201,7 +197,7 @@ function AuthSignupLegalConsent(
           className="shrink-0"
           aria-label="Accept Terms of Service"
         />
-        <Text className="text-left font-medium normal-case leading-snug tracking-wide text-muted-foreground">
+        <Text className="text-left text-[11px] font-medium normal-case leading-snug tracking-wide text-muted-foreground">
           I have read and accept the{' '}
           <Link
             href={TERMS_LINK}
@@ -223,7 +219,7 @@ function AuthSignupLegalConsent(
           className="shrink-0"
           aria-label="Accept Privacy Policy"
         />
-        <Text className="text-left font-medium normal-case leading-snug tracking-wide text-muted-foreground">
+        <Text className="text-left text-[11px] font-medium normal-case leading-snug tracking-wide text-muted-foreground">
           I have read and accept the{' '}
           <Link
             href={PRIVACY_LINK}
@@ -271,156 +267,131 @@ export type AuthDialogRenderProps = Readonly<{
   setLegalTermsAccepted: (v: boolean) => void;
   legalPrivacyAccepted: boolean;
   setLegalPrivacyAccepted: (v: boolean) => void;
+  welcomeTitle: AuthWelcomeTitle;
+  referralInput: string;
+  setReferralInputValue: (v: string) => void;
+  referralValidationState: ReferralValidationState;
+  referralReferrer: InviteResolveValid | null;
+  referralErrorMessage: string | null;
+  referralBlocksSignup: boolean;
 }>;
 
 function renderAuthWelcomeStep(p: AuthDialogRenderProps): ReactNode {
   return (
-        <>
-          <h2
-            id="auth-dialog-title"
-            className="text-center text-xl font-black italic tracking-tighter text-card-foreground uppercase"
-          >
-            Welcome_back.
-          </h2>
-          <div className="mt-6 space-y-3">
-            <SocialButton
-              icon={GoogleIcon}
-              label="Sign in with Google"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/google/login` : undefined}
-              onBeforeNavigate={p.close}
-            />
-            <SocialButton
-              icon={FacebookIcon}
-              label="Sign in with Facebook"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/facebook/login` : undefined}
-              onBeforeNavigate={p.close}
-            />
-            <SocialButton
-              icon={GithubIcon}
-              label="Sign in with GitHub"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/github/login` : undefined}
-              onBeforeNavigate={p.close}
-            />
-            <SocialButton
-              iconSrc={ICON_DISCORD}
-              label="Sign in with Discord"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/discord/login` : undefined}
-              onBeforeNavigate={p.close}
-            />
-            <SocialButton
-              icon={XIcon}
-              label="Sign in with X"
-              href={BACKEND_BASE ? `${BACKEND_BASE}/auth/x/login` : undefined}
-              onBeforeNavigate={p.close}
-            />
-          </div>
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t-2 border-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-3 text-[10px] font-black uppercase tracking-[0.2em] bg-card text-muted-foreground">
-                Or
-              </span>
-            </div>
-          </div>
-          <Button
+    <>
+      <AuthWelcomeHero title={p.welcomeTitle} />
+      <AuthSocialGrid>
+        <SocialButton
+          icon={GoogleIcon}
+          label="Google"
+          href={oauthLoginHref('/auth/google/login')}
+          onBeforeNavigate={p.close}
+        />
+        <SocialButton
+          icon={FacebookIcon}
+          label="Facebook"
+          href={oauthLoginHref('/auth/facebook/login')}
+          onBeforeNavigate={p.close}
+        />
+        <SocialButton
+          icon={GithubIcon}
+          label="GitHub"
+          href={oauthLoginHref('/auth/github/login')}
+          onBeforeNavigate={p.close}
+        />
+        <SocialButton
+          iconSrc={ICON_DISCORD}
+          label="Discord"
+          href={oauthLoginHref('/auth/discord/login')}
+          onBeforeNavigate={p.close}
+        />
+        <SocialButton
+          icon={XIcon}
+          label="X.com"
+          href={oauthLoginHref('/auth/x/login')}
+          onBeforeNavigate={p.close}
+        />
+        <SocialButton
+          iconSrc={SOCIAL_ICON_TWITCH}
+          label="Twitch"
+          href={oauthLoginHref('/auth/twitch/login')}
+          onBeforeNavigate={p.close}
+        />
+      </AuthSocialGrid>
+      <AuthOrDivider />
+      <AuthEmailOutlineButton
+        label="Sign in with email"
+        onClick={() => p.goToStep('login-email')}
+      />
+      <AuthFooter compact showHelp closeDialog={p.close}>
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          No account?{' '}
+          <button
             type="button"
-            variant="outline"
-            className="relative w-full justify-center py-6 pl-12 pr-4 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
-            onClick={() => p.goToStep('login-email')}
+            className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
+            onClick={() => p.goToStep('signup')}
           >
-            <Mail
-              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 shrink-0"
-              aria-hidden
-            />
-            <span>Sign in with email</span>
-          </Button>
-          <AuthFooter showHelp closeDialog={p.close}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              No account?{' '}
-              <button
-                type="button"
-                className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
-                onClick={() => p.goToStep('signup')}
-              >
-                Create one
-              </button>
-            </p>
-          </AuthFooter>
-        </>
-      );
+            Create one
+          </button>
+        </p>
+      </AuthFooter>
+    </>
+  );
 }
 
 function renderAuthLoginEmailStep(p: AuthDialogRenderProps): ReactNode {
   return (
-        <>
+    <>
+      <AuthStepHeader title="Sign in with email" variant="login" />
+      <form ref={p.loginFormRef} onSubmit={p.handleSendLoginOtp} className="mt-3 space-y-3">
+        <div className="space-y-1.5">
+          <label
+            htmlFor="auth-login-email"
+            className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+          >
+            Your email
+          </label>
+          <input
+            id="auth-login-email"
+            type="email"
+            placeholder="name@example.com"
+            value={p.email}
+            onChange={(e) => p.setEmail(e.target.value)}
+            required
+            className={authInputClassName()}
+          />
+        </div>
+        <div className="flex w-full flex-col">
+          <AltchaField
+            enabled={p.altchaOn}
+            floating="bottom"
+            floatingAnchor="#auth-login-send-code"
+            floatingOffset={8}
+          />
+          <Button
+            id="auth-login-send-code"
+            type="submit"
+            className="w-full py-4 text-xs font-black uppercase tracking-widest"
+            disabled={p.isLoading}
+          >
+            {p.isLoading ? 'Sending...' : 'Send login code'}
+          </Button>
+        </div>
+      </form>
+      <AuthFooter compact showHelp closeDialog={p.close}>
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Need an account?{' '}
           <button
             type="button"
-            onClick={() => p.goToStep('welcome')}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4 transition-colors"
+            className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
+            onClick={() => p.goToStep('signup')}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back
+            Sign up here
           </button>
-          <h2
-            id="auth-dialog-title"
-            className="text-xl font-black italic tracking-tighter text-card-foreground uppercase"
-          >
-            Sign_in_with_email
-          </h2>
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">
-            We&apos;ll send you a secure code.
-          </p>
-          <form ref={p.loginFormRef} onSubmit={p.handleSendLoginOtp} className="mt-6 space-y-4">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="auth-login-email"
-                className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
-              >
-                Your email
-              </label>
-              <input
-                id="auth-login-email"
-                type="email"
-                placeholder="name@example.com"
-                value={p.email}
-                onChange={(e) => p.setEmail(e.target.value)}
-                required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-sm font-medium normal-case text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
-              />
-            </div>
-            <div className="flex w-full flex-col">
-              <AltchaField
-                enabled={p.altchaOn}
-                floating="bottom"
-                floatingAnchor="#auth-login-send-code"
-                floatingOffset={8}
-              />
-              <Button
-                id="auth-login-send-code"
-                type="submit"
-                className="w-full py-6 text-xs font-black uppercase tracking-widest"
-                disabled={p.isLoading}
-              >
-                {p.isLoading ? 'Sending...' : 'Send login code'}
-              </Button>
-            </div>
-          </form>
-          <AuthFooter>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Need an account?{' '}
-              <button
-                type="button"
-                className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
-                onClick={() => p.goToStep('signup')}
-              >
-                Sign up here
-              </button>
-            </p>
-          </AuthFooter>
-        </>
-      );
+        </p>
+      </AuthFooter>
+    </>
+  );
 }
 
 function signupLegalReady(p: AuthDialogRenderProps): boolean {
@@ -428,314 +399,275 @@ function signupLegalReady(p: AuthDialogRenderProps): boolean {
 }
 
 function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
-  const ok = signupLegalReady(p);
+  const ok = signupLegalReady(p) && !p.referralBlocksSignup;
+  const oauthRef = p.referralValidationState === 'valid' ? p.referralInput.trim() : null;
   return (
-        <>
+    <>
+      <AuthStepHeader title="Create account" variant="signup" />
+      <div className="mt-3">
+        <SignupReferralField
+          value={p.referralInput}
+          onChange={p.setReferralInputValue}
+          validationState={p.referralValidationState}
+          referrer={p.referralReferrer}
+          errorMessage={p.referralErrorMessage}
+          disabled={p.isLoading}
+        />
+      </div>
+      <div className="mt-3">
+        <AuthSocialGroup>
+          <SocialButton
+            icon={GoogleIcon}
+            label="Google"
+            href={oauthSignupHref('/auth/google/signup', oauthRef)}
+            onBeforeNavigate={p.close}
+            disabled={!ok}
+          />
+          <SocialButton
+            icon={FacebookIcon}
+            label="Facebook"
+            href={oauthSignupHref('/auth/facebook/signup', oauthRef)}
+            onBeforeNavigate={p.close}
+            disabled={!ok}
+          />
+          <SocialButton
+            icon={GithubIcon}
+            label="GitHub"
+            href={oauthSignupHref('/auth/github/signup', oauthRef)}
+            onBeforeNavigate={p.close}
+            disabled={!ok}
+          />
+          <SocialButton
+            iconSrc={ICON_DISCORD}
+            label="Discord"
+            href={oauthSignupHref('/auth/discord/signup', oauthRef)}
+            onBeforeNavigate={p.close}
+            disabled={!ok}
+          />
+          <SocialButton
+            icon={XIcon}
+            label="X.com"
+            href={oauthSignupHref('/auth/x/signup', oauthRef)}
+            onBeforeNavigate={p.close}
+            disabled={!ok}
+          />
+          <SocialButton
+            iconSrc={SOCIAL_ICON_TWITCH}
+            label="Twitch"
+            href={oauthSignupHref('/auth/twitch/signup', oauthRef)}
+            onBeforeNavigate={p.close}
+            disabled={!ok}
+          />
+        </AuthSocialGroup>
+      </div>
+      <AuthOrDivider />
+      <AuthEmailOutlineButton
+        label="Sign up with email"
+        disabled={!ok}
+        onClick={() => p.goToStep('signup-email')}
+      />
+      <div className="mt-3">
+        <AuthSignupLegalConsent
+          termsAccepted={p.legalTermsAccepted}
+          privacyAccepted={p.legalPrivacyAccepted}
+          onTermsChange={p.setLegalTermsAccepted}
+          onPrivacyChange={p.setLegalPrivacyAccepted}
+          closeDialog={p.close}
+        />
+      </div>
+      <AuthFooter compact showLegalBlurb={false}>
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Already joined?{' '}
           <button
             type="button"
+            className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
             onClick={() => p.goToStep('welcome')}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-3 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back
+            Sign in
           </button>
-          <h2
-            id="auth-dialog-title"
-            className="text-xl font-black italic tracking-tighter text-card-foreground uppercase"
-          >
-            Create_Account
-          </h2>
-          <div className="mt-5 space-y-2.5">
-            <SocialButton
-              icon={GoogleIcon}
-              label="Sign up with Google"
-              href={oauthSignupHref('/auth/google/signup')}
-              onBeforeNavigate={p.close}
-              disabled={!ok}
-            />
-            <SocialButton
-              icon={FacebookIcon}
-              label="Sign up with Facebook"
-              href={oauthSignupHref('/auth/facebook/signup')}
-              onBeforeNavigate={p.close}
-              disabled={!ok}
-            />
-            <SocialButton
-              icon={GithubIcon}
-              label="Sign up with GitHub"
-              href={oauthSignupHref('/auth/github/signup')}
-              onBeforeNavigate={p.close}
-              disabled={!ok}
-            />
-            <SocialButton
-              iconSrc={ICON_DISCORD}
-              label="Sign up with Discord"
-              href={oauthSignupHref('/auth/discord/signup')}
-              onBeforeNavigate={p.close}
-              disabled={!ok}
-            />
-            <SocialButton
-              icon={XIcon}
-              label="Sign up with X"
-              href={oauthSignupHref('/auth/x/signup')}
-              onBeforeNavigate={p.close}
-              disabled={!ok}
-            />
-          </div>
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t-2 border-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-3 text-[10px] font-black uppercase tracking-[0.2em] bg-card text-muted-foreground">
-                Or
-              </span>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="relative w-full justify-center py-6 pl-12 pr-4 text-xs font-black uppercase tracking-widest border-2 text-card-foreground"
-            disabled={!ok}
-            onClick={() => p.goToStep('signup-email')}
-          >
-            <Mail
-              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 shrink-0"
-              aria-hidden
-            />
-            <span>Sign up with email</span>
-          </Button>
-          <div className="mt-5">
-            <AuthSignupLegalConsent
-              termsAccepted={p.legalTermsAccepted}
-              privacyAccepted={p.legalPrivacyAccepted}
-              onTermsChange={p.setLegalTermsAccepted}
-              onPrivacyChange={p.setLegalPrivacyAccepted}
-              closeDialog={p.close}
-            />
-          </div>
-          <AuthFooter compact showLegalBlurb={false}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Already joined?{' '}
-              <button
-                type="button"
-                className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
-                onClick={() => p.goToStep('welcome')}
-              >
-                Sign in
-              </button>
-            </p>
-          </AuthFooter>
-        </>
-      );
+        </p>
+      </AuthFooter>
+    </>
+  );
 }
 
 function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
-  const ok = signupLegalReady(p);
+  const ok = signupLegalReady(p) && !p.referralBlocksSignup;
   return (
-        <>
+    <>
+      <AuthStepHeader title="Sign up with email" variant="signup" />
+      <form ref={p.signupFormRef} onSubmit={p.handleSignUp} className="mt-3 space-y-3">
+        <div className="space-y-1.5">
+          <label
+            htmlFor="auth-signup-name"
+            className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+          >
+            Full Name
+          </label>
+          <input
+            id="auth-signup-name"
+            type="text"
+            placeholder="John Doe"
+            value={p.name}
+            onChange={(e) => p.setName(e.target.value)}
+            required
+            className={authInputClassName()}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label
+            htmlFor="auth-signup-email"
+            className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+          >
+            Email Address
+          </label>
+          <input
+            id="auth-signup-email"
+            type="email"
+            placeholder="name@example.com"
+            value={p.signupEmail}
+            onChange={(e) => p.setSignupEmail(e.target.value)}
+            required
+            className={authInputClassName()}
+          />
+        </div>
+        <SignupReferralField
+          id="auth-signup-email-referral"
+          value={p.referralInput}
+          onChange={p.setReferralInputValue}
+          validationState={p.referralValidationState}
+          referrer={p.referralReferrer}
+          errorMessage={p.referralErrorMessage}
+          disabled={p.isLoading}
+        />
+        <div className="flex w-full flex-col">
+          <AltchaField
+            enabled={p.altchaOn}
+            floating="bottom"
+            floatingAnchor="#auth-signup-create"
+            floatingOffset={8}
+          />
+          <Button
+            id="auth-signup-create"
+            type="submit"
+            className="w-full py-4 text-xs font-black uppercase tracking-widest"
+            disabled={p.isLoading || !ok}
+          >
+            {p.isLoading ? 'Creating...' : 'Create account'}
+          </Button>
+        </div>
+      </form>
+      <div className="mt-3">
+        <AuthSignupLegalConsent
+          termsAccepted={p.legalTermsAccepted}
+          privacyAccepted={p.legalPrivacyAccepted}
+          onTermsChange={p.setLegalTermsAccepted}
+          onPrivacyChange={p.setLegalPrivacyAccepted}
+          closeDialog={p.close}
+        />
+      </div>
+      <AuthFooter compact showLegalBlurb={false}>
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Already joined?{' '}
           <button
             type="button"
-            onClick={() => p.goToStep('signup')}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-3 transition-colors"
+            className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
+            onClick={() => p.goToStep('welcome')}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back
+            Sign in
           </button>
-          <h2
-            id="auth-dialog-title"
-            className="text-xl font-black italic tracking-tighter text-card-foreground uppercase"
-          >
-            Sign_up_with_email
-          </h2>
-          <form ref={p.signupFormRef} onSubmit={p.handleSignUp} className="mt-5 space-y-3.5">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="auth-signup-name"
-                className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
-              >
-                Full Name
-              </label>
-              <input
-                id="auth-signup-name"
-                type="text"
-                placeholder="John Doe"
-                value={p.name}
-                onChange={(e) => p.setName(e.target.value)}
-                required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-sm font-medium normal-case text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label
-                htmlFor="auth-signup-email"
-                className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
-              >
-                Email Address
-              </label>
-              <input
-                id="auth-signup-email"
-                type="email"
-                placeholder="name@example.com"
-                value={p.signupEmail}
-                onChange={(e) => p.setSignupEmail(e.target.value)}
-                required
-                className="w-full border-2 border-border bg-background px-4 py-3 text-sm font-medium normal-case text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
-              />
-            </div>
-            <div className="flex w-full flex-col">
-              <AltchaField
-                enabled={p.altchaOn}
-                floating="bottom"
-                floatingAnchor="#auth-signup-create"
-                floatingOffset={8}
-              />
-              <Button
-                id="auth-signup-create"
-                type="submit"
-                className="w-full py-6 text-xs font-black uppercase tracking-widest"
-                disabled={p.isLoading || !ok}
-              >
-                {p.isLoading ? 'Creating...' : 'Create account'}
-              </Button>
-            </div>
-          </form>
-          <div className="mt-5">
-            <AuthSignupLegalConsent
-              termsAccepted={p.legalTermsAccepted}
-              privacyAccepted={p.legalPrivacyAccepted}
-              onTermsChange={p.setLegalTermsAccepted}
-              onPrivacyChange={p.setLegalPrivacyAccepted}
-              closeDialog={p.close}
-            />
-          </div>
-          <AuthFooter compact showLegalBlurb={false}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Already joined?{' '}
-              <button
-                type="button"
-                className="text-card-foreground hover:text-primary underline decoration-2 underline-offset-4"
-                onClick={() => p.goToStep('welcome')}
-              >
-                Sign in
-              </button>
-            </p>
-          </AuthFooter>
-        </>
-      );
+        </p>
+      </AuthFooter>
+    </>
+  );
 }
 
 function renderAuthVerifyEmailStep(p: AuthDialogRenderProps): ReactNode {
-  const verifyBackLabel =
-    p.stepBeforeVerify === 'login-email' || p.stepBeforeVerify === 'signup-email'
-      ? 'Change email'
-      : 'Back';
   return (
-        <>
+    <>
+      <AuthStepHeader title="Check your inbox" variant="verify" />
+      <AuthInboxCallout label="Sent to" email={p.verifyEmail} />
+      <form
+        onSubmit={p.twoFactorActive ? p.handleVerifyTwoFactor : p.handleVerifyCode}
+        className="mt-3 space-y-3"
+      >
+        <div className="space-y-1.5">
+          <label
+            htmlFor="auth-verify-code"
+            className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+          >
+            {p.twoFactorActive ? 'Authenticator Code' : 'Verification Code'}
+          </label>
+          <input
+            id="auth-verify-code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            placeholder="000000"
+            value={p.code}
+            onChange={(e) => p.setCode(p.sanitizeOtpInput(e.target.value))}
+            className={authInputClassName('py-4 text-center text-lg font-black tracking-[0.5em]')}
+          />
+        </div>
+        <Button
+          type="submit"
+          className="w-full py-4 text-xs font-black uppercase tracking-widest"
+          disabled={p.isLoading || p.code.length !== 6}
+        >
+          {p.twoFactorActive ? 'Verify 2FA & Enter' : 'Verify & Enter'}
+        </Button>
+      </form>
+      {p.otpAttemptsLeft != null && p.otpAttemptsLeft > 0 && !p.twoFactorActive && (
+        <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Attempts left: {p.otpAttemptsLeft}
+        </p>
+      )}
+      {!p.twoFactorActive && (
+        <div className="mt-4 text-center">
           <button
             type="button"
-            onClick={() => {
-              p.setCode('');
-              if (p.stepBeforeVerify === 'login-email') p.setEmail(p.verifyEmail);
-              if (p.stepBeforeVerify === 'signup-email') p.setSignupEmail(p.verifyEmail);
-              p.goToStep(p.stepBeforeVerify);
-            }}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary mb-4"
+            disabled={p.isLoading || p.resendCooldownSec > 0}
+            onClick={() => p.onResendCodeClick()}
+            className="text-[10px] font-black uppercase tracking-widest text-muted-foreground underline decoration-2 underline-offset-4 hover:text-primary disabled:opacity-40 disabled:no-underline"
           >
-            <ArrowLeft className="h-4 w-4" />
-            {verifyBackLabel}
+            {p.resendCooldownSec > 0 ? `Resend code in ${p.resendCooldownSec}s` : 'Resend code'}
           </button>
-          <h2
-            id="auth-dialog-title"
-            className="text-xl font-black italic tracking-tighter text-card-foreground uppercase"
+        </div>
+      )}
+      <div className="mt-4 border-t border-border/70 pt-3">
+        <p className="text-[9px] text-center leading-tight font-medium uppercase tracking-widest text-muted-foreground/50">
+          Protected by{' '}
+          <a
+            href="https://altcha.org"
+            className="underline hover:text-card-foreground"
+            target="_blank"
+            rel="noreferrer"
           >
-            Check_Inbox
-          </h2>
-          <div className="mt-2 p-3 bg-muted/50 border-l-4 border-primary">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sent to:</p>
-            <p className="text-xs font-black break-all text-card-foreground">{p.verifyEmail}</p>
-          </div>
-          <form
-            onSubmit={p.twoFactorActive ? p.handleVerifyTwoFactor : p.handleVerifyCode}
-            className="mt-6 space-y-4"
+            ALTCHA
+          </a>{' '}
+          (proof-of-work, no tracking cookies).
+          <br />
+          <Link
+            href={PRIVACY_LINK}
+            className="underline hover:text-card-foreground transition-colors"
+            onClick={() => p.close()}
           >
-            <div className="space-y-1.5">
-              <label
-                htmlFor="auth-verify-code"
-                className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
-              >
-                {p.twoFactorActive ? 'Authenticator Code' : 'Verification Code'}
-              </label>
-              <input
-                id="auth-verify-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="000000"
-                value={p.code}
-                onChange={(e) => p.setCode(p.sanitizeOtpInput(e.target.value))}
-                className="w-full border-2 border-border bg-background px-4 py-4 text-center text-lg font-black tracking-[0.5em] text-card-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors"
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full py-6 text-xs font-black uppercase tracking-widest"
-              disabled={p.isLoading || p.code.length !== 6}
-            >
-              {p.twoFactorActive ? 'Verify 2FA & Enter' : 'Verify & Enter'}
-            </Button>
-          </form>
-          {p.otpAttemptsLeft != null && p.otpAttemptsLeft > 0 && !p.twoFactorActive && (
-            <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Attempts left: {p.otpAttemptsLeft}
-            </p>
-          )}
-          {!p.twoFactorActive && (
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                disabled={p.isLoading || p.resendCooldownSec > 0}
-                onClick={() => p.onResendCodeClick()}
-                className="text-[10px] font-black uppercase tracking-widest text-muted-foreground underline decoration-2 underline-offset-4 hover:text-primary disabled:opacity-40 disabled:no-underline"
-              >
-                {p.resendCooldownSec > 0 ? `Resend code in ${p.resendCooldownSec}s` : 'Resend code'}
-              </button>
-            </div>
-          )}
-          <div className="mt-8 pt-6 border-t-2 border-border">
-            <p className="text-[9px] text-center leading-tight font-medium uppercase tracking-widest text-muted-foreground/50">
-              Protected by{' '}
-              <a
-                href="https://altcha.org"
-                className="underline hover:text-card-foreground"
-                target="_blank"
-                rel="noreferrer"
-              >
-                ALTCHA
-              </a>{' '}
-              (proof-of-work, no tracking cookies).
-              <br />
-              <Link
-                href={PRIVACY_LINK}
-                className="underline hover:text-card-foreground transition-colors"
-                onClick={() => p.close()}
-              >
-                Privacy
-              </Link>
-              {' & '}
-              <Link
-                href={TERMS_LINK}
-                className="underline hover:text-card-foreground transition-colors"
-                onClick={() => p.close()}
-              >
-                Terms
-              </Link>
-              .
-            </p>
-          </div>
-        </>
-      );
+            Privacy
+          </Link>
+          {' & '}
+          <Link
+            href={TERMS_LINK}
+            className="underline hover:text-card-foreground transition-colors"
+            onClick={() => p.close()}
+          >
+            Terms
+          </Link>
+          .
+        </p>
+      </div>
+    </>
+  );
 }
 
 export function authDialogRenderStep(p: AuthDialogRenderProps): ReactNode {

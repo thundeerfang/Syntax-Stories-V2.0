@@ -1,5 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { optionalVerifyToken, type RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
+import {
+  optionalVerifyToken,
+  type RequestWithOptionalAuth,
+} from '../middlewares/auth/optionalVerifyToken.js';
 import { verifyAltchaIfConfigured } from '../middlewares/auth/verifyAltcha.js';
 import { rateLimitContact } from '../middlewares/auth/rateLimitAuth.js';
 import { submitContactLead } from '../controllers/contact.controller.js';

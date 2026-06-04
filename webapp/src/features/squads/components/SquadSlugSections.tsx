@@ -35,7 +35,11 @@ function memberAvatarSrc(profileImg: string | undefined, username: string): stri
   if (!trimmed) {
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
   }
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:')
+  ) {
     return trimmed;
   }
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
@@ -88,7 +92,7 @@ export function SquadMembersDialog({
           } catch {
             return [m.username, false] as const;
           }
-        }),
+        })
       );
       if (!cancelled) setFollowingByUser(Object.fromEntries(entries));
     })();
@@ -108,7 +112,7 @@ export function SquadMembersDialog({
 
   const staff = useMemo(
     () => filtered.filter((m) => m.role === 'admin' || m.role === 'moderator'),
-    [filtered],
+    [filtered]
   );
   const regular = useMemo(() => filtered.filter((m) => m.role === 'member'), [filtered]);
 
@@ -136,7 +140,7 @@ export function SquadMembersDialog({
         setBusyUser(null);
       }
     },
-    [accessToken, followingByUser],
+    [accessToken, followingByUser]
   );
 
   function MemberRow({ m }: Readonly<{ m: SquadMembersDialogRow }>) {
@@ -146,7 +150,10 @@ export function SquadMembersDialog({
 
     return (
       <div className="flex items-center gap-3 border-b border-border/60 py-3 last:border-b-0">
-        <Link href={`/u/${encodeURIComponent(m.username)}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <Link
+          href={`/u/${encodeURIComponent(m.username)}`}
+          className="flex min-w-0 flex-1 items-center gap-3"
+        >
           <img
             src={memberAvatarSrc(m.profileImg, m.username)}
             alt=""
@@ -155,7 +162,9 @@ export function SquadMembersDialog({
           <div className="min-w-0">
             <p className="truncate font-bold text-foreground">{label}</p>
             <p className="truncate font-mono text-[11px] text-muted-foreground">@{m.username}</p>
-            <p className="mt-0.5 text-[9px] font-black uppercase tracking-wide text-primary">{roleLabel(m.role)}</p>
+            <p className="mt-0.5 text-[9px] font-black uppercase tracking-wide text-primary">
+              {roleLabel(m.role)}
+            </p>
           </div>
         </Link>
         {canFollow ? (
@@ -217,7 +226,9 @@ export function SquadMembersDialog({
 
       {regular.length > 0 ? (
         <div className={cn('mt-4', staff.length > 0 && 'border-t border-border pt-4')}>
-          <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Members</p>
+          <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            Members
+          </p>
           <div className="border-2 border-border px-2">
             {regular.map((m) => (
               <MemberRow key={m.userId} m={m} />
@@ -227,7 +238,9 @@ export function SquadMembersDialog({
       ) : null}
 
       {filtered.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-muted-foreground">No members match your search.</p>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          No members match your search.
+        </p>
       ) : null}
     </FormDialog>
   );
@@ -289,22 +302,23 @@ export function SquadsDiscoverCategoryView({ categoryParam }: Readonly<{ categor
 
   const isMember = useCallback((s: SquadSummary) => s.viewerRole != null, []);
 
-  const handleCardJoin = async (squadSlug: string) => {
+  const handleCardJoin = async (squadSlug: string): Promise<boolean> => {
     const row = merged.find((x) => x.slug === squadSlug);
-    if (!row) return;
+    if (!row) return false;
     if (!token) {
       openAuth('login');
-      return;
+      return false;
     }
     if (row.visibility === 'private') {
       router.push(`/squads/${encodeURIComponent(squadSlug)}`);
-      return;
+      return false;
     }
     setJoinBusySlug(squadSlug);
     try {
       await squadsApi.join(squadSlug, token);
       toast.success('Joined squad');
       await load();
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not join');
       throw e;
@@ -322,7 +336,9 @@ export function SquadsDiscoverCategoryView({ categoryParam }: Readonly<{ categor
             { href: '/squads', label: 'Squads' },
             { label: 'Unknown category' },
           ]}
-          title={<h1 className="text-2xl font-bold text-foreground sm:text-3xl">Unknown category</h1>}
+          title={
+            <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Unknown category</h1>
+          }
           description="That category path is not valid. Open squads or featured to browse."
         />
         <Link
@@ -388,7 +404,11 @@ export function SquadsDiscoverCategoryView({ categoryParam }: Readonly<{ categor
                   isAdmin={s.viewerRole === 'admin'}
                   joinBusy={joinBusySlug === s.slug}
                   onJoin={handleCardJoin}
-                  onEditSquad={token && s.viewerRole === 'admin' ? () => router.push(`/squads/${encodeURIComponent(s.slug)}`) : undefined}
+                  onEditSquad={
+                    token && s.viewerRole === 'admin'
+                      ? () => router.push(`/squads/${encodeURIComponent(s.slug)}`)
+                      : undefined
+                  }
                 />
               </li>
             ))}

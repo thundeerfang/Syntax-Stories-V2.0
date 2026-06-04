@@ -6,7 +6,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { READ_HEATMAP_WINDOW_DAYS } from '@/lib/profile/readHeatmapConstants';
 import { MONTH_NAMES_SHORT } from '@/lib/profile/dateLabels';
 
-
 const ActivityCalendar = dynamic(
   () => import('react-activity-calendar').then((m) => m.ActivityCalendar),
   { ssr: false }
@@ -25,10 +24,14 @@ function utcDayStringFromDate(d: Date): string {
  * One row per UTC calendar day in the window: level 4 = read at least one qualifying post that day.
  * Matches `BlogReadDay` buckets from the profile API (`readHeatmapDays`).
  */
-export function buildReadHeatmapActivityData(readDayBuckets: readonly string[] | null | undefined): ActivityDay[] {
+export function buildReadHeatmapActivityData(
+  readDayBuckets: readonly string[] | null | undefined
+): ActivityDay[] {
   const readSet = new Set(readDayBuckets ?? []);
   const anchor = new Date();
-  const todayUtc = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
+  const todayUtc = new Date(
+    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate())
+  );
   const data: ActivityDay[] = [];
   for (let i = READ_HEATMAP_WINDOW_DAYS - 1; i >= 0; i--) {
     const d = new Date(todayUtc);

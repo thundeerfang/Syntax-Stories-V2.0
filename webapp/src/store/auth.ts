@@ -2,16 +2,51 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authApi, AuthError, normalizeUser, type AuthUser, type ProfileUpdateSection, type UpdateProfilePayload } from '@/api/auth';
+import {
+  authApi,
+  AuthError,
+  normalizeUser,
+  type AuthUser,
+  type ProfileUpdateSection,
+  type UpdateProfilePayload,
+} from '@/api/auth';
 import { runProfilePatch } from '@/lib/auth/runProfilePatch';
 import { setLastUserName } from '@/lib/auth/lastUser';
 import { consumePostAuthRedirect } from '@/lib/auth/postAuthRedirect';
+import { FOLLOWED_CATEGORIES_CHANGED_EVENT } from '@/lib/feeds/followedCategoriesStorage';
+import { accessTokenNeedsRefresh } from '@/lib/auth/jwtExpiry';
 
 const AUTH_KEY = 'syntax-stories-auth';
 
+function writeAuthPersistSnapshot(snapshot: {
+  user: AuthUser | null;
+  token: string | null;
+  refreshToken: string | null;
+}): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      AUTH_KEY,
+      JSON.stringify({
+        state: {
+          user: snapshot.user,
+          token: snapshot.token,
+          refreshToken: snapshot.refreshToken,
+        },
+        version: 0,
+      })
+    );
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+/** Prevents parallel `/auth/refresh` calls (e.g. hard reload + 401 retries) from reusing a rotated token. */
+let refreshInFlight: Promise<string | null> | null = null;
+
 async function recoverSessionAfterGetAccount401(
   get: () => AuthState,
-  set: (partial: Partial<AuthState>) => void,
+  set: (partial: Partial<AuthState>) => void
 ): Promise<void> {
   const refreshToken = get().refreshToken;
   if (!refreshToken) {
@@ -20,7 +55,16 @@ async function recoverSessionAfterGetAccount401(
   }
   try {
     const refreshed = await authApi.refresh(refreshToken);
-    set({ token: refreshed.accessToken });
+    const nextRefresh = refreshed.refreshToken ?? refreshToken;
+    set({
+      token: refreshed.accessToken,
+      refreshToken: nextRefresh,
+    });
+    writeAuthPersistSnapshot({
+      user: get().user,
+      token: refreshed.accessToken,
+      refreshToken: nextRefresh,
+    });
     const res = await authApi.getAccount(refreshed.accessToken);
     set({ user: normalizeUser(res.user) });
   } catch (refreshErr) {
@@ -48,7 +92,10 @@ type AuthState = {
   setHydrated: () => void;
   setAuth: (user: AuthUser | null, token: string | null, refreshToken?: string | null) => void;
   refreshUser: () => Promise<void>;
-  updateProfile: (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => Promise<void>;
+  updateProfile: (
+    data: UpdateProfilePayload,
+    opts?: { section?: ProfileUpdateSection }
+  ) => Promise<void>;
   sendLoginOtp: (email: string, altcha?: string) => Promise<void>;
   signUp: (fullName: string, email: string, altcha?: string) => Promise<void>;
   verifyCode: (email: string, code: string, opts?: { acceptPolicies?: boolean }) => Promise<void>;
@@ -88,7 +135,10 @@ export const useAuthStore = create<AuthState>()(
           }
         }
       },
-      updateProfile: async (data: UpdateProfilePayload, opts?: { section?: ProfileUpdateSection }) => {
+      updateProfile: async (
+        data: UpdateProfilePayload,
+        opts?: { section?: ProfileUpdateSection }
+      ) => {
         await runProfilePatch(
           {
             getSnapshot: () => ({
@@ -113,8 +163,7 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (err) {
           set({ isLoading: false });
-          const message =
-            err instanceof Error ? err.message : 'Failed to send code';
+          const message = err instanceof Error ? err.message : 'Failed to send code';
           throw new Error(message);
         }
       },
@@ -128,8 +177,7 @@ export const useAuthStore = create<AuthState>()(
           });
         } catch (err) {
           set({ isLoading: false });
-          const message =
-            err instanceof Error ? err.message : 'Sign up failed';
+          const message = err instanceof Error ? err.message : 'Sign up failed';
           throw new Error(message);
         }
       },
@@ -175,11 +223,9 @@ export const useAuthStore = create<AuthState>()(
           if (user?.fullName) setLastUserName(user.fullName);
           if (consumePostAuthRedirect()) return;
         } catch (err) {
-          const stale =
-            err instanceof AuthError && err.extras?.code === 'OTP_STALE_VERSION';
+          const stale = err instanceof AuthError && err.extras?.code === 'OTP_STALE_VERSION';
           set({ isLoading: false, ...(stale ? { pendingOtpVersion: null } : {}) });
-          const message =
-            err instanceof Error ? err.message : 'Invalid code';
+          const message = err instanceof Error ? err.message : 'Invalid code';
           throw new Error(message);
         }
       },
@@ -188,15 +234,23 @@ export const useAuthStore = create<AuthState>()(
         if (!tf?.challengeToken) throw new Error('2FA challenge missing');
         set({ isLoading: true });
         try {
-          const res = await authApi.verifyTwoFactorLogin({ challengeToken: tf.challengeToken, token });
+          const res = await authApi.verifyTwoFactorLogin({
+            challengeToken: tf.challengeToken,
+            token,
+          });
           const user = normalizeUser(res.user);
-          set({ user, token: res.accessToken, refreshToken: res.refreshToken ?? null, isLoading: false, twoFactor: null });
+          set({
+            user,
+            token: res.accessToken,
+            refreshToken: res.refreshToken ?? null,
+            isLoading: false,
+            twoFactor: null,
+          });
           if (user?.fullName) setLastUserName(user.fullName);
           if (consumePostAuthRedirect()) return;
         } catch (err) {
           set({ isLoading: false });
-          const message =
-            err instanceof Error ? err.message : 'Invalid 2FA code';
+          const message = err instanceof Error ? err.message : 'Invalid 2FA code';
           throw new Error(message);
         }
       },
@@ -210,34 +264,56 @@ export const useAuthStore = create<AuthState>()(
           /* ignore */
         }
         set({ user: null, token: null, refreshToken: null, twoFactor: null });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent(FOLLOWED_CATEGORIES_CHANGED_EVENT, { detail: { userId: null } })
+          );
+        }
       },
       tryRefreshAndReturnNewToken: async () => {
-        const { refreshToken } = get();
-        if (!refreshToken) return null;
-        try {
-          const res = await authApi.refresh(refreshToken);
-          set({ token: res.accessToken });
-          // Re-fetch user so connected-accounts and OAuth flags stay correct after silent refresh
+        if (refreshInFlight) return refreshInFlight;
+
+        refreshInFlight = (async (): Promise<string | null> => {
+          const { refreshToken, token } = get();
+          if (!refreshToken) return null;
+          if (!accessTokenNeedsRefresh(token)) return token;
           try {
-            const accountRes = await authApi.getAccount(res.accessToken);
-            set({ user: normalizeUser(accountRes.user) });
-          } catch {
-            /* keep existing user if /me fails after refresh */
-          }
-          return res.accessToken;
-        } catch (e) {
-          // Only clear auth state when refresh returns 401 (session invalid/expired).
-          // On network error, 5xx, or 429 we keep the user "logged in" so they can retry.
-          if (e instanceof AuthError && e.status === 401) {
-            const rt = get().refreshToken;
+            const res = await authApi.refresh(refreshToken);
+            const nextRefresh = res.refreshToken ?? refreshToken;
+            set({ token: res.accessToken, refreshToken: nextRefresh });
+            writeAuthPersistSnapshot({
+              user: get().user,
+              token: res.accessToken,
+              refreshToken: nextRefresh,
+            });
+            // Re-fetch user so connected-accounts and OAuth flags stay correct after silent refresh
             try {
-              if (rt) await authApi.revokeSession(rt);
+              const accountRes = await authApi.getAccount(res.accessToken);
+              set({ user: normalizeUser(accountRes.user) });
             } catch {
-              /* ignore */
+              /* keep existing user if /me fails after refresh */
             }
-            set({ user: null, token: null, refreshToken: null });
+            return res.accessToken;
+          } catch (e) {
+            // Only clear auth state when refresh returns 401 (session invalid/expired).
+            // On network error, 5xx, or 429 we keep the user "logged in" so they can retry.
+            if (e instanceof AuthError && e.status === 401) {
+              const rt = get().refreshToken;
+              try {
+                if (rt) await authApi.revokeSession(rt);
+              } catch {
+                /* ignore */
+              }
+              set({ user: null, token: null, refreshToken: null });
+            }
+            return null;
           }
-          return null;
+        })();
+
+        try {
+          return await refreshInFlight;
+        } finally {
+          refreshInFlight = null;
         }
       },
     }),

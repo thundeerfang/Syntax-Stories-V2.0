@@ -3,22 +3,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import {
   UserPlus,
   Copy,
   Check,
   Users,
   Link2,
+  Hash,
+  ChevronDown,
   Sparkles,
-  ChevronRight,
-  Radio,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { setPostAuthRedirect } from '@/lib/auth/postAuthRedirect';
 import { cn } from '@/lib/core/utils';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-
+import { ShellPageIntroHeader, RailFeedEmptyState } from '@/components/layout';
+import { InvitePageSkeletonInner } from '@/components/skeletons';
+import { inviteApi, type InviteShareChannel } from '@/api/invite';
 
 type InviteMeResponse = {
   success: boolean;
@@ -31,6 +34,8 @@ type InviteMeResponse = {
 type InviteStatsResponse = {
   success: boolean;
   converted?: number;
+  pending?: number;
+  rewarded?: number;
 };
 
 type ReferredRow = {
@@ -45,13 +50,85 @@ type ReferredRow = {
 type InviteReferredResponse = {
   success: boolean;
   total?: number;
-  skip?: number;
-  limit?: number;
   items?: ReferredRow[];
   message?: string;
 };
 
-const REFERRALS_PAGE_SIZE = 25;
+/** Max friends shown in the roster (fixed layout). */
+const MAX_ROSTER = 10;
+
+type CopyKind = 'link' | 'attach' | 'code';
+
+function CopyButton({
+  label,
+  copied,
+  onCopy,
+  primary,
+}: {
+  label: string;
+  copied: boolean;
+  onCopy: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center gap-2 border-2 border-border px-4 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest shadow transition-all',
+        'hover:translate-x-0.5 hover:translate-y-0.5 active:translate-x-px active:translate-y-px active:shadow-none',
+        primary
+          ? 'bg-primary text-primary-foreground'
+          : 'bg-card text-foreground hover:bg-muted/40'
+      )}
+    >
+      {copied ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+      {copied ? 'Copied' : label}
+    </button>
+  );
+}
+
+function RosterRow({ row }: { row: ReferredRow }) {
+  return (
+    <li className="flex items-center gap-3 border-b-2 border-border/60 px-4 py-3 last:border-b-0 odd:bg-muted/10">
+      <img
+        src={row.profileImg}
+        alt=""
+        className="size-10 shrink-0 border-2 border-border object-cover"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-foreground">{row.fullName}</p>
+        <Link
+          href={`/u/${encodeURIComponent(row.username)}`}
+          className="text-[11px] font-black uppercase tracking-wide text-primary hover:underline"
+        >
+          @{row.username}
+        </Link>
+      </div>
+      <div className="hidden shrink-0 text-right sm:block">
+        <p className="text-[10px] font-medium text-muted-foreground">
+          {row.joinedAt
+            ? new Date(row.joinedAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : '—'}
+        </p>
+      </div>
+      <span
+        className={cn(
+          'shrink-0 border-2 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider',
+          row.isActive
+            ? 'border-primary/40 bg-primary/10 text-primary'
+            : 'border-border bg-muted text-muted-foreground'
+        )}
+      >
+        {row.isActive ? 'Active' : 'Inactive'}
+      </span>
+    </li>
+  );
+}
 
 export default function InviteDashboardPage() {
   const router = useRouter();
@@ -63,11 +140,10 @@ export default function InviteDashboardPage() {
   const [referred, setReferred] = useState<ReferredRow[]>([]);
   const [referredTotal, setReferredTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [referredLoadingMore, setReferredLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [referredError, setReferredError] = useState<string | null>(null);
-  const [copied, setCopied] = useState<'link' | 'attach' | 'code' | null>(null);
-  const [showAttachTip, setShowAttachTip] = useState(false);
+  const [copied, setCopied] = useState<CopyKind | null>(null);
+  const [showAttach, setShowAttach] = useState(false);
 
   const load = useCallback(async () => {
     const t = useAuthStore.getState().token;
@@ -91,7 +167,7 @@ export default function InviteDashboardPage() {
           headers: { Authorization: `Bearer ${t}` },
           credentials: 'include',
         }),
-        fetch(`${base}/api/invites/referred?limit=${REFERRALS_PAGE_SIZE}&skip=0`, {
+        fetch(`${base}/api/invites/referred?limit=${MAX_ROSTER}&skip=0`, {
           headers: { Authorization: `Bearer ${t}` },
           credentials: 'include',
         }),
@@ -110,7 +186,7 @@ export default function InviteDashboardPage() {
         setStats(statsJson);
       }
       if (refRes.ok && refJson.success && refJson.items) {
-        setReferred(refJson.items);
+        setReferred(refJson.items.slice(0, MAX_ROSTER));
         setReferredTotal(typeof refJson.total === 'number' ? refJson.total : refJson.items.length);
       } else {
         setReferred([]);
@@ -128,34 +204,6 @@ export default function InviteDashboardPage() {
     }
   }, []);
 
-  const loadMoreReferred = useCallback(async () => {
-    const t = useAuthStore.getState().token;
-    const base = resolvePublicApiBase();
-    if (!t || !base || referred.length >= referredTotal) return;
-    setReferredLoadingMore(true);
-    setReferredError(null);
-    try {
-      const skip = referred.length;
-      const res = await fetch(
-        `${base}/api/invites/referred?limit=${REFERRALS_PAGE_SIZE}&skip=${skip}`,
-        {
-          headers: { Authorization: `Bearer ${t}` },
-          credentials: 'include',
-        }
-      );
-      const json = (await res.json()) as InviteReferredResponse;
-      if (!res.ok || !json.success || !json.items) {
-        setReferredError(json.message ?? 'Could not load more.');
-        return;
-      }
-      setReferred((prev) => [...prev, ...json.items!]);
-    } catch {
-      setReferredError('Network error loading more.');
-    } finally {
-      setReferredLoadingMore(false);
-    }
-  }, [referred.length, referredTotal]);
-
   useEffect(() => {
     if (!isHydrated) return;
     if (!token) {
@@ -166,347 +214,254 @@ export default function InviteDashboardPage() {
     void load();
   }, [isHydrated, token, load, router]);
 
-  const copyText = async (text: string, kind: 'link' | 'attach' | 'code') => {
+  const copyText = async (text: string, kind: CopyKind, toastLabel: string) => {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(kind);
+      toast.success(toastLabel);
       setTimeout(() => setCopied(null), 2000);
+      const channelMap: Record<CopyKind, InviteShareChannel> = {
+        link: 'copy_link',
+        attach: 'copy_attach',
+        code: 'copy_code',
+      };
+      const t = useAuthStore.getState().token;
+      if (t) {
+        void inviteApi.recordShare(t, channelMap[kind], me?.referralCode).catch(() => undefined);
+      }
     } catch {
-      /* ignore */
+      toast.error('Could not copy to clipboard.');
     }
   };
 
-  if (!isHydrated) {
-    return (
-      <div className={SHELL_CONTENT_RAIL_CLASS}>
-        <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Invite desk</p>
-          <p className="mt-3 text-sm font-black uppercase tracking-wide text-foreground">Loading…</p>
-        </div>
-      </div>
-    );
+  if (!isHydrated || !token) {
+    return <InvitePageSkeletonInner />;
   }
 
-  if (!token) {
-    return (
-      <div className={SHELL_CONTENT_RAIL_CLASS}>
-        <div className="mx-auto max-w-2xl border-4 border-border bg-card px-6 py-12 text-center shadow">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground">Invite desk</p>
-          <p className="mt-3 text-sm font-black uppercase tracking-wide text-foreground">Redirecting to sign in…</p>
-        </div>
-      </div>
-    );
+  if (loading) {
+    return <InvitePageSkeletonInner />;
   }
 
   const converted = typeof stats?.converted === 'number' ? stats.converted : referredTotal;
-  const hasMore = referred.length < referredTotal;
+  const rosterFilled = referred.length;
+  const emptySlots = Math.max(0, MAX_ROSTER - rosterFilled);
 
   return (
-    <div className={SHELL_CONTENT_RAIL_CLASS}>
-      <div className="w-full space-y-6 md:space-y-8">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(0,480px)] xl:gap-10">
-          <div className="min-w-0 space-y-6 md:space-y-8">
-        {/* Big page header — panel card, not a navbar strip */}
-        <div className="overflow-hidden border-4 border-border bg-card shadow">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b-4 border-dashed border-border bg-muted/50 px-4 py-2.5 sm:px-6">
-            <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              <Radio className="size-3.5 shrink-0 text-primary" aria-hidden />
-              <span>Referral terminal</span>
-            </div>
-            <span className="font-mono text-[10px] text-muted-foreground">session · invite</span>
-          </div>
-          <div className="relative px-5 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12">
-            <div
-              className="pointer-events-none absolute inset-0 opacity-[0.06]"
-              style={{
-                backgroundImage:
-                  'repeating-linear-gradient(0deg, transparent, transparent 2px, var(--border) 2px, var(--border) 3px)',
-              }}
-              aria-hidden
-            />
-            <div className="relative">
-              <p className="text-[10px] font-black uppercase tracking-[0.35em] text-muted-foreground">Syntax stories</p>
-              <h1 className="mt-2 text-3xl font-black uppercase italic leading-[0.95] tracking-tighter text-foreground sm:text-4xl md:text-5xl">
-                Invite friends
+    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
+      <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
+        <ShellPageIntroHeader
+          breadcrumbItems={[{ href: '/', label: 'Home' }, { label: 'Invite friends' }]}
+          description="Share your link or code. Friends who complete signup through your URL count toward your roster below."
+          title={
+            <div className="flex items-center gap-4">
+              <span className="flex size-12 shrink-0 items-center justify-center bg-foreground text-background shadow [&_svg]:size-7">
+                <UserPlus aria-hidden />
+              </span>
+              <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
+                Invite{' '}
+                <span className="text-primary underline decoration-4 underline-offset-4 sm:decoration-6 sm:underline-offset-6">
+                  friends.
+                </span>
               </h1>
-              <p className="mt-5 max-w-2xl text-sm font-medium leading-relaxed text-muted-foreground md:text-base">
-                This is your referral desk: copy your invite link or code, drop them in bios and DMs, and watch new
-                builders land in your directory. Anyone who completes signup through your link or cookie-backed URL
-                counts toward your totals below.
-              </p>
-              <ul className="mt-6 space-y-2 border-l-4 border-primary/50 pl-4 text-xs font-semibold text-foreground/90 md:text-sm">
-                <li className="flex gap-2">
-                  <span className="font-mono text-muted-foreground">01</span>
-                  <span>Share the invite URL — it opens your public invite landing flow.</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-mono text-muted-foreground">02</span>
-                  <span>They sign up; you see them in the roster with join date and status.</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-mono text-muted-foreground">03</span>
-                  <span>Advanced: direct signup URL sets the referral cookie before redirect.</span>
-                </li>
-              </ul>
             </div>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="border-4 border-border bg-card shadow">
-          <div className="grid divide-y-4 divide-dashed divide-border sm:grid-cols-2 sm:divide-x-4 sm:divide-y-0">
-            <div className="p-5 sm:p-6">
-              <div className="flex items-center gap-2 border-b-2 border-dashed border-border pb-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                <Users className="h-4 w-4 shrink-0" aria-hidden />
-                Friends who joined
-              </div>
-              <p className="mt-4 text-4xl font-black tabular-nums tracking-tight text-foreground md:text-5xl">
-                {loading ? '—' : converted}
-              </p>
-              <p className="mt-2 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                Completed signups · attributed
-              </p>
-            </div>
-            <div className="p-5 sm:p-6">
-              <div className="flex items-center gap-2 border-b-2 border-dashed border-border pb-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
-                Directory rows
-              </div>
-              <p className="mt-4 text-4xl font-black tabular-nums tracking-tight text-foreground md:text-5xl">
-                {loading ? '—' : referredTotal}
-              </p>
-              <p className="mt-2 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                {loading
-                  ? '—'
-                  : referred.length >= referredTotal
-                    ? 'Full roster synced'
-                    : `${referred.length} / ${referredTotal} loaded`}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {loading && (
-          <div className="border-4 border-dashed border-border bg-muted/20 px-4 py-8 text-center shadow">
-            <UserPlus className="mx-auto mb-3 size-8 text-muted-foreground/60" strokeWidth={2} aria-hidden />
-            <p className="text-sm font-black uppercase tracking-wide text-muted-foreground">Pulling your links & roster…</p>
-          </div>
-        )}
-
-        {error && !loading && (
-          <p className="border-4 border-destructive bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive shadow">
-            {error}
-          </p>
-        )}
-
-        {!loading && me?.inviteUrl && (
-            <section className="border-4 border-border bg-card shadow">
-              <div className="border-b-4 border-border bg-muted/30 px-5 py-3 sm:px-6">
-                <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-foreground">
-                  <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow">
-                    <Link2 className="size-4" aria-hidden />
-                  </span>
-                  Share &amp; copy
-                </h2>
-                <p className="mt-1 pl-10 font-mono text-[10px] text-muted-foreground">clipboard-ready fields</p>
-              </div>
-              <div className="space-y-6 p-5 sm:p-6 md:p-8">
-            <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-              Invite URL (opens your invite landing page)
-            </p>
-            <div className="flex gap-2 break-all border-4 border-border bg-muted/25 px-3 py-3 font-mono text-xs leading-snug text-foreground shadow">
-              <span className="min-w-0 flex-1">{me.inviteUrl}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => void copyText(me.inviteUrl!, 'link')}
-              className="mt-4 flex w-full items-center justify-center gap-2 border-4 border-border bg-primary py-3 text-[10px] font-black uppercase tracking-[0.15em] text-primary-foreground shadow transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow active:translate-x-1 active:translate-y-1 active:shadow-none sm:w-auto sm:px-10"
-            >
-              {copied === 'link' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied === 'link' ? 'Copied' : 'Copy invite URL'}
-            </button>
-
-            {me.referralCode && (
-              <div className="mt-6 border-t-2 border-dashed border-border pt-6">
-                <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                  Referral code only
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <code className="border-4 border-border bg-background px-3 py-2 font-mono text-sm font-bold tracking-widest shadow">
-                    {me.referralCode}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => void copyText(me.referralCode!, 'code')}
-                    className="border-4 border-border bg-card px-4 py-2 text-[10px] font-black uppercase tracking-wide shadow transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none"
-                  >
-                    {copied === 'code' ? 'Copied' : 'Copy code'}
-                  </button>
+        {/* Share & copy + stats side-by-side */}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,300px)] lg:items-stretch xl:gap-6">
+          <section className="border-4 border-border bg-card shadow min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-border bg-muted/30 px-4 py-3 sm:px-5">
+              <div className="flex items-center gap-2">
+                <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow-sm">
+                  <Link2 className="size-4 text-primary" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-foreground">
+                    Share &amp; copy
+                  </p>
+                  <p className="text-[10px] font-medium text-muted-foreground">
+                    Invite URL · code · direct signup link
+                  </p>
                 </div>
               </div>
+              {me?.inviteUrl && (
+                <CopyButton
+                  primary
+                  label="Copy invite link"
+                  copied={copied === 'link'}
+                  onCopy={() => void copyText(me.inviteUrl!, 'link', 'Invite link copied')}
+                />
+              )}
+            </div>
+
+            <div className="space-y-5 p-4 sm:p-5 md:p-6">
+            {error && (
+              <p className="border-2 border-destructive bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive">
+                {error}
+              </p>
             )}
 
-            {me.attachUrl && (
-              <div className="mt-6 border-t-2 border-dashed border-border pt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowAttachTip((v) => !v)}
-                  className="flex w-full items-center justify-between gap-2 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
-                >
-                  <span>Direct signup URL (sets referral cookie)</span>
-                  <ChevronRight
-                    className={cn('h-4 w-4 shrink-0 transition-transform', showAttachTip && 'rotate-90')}
-                    aria-hidden
-                  />
-                </button>
-                {showAttachTip && (
-                  <div className="mt-3 space-y-3">
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      Use this when you want the referral to apply after redirect (e.g. email buttons). It sends people
-                      through the API first, then to your app with the referral cookie set.
-                    </p>
-                    <div className="break-all border-4 border-border bg-muted/20 px-3 py-2.5 font-mono text-[10px] leading-snug text-foreground">
-                      {me.attachUrl}
+            {me?.inviteUrl && (
+              <>
+                <div>
+                  <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <Link2 className="size-3.5" aria-hidden />
+                    Invite URL
+                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                    <div className="min-w-0 flex-1 break-all border-2 border-border bg-muted/20 px-3 py-2.5 font-mono text-xs leading-snug text-foreground">
+                      {me.inviteUrl}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void copyText(me.attachUrl!, 'attach')}
-                      className="flex items-center justify-center gap-2 border-4 border-border bg-card px-4 py-2.5 text-[10px] font-black uppercase tracking-wide shadow transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none"
-                    >
-                      {copied === 'attach' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {copied === 'attach' ? 'Copied' : 'Copy signup URL'}
-                    </button>
+                    <CopyButton
+                      label="Copy URL"
+                      copied={copied === 'link'}
+                      onCopy={() => void copyText(me.inviteUrl!, 'link', 'Invite link copied')}
+                    />
+                  </div>
+                </div>
+
+                {me.referralCode && (
+                  <div>
+                    <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      <Hash className="size-3.5" aria-hidden />
+                      Referral code
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="border-2 border-border bg-background px-4 py-2 font-mono text-sm font-bold tracking-widest shadow-sm">
+                        {me.referralCode}
+                      </code>
+                      <CopyButton
+                        label="Copy code"
+                        copied={copied === 'code'}
+                        onCopy={() =>
+                          void copyText(me.referralCode!, 'code', 'Referral code copied')
+                        }
+                      />
+                    </div>
                   </div>
                 )}
-              </div>
+
+                {me.attachUrl && (
+                  <div className="border-t-2 border-dashed border-border pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAttach((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="size-3.5" aria-hidden />
+                        Direct signup URL (sets referral cookie)
+                      </span>
+                      <ChevronDown
+                        className={cn('size-4 transition-transform', showAttach && 'rotate-180')}
+                        aria-hidden
+                      />
+                    </button>
+                    {showAttach && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                          For email buttons or deep links — hits the API first, then redirects with
+                          your referral cookie set.
+                        </p>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                          <div className="min-w-0 flex-1 break-all border-2 border-border bg-muted/15 px-3 py-2 font-mono text-[10px] leading-snug">
+                            {me.attachUrl}
+                          </div>
+                          <CopyButton
+                            label="Copy signup URL"
+                            copied={copied === 'attach'}
+                            onCopy={() =>
+                              void copyText(me.attachUrl!, 'attach', 'Signup URL copied')
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
-              </div>
-            </section>
-        )}
           </div>
+          </section>
 
-          <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
-            <section className="border-4 border-border bg-card shadow">
-              <div className="border-b-4 border-border bg-muted/30 px-5 py-3 sm:px-6">
-                <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-foreground">
-                  <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow">
-                    <Users className="size-4" aria-hidden />
-                  </span>
-                  Referral roster
-                </h2>
-                <p className="mt-1 pl-10 font-mono text-[10px] text-muted-foreground">
-                  newest first · public fields only
-                </p>
+          <aside className="flex min-w-0 flex-col gap-3 lg:min-h-full">
+            <div className="border-4 border-border bg-card p-4 shadow-sm flex-1">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                <Users className="size-4 shrink-0 text-primary" aria-hidden />
+                Friends joined
               </div>
-
-              {referredError && (
-                <p className="border-b-4 border-destructive/40 bg-destructive/5 px-4 py-2.5 text-xs font-semibold text-destructive sm:px-6">
-                  {referredError}
-                </p>
-              )}
-
-              {loading ? (
-                <div className="space-y-3 px-4 py-10 sm:px-6">
-                  <div className="h-10 w-full animate-pulse border-2 border-border bg-muted/40" />
-                  <div className="h-10 w-full animate-pulse border-2 border-border bg-muted/30" />
-                  <div className="h-10 w-full animate-pulse border-2 border-border bg-muted/20" />
-                  <p className="text-center font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Syncing roster…
-                  </p>
-                </div>
-              ) : referred.length === 0 && !referredLoadingMore ? (
-                <div className="px-4 py-12 text-center sm:px-6">
-                  <Users className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" strokeWidth={1.5} aria-hidden />
-                  <p className="text-sm font-bold text-foreground">No referrals yet</p>
-                  <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-                    When friends sign up using your link or code, they will show up in this table.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[280px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b-4 border-border bg-muted/40 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                        <th className="px-3 py-2.5 sm:px-4">Member</th>
-                        <th className="hidden px-3 py-2.5 sm:table-cell sm:px-4">Joined</th>
-                        <th className="px-3 py-2.5 text-right sm:px-4">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {referred.map((row) => (
-                        <tr
-                          key={row.id}
-                          className="border-b-2 border-dashed border-border/70 last:border-0 odd:bg-muted/15"
-                        >
-                          <td className="px-3 py-3 sm:px-4">
-                            <div className="flex min-w-0 items-center gap-3">
-                              <img
-                                src={row.profileImg}
-                                alt=""
-                                className="h-10 w-10 shrink-0 border-2 border-border object-cover"
-                              />
-                              <div className="min-w-0">
-                                <p className="truncate font-bold text-foreground">{row.fullName}</p>
-                                <Link
-                                  href={`/u/${encodeURIComponent(row.username)}`}
-                                  className="text-[11px] font-black uppercase tracking-wide text-primary hover:underline"
-                                >
-                                  @{row.username}
-                                </Link>
-                                <p className="mt-0.5 text-[10px] text-muted-foreground sm:hidden">
-                                  {row.joinedAt
-                                    ? new Date(row.joinedAt).toLocaleDateString(undefined, {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric',
-                                      })
-                                    : '—'}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="hidden whitespace-nowrap px-3 py-3 text-xs text-muted-foreground sm:table-cell sm:px-4">
-                            {row.joinedAt
-                              ? new Date(row.joinedAt).toLocaleString(undefined, {
-                                  dateStyle: 'medium',
-                                  timeStyle: 'short',
-                                })
-                              : '—'}
-                          </td>
-                          <td className="px-3 py-3 text-right sm:px-4">
-                            <span
-                              className={cn(
-                                'inline-block border-4 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow',
-                                row.isActive
-                                  ? 'border-primary/40 bg-primary/10 text-primary'
-                                  : 'border-border bg-muted text-muted-foreground'
-                              )}
-                            >
-                              {row.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {!loading && hasMore && (
-                <div className="border-t-4 border-dashed border-border bg-muted/10 p-4 sm:px-6">
-                  <button
-                    type="button"
-                    onClick={() => void loadMoreReferred()}
-                    disabled={referredLoadingMore}
-                    className="w-full border-4 border-border bg-background py-3 text-[10px] font-black uppercase tracking-[0.2em] text-foreground shadow transition-all hover:bg-muted/30 hover:translate-x-px hover:translate-y-px hover:shadow disabled:translate-x-0 disabled:translate-y-0 disabled:opacity-50 disabled:shadow sm:w-auto sm:px-12"
-                  >
-                    {referredLoadingMore ? 'Loading…' : `Load more (${referredTotal - referred.length} left)`}
-                  </button>
-                </div>
-              )}
-            </section>
+              <p className="mt-2 text-3xl font-black tabular-nums text-foreground">{converted}</p>
+              <p className="mt-1 text-[10px] font-medium text-muted-foreground">Completed signups</p>
+            </div>
+            <div className="border-4 border-border bg-card p-4 shadow-sm flex-1">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                <UserPlus className="size-4 shrink-0 text-primary" aria-hidden />
+                Roster slots
+              </div>
+              <p className="mt-2 text-3xl font-black tabular-nums text-foreground">
+                {`${rosterFilled}/${MAX_ROSTER}`}
+              </p>
+              <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+                Shown in your directory
+              </p>
+            </div>
+            <div className="border-4 border-border bg-card p-4 shadow-sm flex-1">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                Open slots
+              </div>
+              <p className="mt-2 text-3xl font-black tabular-nums text-foreground">{emptySlots}</p>
+              <p className="mt-1 text-[10px] font-medium text-muted-foreground">Until roster is full</p>
+            </div>
           </aside>
         </div>
+
+        {/* Roster — fixed 10-row layout */}
+        <section className="border-4 border-border bg-card shadow">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b-4 border-border bg-muted/30 px-4 py-3 sm:px-5">
+            <div className="flex items-center gap-2">
+              <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow-sm">
+                <Users className="size-4 text-primary" aria-hidden />
+              </span>
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-foreground">
+                  Referral roster
+                </p>
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  Newest first · max {MAX_ROSTER} shown
+                </p>
+              </div>
+            </div>
+            {referredTotal > MAX_ROSTER && (
+              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                +{referredTotal - MAX_ROSTER} more not shown
+              </span>
+            )}
+          </div>
+
+          {referredError && (
+            <p className="border-b-2 border-destructive/30 bg-destructive/5 px-4 py-2 text-xs font-semibold text-destructive sm:px-5">
+              {referredError}
+            </p>
+          )}
+
+          {rosterFilled === 0 ? (
+            <RailFeedEmptyState
+              bordered={false}
+              icon={Users}
+              title="No referrals yet"
+              description={`Copy your invite link above. Up to ${MAX_ROSTER} friends appear here after signup.`}
+              className="py-14 sm:py-16"
+            />
+          ) : (
+            <ul>
+              {referred.map((row) => (
+                <RosterRow key={row.id} row={row} />
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </div>
   );

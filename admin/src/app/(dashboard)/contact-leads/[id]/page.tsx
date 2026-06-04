@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { getContactLead, type ContactLeadDetail } from '@/lib/api';
+import { userProfilePath } from '@/lib/users/userProfilePath';
 import { useSessionStore } from '@/store/session';
 
 export default function ContactLeadDetailPage() {
@@ -78,7 +79,13 @@ export default function ContactLeadDetailPage() {
       ) : (
         <>
           <Box>
-            <Typography variant="h4" component="h1" fontWeight={800} className="tracking-tight" gutterBottom>
+            <Typography
+              variant="h4"
+              component="h1"
+              fontWeight={800}
+              className="tracking-tight"
+              gutterBottom
+            >
               {lead.topic}
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
@@ -124,8 +131,11 @@ export default function ContactLeadDetailPage() {
                     <Row
                       label="Account"
                       value={
-                        lead.userId ? (
-                          <Link href={`/users/${lead.userId}`} className="underline-offset-4 hover:underline">
+                        lead.userRef ? (
+                          <Link
+                            href={userProfilePath(lead.userRef)}
+                            className="underline-offset-4 hover:underline"
+                          >
                             @{lead.username}
                           </Link>
                         ) : (
@@ -198,7 +208,12 @@ export default function ContactLeadDetailPage() {
             </Card>
           ) : null}
 
-          <Button component={Link} href="/contact-leads" variant="text" sx={{ alignSelf: 'flex-start' }}>
+          <Button
+            component={Link}
+            href="/contact-leads"
+            variant="text"
+            sx={{ alignSelf: 'flex-start' }}
+          >
             ← Back to list
           </Button>
         </>

@@ -1,55 +1,38 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
-import { UserModel } from '../../../models/User.js';
 import { SessionModel } from '../../../models/Session.js';
 import { SecurityEventModel } from '../../../models/SecurityEvent.js';
-import { authConfig } from '../../../config/auth.config.js';
-import { signAccessToken } from '../../../config/jwt.js';
 import type { AuthUser } from '../../../middlewares/auth/index.js';
 import { writeAuditLog } from '../../../shared/audit/auditLog.js';
 import { AuditAction } from '../../../shared/audit/events.js';
 import { logSecurityEvent } from '../securityEventLog.js';
-import { SESSION_DURATION_MS } from '../../../services/session.service.js';
-
-function hashToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
+import { hashToken } from '../../../services/session.service.js';
+import {
+  refreshSessionWithRotation,
+  sendRefreshSuccess,
+} from '../../../services/sessionRefresh.service.js';
+import { env } from '../../../config/env.js';
+import { readAdminRefreshToken } from '../../../admin-platform/auth/adminSessionCookies.js';
 
 export async function refresh(req: Request, res: Response): Promise<void> {
   try {
-    const refreshTokenRaw = (req.body as { refreshToken?: string }).refreshToken;
+    const body = req.body as { refreshToken?: string };
+    let refreshTokenRaw = body.refreshToken;
+    if (!refreshTokenRaw && env.FEATURE_ADMIN_HTTPONLY_COOKIES) {
+      refreshTokenRaw = readAdminRefreshToken(req.cookies ?? {}) ?? undefined;
+    }
     if (!refreshTokenRaw) {
       res.status(400).json({ message: 'Refresh token required', success: false });
       return;
     }
-    const refreshTokenHash = hashToken(refreshTokenRaw);
-    const session = await SessionModel.findOne({
-      refreshTokenHash,
-      revoked: false,
-      expiresAt: { $gt: new Date() },
-    });
-    if (!session) {
-      res.status(401).json({
-        message: 'Session invalid or expired. Please log in again.',
-        success: false,
-      });
+
+    const result = await refreshSessionWithRotation(req, refreshTokenRaw);
+    if (!result.ok) {
+      res.status(result.status).json({ message: result.message, success: false });
       return;
     }
-    const user = await UserModel.findById(session.userId).select('isActive');
-    if (!user || !user.isActive) {
-      res.status(401).json({ message: 'Account disabled or not found', success: false });
-      return;
-    }
-    session.lastActiveAt = new Date();
-    session.expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-    await session.save();
-    const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
-    res.status(200).json({
-      message: 'Token refreshed 🚀',
-      success: true,
-      accessToken,
-      expiresIn: authConfig.ACCESS_TOKEN_EXPIRY,
-    });
+
+    sendRefreshSuccess(res, result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error 💀', success: false });
@@ -69,8 +52,14 @@ export async function logout(req: Request, res: Response): Promise<void> {
       await session.save();
       const sid = String(session._id);
       await logSecurityEvent(user._id, 'session_revoked', req, { sessionId: sid });
-      void writeAuditLog(req, AuditAction.USER_SIGNOUT, { actorId: String(user._id), metadata: { sessionId: sid } });
-      void writeAuditLog(req, AuditAction.SESSION_REVOKED, { actorId: String(user._id), metadata: { sessionId: sid } });
+      void writeAuditLog(req, AuditAction.USER_SIGNOUT, {
+        actorId: String(user._id),
+        metadata: { sessionId: sid },
+      });
+      void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
+        actorId: String(user._id),
+        metadata: { sessionId: sid },
+      });
     }
 
     if (user?._id && sessionId) {
@@ -103,7 +92,9 @@ export async function revokeSessionByRefreshToken(req: Request, res: Response): 
     if (session) {
       session.revoked = true;
       await session.save();
-      await logSecurityEvent(String(session.userId), 'session_revoked', req, { sessionId: session._id });
+      await logSecurityEvent(String(session.userId), 'session_revoked', req, {
+        sessionId: session._id,
+      });
       void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
         actorId: String(session.userId),
         metadata: { sessionId: String(session._id) },

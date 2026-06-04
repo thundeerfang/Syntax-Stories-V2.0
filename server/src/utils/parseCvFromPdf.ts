@@ -115,13 +115,18 @@ function normalizeSectionTitle(line: string): string {
     .trim();
 }
 
-function flushSectionContent(sections: Map<string, string>, header: string, content: string[]): void {
+function flushSectionContent(
+  sections: Map<string, string>,
+  header: string,
+  content: string[]
+): void {
   if (content.length === 0) return;
   const existing = sections.get(header) ?? '';
   sections.set(header, (existing + '\n' + content.join('\n')).trim());
 }
 
-const SECTION_HEADER_SHORT = /^(education|experience|skills|summary|projects?|certifications?|about|contact)$/;
+const SECTION_HEADER_SHORT =
+  /^(education|experience|skills|summary|projects?|certifications?|about|contact)$/;
 
 function looksLikeSectionHeader(trimmed: string, normalized: string): boolean {
   if (normalized.length >= 50 || trimmed.length >= 80) return false;
@@ -136,7 +141,8 @@ function canonicalSectionKey(token: string, normalizedLine: string): string {
   if (key === 'academic') key = 'education';
   if (key === 'employment' || key === 'professional') key = 'experience';
   if (key === 'technical' || key === 'technologies') key = 'skills';
-  if ((key === 'core' || key === 'programming') && normalizedLine.includes('language')) key = 'skills';
+  if ((key === 'core' || key === 'programming') && normalizedLine.includes('language'))
+    key = 'skills';
   if (key === 'languages') key = 'skills';
   return key;
 }
@@ -215,10 +221,15 @@ function monthYearToIso(str: string): string {
  */
 function parseWorkExperienceFirstLine(
   titleLine: string
-): { jobTitle: string; company: string; startDate?: string; endDate?: string; current?: boolean } | null {
+): {
+  jobTitle: string;
+  company: string;
+  startDate?: string;
+  endDate?: string;
+  current?: boolean;
+} | null {
   const line = titleLine.trim();
-  const parenRe =
-    /\s*\((\d{1,2}\/\d{4})\s*[-–—]\s*(\d{1,2}\/\d{4}|present|current|now)\s*\)\s*$/i;
+  const parenRe = /\s*\((\d{1,2}\/\d{4})\s*[-–—]\s*(\d{1,2}\/\d{4}|present|current|now)\s*\)\s*$/i;
   const parenMatch = parenRe.exec(line);
   if (!parenMatch) return null;
   const dateStart = parenMatch[1];
@@ -246,12 +257,17 @@ function looksLikeWorkExperienceHeader(line: string): boolean {
  */
 function parseWorkExperienceFirstLineRelaxed(
   titleLine: string
-): { jobTitle: string; company: string; startDate?: string; endDate?: string; current?: boolean } | null {
+): {
+  jobTitle: string;
+  company: string;
+  startDate?: string;
+  endDate?: string;
+  current?: boolean;
+} | null {
   const line = titleLine.trim();
   const relaxedClosed =
     /\s*\((\d{1,2}\/\d{4})\s*[-–—]\s*(\d{1,2}\/\d{4}|present|current|now)\s*\)\s*$/i;
-  const relaxedOpen =
-    /\s*\((\d{1,2}\/\d{4})\s*[-–—]?\s*(\d{1,2}\/\d{4}|present|current|now)?\s*$/i;
+  const relaxedOpen = /\s*\((\d{1,2}\/\d{4})\s*[-–—]?\s*(\d{1,2}\/\d{4}|present|current|now)?\s*$/i;
   const relaxed = relaxedClosed.exec(line) ?? relaxedOpen.exec(line);
   if (!relaxed) return null;
   const beforeParen = line.slice(0, line.indexOf('(')).trim();
@@ -265,7 +281,8 @@ function parseWorkExperienceFirstLineRelaxed(
   const dateEnd = relaxed[2];
   const current = !dateEnd || /present|current|now/i.test(dateEnd);
   const startDate = monthYearToIso(dateStart);
-  const endDate = dateEnd && !/present|current|now/i.test(dateEnd) ? monthYearToIso(dateEnd) : undefined;
+  const endDate =
+    dateEnd && !/present|current|now/i.test(dateEnd) ? monthYearToIso(dateEnd) : undefined;
   return { jobTitle, company, startDate: startDate || undefined, endDate, current };
 }
 
@@ -303,22 +320,35 @@ function extractSkills(text: string): string[] {
   const TITLE_CASE_TOKEN = /^[A-Z][a-z]+(?:\s*[/&]\s*[A-Za-z]+)*$/;
   for (const t of tokens) {
     const s = trunc(t, MAX.skillItem);
-    if (s && (KNOWN_LANG.test(s) || KNOWN_PLATFORM.test(s) || TITLE_CASE_TOKEN.test(s))) skills.push(s);
+    if (s && (KNOWN_LANG.test(s) || KNOWN_PLATFORM.test(s) || TITLE_CASE_TOKEN.test(s)))
+      skills.push(s);
     if (skills.length >= 15) break;
   }
   return [...new Set(skills)].slice(0, 15);
 }
 
 function extractBio(text: string): string | undefined {
-  const summary = findSections(text).get('summary') ?? findSections(text).get('about') ?? findSections(text).get('profile') ?? findSections(text).get('objective') ?? '';
+  const summary =
+    findSections(text).get('summary') ??
+    findSections(text).get('about') ??
+    findSections(text).get('profile') ??
+    findSections(text).get('objective') ??
+    '';
   if (summary) {
     const first = summary.split(/\n+/)[0]?.trim() ?? '';
     return first.length > 10 ? trunc(first, MAX.bio) : undefined;
   }
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   for (let i = 0; i < Math.min(5, lines.length); i++) {
     const line = lines[i];
-    if (line.length > 40 && !/^[\d\s\-•·]+$/.test(line) && !/^(education|experience|skills|http)/i.test(line))
+    if (
+      line.length > 40 &&
+      !/^[\d\s\-•·]+$/.test(line) &&
+      !/^(education|experience|skills|http)/i.test(line)
+    )
       return trunc(line, MAX.bio);
   }
   return undefined;
@@ -331,9 +361,12 @@ function extractBio(text: string): string | undefined {
 const PAREN_YEAR_CLOSED = /\s*\((\d{4})\s*[-–—]\s*(\d{4}|present|current|now)\s*\)?\s*$/i;
 const YEAR_PAIR_INSIDE_PAREN = /(\d{4})\s*[-–—]\s*(\d{4}|present|current|now)?/i;
 
-function parseEducationSchoolLine(
-  line: string
-): { schoolName: string; startDate?: string; endDate?: string; current?: boolean } {
+function parseEducationSchoolLine(line: string): {
+  schoolName: string;
+  startDate?: string;
+  endDate?: string;
+  current?: boolean;
+} {
   const trimmed = line.trim();
   const parenMatch = PAREN_YEAR_CLOSED.exec(trimmed);
   if (parenMatch) {
@@ -393,7 +426,10 @@ function extractEducation(text: string): ExtractedProfile['education'] {
   for (const block of blocks) {
     const degreeRaw = firstDegreeInBlock(block);
     const degree = degreeRaw?.trim() ?? 'Degree';
-    const lines = block.split(/\n/).map((l) => l.trim()).filter(Boolean);
+    const lines = block
+      .split(/\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     const firstLine = lines.at(0) ?? 'School';
     let schoolLine = firstLine;
     const dm0 = degreeRaw?.trim();
@@ -404,7 +440,10 @@ function extractEducation(text: string): ExtractedProfile['education'] {
     const dateRange = YEAR_RANGE.exec(block)?.[0] ?? firstDateFragmentInBlock(block);
     const blockDates = parseYearRange(dateRange);
     entries.push({
-      school: trunc((parsed.schoolName || schoolLine).replace(/\s*\([^)]*$/, '').trim(), MAX.school),
+      school: trunc(
+        (parsed.schoolName || schoolLine).replace(/\s*\([^)]*$/, '').trim(),
+        MAX.school
+      ),
       degree: trunc(degree, MAX.degree),
       startDate: parsed.startDate ?? blockDates.startDate,
       endDate: parsed.endDate ?? blockDates.endDate,
@@ -430,7 +469,10 @@ function isLikelyWorkDescriptionLine(nextLine: string): boolean {
   );
 }
 
-function gatherWorkDescriptionLines(lines: string[], startJ: number): { desc: string[]; endJ: number } {
+function gatherWorkDescriptionLines(
+  lines: string[],
+  startJ: number
+): { desc: string[]; endJ: number } {
   const desc: string[] = [];
   let j = startJ;
   while (j < lines.length) {
@@ -466,13 +508,20 @@ function parseHeuristicWorkRow(
 
   if (i + 1 < lines.length) {
     const companyLine = lines[i + 1];
-    const looksLikeDateFragment = /^\d{1,2}\/\d{4}\)?\s*$/i.test(companyLine) || /^\)\s*$/.test(companyLine);
+    const looksLikeDateFragment =
+      /^\d{1,2}\/\d{4}\)?\s*$/i.test(companyLine) || /^\)\s*$/.test(companyLine);
     if (isNextLineNewWorkRole(companyLine)) {
       nextI = i + 1;
     } else if (looksLikeDateFragment) {
       nextI = i + 2;
     } else {
-      company = trunc(companyLine.replace(/\s*[-–—|].*$/, '').replace(/\)\s*$/, '').trim(), MAX.company);
+      company = trunc(
+        companyLine
+          .replace(/\s*[-–—|].*$/, '')
+          .replace(/\)\s*$/, '')
+          .trim(),
+        MAX.company
+      );
       nextI = i + 2;
     }
   } else {
@@ -503,11 +552,15 @@ function extractWorkExperience(text: string): ExtractedProfile['workExperiences'
   const section = findSections(text).get('experience') ?? '';
   if (!section.trim()) return undefined;
   const entries: NonNullable<ExtractedProfile['workExperiences']> = [];
-  const lines = section.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = section
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   let i = 0;
   while (i < lines.length) {
     const titleLine = lines[i];
-    const parsedFirst = parseWorkExperienceFirstLine(titleLine) ?? parseWorkExperienceFirstLineRelaxed(titleLine);
+    const parsedFirst =
+      parseWorkExperienceFirstLine(titleLine) ?? parseWorkExperienceFirstLineRelaxed(titleLine);
 
     let jobTitle: string;
     let company: string;
@@ -543,7 +596,8 @@ function extractWorkExperience(text: string): ExtractedProfile['workExperiences'
       startDate,
       endDate,
       currentPosition: current,
-      description: descLines.length > 0 ? trunc(descLines.join('\n'), MAX.workDescription) : undefined,
+      description:
+        descLines.length > 0 ? trunc(descLines.join('\n'), MAX.workDescription) : undefined,
     });
     if (entries.length >= 5) break;
     i = nextI;
@@ -556,13 +610,17 @@ function extractCertifications(text: string): ExtractedProfile['certifications']
   const section = secMap.get('certifications') ?? secMap.get('licenses') ?? '';
   if (!section.trim()) return undefined;
   const entries: NonNullable<ExtractedProfile['certifications']> = [];
-  const lines = section.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = section
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
     if (/certified|certificate|license|credential/i.test(line)) {
       const name = trunc(line.replace(/\s*[-–—|].*$/, '').trim(), MAX.certName);
-      const issuer = trunc(lines[i + 1]?.replace(/\s*[-–—|].*$/, '').trim(), MAX.certIssuer) || 'Issuer';
+      const issuer =
+        trunc(lines[i + 1]?.replace(/\s*[-–—|].*$/, '').trim(), MAX.certIssuer) || 'Issuer';
       entries.push({ name, issuingOrganization: issuer });
       i += 2;
     }
@@ -573,9 +631,10 @@ function extractCertifications(text: string): ExtractedProfile['certifications']
 }
 
 /** Ensure all items have required fields set (use '' so validation passes) and build hints for empty expected fields. */
-function normalizeAndHint(
-  extracted: ExtractedProfile
-): { normalized: ExtractedProfile; incompleteItemHints: IncompleteItemHints } {
+function normalizeAndHint(extracted: ExtractedProfile): {
+  normalized: ExtractedProfile;
+  incompleteItemHints: IncompleteItemHints;
+} {
   const hints: IncompleteItemHints = {};
   const normalized = { ...extracted };
 

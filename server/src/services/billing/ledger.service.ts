@@ -42,7 +42,7 @@ export async function upsertLedgerFromStripeInvoice(
       ? invoice.payment_intent
       : invoice.payment_intent?.id;
   const charge =
-    typeof invoice.charge === 'string' ? invoice.charge : invoice.charge?.id ?? undefined;
+    typeof invoice.charge === 'string' ? invoice.charge : (invoice.charge?.id ?? undefined);
 
   const lineSummary =
     invoice.lines?.data

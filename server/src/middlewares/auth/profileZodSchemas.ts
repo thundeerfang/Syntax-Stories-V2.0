@@ -1,8 +1,5 @@
 import { z } from 'zod';
-import {
-  EMPLOYMENT_TYPE_VALUES,
-  LOCATION_TYPE_VALUES,
-} from '@syntax-stories/shared';
+import { EMPLOYMENT_TYPE_VALUES, LOCATION_TYPE_VALUES } from '@syntax-stories/shared';
 
 function isMonthYear(val: unknown): val is string {
   return typeof val === 'string' && /^\d{4}-\d{2}$/.test(val);
@@ -25,8 +22,7 @@ function safeMonthYear(val: unknown): string {
   return val;
 }
 
-const uriMax = (max: number) =>
-  z.union([z.string().url().max(max).trim(), z.literal('')]);
+const uriMax = (max: number) => z.union([z.string().url().max(max).trim(), z.literal('')]);
 
 const optUriMax = (max: number) => uriMax(max).optional();
 
@@ -306,7 +302,8 @@ const projectsArraySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['projects'],
-        message: 'You can link up to 7 GitHub repositories in Open Source. Remove one to add another.',
+        message:
+          'You can link up to 7 GitHub repositories in Open Source. Remove one to add another.',
       });
     }
   });
@@ -329,6 +326,7 @@ const profilePatchFields = {
   coverBanner: z.string().max(2000).trim().optional(),
   coverBannerAlt: z.string().max(120).trim().optional(),
   job: z.string().max(100).trim().optional(),
+  profileLocation: z.string().max(180).trim().optional(),
   portfolioUrl: optUriMax(500),
   linkedin: z.union([z.string().url().trim(), z.literal('')]).optional(),
   instagram: z.string().max(200).trim().optional(),
@@ -374,6 +372,7 @@ export const updateProfileBasicSchema = z
     coverBanner: profilePatchFields.coverBanner,
     coverBannerAlt: profilePatchFields.coverBannerAlt,
     job: profilePatchFields.job,
+    profileLocation: profilePatchFields.profileLocation,
     portfolioUrl: profilePatchFields.portfolioUrl,
     isGoogleAccount: profilePatchFields.isGoogleAccount,
     isGitAccount: profilePatchFields.isGitAccount,
@@ -438,7 +437,9 @@ export const updateProfileProjectsSchema = z
   })
   .refine(
     (d: { projects?: unknown; openSourceContributions?: unknown; isGitAccount?: unknown }) =>
-      d.projects !== undefined || d.openSourceContributions !== undefined || d.isGitAccount !== undefined,
+      d.projects !== undefined ||
+      d.openSourceContributions !== undefined ||
+      d.isGitAccount !== undefined,
     {
       message: 'Provide projects, openSourceContributions, and/or isGitAccount',
       path: [],

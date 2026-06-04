@@ -3,10 +3,9 @@
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/core/utils';
 
-
 const DotLottieReact = dynamic(
   () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false },
+  { ssr: false }
 );
 
 const ERROR_LOTTIE_SRC = {

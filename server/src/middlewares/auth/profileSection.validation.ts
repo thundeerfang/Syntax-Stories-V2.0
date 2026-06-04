@@ -14,7 +14,12 @@ import {
 } from './profileZodSchemas.js';
 import { formatZodError } from './zodFormat.js';
 
-function sectionValidation(schema: ZodTypeAny, req: Request, res: Response, next: NextFunction): void {
+function sectionValidation(
+  schema: ZodTypeAny,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   const r = schema.safeParse(req.body);
   if (!r.success) {
     res.status(400).json({
@@ -29,11 +34,19 @@ function sectionValidation(schema: ZodTypeAny, req: Request, res: Response, next
   next();
 }
 
-export function updateProfileBasicValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileBasicValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileBasicSchema, req, res, next);
 }
 
-export function updateProfileSocialValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileSocialValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileSocialSchema, req, res, next);
 }
 
@@ -41,27 +54,51 @@ export function updateProfileWorkValidation(req: Request, res: Response, next: N
   sectionValidation(updateProfileWorkSchema, req, res, next);
 }
 
-export function updateProfileEducationValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileEducationValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileEducationSchema, req, res, next);
 }
 
-export function updateProfileCertificationsValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileCertificationsValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileCertificationsSchema, req, res, next);
 }
 
-export function updateProfileProjectsValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileProjectsValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileProjectsSchema, req, res, next);
 }
 
-export function updateProfileSetupValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileSetupValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileSetupSchema, req, res, next);
 }
 
-export function updateProfileStackValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileStackValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileStackSchema, req, res, next);
 }
 
-export function updateProfileBlogStreakValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileBlogStreakValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   sectionValidation(updateProfileBlogStreakSchema, req, res, next);
 }
 
@@ -72,7 +109,11 @@ function paramSection(req: Request): string | undefined {
 }
 
 /** Dispatches the correct Zod schema for `PATCH /auth/profile/:section`. */
-export function updateProfileSectionBodyValidation(req: Request, res: Response, next: NextFunction): void {
+export function updateProfileSectionBodyValidation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   const s = paramSection(req);
   if (!s || !isProfileUpdateSection(s)) {
     res.status(400).json({

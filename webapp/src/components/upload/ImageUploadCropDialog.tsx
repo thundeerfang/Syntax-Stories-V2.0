@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import type { Accept } from 'react-dropzone';
 import Cropper, { type Area } from 'react-easy-crop';
 import { CropperKeyboardWrapper } from '@/components/ui/media';
@@ -19,8 +12,12 @@ import { RotateCcw, RotateCw, Undo2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { FullWidthSegmentedControl } from '@/components/ui/layout';
-import { exportCroppedImageFile, imageAdjustmentsPreviewFilter, NEUTRAL_IMAGE_ADJUSTMENTS, type ImageEditAdjustments } from '@/lib/media/exportCroppedImageFile';
-
+import {
+  exportCroppedImageFile,
+  imageAdjustmentsPreviewFilter,
+  NEUTRAL_IMAGE_ADJUSTMENTS,
+  type ImageEditAdjustments,
+} from '@/lib/media/exportCroppedImageFile';
 
 type EditorTab = 'crop' | 'rotate' | 'adjust';
 
@@ -90,8 +87,12 @@ function AdjSlider({
   return (
     <div className="grid gap-1">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">{label}</span>
-        <span className="w-8 text-right font-mono text-[9px] font-bold text-foreground">{value}</span>
+        <span className="text-[9px] font-black uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+        <span className="w-8 text-right font-mono text-[9px] font-bold text-foreground">
+          {value}
+        </span>
       </div>
       <input
         type="range"
@@ -141,7 +142,9 @@ export function ImageUploadCropDialog({
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [adjustments, setAdjustments] = useState<ImageEditAdjustments>({ ...NEUTRAL_IMAGE_ADJUSTMENTS });
+  const [adjustments, setAdjustments] = useState<ImageEditAdjustments>({
+    ...NEUTRAL_IMAGE_ADJUSTMENTS,
+  });
   const [editorTab, setEditorTab] = useState<EditorTab>('crop');
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [passthrough, setPassthrough] = useState(false);
@@ -291,7 +294,10 @@ export function ImageUploadCropDialog({
   const renderTitleFields = (className?: string) =>
     imageTitleField ? (
       <div className={cn('grid gap-1.5', className)}>
-        <Label htmlFor={imageTitleInputId} className="text-[10px] font-bold uppercase text-muted-foreground">
+        <Label
+          htmlFor={imageTitleInputId}
+          className="text-[10px] font-bold uppercase text-muted-foreground"
+        >
           {imageTitleLabel}
         </Label>
         <div className="relative">
@@ -367,7 +373,9 @@ export function ImageUploadCropDialog({
             <div className="flex max-h-48 items-center justify-center border-2 border-border bg-muted/30 p-4">
               <img src={imageUrl} alt="" className="max-h-40 max-w-full object-contain" />
             </div>
-            <p className="text-center text-xs font-bold text-foreground break-all">{selectedFile.name}</p>
+            <p className="text-center text-xs font-bold text-foreground break-all">
+              {selectedFile.name}
+            </p>
             <p className="text-center text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               Vector — no cropping
             </p>
@@ -458,7 +466,9 @@ export function ImageUploadCropDialog({
                       className={cn(ADJ_RANGE_INPUT_CLASS, 'min-w-0 flex-1')}
                       aria-label="Rotation in degrees"
                     />
-                    <span className="w-11 shrink-0 text-right font-mono text-xs font-black text-foreground">{rotation}°</span>
+                    <span className="w-11 shrink-0 text-right font-mono text-xs font-black text-foreground">
+                      {rotation}°
+                    </span>
                   </div>
                   <div className="flex shrink-0 items-stretch gap-2">
                     <Button

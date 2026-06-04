@@ -46,7 +46,12 @@ const FeedbackSubmissionSchema = new Schema<IFeedbackSubmission>(
     email: { type: String, required: true, trim: true, lowercase: true, maxlength: 254 },
     subject: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, required: true, trim: true, maxlength: 5000 },
-    categoryId: { type: Schema.Types.ObjectId, ref: 'FeedbackCategory', required: true, index: true },
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'FeedbackCategory',
+      required: true,
+      index: true,
+    },
     categorySlug: { type: String, required: true, trim: true, lowercase: true, maxlength: 64 },
     categoryLabel: { type: String, required: true, trim: true, maxlength: 120 },
     userId: { type: Schema.Types.ObjectId, ref: 'users', index: true, default: undefined },

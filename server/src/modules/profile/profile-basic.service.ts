@@ -9,7 +9,10 @@ export type BasicRulesResult =
 /**
  * Caps stack list and resolves username uniqueness + lowercase (basic section).
  */
-export async function applyBasicProfileRules(userId: string, updates: Record<string, unknown>): Promise<BasicRulesResult> {
+export async function applyBasicProfileRules(
+  userId: string,
+  updates: Record<string, unknown>
+): Promise<BasicRulesResult> {
   const stackRaw = updates.stackAndTools;
   if (Array.isArray(stackRaw)) {
     const arr = stackRaw.filter((t): t is string => typeof t === 'string');

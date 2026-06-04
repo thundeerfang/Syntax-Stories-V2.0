@@ -5,7 +5,6 @@ import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { MAX_TABLE_CELL_CHARS, truncateCell } from '@/lib/blog/tableBlockLimits';
 
-
 export const MAX_COLS = 12;
 export const MAX_ROWS = 24;
 export const MIN_COLS = 1;
@@ -60,7 +59,7 @@ export function TableVisualGrid({
       const c = Math.min(MAX_COLS, Math.max(MIN_COLS, cols));
       onChange(resizeGrid(grid, r, c));
     },
-    [grid, onChange],
+    [grid, onChange]
   );
 
   const bumpCols = (delta: number) => setDims(rowCount, colCount + delta);
@@ -75,7 +74,7 @@ export function TableVisualGrid({
       next[ri] = row;
       onChange(next);
     },
-    [grid, onChange],
+    [grid, onChange]
   );
 
   return (
@@ -131,7 +130,7 @@ export function TableVisualGrid({
       <div
         className={cn(
           'min-h-0 flex-1 overflow-auto border-2 border-border bg-background',
-          scrollClassName,
+          scrollClassName
         )}
       >
         <table className="w-full min-w-[240px] border-collapse text-left text-[11px]">
@@ -139,7 +138,10 @@ export function TableVisualGrid({
             {grid.map((r, ri) => (
               <tr key={`vg-r-${ri}`} className="border-b border-border last:border-b-0">
                 {r.map((cell, ci) => (
-                  <td key={`vg-c-${ri}-${ci}`} className="border-r border-border p-0 last:border-r-0 align-top">
+                  <td
+                    key={`vg-c-${ri}-${ci}`}
+                    className="border-r border-border p-0 last:border-r-0 align-top"
+                  >
                     <input
                       type="text"
                       value={cell}

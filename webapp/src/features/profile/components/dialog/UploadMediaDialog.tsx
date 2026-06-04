@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { uploadMedia, type CropArea } from '@/api/upload';
 
-
 export interface UploadMediaDialogProps {
   open: boolean;
   onClose: () => void;
@@ -189,7 +188,9 @@ export function UploadMediaDialog({
             dragActiveClassName="border-primary bg-primary/5"
             onFile={(f) => handleFile(f)}
           >
-            <p className="max-w-[16rem] text-balance text-sm font-bold text-foreground">Drop an image here or click to browse</p>
+            <p className="max-w-[16rem] text-balance text-sm font-bold text-foreground">
+              Drop an image here or click to browse
+            </p>
             <p className="mt-2 max-w-[16rem] text-balance text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               You will crop before upload
             </p>
@@ -226,13 +227,17 @@ export function UploadMediaDialog({
                 disabled={uploading}
                 aria-label="Zoom"
               />
-              <span className="w-14 text-right text-[10px] font-bold text-muted-foreground">{zoom.toFixed(1)}×</span>
+              <span className="w-14 text-right text-[10px] font-bold text-muted-foreground">
+                {zoom.toFixed(1)}×
+              </span>
             </div>
-           
 
             {uploading && (
               <div className="h-2 w-full overflow-hidden bg-muted">
-                <div className="h-full bg-primary transition-all" style={{ width: uploadProgressWidth }} />
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: uploadProgressWidth }}
+                />
               </div>
             )}
 

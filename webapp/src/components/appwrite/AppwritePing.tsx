@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { client } from '@/lib/core/appwrite';
 
-
 /**
  * On each full load of the app, calls `client.ping()` once to verify reachability
  * of the Appwrite endpoint (same idea as the starter’s “Send a ping” button).
@@ -25,7 +24,10 @@ export function AppwritePing() {
       })
       .catch((err: unknown) => {
         if (process.env.NODE_ENV === 'development') {
-          console.warn('[Appwrite] Ping failed — check endpoint, project ID, and Web platform hostname in Console:', err);
+          console.warn(
+            '[Appwrite] Ping failed — check endpoint, project ID, and Web platform hostname in Console:',
+            err
+          );
         }
       });
   }, []);

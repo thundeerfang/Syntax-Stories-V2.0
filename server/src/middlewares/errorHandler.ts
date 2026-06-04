@@ -3,12 +3,7 @@ import { MulterError } from 'multer';
 import { isAppHttpError } from '../errors/httpErrors.js';
 import { sendAppHttpError } from '../errors/sendAppHttpError.js';
 
-export function errorHandler(
-  err: Error,
-  req: Request,
-  res: Response,
-  _next: NextFunction
-): void {
+export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction): void {
   if (err instanceof MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       res.status(400).json({ success: false, message: 'File too large' });

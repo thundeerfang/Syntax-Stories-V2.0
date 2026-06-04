@@ -1,16 +1,9 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import {
-  createContext,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { createContext, useContext, useLayoutEffect, useMemo, useState } from 'react';
 import type { PublishedPolicyResponse } from '@contracts/legalApi';
 import { formatLegalPolicyVersionMeta, getLegalPolicyVersionBadgeLines } from './legalPolicyFormat';
-
 
 export type LegalPolicyHeaderSnapshot = {
   title: string;
@@ -30,7 +23,9 @@ const LegalPolicyHeaderContext = createContext<Ctx | null>(null);
 export function LegalPolicyHeaderProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<LegalPolicyHeaderSnapshot | null>(null);
   const value = useMemo(() => ({ snapshot, setSnapshot }), [snapshot]);
-  return <LegalPolicyHeaderContext.Provider value={value}>{children}</LegalPolicyHeaderContext.Provider>;
+  return (
+    <LegalPolicyHeaderContext.Provider value={value}>{children}</LegalPolicyHeaderContext.Provider>
+  );
 }
 
 /** Header reads optional snapshot (null when no policy mounted or outside provider). */

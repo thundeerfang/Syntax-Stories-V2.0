@@ -17,7 +17,11 @@ export async function buildOAuthSignupState(req: Request): Promise<'signup' | `s
   if (!redis) return 'signup';
   const nonce = crypto.randomBytes(16).toString('hex');
   try {
-    await redis.setEx(redisKeys.invite.oauthSignupNonce(nonce), OAUTH_SIGNUP_NONCE_TTL_SEC, refCode);
+    await redis.setEx(
+      redisKeys.invite.oauthSignupNonce(nonce),
+      OAUTH_SIGNUP_NONCE_TTL_SEC,
+      refCode
+    );
   } catch {
     return 'signup';
   }

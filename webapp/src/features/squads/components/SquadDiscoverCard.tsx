@@ -11,16 +11,15 @@ import { PrimaryCoverFallback } from '@/lib/shell/primaryCoverFallback';
 import { cn } from '@/lib/core/utils';
 import { triggerFollowConfetti } from '@/store/engagementEffects';
 
-
 const SQUAD_CORNER_BTN =
   '!size-9 !min-h-9 !min-w-9 shrink-0 !p-0 active:translate-x-0 active:translate-y-0 active:shadow-none';
 const SQUAD_CORNER_JOIN_CLASS = cn(
   SQUAD_CORNER_BTN,
-  '!border-border !bg-white !text-primary hover:!bg-white hover:!text-primary hover:!opacity-90',
+  '!border-border !bg-white !text-primary hover:!bg-white hover:!text-primary hover:!opacity-90'
 );
 const SQUAD_CORNER_OPEN_CLASS = cn(
   SQUAD_CORNER_BTN,
-  '!border-primary !bg-primary !text-white hover:!bg-primary hover:!text-white hover:!opacity-90',
+  '!border-primary !bg-primary !text-white hover:!bg-primary hover:!text-white hover:!opacity-90'
 );
 
 function formatMemberCount(n: number): string {
@@ -37,18 +36,12 @@ function formatMemberCount(n: number): string {
   return n.toLocaleString();
 }
 
-export function resolveSquadMediaUrl(
-  url: string | null | undefined,
-): string | undefined {
+export function resolveSquadMediaUrl(url: string | null | undefined): string | undefined {
   const t = url?.trim();
 
   if (!t) return undefined;
 
-  if (
-    t.startsWith('http://') ||
-    t.startsWith('https://') ||
-    t.startsWith('data:')
-  ) {
+  if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('data:')) {
     return t;
   }
 
@@ -57,16 +50,11 @@ export function resolveSquadMediaUrl(
   return `${base}${t.startsWith('/') ? '' : '/'}${t}`;
 }
 
-function memberAvatarSrc(
-  profileImg: string | undefined,
-  username: string,
-): string {
+function memberAvatarSrc(profileImg: string | undefined, username: string): string {
   const trimmed = profileImg?.trim();
 
   if (!trimmed) {
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
-      username,
-    )}`;
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
   }
 
   if (
@@ -79,19 +67,17 @@ function memberAvatarSrc(
 
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
-  return `${base.replace(/\/$/, '')}${
-    trimmed.startsWith('/') ? '' : '/'
-  }${trimmed}`;
+  return `${base.replace(/\/$/, '')}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
 
-const accentPurple =
-  'text-violet-700 dark:text-violet-400';
+const accentPurple = 'text-violet-700 dark:text-violet-400';
 
 export type SquadDiscoverCardProps = Readonly<{
   squad: SquadSummary;
   isMember: boolean;
   joinBusy?: boolean;
-  onJoin: (slug: string) => void;
+  /** Return `false` when join did not happen (e.g. login gate). */
+  onJoin: (slug: string) => void | boolean | Promise<void | boolean>;
   joinCtaLabel?: string;
   className?: string;
   topRightAccessory?: ReactNode;
@@ -109,33 +95,21 @@ export function SquadDiscoverCard({
   className,
   topRightAccessory,
 }: SquadDiscoverCardProps) {
-  const href = `/squads/${encodeURIComponent(
-    squad.slug,
-  )}`;
+  const href = `/squads/${encodeURIComponent(squad.slug)}`;
 
   const handle = squad.handle ?? squad.slug;
 
-  const banner = resolveSquadMediaUrl(
-    squad.coverBannerUrl,
-  );
+  const banner = resolveSquadMediaUrl(squad.coverBannerUrl);
 
-  const icon = resolveSquadMediaUrl(
-    squad.iconUrl,
-  );
+  const icon = resolveSquadMediaUrl(squad.iconUrl);
 
   const previews = squad.memberPreview ?? [];
 
   const categoryLabel =
-    squad.visibility === 'public' &&
-    squad.category
-      ? squadCategoryLabel(squad.category)
-      : null;
+    squad.visibility === 'public' && squad.category ? squadCategoryLabel(squad.category) : null;
 
   const joinCtaLabelResolved =
-    joinCtaLabel ??
-    (squad.visibility === 'private'
-      ? 'Open squad'
-      : 'Join squad');
+    joinCtaLabel ?? (squad.visibility === 'private' ? 'Open squad' : 'Join squad');
 
   const joined = isMember || squad.viewerRole != null;
   const showOpen = joined || squad.visibility === 'private';
@@ -149,7 +123,7 @@ export function SquadDiscoverCard({
         'before:pointer-events-none before:absolute before:-inset-2 before:-z-10 before:content-[""]',
         'before:bg-[radial-gradient(circle_at_bottom,color-mix(in_srgb,var(--primary)_18%,transparent),transparent_72%)]',
         'before:blur-2xl',
-        className,
+        className
       )}
     >
       <div className="absolute right-2 top-2 z-30 flex items-center gap-1.5">
@@ -177,8 +151,10 @@ export function SquadDiscoverCard({
               const rect = e.currentTarget.getBoundingClientRect();
               void (async () => {
                 try {
-                  await onJoin(squad.slug);
-                  triggerFollowConfetti(rect);
+                  const joinedOk = await onJoin(squad.slug);
+                  if (joinedOk !== false) {
+                    triggerFollowConfetti(rect);
+                  }
                 } catch {
                   /* join failed — no confetti */
                 }
@@ -191,16 +167,10 @@ export function SquadDiscoverCard({
       </div>
 
       {/* Banner */}
-      <div
-        className="relative h-[7rem] shrink-0 overflow-hidden md:h-[8rem]"
-      >
+      <div className="relative h-[7rem] shrink-0 overflow-hidden md:h-[8rem]">
         {banner ? (
           <>
-            <img
-              src={banner}
-              alt=""
-              className="size-full object-cover"
-            />
+            <img src={banner} alt="" className="size-full object-cover" />
 
             <div
               className="pointer-events-none absolute inset-0 bg-[color-mix(in_srgb,var(--background)_14%,transparent)] dark:bg-[color-mix(in_srgb,var(--background)_42%,transparent)]"
@@ -249,13 +219,9 @@ export function SquadDiscoverCard({
       </div>
 
       {/* Overlap zone: transparent so banner shows behind icon + members */}
-      <div
-        className="relative -mt-14 flex flex-col bg-transparent px-4 pt-0 md:-mt-16 md:px-5"
-      >
+      <div className="relative -mt-14 flex flex-col bg-transparent px-4 pt-0 md:-mt-16 md:px-5">
         {/* Top Row */}
-        <div
-          className="relative z-20 flex items-end gap-3.5 pb-2"
-        >
+        <div className="relative z-20 flex items-end gap-3.5 pb-2">
           {/* Squad Icon */}
           <div
             className={cn(
@@ -264,19 +230,13 @@ export function SquadDiscoverCard({
               'after:pointer-events-none after:absolute after:-inset-3 after:-z-10 after:content-[""]',
               'after:bg-[radial-gradient(circle,color-mix(in_srgb,var(--primary)_22%,transparent)_0%,transparent_70%)]',
               'after:blur-xl',
-              'size-[3rem] md:size-[4rem]',
+              'size-[3rem] md:size-[4rem]'
             )}
           >
             {icon ? (
-              <img
-                src={icon}
-                alt=""
-                className="block size-full object-cover object-center"
-              />
+              <img src={icon} alt="" className="block size-full object-cover object-center" />
             ) : (
-              <div
-                className="flex size-full items-center justify-center bg-amber-300 font-black text-2xl text-teal-950"
-              >
+              <div className="flex size-full items-center justify-center bg-amber-300 font-black text-2xl text-teal-950">
                 {squad.name.slice(0, 1).toUpperCase()}
               </div>
             )}
@@ -285,44 +245,31 @@ export function SquadDiscoverCard({
           {/* Members */}
           <div className="relative z-20 min-w-0 flex-1 pt-7">
             <div className="flex -space-x-2">
-              {previews
-                .slice(0, 3)
-                .map((m) => (
-                  <img
-                    key={m.username}
-                    src={memberAvatarSrc(
-                      m.profileImg,
-                      m.username,
-                    )}
-                    alt=""
-                    title={m.username}
-                    className="size-7 border-2 border-white/90 object-cover shadow"
-                  />
-                ))}
+              {previews.slice(0, 3).map((m) => (
+                <img
+                  key={m.username}
+                  src={memberAvatarSrc(m.profileImg, m.username)}
+                  alt=""
+                  title={m.username}
+                  className="size-7 border-2 border-white/90 object-cover shadow"
+                />
+              ))}
             </div>
 
             <p
               className={cn(
                 'mt-1.5 font-sans text-[10px] font-bold uppercase tracking-[0.12em]',
-                accentPurple,
+                accentPurple
               )}
             >
-              {formatMemberCount(
-                squad.memberCount,
-              )}{' '}
-              members
+              {formatMemberCount(squad.memberCount)} members
             </p>
           </div>
         </div>
 
         {/* Solid card body from title down */}
-        <div
-          className="relative z-10 mt-2 min-w-0 space-y-1 bg-background pb-3 pt-1"
-        >
-          <Link
-            href={href}
-            className="block min-w-0"
-          >
+        <div className="relative z-10 mt-2 min-w-0 space-y-1 bg-background pb-3 pt-1">
+          <Link href={href} className="block min-w-0">
             <h3 className="truncate text-lg font-black uppercase leading-tight tracking-tight text-foreground md:text-xl">
               {squad.name}
             </h3>
@@ -339,26 +286,21 @@ export function SquadDiscoverCard({
                   'shrink-0  border border-border',
                   'bg-muted/50 px-1 py-px dark:bg-muted/35',
                   'font-mono text-[9px] font-black uppercase tracking-widest',
-                  'text-foreground',
+                  'text-foreground'
                 )}
               >
                 {categoryLabel}
               </span>
-            ) : squad.visibility ===
-              'private' ? (
+            ) : squad.visibility === 'private' ? (
               <span
                 className={cn(
                   'inline-flex shrink-0 items-center gap-1 ',
                   'border border-border bg-muted/45 px-1 py-px dark:bg-muted/30',
                   'font-mono text-[9px] font-black uppercase tracking-widest',
-                  'text-foreground',
+                  'text-foreground'
                 )}
               >
-                <Lock
-                  className="size-3 shrink-0"
-                  strokeWidth={2.5}
-                  aria-hidden
-                />
+                <Lock className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
                 Private
               </span>
             ) : null}

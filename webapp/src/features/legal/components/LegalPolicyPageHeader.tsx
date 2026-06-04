@@ -15,7 +15,6 @@ import {
   LEGAL_VERSION_BADGE_LINE_PRIMARY,
 } from './legalUi';
 
-
 const PATH_KICKER: Record<string, string> = {
   '/terms': 'Legal · Terms',
   '/privacy': 'Legal · Privacy',
@@ -68,7 +67,12 @@ export function LegalPolicyPageHeader() {
             aria-label={versionAria ?? 'Policy version'}
           >
             {versionLines.map((line, i) => (
-              <p key={line} className={i === 0 ? LEGAL_VERSION_BADGE_LINE_PRIMARY : LEGAL_VERSION_BADGE_LINE_MUTED}>
+              <p
+                key={line}
+                className={
+                  i === 0 ? LEGAL_VERSION_BADGE_LINE_PRIMARY : LEGAL_VERSION_BADGE_LINE_MUTED
+                }
+              >
                 {line}
               </p>
             ))}

@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import { diceBearAvatarSvgUrl } from '../utils/diceBearAvatarUrl.js';
+import { ensureOpaqueDiceBearDataUri } from '../utils/diceBearSvgBackground.js';
 
 /** Fallback when `profileImg` is empty or invalid (DiceBear Adventurer SVG data URI, deterministic). */
 export const DEFAULT_AVATAR_URL = diceBearAvatarSvgUrl('syntax-stories-default');
@@ -8,6 +9,9 @@ export const DEFAULT_AVATAR_URL = diceBearAvatarSvgUrl('syntax-stories-default')
 export function normalizeProfileImg(profileImg: string | undefined): string {
   if (!profileImg?.trim()) return DEFAULT_AVATAR_URL;
   if (profileImg.startsWith('http://') || profileImg.startsWith('https://')) return profileImg;
+  if (profileImg.startsWith('data:image/svg+xml')) {
+    return ensureOpaqueDiceBearDataUri(profileImg);
+  }
   if (profileImg.startsWith('data:image/')) return profileImg;
   return DEFAULT_AVATAR_URL;
 }
@@ -130,6 +134,15 @@ export interface ISetupItem {
   imageAlt?: string;
 }
 
+export interface IUserPasskey {
+  credentialId: string;
+  publicKey: string;
+  counter: number;
+  deviceLabel: string;
+  createdAt: Date;
+  lastUsedAt?: Date;
+}
+
 export interface IUser extends Document {
   fullName: string;
   username: string;
@@ -142,6 +155,8 @@ export interface IUser extends Document {
   coverBannerAlt?: string;
   gender?: string;
   job?: string;
+  /** Public profile location (city/region display). */
+  profileLocation?: string;
   bio?: string;
   portfolioUrl?: string;
   linkedin?: string;
@@ -161,18 +176,21 @@ export interface IUser extends Document {
   isXAccount: boolean;
   isAppleAccount: boolean;
   isDiscordAccount: boolean;
+  isTwitchAccount: boolean;
   googleId?: string;
   gitId?: string;
   facebookId?: string;
   appleId?: string;
   xId?: string;
   discordId?: string;
+  twitchId?: string;
   googleToken?: string;
   githubToken?: string;
   facebookToken?: string;
   xToken?: string;
   appleToken?: string;
   discordToken?: string;
+  twitchToken?: string;
   isActive: boolean;
   emailVerified: boolean;
   lastLoginAt?: Date;
@@ -186,6 +204,10 @@ export interface IUser extends Document {
   lastSubscriptionReconciledAt?: Date | null;
   twoFactorEnabled: boolean;
   twoFactorSecret?: string;
+  /** Platform passkeys (Touch ID / Windows Hello) for admin step-up. */
+  passkeys?: IUserPasskey[];
+  /** When true and passkeys exist, step-up may use biometrics instead of TOTP only. */
+  passkeyStepUpEnabled?: boolean;
   /** Denormalized: updated on follow/unfollow */
   followersCount?: number;
   followingCount?: number;
@@ -217,134 +239,180 @@ export interface IUser extends Document {
   updatedAt?: Date;
 }
 
-const WorkExperienceSchema = new Schema({
-  workId: { type: String, trim: true, maxlength: 20 },
-  jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
-  employmentType: { type: String, trim: true, maxlength: 50 },
-  company: { type: String, required: true, trim: true, maxlength: 200 },
-  companyDomain: { type: String, trim: true, maxlength: 120 },
-  companyLogo: { type: String, trim: true, maxlength: 500 },
-  companyLogoAlt: { type: String, trim: true, maxlength: 120 },
-  currentPosition: { type: Boolean, default: false },
-  startDate: { type: String, trim: true, maxlength: 20 },
-  endDate: { type: String, trim: true, maxlength: 20 },
-  location: { type: String, trim: true, maxlength: 180 },
-  locationType: { type: String, trim: true, maxlength: 20 },
-  description: { type: String, trim: true, maxlength: 5000 },
-  skills: { type: [String], default: [], maxlength: 10 },
-  /** @deprecated use promotions array */
-  promotion: {
-    type: new Schema({
-      jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
-      startDate: { type: String, trim: true, maxlength: 20 },
-      endDate: { type: String, trim: true, maxlength: 20 },
-      currentPosition: { type: Boolean, default: false },
-    }, { _id: false }),
-    default: undefined,
+const WorkExperienceSchema = new Schema(
+  {
+    workId: { type: String, trim: true, maxlength: 20 },
+    jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
+    employmentType: { type: String, trim: true, maxlength: 50 },
+    company: { type: String, required: true, trim: true, maxlength: 200 },
+    companyDomain: { type: String, trim: true, maxlength: 120 },
+    companyLogo: { type: String, trim: true, maxlength: 500 },
+    companyLogoAlt: { type: String, trim: true, maxlength: 120 },
+    currentPosition: { type: Boolean, default: false },
+    startDate: { type: String, trim: true, maxlength: 20 },
+    endDate: { type: String, trim: true, maxlength: 20 },
+    location: { type: String, trim: true, maxlength: 180 },
+    locationType: { type: String, trim: true, maxlength: 20 },
+    description: { type: String, trim: true, maxlength: 5000 },
+    skills: { type: [String], default: [], maxlength: 10 },
+    /** @deprecated use promotions array */
+    promotion: {
+      type: new Schema(
+        {
+          jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
+          startDate: { type: String, trim: true, maxlength: 20 },
+          endDate: { type: String, trim: true, maxlength: 20 },
+          currentPosition: { type: Boolean, default: false },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
+    promotions: {
+      type: [
+        new Schema(
+          {
+            jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
+            startDate: { type: String, trim: true, maxlength: 20 },
+            endDate: { type: String, trim: true, maxlength: 20 },
+            currentPosition: { type: Boolean, default: false },
+            media: {
+              type: [
+                new Schema(
+                  {
+                    url: { type: String, required: true, trim: true, maxlength: 500 },
+                    title: { type: String, trim: true, maxlength: 120 },
+                  },
+                  { _id: false }
+                ),
+              ],
+              default: undefined,
+              maxlength: 5,
+            },
+          },
+          { _id: false }
+        ),
+      ],
+      default: undefined,
+      maxlength: 5,
+    },
+    mediaUrls: { type: [String], default: [], maxlength: 5 },
+    media: {
+      type: [
+        {
+          url: { type: String, required: true, trim: true, maxlength: 500 },
+          title: { type: String, trim: true, maxlength: 120 },
+        },
+      ],
+      default: [],
+      maxlength: 5,
+      _id: false,
+    },
   },
-  promotions: {
-    type: [new Schema({
-      jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
-      startDate: { type: String, trim: true, maxlength: 20 },
-      endDate: { type: String, trim: true, maxlength: 20 },
-      currentPosition: { type: Boolean, default: false },
-      media: {
-        type: [new Schema({ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 } }, { _id: false })],
-        default: undefined,
-        maxlength: 5,
-      },
-    }, { _id: false })],
-    default: undefined,
-    maxlength: 5,
+  { _id: false }
+);
+
+const EducationSchema = new Schema(
+  {
+    eduId: { type: String, trim: true, maxlength: 20 },
+    school: { type: String, required: true, trim: true, maxlength: 200 },
+    schoolDomain: { type: String, trim: true, maxlength: 120 },
+    schoolLogo: { type: String, trim: true, maxlength: 2000 },
+    schoolLogoAlt: { type: String, trim: true, maxlength: 120 },
+    degree: { type: String, required: true, trim: true, maxlength: 80 },
+    fieldOfStudy: { type: String, trim: true, maxlength: 120 },
+    currentEducation: { type: Boolean, default: false },
+    startDate: { type: String, trim: true, maxlength: 20 },
+    endDate: { type: String, trim: true, maxlength: 20 },
+    grade: { type: String, trim: true, maxlength: 80 },
+    description: { type: String, trim: true, maxlength: 2000 },
+    activity: { type: String, trim: true, maxlength: 500 },
+    refCode: { type: String, trim: true, maxlength: 40 },
   },
-  mediaUrls: { type: [String], default: [], maxlength: 5 },
-  media: {
-    type: [{
-      url: { type: String, required: true, trim: true, maxlength: 500 },
-      title: { type: String, trim: true, maxlength: 120 },
-    }],
-    default: [],
-    maxlength: 5,
-    _id: false,
+  { _id: false }
+);
+
+const CertificationSchema = new Schema(
+  {
+    certId: { type: String, trim: true, maxlength: 20 },
+    name: { type: String, required: true, trim: true, maxlength: 120 },
+    issuingOrganization: { type: String, required: true, trim: true, maxlength: 120 },
+    issuerLogo: { type: String, trim: true, maxlength: 2000 },
+    issuerLogoAlt: { type: String, trim: true, maxlength: 120 },
+    currentlyValid: { type: Boolean, default: false },
+    issueDate: { type: String, trim: true, maxlength: 20 },
+    expirationDate: { type: String, trim: true, maxlength: 20 },
+    certValType: { type: String, trim: true, maxlength: 20 },
+    credentialId: { type: String, trim: true, maxlength: 80 },
+    credentialUrl: { type: String, trim: true, maxlength: 500 },
+    description: { type: String, trim: true, maxlength: 2000 },
+    skills: { type: [String], default: [], maxlength: 30 },
+    media: {
+      type: [
+        {
+          url: { type: String, required: true, trim: true, maxlength: 500 },
+          title: { type: String, trim: true, maxlength: 120 },
+        },
+      ],
+      default: [],
+      maxlength: 5,
+      _id: false,
+    },
   },
-}, { _id: false });
+  { _id: false }
+);
 
-const EducationSchema = new Schema({
-  eduId: { type: String, trim: true, maxlength: 20 },
-  school: { type: String, required: true, trim: true, maxlength: 200 },
-  schoolDomain: { type: String, trim: true, maxlength: 120 },
-  schoolLogo: { type: String, trim: true, maxlength: 2000 },
-  schoolLogoAlt: { type: String, trim: true, maxlength: 120 },
-  degree: { type: String, required: true, trim: true, maxlength: 80 },
-  fieldOfStudy: { type: String, trim: true, maxlength: 120 },
-  currentEducation: { type: Boolean, default: false },
-  startDate: { type: String, trim: true, maxlength: 20 },
-  endDate: { type: String, trim: true, maxlength: 20 },
-  grade: { type: String, trim: true, maxlength: 80 },
-  description: { type: String, trim: true, maxlength: 2000 },
-  activity: { type: String, trim: true, maxlength: 500 },
-  refCode: { type: String, trim: true, maxlength: 40 },
-}, { _id: false });
-
-const CertificationSchema = new Schema({
-  certId: { type: String, trim: true, maxlength: 20 },
-  name: { type: String, required: true, trim: true, maxlength: 120 },
-  issuingOrganization: { type: String, required: true, trim: true, maxlength: 120 },
-  issuerLogo: { type: String, trim: true, maxlength: 2000 },
-  issuerLogoAlt: { type: String, trim: true, maxlength: 120 },
-  currentlyValid: { type: Boolean, default: false },
-  issueDate: { type: String, trim: true, maxlength: 20 },
-  expirationDate: { type: String, trim: true, maxlength: 20 },
-  certValType: { type: String, trim: true, maxlength: 20 },
-  credentialId: { type: String, trim: true, maxlength: 80 },
-  credentialUrl: { type: String, trim: true, maxlength: 500 },
-  description: { type: String, trim: true, maxlength: 2000 },
-  skills: { type: [String], default: [], maxlength: 30 },
-  media: {
-    type: [{ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 } }],
-    default: [],
-    maxlength: 5,
-    _id: false,
+const ProjectSchema = new Schema(
+  {
+    type: { type: String, enum: ['project', 'publication'], default: 'project', trim: true },
+    source: { type: String, enum: ['github'], trim: true },
+    repoFullName: { type: String, trim: true, maxlength: 200 },
+    repoId: { type: Number },
+    title: { type: String, required: true, trim: true, maxlength: 120 },
+    publisher: { type: String, trim: true, maxlength: 120 },
+    ongoing: { type: Boolean, default: false },
+    publicationDate: { type: String, trim: true, maxlength: 20 },
+    endDate: { type: String, trim: true, maxlength: 20 },
+    publicationUrl: { type: String, trim: true, maxlength: 500 },
+    description: { type: String, trim: true, maxlength: 2000 },
+    prjLog: { type: String, trim: true, maxlength: 20 },
+    media: {
+      type: [
+        {
+          url: { type: String, required: true, trim: true, maxlength: 500 },
+          title: { type: String, trim: true, maxlength: 120 },
+        },
+      ],
+      default: [],
+      maxlength: 5,
+      _id: false,
+    },
   },
-}, { _id: false });
+  { _id: false }
+);
 
-const ProjectSchema = new Schema({
-  type: { type: String, enum: ['project', 'publication'], default: 'project', trim: true },
-  source: { type: String, enum: ['github'], trim: true },
-  repoFullName: { type: String, trim: true, maxlength: 200 },
-  repoId: { type: Number },
-  title: { type: String, required: true, trim: true, maxlength: 120 },
-  publisher: { type: String, trim: true, maxlength: 120 },
-  ongoing: { type: Boolean, default: false },
-  publicationDate: { type: String, trim: true, maxlength: 20 },
-  endDate: { type: String, trim: true, maxlength: 20 },
-  publicationUrl: { type: String, trim: true, maxlength: 500 },
-  description: { type: String, trim: true, maxlength: 2000 },
-  prjLog: { type: String, trim: true, maxlength: 20 },
-  media: {
-    type: [{ url: { type: String, required: true, trim: true, maxlength: 500 }, title: { type: String, trim: true, maxlength: 120 } }],
-    default: [],
-    maxlength: 5,
-    _id: false,
+const OpenSourceContributionSchema = new Schema(
+  {
+    title: { type: String, required: true, trim: true, maxlength: 120 },
+    repository: { type: String, trim: true, maxlength: 200 },
+    repositoryUrl: { type: String, trim: true, maxlength: 500 },
+    active: { type: Boolean, default: false },
+    activeFrom: { type: String, trim: true, maxlength: 20 },
+    endDate: { type: String, trim: true, maxlength: 20 },
+    description: { type: String, trim: true, maxlength: 2000 },
   },
-}, { _id: false });
+  { _id: false }
+);
 
-const OpenSourceContributionSchema = new Schema({
-  title: { type: String, required: true, trim: true, maxlength: 120 },
-  repository: { type: String, trim: true, maxlength: 200 },
-  repositoryUrl: { type: String, trim: true, maxlength: 500 },
-  active: { type: Boolean, default: false },
-  activeFrom: { type: String, trim: true, maxlength: 20 },
-  endDate: { type: String, trim: true, maxlength: 20 },
-  description: { type: String, trim: true, maxlength: 2000 },
-}, { _id: false });
-
-const SetupItemSchema = new Schema({
-  label: { type: String, required: true, trim: true, maxlength: 80 },
-  imageUrl: { type: String, required: true, trim: true, maxlength: 500 },
-  productUrl: { type: String, trim: true, maxlength: 500 },
-  imageAlt: { type: String, trim: true, maxlength: 120 },
-}, { _id: false });
+const SetupItemSchema = new Schema(
+  {
+    label: { type: String, required: true, trim: true, maxlength: 80 },
+    imageUrl: { type: String, required: true, trim: true, maxlength: 500 },
+    productUrl: { type: String, trim: true, maxlength: 500 },
+    imageAlt: { type: String, trim: true, maxlength: 120 },
+  },
+  { _id: false }
+);
 
 const UserSchema = new Schema<IUser>(
   {
@@ -361,6 +429,7 @@ const UserSchema = new Schema<IUser>(
     coverBannerAlt: { type: String, trim: true, maxlength: 120 },
     gender: { type: String },
     job: { type: String },
+    profileLocation: { type: String, trim: true, maxlength: 180 },
     bio: {
       type: String,
       default: 'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀',
@@ -392,18 +461,21 @@ const UserSchema = new Schema<IUser>(
     isXAccount: { type: Boolean, default: false },
     isAppleAccount: { type: Boolean, default: false },
     isDiscordAccount: { type: Boolean, default: false },
+    isTwitchAccount: { type: Boolean, default: false },
     googleId: { type: String, sparse: true },
     gitId: { type: String, sparse: true },
     facebookId: { type: String, sparse: true },
     appleId: { type: String, sparse: true },
     xId: { type: String, sparse: true },
     discordId: { type: String, sparse: true },
+    twitchId: { type: String, sparse: true },
     googleToken: { type: String, select: false },
     githubToken: { type: String, select: false },
     facebookToken: { type: String, select: false },
     xToken: { type: String, select: false },
     appleToken: { type: String, select: false },
     discordToken: { type: String, select: false },
+    twitchToken: { type: String, select: false },
     isActive: { type: Boolean, default: true },
     emailVerified: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
@@ -415,11 +487,32 @@ const UserSchema = new Schema<IUser>(
     lastSubscriptionReconciledAt: { type: Date, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, select: false },
+    passkeys: {
+      type: [
+        {
+          credentialId: { type: String, required: true },
+          publicKey: { type: String, required: true },
+          counter: { type: Number, default: 0 },
+          deviceLabel: { type: String, default: 'This device' },
+          createdAt: { type: Date, default: Date.now },
+          lastUsedAt: { type: Date },
+        },
+      ],
+      default: [],
+    },
+    passkeyStepUpEnabled: { type: Boolean, default: false },
     followersCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
     profileVersion: { type: Number, default: 0, min: 0 },
     profileUpdatedAt: { type: Date },
-    referralCode: { type: String, trim: true, uppercase: true, sparse: true, unique: true, maxlength: 24 },
+    referralCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      sparse: true,
+      unique: true,
+      maxlength: 24,
+    },
     referredByUserId: { type: Schema.Types.ObjectId, ref: 'users', default: null },
     referredAt: { type: Date, default: null },
     referralSource: { type: String, trim: true, maxlength: 32, default: undefined },

@@ -130,7 +130,11 @@ function buildAuthFetchHeaders(
   return headers;
 }
 
-async function authFetch<T>(path: string, options?: RequestInit & { token?: string }, isRetry = false): Promise<T> {
+async function authFetch<T>(
+  path: string,
+  options?: RequestInit & { token?: string },
+  isRetry = false
+): Promise<T> {
   const url = resolveSameOriginRequestUrl(path);
   const token = options?.token;
   const { token: _, ...restOptions } = options ?? {};
@@ -290,13 +294,21 @@ export const authApi = {
   updateProfile: async (
     accessToken: string,
     data: UpdateProfilePayload
-  ): Promise<{ success: boolean; user: AccountUser }> => {
+  ): Promise<{
+    success: boolean;
+    user: AccountUser;
+    achievements?: import('@/contracts/achievementsApi').AchievementsPayload;
+  }> => {
     const raw = await authFetch<AccountResponseJson>(`${getAuthBase()}/profile`, {
       method: 'PATCH',
       token: accessToken,
       body: JSON.stringify(data),
     });
-    return { success: raw.success ?? true, user: unwrapAccountUserPayload(raw) };
+    return {
+      success: raw.success ?? true,
+      user: unwrapAccountUserPayload(raw),
+      achievements: raw.achievements,
+    };
   },
 
   /** Section-scoped profile PATCH (smaller payload + Zod schema). See `docs/PROFILE_UPDATE_FLOW.md`. */
@@ -304,7 +316,11 @@ export const authApi = {
     accessToken: string,
     section: ProfileUpdateSection,
     data: UpdateProfilePayload
-  ): Promise<{ success: boolean; user: AccountUser }> => {
+  ): Promise<{
+    success: boolean;
+    user: AccountUser;
+    achievements?: import('@/contracts/achievementsApi').AchievementsPayload;
+  }> => {
     const raw = await authFetch<AccountResponseJson>(
       `${getAuthBase()}/profile/${encodeURIComponent(section)}`,
       {
@@ -313,7 +329,11 @@ export const authApi = {
         body: JSON.stringify(data),
       }
     );
-    return { success: raw.success ?? true, user: unwrapAccountUserPayload(raw) };
+    return {
+      success: raw.success ?? true,
+      user: unwrapAccountUserPayload(raw),
+      achievements: raw.achievements,
+    };
   },
 
   /** Parse CV/Resume PDF and return extracted profile + missing field keys. Does not update profile. */
@@ -327,13 +347,18 @@ export const authApi = {
     const data = (await res.json().catch(() => ({}))) as ParseCvResponseJson;
     if (!res.ok) throw new Error((data.message as string) || 'Failed to parse PDF');
     const extracted = data.data?.extracted ?? data.extracted ?? {};
-    const missingFields = (data.data?.missingFields ?? data.missingFields ?? []) as ParseCvMissingFieldKey[];
+    const missingFields = (data.data?.missingFields ??
+      data.missingFields ??
+      []) as ParseCvMissingFieldKey[];
     const incompleteItemHints = data.data?.incompleteItemHints ?? data.incompleteItemHints ?? {};
     return {
       success: Boolean(data.success),
       extracted,
       missingFields,
       incompleteItemHints,
+      achievements: (
+        data as { achievements?: import('@/contracts/achievementsApi').AchievementsPayload }
+      ).achievements,
     };
   },
 
@@ -344,12 +369,18 @@ export const authApi = {
     }),
 
   /** Get redirect URL to link an OAuth provider to the current account. Call then set window.location = redirectUrl. */
-  getLinkRedirectUrl: (accessToken: string, provider: 'google' | 'github' | 'facebook' | 'x' | 'discord') =>
-    authFetch<{ success: boolean; redirectUrl?: string; message?: string }>(`${getAuthBase()}/link-request`, {
-      method: 'POST',
-      token: accessToken,
-      body: JSON.stringify({ provider }),
-    }),
+  getLinkRedirectUrl: (
+    accessToken: string,
+    provider: 'google' | 'github' | 'facebook' | 'x' | 'discord'
+  ) =>
+    authFetch<{ success: boolean; redirectUrl?: string; message?: string }>(
+      `${getAuthBase()}/link-request`,
+      {
+        method: 'POST',
+        token: accessToken,
+        body: JSON.stringify({ provider }),
+      }
+    ),
 
   initEmailChange: (accessToken: string, newEmail: string) =>
     authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/email-change/init`, {

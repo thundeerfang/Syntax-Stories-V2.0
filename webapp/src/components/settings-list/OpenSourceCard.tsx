@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  ExternalLink,
-  GitFork,
-  FolderGit2,
-  Unlink,
-  Terminal,
-  Hash,
-} from 'lucide-react';
+import { ExternalLink, GitFork, FolderGit2, Unlink, Terminal, Hash } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
-
-const OPEN_SOURCE_FOOTER_MARKS = ['o0', 'o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9'] as const;
+const OPEN_SOURCE_FOOTER_MARKS = [
+  'o0',
+  'o1',
+  'o2',
+  'o3',
+  'o4',
+  'o5',
+  'o6',
+  'o7',
+  'o8',
+  'o9',
+] as const;
 
 type OpenSourceCardProps = Readonly<{
   item: any;
@@ -24,13 +27,7 @@ type OpenSourceCardProps = Readonly<{
 }>;
 
 export function OpenSourceCard(props: OpenSourceCardProps) {
-  const {
-    item: p,
-    index,
-    saving,
-    onDetach,
-    hideActions = false,
-  } = props;
+  const { item: p, index, saving, onDetach, hideActions = false } = props;
   const repoName = String(p.repoFullName ?? p.title ?? 'UNKNOWN_REPO');
   const repoUrl = String(p.publicationUrl ?? '#');
   const [isDescExpanded, setIsDescExpanded] = useState(false);
@@ -39,7 +36,6 @@ export function OpenSourceCard(props: OpenSourceCardProps) {
     <div className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
       {/* Industrial Sync Node Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card overflow-hidden">
-        
         {/* Hardware Corner Brackets */}
         <div className="absolute -top-[3px] -left-[3px] size-4 border-t-[3px] border-l-[3px] border-primary z-20" />
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-20" />
@@ -62,11 +58,10 @@ export function OpenSourceCard(props: OpenSourceCardProps) {
 
         {/* Main Content Area — compact */}
         <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10 overflow-hidden min-w-0">
-          
           {/* GitHub Icon Viewport — reduced size */}
           <div className="ss-card-logo-box relative size-12 shrink-0 border-2 border-border bg-black flex items-center justify-center overflow-hidden">
-             <div className="absolute inset-0 opacity-[0.2] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:4px_4px]" />
-             <GitFork className="ss-icon-scale size-5 text-primary/80" />
+            <div className="absolute inset-0 opacity-[0.2] pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:4px_4px]" />
+            <GitFork className="ss-icon-scale size-5 text-primary/80" />
           </div>
 
           <div className="flex-1 min-w-0 space-y-3">
@@ -131,7 +126,9 @@ export function OpenSourceCard(props: OpenSourceCardProps) {
                 }}
                 className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                 aria-expanded={isDescExpanded}
-                aria-label={isDescExpanded ? 'Collapse description' : 'Expand to read full description'}
+                aria-label={
+                  isDescExpanded ? 'Collapse description' : 'Expand to read full description'
+                }
               >
                 {isDescExpanded ? (
                   <div
@@ -140,13 +137,17 @@ export function OpenSourceCard(props: OpenSourceCardProps) {
                   >
                     <p className="text-[11px] font-medium text-muted-foreground break-words break-all">
                       <span className="text-primary font-bold mr-2 shrink-0">REPO_DESC:</span>
-                      <span className="break-words break-all">{p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}</span>
+                      <span className="break-words break-all">
+                        {p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}
+                      </span>
                     </p>
                   </div>
                 ) : (
                   <p className="text-[11px] font-medium text-muted-foreground leading-snug break-words break-all line-clamp-2 [line-height:1.375rem] py-1.5">
                     <span className="text-primary font-bold mr-2 shrink-0">REPO_DESC:</span>
-                    <span className="break-words break-all">{p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}</span>
+                    <span className="break-words break-all">
+                      {p.description || 'REMOTE_SOURCE_HAS_NO_DESCRIPTION_META.'}
+                    </span>
                   </p>
                 )}
               </button>
@@ -160,10 +161,7 @@ export function OpenSourceCard(props: OpenSourceCardProps) {
             {OPEN_SOURCE_FOOTER_MARKS.map((mark, i) => (
               <div
                 key={mark}
-                className={cn(
-                  'h-1.5 w-[2px] bg-primary/20',
-                  i % 3 === 0 && 'bg-primary/40',
-                )}
+                className={cn('h-1.5 w-[2px] bg-primary/20', i % 3 === 0 && 'bg-primary/40')}
               />
             ))}
           </div>

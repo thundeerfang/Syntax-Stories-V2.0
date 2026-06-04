@@ -1,18 +1,11 @@
 'use client';
 
 import React from 'react';
-import {
-  Share2,
-  Copy,
-  Globe,
-  Check,
-  Code2,
-} from 'lucide-react';
+import { Share2, Copy, Globe, Check, Code2 } from 'lucide-react';
 import { XIcon } from '@/components/icons/SocialProviderIcons';
 import { Dialog } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
-
 
 export interface ShareProfileDialogProps {
   open: boolean;
@@ -21,7 +14,11 @@ export interface ShareProfileDialogProps {
   profileUrl: string;
 }
 
-export function ShareProfileDialog({ open, onClose, profileUrl }: Readonly<ShareProfileDialogProps>) {
+export function ShareProfileDialog({
+  open,
+  onClose,
+  profileUrl,
+}: Readonly<ShareProfileDialogProps>) {
   const [copied, setCopied] = React.useState(false);
 
   const copyUrl = async () => {
@@ -47,7 +44,10 @@ export function ShareProfileDialog({ open, onClose, profileUrl }: Readonly<Share
       contentClassName="relative p-6 pt-10"
       backdropClassName="fixed inset-0 z-50 bg-black/40"
     >
-      <h2 id="share-dialog-title" className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-4">
+      <h2
+        id="share-dialog-title"
+        className="text-sm font-black uppercase tracking-widest flex items-center gap-2 mb-4"
+      >
         <Share2 className="size-4 text-primary" /> Share profile
       </h2>
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">
@@ -72,7 +72,9 @@ export function ShareProfileDialog({ open, onClose, profileUrl }: Readonly<Share
         </button>
       </div>
       <div className="border-t-2 border-border pt-4">
-        <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mb-3">Share to</p>
+        <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest mb-3">
+          Share to
+        </p>
         <div className="flex gap-3">
           {[
             { Icon: Code2, label: 'GitHub' },

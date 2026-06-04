@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Compass, Sparkles, UserPlus, UsersRound } from 'lucide-react';
-import { RailFeedEmptyState, RailSectionSubheader, ShellPageIntroHeader, type RailSectionSubheaderSortProps } from '@/components/layout';
+import {
+  RailFeedEmptyState,
+  RailSectionSubheader,
+  ShellPageIntroHeader,
+  type RailSectionSubheaderSortProps,
+} from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { CreateSquadDialog } from '../components/CreateSquadDialog';
 import { SquadDirectoryCard } from '../components/SquadDirectoryCard';
@@ -18,7 +23,6 @@ import { squadsApi, type SquadSummary } from '@/api/squads';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { toast } from 'sonner';
-
 
 /** Horizontal tabs: directory + visibility + memberships. */
 type SquadBrowseTab = 'all' | 'public' | 'private' | 'yours';
@@ -50,10 +54,14 @@ function sortSquads(list: SquadSummary[], sort: SquadSort): SquadSummary[] {
     case 'az':
       return next.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     case 'oldest':
-      return next.sort((a, b) => squadCreatedMs(a) - squadCreatedMs(b) || a.name.localeCompare(b.name));
+      return next.sort(
+        (a, b) => squadCreatedMs(a) - squadCreatedMs(b) || a.name.localeCompare(b.name)
+      );
     case 'newest':
     default:
-      return next.sort((a, b) => squadCreatedMs(b) - squadCreatedMs(a) || a.name.localeCompare(b.name));
+      return next.sort(
+        (a, b) => squadCreatedMs(b) - squadCreatedMs(a) || a.name.localeCompare(b.name)
+      );
   }
 }
 
@@ -122,7 +130,8 @@ export default function SquadsBrowsePage() {
     const q = searchDebounced;
     if (q) {
       rows = rows.filter((s) => {
-        const hay = `${s.name} ${s.description} ${s.slug} ${s.handle ?? ''} ${s.category ? squadCategoryLabel(s.category) : ''}`.toLowerCase();
+        const hay =
+          `${s.name} ${s.description} ${s.slug} ${s.handle ?? ''} ${s.category ? squadCategoryLabel(s.category) : ''}`.toLowerCase();
         return hay.includes(q);
       });
     }
@@ -147,22 +156,23 @@ export default function SquadsBrowsePage() {
     setSquadFormOpen(true);
   };
 
-  const handleCardJoin = async (squadSlug: string) => {
+  const handleCardJoin = async (squadSlug: string): Promise<boolean> => {
     const row = mergedCatalog.find((x) => x.slug === squadSlug);
-    if (!row) return;
+    if (!row) return false;
     if (!token) {
       openAuth('login');
-      return;
+      return false;
     }
     if (row.visibility === 'private') {
       router.push(`/squads/${encodeURIComponent(squadSlug)}`);
-      return;
+      return false;
     }
     setJoinBusySlug(squadSlug);
     try {
       await squadsApi.join(squadSlug, token);
       toast.success('Joined squad');
       await load();
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not join');
       throw e;
@@ -181,17 +191,17 @@ export default function SquadsBrowsePage() {
         variant: browseTab === tab.id ? ('primary' as const) : ('default' as const),
         ariaLabel: tab.label,
       })),
-    [browseTab],
+    [browseTab]
   );
 
   const publicCountInCatalog = useMemo(
     () => mergedCatalog.filter((s) => s.visibility === 'public').length,
-    [mergedCatalog],
+    [mergedCatalog]
   );
 
   const privateCountInMemberships = useMemo(
     () => mine.filter((s) => s.visibility === 'private').length,
-    [mine],
+    [mine]
   );
 
   return (
@@ -262,9 +272,15 @@ export default function SquadsBrowsePage() {
               {showMembershipAuthGate ? (
                 <RailFeedEmptyState
                   icon={UsersRound}
-                  title={browseTab === 'private' ? 'Sign in to see private squads' : 'Sign in to see your squads'}
+                  title={
+                    browseTab === 'private'
+                      ? 'Sign in to see private squads'
+                      : 'Sign in to see your squads'
+                  }
                   description="All squads and Public stay available without an account."
-                  actions={[{ label: 'Sign in', onClick: () => openAuth('login'), variant: 'primary' }]}
+                  actions={[
+                    { label: 'Sign in', onClick: () => openAuth('login'), variant: 'primary' },
+                  ]}
                 />
               ) : filteredSquads.length === 0 && searchDebounced && baseList.length > 0 ? (
                 <RailFeedEmptyState
@@ -302,7 +318,9 @@ export default function SquadsBrowsePage() {
                             label: 'Browse topics',
                             href: '/topics',
                             variant: 'primary' as const,
-                            icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+                            icon: (
+                              <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                            ),
                           },
                         ]
                       : []),

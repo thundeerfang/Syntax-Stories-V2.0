@@ -1,4 +1,10 @@
-import { canonicalLegalPayload, computeLegalContentHash, hashIdempotencyPayload, stableStringify, verifyRevisionHash } from '../modules/legal/legalContentHash.js';
+import {
+  canonicalLegalPayload,
+  computeLegalContentHash,
+  hashIdempotencyPayload,
+  stableStringify,
+  verifyRevisionHash,
+} from '../admin-platform/cms/legal/legalContentHash.js';
 
 describe('legalContentHash', () => {
   it('computes stable SHA-256 for canonical payload', () => {

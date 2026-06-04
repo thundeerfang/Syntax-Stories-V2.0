@@ -11,7 +11,12 @@ const importBlock = lines.slice(2, 47).join('\n');
 const chunks = [
   { file: 'writeUtils.ts', start: 47, end: 301, rename: [] },
   { file: 'SummaryEditor.tsx', start: 301, end: 634, export: 'SummaryEditor' },
-  { file: 'writeSyncHooks.ts', start: 634, end: 1149, exports: ['useBlogWritePageSyncEffects', 'useBlogWriteServerDraftSync', 'BlogWriteTopNav'] },
+  {
+    file: 'writeSyncHooks.ts',
+    start: 634,
+    end: 1149,
+    exports: ['useBlogWritePageSyncEffects', 'useBlogWriteServerDraftSync', 'BlogWriteTopNav'],
+  },
   { file: 'BlogWritePage.tsx', start: 1149, end: lines.length, defaultExport: 'WriteBlogPage' },
 ];
 
@@ -30,7 +35,7 @@ for (const c of chunks) {
   if (c.defaultExport) {
     body = body.replace(
       new RegExp(`^export default function ${c.defaultExport}`),
-      `export default function ${c.defaultExport}`,
+      `export default function ${c.defaultExport}`
     );
   }
   // Simpler: all files get full import block; BlogWritePage imports submodules
@@ -44,12 +49,12 @@ for (const c of chunks) {
 
 fs.writeFileSync(
   path.join(outDir, 'index.ts'),
-  `export { default as BlogWritePage } from './BlogWritePage';\nexport { default } from './BlogWritePage';\n`,
+  `export { default as BlogWritePage } from './BlogWritePage';\nexport { default } from './BlogWritePage';\n`
 );
 
 fs.writeFileSync(
   path.join(__dirname, '../src/app/blogs/write/page.tsx'),
-  `export { default } from '@/features/blog/pages/write';\n`,
+  `export { default } from '@/features/blog/pages/write';\n`
 );
 
 console.log('thinned app/blogs/write/page.tsx');

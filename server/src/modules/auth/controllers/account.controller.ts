@@ -81,11 +81,7 @@ export async function deleteAccount(req: Request, res: Response): Promise<void> 
       { $set: { revoked: true } }
     );
 
-    const updated = await UserModel.findByIdAndUpdate(
-      user._id,
-      { isActive: false },
-      { new: true }
-    );
+    const updated = await UserModel.findByIdAndUpdate(user._id, { isActive: false }, { new: true });
 
     if (!updated) {
       res.status(404).json({ message: 'User not found', success: false });
@@ -93,8 +89,14 @@ export async function deleteAccount(req: Request, res: Response): Promise<void> 
     }
 
     await logSecurityEvent(String(user._id), 'account_locked', req, { reason: 'delete_account' });
-    void writeAuditLog(req, AuditAction.ACCOUNT_LOCKED, { actorId: String(user._id), metadata: { reason: 'delete_account' } });
-    void writeAuditLog(req, AuditAction.ACCOUNT_DELETED, { actorId: String(user._id), metadata: { reason: 'delete_account' } });
+    void writeAuditLog(req, AuditAction.ACCOUNT_LOCKED, {
+      actorId: String(user._id),
+      metadata: { reason: 'delete_account' },
+    });
+    void writeAuditLog(req, AuditAction.ACCOUNT_DELETED, {
+      actorId: String(user._id),
+      metadata: { reason: 'delete_account' },
+    });
 
     res.status(200).json({
       success: true,

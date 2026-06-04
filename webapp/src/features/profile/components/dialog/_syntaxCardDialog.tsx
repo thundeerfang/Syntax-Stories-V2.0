@@ -4,20 +4,15 @@
  * Syntax Card dialog (P6) — card export UI used from profile and account menu.
  */
 
-import React, {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CreditCard, Download, Loader2, Share2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { Dialog } from '@/components/ui/dialog';
 import { followApi } from '@/api/follow';
 import { blogApi } from '@/api/blog';
+import { achievementsApi } from '@/api/achievements';
+import { useAuthStore } from '@/store/auth';
 import {
   buildHeatmapCells,
   publishDaysFromPosts,
@@ -57,7 +52,9 @@ function SyntaxCardMiniHeatmap({
   return (
     <div className="w-full">
       {label ? (
-        <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+          {label}
+        </p>
       ) : null}
       <div className="flex flex-col" style={{ gap }}>
         {rows.map((row) => (
@@ -113,12 +110,10 @@ const SyntaxCardSquare = forwardRef<HTMLDivElement, SyntaxCardSquareProps>(
       readHeatmapCells,
       profileUrl,
     },
-    ref,
+    ref
   ) {
     const avatarSrc = resolveProfileMediaUrl(profileImg, username);
-    const coverSrc = coverBanner
-      ? resolveProfileMediaUrl(coverBanner, username)
-      : null;
+    const coverSrc = coverBanner ? resolveProfileMediaUrl(coverBanner, username) : null;
     const postsDisplay = postsCountLabel ?? String(postsCount);
 
     const stats = [
@@ -226,7 +221,9 @@ const SyntaxCardSquare = forwardRef<HTMLDivElement, SyntaxCardSquareProps>(
               <p className="text-[16px] font-black uppercase tracking-[0.2em] text-[#71717a]">
                 Syntax Stories
               </p>
-              <p className="mt-1 max-w-[620px] truncate text-[13px] font-bold text-[#52525b]">{profileUrl}</p>
+              <p className="mt-1 max-w-[620px] truncate text-[13px] font-bold text-[#52525b]">
+                {profileUrl}
+              </p>
             </div>
             <img
               src="/svg/logo_hori.png"
@@ -238,10 +235,10 @@ const SyntaxCardSquare = forwardRef<HTMLDivElement, SyntaxCardSquareProps>(
         </div>
       </div>
     );
-  },
+  }
 );
 
-const ACHIEVEMENTS_TOTAL = 56;
+const ACHIEVEMENTS_TOTAL_DEFAULT = 10;
 const CARD_EXPORT_WIDTH = 1080;
 /** ~3 months of cells (26 cols × 3 rows) — readable on the square card. */
 const CARD_HEATMAP_DAYS = 78;
@@ -288,8 +285,15 @@ export function SyntaxCardDialog({
   const [respectsCount, setRespectsCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   const [streakCount, setStreakCount] = useState(0);
-  const [publishHeatmapCells, setPublishHeatmapCells] = useState(buildHeatmapCells([], CARD_HEATMAP_DAYS));
-  const [readHeatmapCells, setReadHeatmapCells] = useState(buildHeatmapCells([], CARD_HEATMAP_DAYS));
+  const [achievementsUnlocked, setAchievementsUnlocked] = useState(0);
+  const [achievementsTotal, setAchievementsTotal] = useState(ACHIEVEMENTS_TOTAL_DEFAULT);
+  const token = useAuthStore((s) => s.token);
+  const [publishHeatmapCells, setPublishHeatmapCells] = useState(
+    buildHeatmapCells([], CARD_HEATMAP_DAYS)
+  );
+  const [readHeatmapCells, setReadHeatmapCells] = useState(
+    buildHeatmapCells([], CARD_HEATMAP_DAYS)
+  );
 
   const profileUrl = useMemo(() => {
     if (globalThis.window === undefined || !username) return '';
@@ -300,9 +304,10 @@ export function SyntaxCardDialog({
     if (!username.trim()) return;
     setLoading(true);
     try {
-      const [profileRes, postsRes] = await Promise.all([
+      const [profileRes, postsRes, achSummary] = await Promise.all([
         followApi.getPublicProfile(username.trim()),
         blogApi.getUserPublishedPosts(username.trim(), 50),
+        token ? achievementsApi.summary(token).catch(() => null) : Promise.resolve(null),
       ]);
 
       if (profileRes.success) {
@@ -316,12 +321,16 @@ export function SyntaxCardDialog({
       setPostsCount(posts.length);
       setPostsCapped(posts.length >= 50);
       setPublishHeatmapCells(buildHeatmapCells(publishDaysFromPosts(posts), CARD_HEATMAP_DAYS));
+      if (achSummary?.success) {
+        setAchievementsUnlocked(achSummary.unlockedCount);
+        setAchievementsTotal(achSummary.total);
+      }
     } catch {
       toast.error('Could not load Syntax Card data');
     } finally {
       setLoading(false);
     }
-  }, [username]);
+  }, [username, token]);
 
   useEffect(() => {
     if (!open) return;
@@ -367,7 +376,11 @@ export function SyntaxCardDialog({
     link.href = dataUrl;
     link.click();
     const text = encodeURIComponent(`My Syntax Stories dev card 🔥\n${profileUrl}`);
-    globalThis.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank', 'noopener,noreferrer');
+    globalThis.open(
+      `https://twitter.com/intent/tweet?text=${text}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
   }, [exportCardPng, profileUrl, username]);
 
   const shareToFacebook = useCallback(() => {
@@ -375,7 +388,7 @@ export function SyntaxCardDialog({
     globalThis.open(
       `https://www.facebook.com/sharer/sharer.php?u=${url}`,
       '_blank',
-      'noopener,noreferrer',
+      'noopener,noreferrer'
     );
   }, [profileUrl]);
 
@@ -419,8 +432,8 @@ export function SyntaxCardDialog({
               postsCountLabel={formatPostsCount(postsCount, postsCapped)}
               respectsCount={respectsCount}
               followersCount={followersCount}
-              achievementsUnlocked={0}
-              achievementsTotal={ACHIEVEMENTS_TOTAL}
+              achievementsUnlocked={achievementsUnlocked}
+              achievementsTotal={achievementsTotal}
               streakCount={streakCount}
               publishHeatmapCells={publishHeatmapCells}
               readHeatmapCells={readHeatmapCells}
@@ -443,11 +456,10 @@ export function SyntaxCardDialog({
               'flex min-w-[88px] flex-col items-center gap-1.5 border-2 border-border bg-card px-4 py-3',
               'text-[8px] font-black uppercase tracking-widest transition-all',
               'hover:border-primary hover:bg-muted/40 active:translate-x-0.5 active:translate-y-0.5',
-              'disabled:pointer-events-none disabled:opacity-50',
+              'disabled:pointer-events-none disabled:opacity-50'
             )}
           >
-            <XIcon className="size-5 text-foreground" />
-            X / Twitter
+            <XIcon className="size-5 text-foreground" />X / Twitter
           </button>
           <button
             type="button"
@@ -457,7 +469,7 @@ export function SyntaxCardDialog({
               'flex min-w-[88px] flex-col items-center gap-1.5 border-2 border-border bg-card px-4 py-3',
               'text-[8px] font-black uppercase tracking-widest transition-all',
               'hover:border-primary hover:bg-muted/40 active:translate-x-0.5 active:translate-y-0.5',
-              'disabled:pointer-events-none disabled:opacity-50',
+              'disabled:pointer-events-none disabled:opacity-50'
             )}
           >
             <FacebookShareGlyph />
@@ -471,7 +483,7 @@ export function SyntaxCardDialog({
               'flex min-w-[88px] flex-col items-center gap-1.5 border-2 border-border bg-card px-4 py-3',
               'text-[8px] font-black uppercase tracking-widest transition-all',
               'hover:border-primary hover:bg-muted/40 active:translate-x-0.5 active:translate-y-0.5',
-              'disabled:pointer-events-none disabled:opacity-50',
+              'disabled:pointer-events-none disabled:opacity-50'
             )}
           >
             <InstagramShareGlyph />
@@ -489,10 +501,14 @@ export function SyntaxCardDialog({
             'inline-flex flex-1 items-center justify-center gap-2 border-2 border-border bg-primary px-4 py-2.5',
             'text-[10px] font-black uppercase tracking-widest text-primary-foreground',
             'shadow hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none',
-            'disabled:pointer-events-none disabled:opacity-50',
+            'disabled:pointer-events-none disabled:opacity-50'
           )}
         >
-          {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+          {exporting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Download className="size-4" />
+          )}
           Download PNG
         </button>
       </div>

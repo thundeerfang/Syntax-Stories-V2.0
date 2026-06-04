@@ -7,7 +7,6 @@ import { ImageUploadCropDialog } from '@/components/upload/ImageUploadCropDialog
 import { toast } from 'sonner';
 import { uploadSettingsLogo } from '@/api/upload';
 
-
 export type SettingsLogoUploadKind = 'company-logo' | 'school-logo' | 'org-logo';
 
 export interface UploadLogoDialogProps {

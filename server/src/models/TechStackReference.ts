@@ -33,7 +33,7 @@ const TechStackReferenceSchema = new Schema<ITechStackReference>(
       enum: TECH_STACK_REFERENCE_CATEGORIES,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 TechStackReferenceSchema.index({ slug: 1, name: 1 }, { unique: true });

@@ -26,7 +26,10 @@ export function projectMatchesGithubRepo(project: unknown, fullName: string): bo
   if (!want.includes('/')) return false;
   const p = project as { source?: string; repoFullName?: string; publicationUrl?: string };
   if (p.source !== 'github') return false;
-  if (typeof p.repoFullName === 'string' && normalizeGithubRepoFullName(p.repoFullName).toLowerCase() === want) {
+  if (
+    typeof p.repoFullName === 'string' &&
+    normalizeGithubRepoFullName(p.repoFullName).toLowerCase() === want
+  ) {
     return true;
   }
   if (typeof p.publicationUrl === 'string') {

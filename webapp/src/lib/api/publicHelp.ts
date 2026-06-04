@@ -42,9 +42,7 @@ export async function fetchPublishedHelpList(opts?: {
   }
 }
 
-export async function fetchPublishedArticleBySlug(
-  slug: string
-): Promise<HelpArticlePublic | null> {
+export async function fetchPublishedArticleBySlug(slug: string): Promise<HelpArticlePublic | null> {
   const base = apiBase();
   if (!base) return null;
   try {

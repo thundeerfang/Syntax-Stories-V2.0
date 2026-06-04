@@ -4,7 +4,11 @@ import fs from 'node:fs';
 import multer from 'multer';
 import sharp from 'sharp';
 import { verifyToken } from '../middlewares/auth/index.js';
-import { MAX_FILE_SIZE_BYTES, imageBufferMatchesClaimedMime, imageDimensionsAllowed } from '../config/uploadValidation.js';
+import {
+  MAX_FILE_SIZE_BYTES,
+  imageBufferMatchesClaimedMime,
+  imageDimensionsAllowed,
+} from '../config/uploadValidation.js';
 import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder.js';
 import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage.js';
 
@@ -19,8 +23,14 @@ async function tryBlurDataUrl(imagePath: string): Promise<string | undefined> {
 
 const router = Router();
 
-const { avatars: AVATARS_DIR, covers: COVERS_DIR, media: MEDIA_DIR, logos: LOGOS_DIR, schoolLogos: SCHOOL_LOGOS_DIR, orgLogos: ORG_LOGOS_DIR } =
-  getDefaultUploadStorage().dirs;
+const {
+  avatars: AVATARS_DIR,
+  covers: COVERS_DIR,
+  media: MEDIA_DIR,
+  logos: LOGOS_DIR,
+  schoolLogos: SCHOOL_LOGOS_DIR,
+  orgLogos: ORG_LOGOS_DIR,
+} = getDefaultUploadStorage().dirs;
 
 const storageAvatar = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATARS_DIR),
@@ -151,7 +161,9 @@ function getPublicUrl(req: Request, pathSegment: string): string {
   const host = req.get('host') ?? 'localhost';
   const protocol = req.protocol ?? 'http';
   const base = `${protocol}://${host}`;
-  return pathSegment.startsWith('http') ? pathSegment : `${base}/${pathSegment.replace(/^\/+/, '')}`;
+  return pathSegment.startsWith('http')
+    ? pathSegment
+    : `${base}/${pathSegment.replace(/^\/+/, '')}`;
 }
 
 /** Multer fields may be strings or numbers; never stringify arbitrary objects. */
@@ -196,7 +208,11 @@ async function finalizeRasterLogo(
 ): Promise<{ outputPath: string; outputFilename: string }> {
   let image = sharp(inputPath);
   const meta = await image.metadata();
-  if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
+  if (
+    meta.width != null &&
+    meta.height != null &&
+    !imageDimensionsAllowed(meta.width, meta.height)
+  ) {
     try {
       fs.unlinkSync(inputPath);
     } catch {
@@ -226,242 +242,326 @@ async function finalizeRasterLogo(
   return { outputPath, outputFilename };
 }
 
-router.post('/avatar', verifyToken, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, message: 'No file uploaded' });
-    return;
-  }
-  if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
-    try {
-      fs.unlinkSync(req.file.path);
-    } catch {
-      /* ignore */
-    }
-    res.status(400).json({ success: false, message: 'File content does not match declared image type.' });
-    return;
-  }
-  try {
-    let image = sharp(req.file.path);
-    const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
-      try { fs.unlinkSync(req.file.path); } catch {}
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+router.post(
+  '/avatar',
+  verifyToken,
+  uploadAvatar.single('avatar'),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file uploaded' });
       return;
     }
-    const inputPath = req.file.path;
-    const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
-    const outputPath = path.join(AVATARS_DIR, outputFilename);
-
-    image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
-
-    await image
-      .resize(256, 256, { fit: 'cover' })
-      .jpeg({ quality: 80 })
-      .toFile(outputPath);
-
-    // best-effort cleanup of original
-    try { fs.unlinkSync(inputPath); } catch {}
-
-    const pathSegment = `uploads/avatars/${outputFilename}`;
-    const url = getPublicUrl(req, pathSegment);
-    const blurDataUrl = await tryBlurDataUrl(outputPath);
-    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to process image' });
-  }
-});
-
-router.post('/cover', verifyToken, uploadCover.single('cover'), async (req: Request, res: Response) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, message: 'No file uploaded' });
-    return;
-  }
-  if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
-    try {
-      fs.unlinkSync(req.file.path);
-    } catch {
-      /* ignore */
-    }
-    res.status(400).json({ success: false, message: 'File content does not match declared image type.' });
-    return;
-  }
-  try {
-    let image = sharp(req.file.path);
-    const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
-      try { fs.unlinkSync(req.file.path); } catch {}
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+    if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+      res
+        .status(400)
+        .json({ success: false, message: 'File content does not match declared image type.' });
       return;
     }
-    const inputPath = req.file.path;
-    const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
-    const outputPath = path.join(COVERS_DIR, outputFilename);
+    try {
+      let image = sharp(req.file.path);
+      const meta = await image.metadata();
+      if (
+        meta.width != null &&
+        meta.height != null &&
+        !imageDimensionsAllowed(meta.width, meta.height)
+      ) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {}
+        res
+          .status(400)
+          .json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+        return;
+      }
+      const inputPath = req.file.path;
+      const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
+      const outputPath = path.join(AVATARS_DIR, outputFilename);
 
-    image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
+      image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
 
-    await image
-      .resize(1600, 1600, { fit: 'inside', withoutEnlargement: false })
-      .jpeg({ quality: 82 })
-      .toFile(outputPath);
+      await image.resize(256, 256, { fit: 'cover' }).jpeg({ quality: 80 }).toFile(outputPath);
 
-    try { fs.unlinkSync(inputPath); } catch {}
+      // best-effort cleanup of original
+      try {
+        fs.unlinkSync(inputPath);
+      } catch {}
 
-    const pathSegment = `uploads/covers/${outputFilename}`;
-    const url = getPublicUrl(req, pathSegment);
-    const blurDataUrl = await tryBlurDataUrl(outputPath);
-    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to process image' });
+      const pathSegment = `uploads/avatars/${outputFilename}`;
+      const url = getPublicUrl(req, pathSegment);
+      const blurDataUrl = await tryBlurDataUrl(outputPath);
+      res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Failed to process image' });
+    }
   }
-});
+);
+
+router.post(
+  '/cover',
+  verifyToken,
+  uploadCover.single('cover'),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file uploaded' });
+      return;
+    }
+    if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+      res
+        .status(400)
+        .json({ success: false, message: 'File content does not match declared image type.' });
+      return;
+    }
+    try {
+      let image = sharp(req.file.path);
+      const meta = await image.metadata();
+      if (
+        meta.width != null &&
+        meta.height != null &&
+        !imageDimensionsAllowed(meta.width, meta.height)
+      ) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {}
+        res
+          .status(400)
+          .json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+        return;
+      }
+      const inputPath = req.file.path;
+      const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-processed.jpg';
+      const outputPath = path.join(COVERS_DIR, outputFilename);
+
+      image = applyOptionalRasterCrop(image, req.body as Record<string, string | undefined>, meta);
+
+      await image
+        .resize(1600, 1600, { fit: 'inside', withoutEnlargement: false })
+        .jpeg({ quality: 82 })
+        .toFile(outputPath);
+
+      try {
+        fs.unlinkSync(inputPath);
+      } catch {}
+
+      const pathSegment = `uploads/covers/${outputFilename}`;
+      const url = getPublicUrl(req, pathSegment);
+      const blurDataUrl = await tryBlurDataUrl(outputPath);
+      res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Failed to process image' });
+    }
+  }
+);
 
 const MEDIA_THUMB_SIZE = 400;
 
-router.post('/media', verifyToken, uploadMedia.single('media'), async (req: Request, res: Response) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, message: 'No file uploaded' });
-    return;
-  }
-  if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
+router.post(
+  '/media',
+  verifyToken,
+  uploadMedia.single('media'),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file uploaded' });
+      return;
+    }
+    if (!assertRasterMagicBytesOrCleanup(req.file.path, req.file.mimetype)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch {
+        /* ignore */
+      }
+      res
+        .status(400)
+        .json({ success: false, message: 'File content does not match declared image type.' });
+      return;
+    }
     try {
-      fs.unlinkSync(req.file.path);
-    } catch {
-      /* ignore */
-    }
-    res.status(400).json({ success: false, message: 'File content does not match declared image type.' });
-    return;
-  }
-  try {
-    let image = sharp(req.file.path);
-    const meta = await image.metadata();
-    if (meta.width != null && meta.height != null && !imageDimensionsAllowed(meta.width, meta.height)) {
-      try { fs.unlinkSync(req.file.path); } catch {}
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
-      return;
-    }
-    const rawBody = req.body as Record<string, unknown>;
-    const cropBody: Record<string, string | undefined> = {
-      cropX: formCropCoord(rawBody.cropX),
-      cropY: formCropCoord(rawBody.cropY),
-      cropWidth: formCropCoord(rawBody.cropWidth),
-      cropHeight: formCropCoord(rawBody.cropHeight),
-    };
-    const inputPath = req.file.path;
-    const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-thumb.jpg';
-    const outputPath = path.join(MEDIA_DIR, outputFilename);
+      let image = sharp(req.file.path);
+      const meta = await image.metadata();
+      if (
+        meta.width != null &&
+        meta.height != null &&
+        !imageDimensionsAllowed(meta.width, meta.height)
+      ) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch {}
+        res
+          .status(400)
+          .json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+        return;
+      }
+      const rawBody = req.body as Record<string, unknown>;
+      const cropBody: Record<string, string | undefined> = {
+        cropX: formCropCoord(rawBody.cropX),
+        cropY: formCropCoord(rawBody.cropY),
+        cropWidth: formCropCoord(rawBody.cropWidth),
+        cropHeight: formCropCoord(rawBody.cropHeight),
+      };
+      const inputPath = req.file.path;
+      const outputFilename = req.file.filename.replace(/\.[^.]+$/, '') + '-thumb.jpg';
+      const outputPath = path.join(MEDIA_DIR, outputFilename);
 
-    image = applyOptionalRasterCrop(image, cropBody, meta);
+      image = applyOptionalRasterCrop(image, cropBody, meta);
 
-    await image
-      .resize(MEDIA_THUMB_SIZE, MEDIA_THUMB_SIZE, { fit: 'cover' })
-      .jpeg({ quality: 80 })
-      .toFile(outputPath);
+      await image
+        .resize(MEDIA_THUMB_SIZE, MEDIA_THUMB_SIZE, { fit: 'cover' })
+        .jpeg({ quality: 80 })
+        .toFile(outputPath);
 
-    try { fs.unlinkSync(inputPath); } catch {}
+      try {
+        fs.unlinkSync(inputPath);
+      } catch {}
 
-    const pathSegment = `uploads/media/${outputFilename}`;
-    const url = getPublicUrl(req, pathSegment);
-    const blurDataUrl = await tryBlurDataUrl(outputPath);
-    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to process image' });
-  }
-});
-
-router.post('/company-logo', verifyToken, uploadLogo.single('logo'), async (req: Request, res: Response) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, message: 'No file uploaded' });
-    return;
-  }
-  try {
-    const inputPath = req.file.path;
-    const isSvg = /svg/i.test(req.file.mimetype);
-
-    if (isSvg) {
-      const pathSegment = `uploads/logos/${req.file.filename}`;
+      const pathSegment = `uploads/media/${outputFilename}`;
       const url = getPublicUrl(req, pathSegment);
-      res.status(201).json({ success: true, url });
+      const blurDataUrl = await tryBlurDataUrl(outputPath);
+      res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Failed to process image' });
+    }
+  }
+);
+
+router.post(
+  '/company-logo',
+  verifyToken,
+  uploadLogo.single('logo'),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file uploaded' });
       return;
     }
+    try {
+      const inputPath = req.file.path;
+      const isSvg = /svg/i.test(req.file.mimetype);
 
-    const { outputPath, outputFilename } = await finalizeRasterLogo(req, inputPath, LOGOS_DIR, req.file);
-    const pathSegment = `uploads/logos/${outputFilename}`;
-    const url = getPublicUrl(req, pathSegment);
-    const blurDataUrl = await tryBlurDataUrl(outputPath);
-    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
-  } catch (err) {
-    console.error(err);
-    if (err instanceof Error && err.message === 'RESOLUTION') {
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
-      return;
-    }
-    res.status(500).json({ success: false, message: 'Failed to process logo' });
-  }
-});
+      if (isSvg) {
+        const pathSegment = `uploads/logos/${req.file.filename}`;
+        const url = getPublicUrl(req, pathSegment);
+        res.status(201).json({ success: true, url });
+        return;
+      }
 
-router.post('/school-logo', verifyToken, uploadSchoolLogo.single('logo'), async (req: Request, res: Response) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, message: 'No file uploaded' });
-    return;
-  }
-  try {
-    const inputPath = req.file.path;
-    const isSvg = /svg/i.test(req.file.mimetype);
-
-    if (isSvg) {
-      const pathSegment = `uploads/school-logos/${req.file.filename}`;
+      const { outputPath, outputFilename } = await finalizeRasterLogo(
+        req,
+        inputPath,
+        LOGOS_DIR,
+        req.file
+      );
+      const pathSegment = `uploads/logos/${outputFilename}`;
       const url = getPublicUrl(req, pathSegment);
-      res.status(201).json({ success: true, url });
+      const blurDataUrl = await tryBlurDataUrl(outputPath);
+      res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
+    } catch (err) {
+      console.error(err);
+      if (err instanceof Error && err.message === 'RESOLUTION') {
+        res
+          .status(400)
+          .json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+        return;
+      }
+      res.status(500).json({ success: false, message: 'Failed to process logo' });
+    }
+  }
+);
+
+router.post(
+  '/school-logo',
+  verifyToken,
+  uploadSchoolLogo.single('logo'),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file uploaded' });
       return;
     }
+    try {
+      const inputPath = req.file.path;
+      const isSvg = /svg/i.test(req.file.mimetype);
 
-    const { outputPath, outputFilename } = await finalizeRasterLogo(req, inputPath, SCHOOL_LOGOS_DIR, req.file);
-    const pathSegment = `uploads/school-logos/${outputFilename}`;
-    const url = getPublicUrl(req, pathSegment);
-    const blurDataUrl = await tryBlurDataUrl(outputPath);
-    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
-  } catch (err) {
-    console.error(err);
-    if (err instanceof Error && err.message === 'RESOLUTION') {
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
-      return;
-    }
-    res.status(500).json({ success: false, message: 'Failed to process school logo' });
-  }
-});
+      if (isSvg) {
+        const pathSegment = `uploads/school-logos/${req.file.filename}`;
+        const url = getPublicUrl(req, pathSegment);
+        res.status(201).json({ success: true, url });
+        return;
+      }
 
-router.post('/org-logo', verifyToken, uploadOrgLogo.single('logo'), async (req: Request, res: Response) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, message: 'No file uploaded' });
-    return;
-  }
-  try {
-    const inputPath = req.file.path;
-    const isSvg = /svg/i.test(req.file.mimetype);
-
-    if (isSvg) {
-      const pathSegment = `uploads/org-logos/${req.file.filename}`;
+      const { outputPath, outputFilename } = await finalizeRasterLogo(
+        req,
+        inputPath,
+        SCHOOL_LOGOS_DIR,
+        req.file
+      );
+      const pathSegment = `uploads/school-logos/${outputFilename}`;
       const url = getPublicUrl(req, pathSegment);
-      res.status(201).json({ success: true, url });
-      return;
+      const blurDataUrl = await tryBlurDataUrl(outputPath);
+      res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
+    } catch (err) {
+      console.error(err);
+      if (err instanceof Error && err.message === 'RESOLUTION') {
+        res
+          .status(400)
+          .json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+        return;
+      }
+      res.status(500).json({ success: false, message: 'Failed to process school logo' });
     }
-
-    const { outputPath, outputFilename } = await finalizeRasterLogo(req, inputPath, ORG_LOGOS_DIR, req.file);
-    const pathSegment = `uploads/org-logos/${outputFilename}`;
-    const url = getPublicUrl(req, pathSegment);
-    const blurDataUrl = await tryBlurDataUrl(outputPath);
-    res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
-  } catch (err) {
-    console.error(err);
-    if (err instanceof Error && err.message === 'RESOLUTION') {
-      res.status(400).json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
-      return;
-    }
-    res.status(500).json({ success: false, message: 'Failed to process organization logo' });
   }
-});
+);
+
+router.post(
+  '/org-logo',
+  verifyToken,
+  uploadOrgLogo.single('logo'),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'No file uploaded' });
+      return;
+    }
+    try {
+      const inputPath = req.file.path;
+      const isSvg = /svg/i.test(req.file.mimetype);
+
+      if (isSvg) {
+        const pathSegment = `uploads/org-logos/${req.file.filename}`;
+        const url = getPublicUrl(req, pathSegment);
+        res.status(201).json({ success: true, url });
+        return;
+      }
+
+      const { outputPath, outputFilename } = await finalizeRasterLogo(
+        req,
+        inputPath,
+        ORG_LOGOS_DIR,
+        req.file
+      );
+      const pathSegment = `uploads/org-logos/${outputFilename}`;
+      const url = getPublicUrl(req, pathSegment);
+      const blurDataUrl = await tryBlurDataUrl(outputPath);
+      res.status(201).json({ success: true, url, ...(blurDataUrl ? { blurDataUrl } : {}) });
+    } catch (err) {
+      console.error(err);
+      if (err instanceof Error && err.message === 'RESOLUTION') {
+        res
+          .status(400)
+          .json({ success: false, message: 'Image resolution exceeds 120 megapixels limit.' });
+        return;
+      }
+      res.status(500).json({ success: false, message: 'Failed to process organization logo' });
+    }
+  }
+);
 
 export default router;

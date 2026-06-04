@@ -4,14 +4,20 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Bookmark, ChevronLeft, ChevronRight, Repeat2 } from 'lucide-react';
+import {
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Layers,
+  Repeat2,
+  Sparkles,
+} from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { blogApi } from '@/api/blog';
+import { CompactBlogPostsSwiper, type CompactBlogPostsSwiperHandle } from '@/features/blog';
 import {
-  CompactBlogPostsSwiper,
-  type CompactBlogPostsSwiperHandle,
-} from '@/features/blog';
-import {
+  RailFeedEmptyState,
   RailFeedErrorState,
   RailSectionSubheader,
   ShellPageIntroHeader,
@@ -94,36 +100,33 @@ function TrendingHeroEngagementStrip({
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[25] flex flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
       <div className="flex min-w-0 items-center gap-2.5">
-          {post.author.image ? (
-            <img
-              src={post.author.image}
-              alt=""
-              className={cn(
-                avatarSize,
-                'shrink-0  border-2 border-white/90 object-cover',
-              )}
-            />
-          ) : (
-            <div
-              className={cn(
-                avatarSize,
-                'flex shrink-0 items-center justify-center  border-2 border-white/90 bg-white/15 font-mono text-sm font-black text-white',
-              )}
-              aria-hidden
-            >
-              {(post.author.name || username).slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-[10px] font-black uppercase tracking-wide text-white">
-              {post.author.name}
-            </p>
-            {username ? (
-              <p className="truncate font-mono text-[9px] font-bold uppercase tracking-wider text-white/75">
-                @{username}
-              </p>
-            ) : null}
+        {post.author.image ? (
+          <img
+            src={post.author.image}
+            alt=""
+            className={cn(avatarSize, 'shrink-0  border-2 border-white/90 object-cover')}
+          />
+        ) : (
+          <div
+            className={cn(
+              avatarSize,
+              'flex shrink-0 items-center justify-center  border-2 border-white/90 bg-white/15 font-mono text-sm font-black text-white'
+            )}
+            aria-hidden
+          >
+            {(post.author.name || username).slice(0, 1).toUpperCase()}
           </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-mono text-[10px] font-black uppercase tracking-wide text-white">
+            {post.author.name}
+          </p>
+          {username ? (
+            <p className="truncate font-mono text-[9px] font-bold uppercase tracking-wider text-white/75">
+              @{username}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <p
@@ -131,7 +134,7 @@ function TrendingHeroEngagementStrip({
           'line-clamp-2 min-w-0 w-full break-words text-left font-sans font-black leading-snug tracking-tight text-white',
           stacked
             ? 'max-w-[11.5rem] text-sm sm:max-w-[13rem] sm:text-base'
-            : 'max-w-[16rem] text-base sm:max-w-[22rem] md:max-w-[28rem] sm:text-lg',
+            : 'max-w-[16rem] text-base sm:max-w-[22rem] md:max-w-[28rem] sm:text-lg'
         )}
         title={post.title}
       >
@@ -142,7 +145,9 @@ function TrendingHeroEngagementStrip({
         <p
           className={cn(
             'line-clamp-2 min-w-0 font-mono text-[10px] uppercase leading-relaxed text-white/80 sm:text-[11px]',
-            stacked ? 'max-w-[11.5rem] sm:max-w-[13rem]' : 'max-w-[16rem] sm:max-w-[22rem] md:max-w-[28rem]',
+            stacked
+              ? 'max-w-[11.5rem] sm:max-w-[13rem]'
+              : 'max-w-[16rem] sm:max-w-[22rem] md:max-w-[28rem]'
           )}
         >
           {excerpt}
@@ -154,7 +159,11 @@ function TrendingHeroEngagementStrip({
         aria-label={`Engagement: ${respect} respects, ${reposts} reposts, ${bookmarks} bookmarks`}
       >
         <span className={statClass} title="Respects">
-          <img src="/svg/icons8-lightning-bolt.svg" alt="" className="size-3.5 object-contain opacity-95" />
+          <img
+            src="/svg/icons8-lightning-bolt.svg"
+            alt=""
+            className="size-3.5 object-contain opacity-95"
+          />
           {formatEngagementCount(respect)}
         </span>
         <span className="text-white/35" aria-hidden>
@@ -213,7 +222,7 @@ function TrendingStackedHero({
       setFrontPromoteAnim(false);
       setActive((i) => (i + dir + n) % n);
     },
-    [n],
+    [n]
   );
 
   useEffect(() => {
@@ -251,21 +260,30 @@ function TrendingStackedHero({
   }
 
   if (error != null) {
-    return (
-      <RailFeedErrorState
-        title="Could not load trending"
-        error={error}
-        onRetry={onRetry}
-      />
-    );
+    return <RailFeedErrorState title="Could not load trending" error={error} onRetry={onRetry} />;
   }
 
   if (n === 0) {
     return (
-      <section className="ss-empty-dashed-panel flex min-h-[200px] flex-col items-center justify-center p-8 text-center">
-        <p className="font-mono text-sm font-black uppercase tracking-wide text-foreground">{emptyHeadline}</p>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">{emptySub}</p>
-      </section>
+      <RailFeedEmptyState
+        icon={Layers}
+        title={emptyHeadline}
+        description={emptySub}
+        className="min-h-[20rem] justify-center sm:min-h-[23rem] md:min-h-[26rem]"
+        actions={[
+          {
+            label: 'Browse topics',
+            href: '/topics',
+            variant: 'primary',
+            icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+          },
+          {
+            label: 'Explore',
+            href: '/explore',
+            variant: 'default',
+          },
+        ]}
+      />
     );
   }
 
@@ -283,11 +301,7 @@ function TrendingStackedHero({
 
   const FRONT_WIDTH_PCT = 64;
 
-  function backStackStyle(
-    depth: number,
-    stackVisible: number,
-    frontW: number,
-  ): CSSProperties {
+  function backStackStyle(depth: number, stackVisible: number, frontW: number): CSSProperties {
     const maxBackDepth = stackVisible - 1;
 
     if (maxBackDepth <= 0) {
@@ -438,7 +452,7 @@ function TrendingStackedHero({
                 <div
                   className={cn(
                     'h-full w-full overflow-hidden  border-2 border-border bg-background shadow',
-                    isFront && 'shadow',
+                    isFront && 'shadow'
                   )}
                 >
                   {isFront ? (
@@ -518,16 +532,20 @@ type LaneSortValue = (typeof LANE_SORT_OPTIONS)[number]['value'];
 function sortLanePosts(list: Post[], sort: LaneSortValue): Post[] {
   switch (sort) {
     case 'title-asc':
-      return [...list].sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
+      return [...list].sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+      );
     case 'title-desc':
-      return [...list].sort((a, b) => b.title.localeCompare(a.title, undefined, { sensitivity: 'base' }));
+      return [...list].sort((a, b) =>
+        b.title.localeCompare(a.title, undefined, { sensitivity: 'base' })
+      );
     case 'newest':
       return [...list].sort(
-        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
       );
     case 'oldest':
       return [...list].sort(
-        (a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime(),
+        (a, b) => new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
       );
     case 'feed':
     default:
@@ -558,7 +576,7 @@ function TrendingCategoryLane({
         (p) =>
           p.title.toLowerCase().includes(q) ||
           p.slug.toLowerCase().includes(q) ||
-          (p.author.name && p.author.name.toLowerCase().includes(q)),
+          (p.author.name && p.author.name.toLowerCase().includes(q))
       );
     }
     return sortLanePosts(list, sortValue);
@@ -642,7 +660,6 @@ function TrendingCategoryLane({
 
 export function TrendingPage() {
   const token = useAuthStore((s) => s.token);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
   const [heroPosts, setHeroPosts] = useState<Post[]>([]);
   const [categoryRows, setCategoryRows] = useState<
     { category: BlogTaxonomyRow; posts: Post[]; error: unknown | null }[]
@@ -674,13 +691,17 @@ export function TrendingPage() {
             const { posts } = await blogApi.getPublishedFeed(
               PER_CATEGORY_LIMIT,
               { category: row.slug },
-              token,
+              token
             );
-            return { category: row, posts: posts.map(mapPublicFeedPostToPost), error: null as unknown | null };
+            return {
+              category: row,
+              posts: posts.map(mapPublicFeedPostToPost),
+              error: null as unknown | null,
+            };
           } catch (e) {
             return { category: row, posts: [] as Post[], error: e };
           }
-        }),
+        })
       );
       setCategoryRows(rows);
     } catch (e) {
@@ -694,17 +715,21 @@ export function TrendingPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     void load();
-  }, [load, isHydrated]);
+  }, [load]);
 
   const sectionsToShow = useMemo(
     () => categoryRows.filter((r) => r.posts.length > 0 || r.error != null),
-    [categoryRows],
+    [categoryRows]
   );
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col gap-10 pb-10 md:gap-12 md:pb-14')}>
+    <div
+      className={cn(
+        SHELL_CONTENT_RAIL_CLASS,
+        'flex min-h-0 flex-1 flex-col gap-10 pb-10 md:gap-12 md:pb-14'
+      )}
+    >
       <ShellPageIntroHeader
         breadcrumbItems={[{ href: '/', label: 'Home' }, { label: 'Trending' }]}
         description="A spotlight lane for what is moving right now, then top stories filed under each taxonomy category."
@@ -734,13 +759,25 @@ export function TrendingPage() {
             ))}
           </div>
         ) : sectionsToShow.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No category lanes with posts yet. Open{' '}
-            <Link href="/topics" className="font-semibold text-primary underline underline-offset-2">
-              Topics
-            </Link>{' '}
-            to explore taxonomy.
-          </p>
+          <RailFeedEmptyState
+            icon={Sparkles}
+            title="Great things coming soon"
+            description="Category lanes light up as stories trend across topics. The feed is warming up — check back shortly."
+            className="py-14 sm:py-16"
+            actions={[
+              {
+                label: 'Browse topics',
+                href: '/topics',
+                variant: 'primary',
+                icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+              },
+              {
+                label: 'Explore',
+                href: '/explore',
+                variant: 'default',
+              },
+            ]}
+          />
         ) : (
           sectionsToShow.map(({ category, posts, error }) => (
             <TrendingCategoryLane

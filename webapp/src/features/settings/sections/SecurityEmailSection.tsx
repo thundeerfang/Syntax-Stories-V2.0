@@ -9,10 +9,11 @@ import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
 import { GhostOutlineButton } from '@/components/ui';
 import { Label } from '@/components/retroui';
-import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
-
-
-
+import {
+  SettingsSectionHeading,
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 
 export function SecurityEmailContent() {
   const { user, token, refreshUser } = useAuthStore();
@@ -96,8 +97,26 @@ export function SecurityEmailContent() {
           description="Authorized personnel only. Changing your primary email requires dual-factor verification."
         />
         <div className="hidden shrink-0 md:flex gap-1">
-          <div className={cn("px-2 py-1 text-[9px] font-black border-2 transition-colors", step === 'enter' ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground")}>01. INITIATE</div>
-          <div className={cn("px-2 py-1 text-[9px] font-black border-2 transition-colors", step === 'verify' ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground")}>02. VERIFY</div>
+          <div
+            className={cn(
+              'px-2 py-1 text-[9px] font-black border-2 transition-colors',
+              step === 'enter'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border text-muted-foreground'
+            )}
+          >
+            01. INITIATE
+          </div>
+          <div
+            className={cn(
+              'px-2 py-1 text-[9px] font-black border-2 transition-colors',
+              step === 'verify'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border text-muted-foreground'
+            )}
+          >
+            02. VERIFY
+          </div>
         </div>
       </header>
 
@@ -106,13 +125,17 @@ export function SecurityEmailContent() {
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Current Primary Email</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                  Current Primary Email
+                </Label>
                 <div className="p-3 border-2 border-border bg-muted/20 font-mono text-sm opacity-70 italic">
                   {user?.email}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-primary">New Destination Email</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  New Destination Email
+                </Label>
                 <input
                   type="email"
                   value={newEmail}
@@ -129,7 +152,7 @@ export function SecurityEmailContent() {
               disabled={sending || !newEmail.trim()}
               className={cn(
                 settingsBtnBlockPrimaryMd,
-                'px-6 py-3 text-xs tracking-widest disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60',
+                'px-6 py-3 text-xs tracking-widest disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60'
               )}
             >
               {sending ? 'Processing...' : 'Request Verification Codes'}
@@ -143,7 +166,9 @@ export function SecurityEmailContent() {
               <div className="p-4 border-2 border-border bg-background space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="size-2 bg-primary animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Input Code: Current Email</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    Input Code: Current Email
+                  </span>
                 </div>
                 <input
                   type="text"
@@ -160,7 +185,9 @@ export function SecurityEmailContent() {
               <div className="p-4 border-2 border-primary/50 bg-background space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="size-2 bg-primary animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Input Code: New Email</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    Input Code: New Email
+                  </span>
                 </div>
                 <input
                   type="text"
@@ -194,10 +221,11 @@ export function SecurityEmailContent() {
       <div className="border-2 border-dashed border-border bg-muted/5 flex gap-4 items-start p-4">
         <ShieldCheck className="size-5 text-primary shrink-0 mt-0.5" />
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          <strong>Security Note:</strong> Changing your email is a high-level action. Upon successful update, all current OAuth sessions (Google, GitHub, etc.) will be terminated for your protection. You must re-authenticate using the new credentials.
+          <strong>Security Note:</strong> Changing your email is a high-level action. Upon
+          successful update, all current OAuth sessions (Google, GitHub, etc.) will be terminated
+          for your protection. You must re-authenticate using the new credentials.
         </p>
       </div>
     </SettingsTabRoot>
   );
 }
-

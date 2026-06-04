@@ -16,7 +16,9 @@ function legalBase(): string {
   return base ? `${base}/api/v1/legal` : '/api/v1/legal';
 }
 
-export async function fetchPublishedPolicy(kind: LegalPolicyKind): Promise<PublishedPolicyResponse> {
+export async function fetchPublishedPolicy(
+  kind: LegalPolicyKind
+): Promise<PublishedPolicyResponse> {
   const url = resolveSameOriginRequestUrl(`${legalBase()}/policies/${kind}`);
   const res = await fetch(url, { credentials: 'include' });
   const data = (await res.json()) as PublishedPolicyResponse;

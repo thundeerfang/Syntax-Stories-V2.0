@@ -2,13 +2,16 @@
 
 import { useCallback, useEffect, useState, type MouseEvent } from 'react';
 import { FollowToggleButton } from '@/components/ui/button/FollowToggleButton';
-import { FOLLOWED_CATEGORIES_CHANGED_EVENT, isCategorySlugFollowed } from '@/lib/feeds/followedCategoriesStorage';
+import {
+  FOLLOWED_CATEGORIES_CHANGED_EVENT,
+  isCategoryFollowedForViewer,
+  shouldHandleFollowedCategoriesEvent,
+} from '@/lib/feeds/followedCategoriesStorage';
 import { toggleCategoryFollowWithSync } from '@/lib/feeds/categoryFollowActions';
 import { triggerFollowConfetti } from '@/store/engagementEffects';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
-
 
 export type CategoryFollowButtonProps = Readonly<{
   slug: string;
@@ -18,33 +21,42 @@ export type CategoryFollowButtonProps = Readonly<{
   onToggle?: (nowFollowing: boolean) => void;
 }>;
 
-export function CategoryFollowButton({ slug, name, className, onToggle }: CategoryFollowButtonProps) {
+export function CategoryFollowButton({
+  slug,
+  name,
+  className,
+  onToggle,
+}: CategoryFollowButtonProps) {
   const token = useAuthStore((s) => s.token);
   const userId = useAuthStore((s) => s.user?.id ?? s.user?._id ?? null);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const openAuth = useAuthDialogStore((s) => s.open);
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const sync = useCallback(() => {
-    setFollowing(isCategorySlugFollowed(slug, userId));
-  }, [slug, userId]);
+    setFollowing(isCategoryFollowedForViewer(slug, { token, userId, isHydrated }));
+  }, [slug, userId, token, isHydrated]);
 
   useEffect(() => {
     sync();
   }, [sync]);
 
   useEffect(() => {
-    const onChanged = () => sync();
+    const onChanged = (event: Event) => {
+      if (!shouldHandleFollowedCategoriesEvent(event, userId)) return;
+      sync();
+    };
     window.addEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, onChanged);
     window.addEventListener('storage', onChanged);
     return () => {
       window.removeEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, onChanged);
       window.removeEventListener('storage', onChanged);
     };
-  }, [sync]);
+  }, [sync, userId]);
 
   const onFollowClick = (e: MouseEvent<HTMLButtonElement>) => {
-    if (!token) {
+    if (!token || !userId) {
       openAuth('login');
       return;
     }

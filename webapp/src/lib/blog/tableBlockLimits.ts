@@ -9,13 +9,15 @@ export function clampTableMatrix(
   rows: string[][],
   maxRows: number,
   maxCols: number,
-  maxCellChars: number,
+  maxCellChars: number
 ): string[][] {
   if (!rows.length) return [['']];
   const w = Math.min(maxCols, Math.max(1, ...rows.map((r) => r.length)));
   const h = Math.min(maxRows, Math.max(1, rows.length));
   return rows.slice(0, h).map((r) => {
-    const cells = r.slice(0, w).map((c) => (c.length > maxCellChars ? c.slice(0, maxCellChars) : c));
+    const cells = r
+      .slice(0, w)
+      .map((c) => (c.length > maxCellChars ? c.slice(0, maxCellChars) : c));
     while (cells.length < w) cells.push('');
     return cells;
   });

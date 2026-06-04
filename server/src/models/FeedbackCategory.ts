@@ -19,7 +19,14 @@ export interface IFeedbackCategory extends Document {
 
 const FeedbackCategorySchema = new Schema<IFeedbackCategory>(
   {
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true, maxlength: 64 },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 64,
+    },
     label: { type: String, required: true, trim: true, maxlength: 120 },
     sortOrder: { type: Number, default: 0 },
     active: { type: Boolean, default: true, index: true },

@@ -8,7 +8,6 @@ import { consumePostAuthRedirect } from '@/lib/auth/postAuthRedirect';
 import { DialogPanelSkeleton } from '@/components/skeletons';
 import { toast } from 'sonner';
 
-
 type FormSubmit = { preventDefault(): void };
 
 export type OAuthBrowserCallbackProps = {
@@ -97,7 +96,9 @@ export function OAuthBrowserCallback({ providerLabel }: Readonly<OAuthBrowserCal
     <div className="flex w-full flex-col items-center justify-center py-12 sm:py-16">
       {twoFactorRequired && challengeToken ? (
         <form onSubmit={handleVerify} className="w-full max-w-sm space-y-3">
-          <p className="text-center text-sm font-bold uppercase tracking-widest text-muted-foreground">2FA required</p>
+          <p className="text-center text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            2FA required
+          </p>
           <input
             value={totpCode}
             onChange={(e) => setTotpCode(e.target.value)}

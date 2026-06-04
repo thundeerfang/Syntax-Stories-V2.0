@@ -11,10 +11,10 @@ import { redisKeys } from '../../../shared/redis/keys.js';
 import { logSecurityEvent } from '../securityEventLog.js';
 
 const LINK_TTL_SEC = 300; // 5 min
-const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord'] as const;
+const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord', 'twitch'] as const;
 type LinkProvider = (typeof LINK_PROVIDERS)[number];
 
-const DISCONNECT_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord'] as const;
+const DISCONNECT_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord', 'twitch'] as const;
 type DisconnectProvider = (typeof DISCONNECT_PROVIDERS)[number];
 
 export async function linkRequest(req: Request, res: Response): Promise<void> {
@@ -27,14 +27,16 @@ export async function linkRequest(req: Request, res: Response): Promise<void> {
     const provider = (req.body?.provider as string)?.toLowerCase();
     if (!provider || !LINK_PROVIDERS.includes(provider as LinkProvider)) {
       res.status(400).json({
-        message: 'Invalid provider. Use: google, github, facebook, x, discord',
+        message: 'Invalid provider. Use: google, github, facebook, x, discord, twitch',
         success: false,
       });
       return;
     }
     const redis = getRedis();
     if (!redis) {
-      res.status(503).json({ message: 'Account linking is temporarily unavailable', success: false });
+      res
+        .status(503)
+        .json({ message: 'Account linking is temporarily unavailable', success: false });
       return;
     }
     const linkKey = crypto.randomBytes(16).toString('hex');
@@ -64,11 +66,18 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
     }
     const provider = (req.params.provider as string)?.toLowerCase();
     if (!provider || !DISCONNECT_PROVIDERS.includes(provider as DisconnectProvider)) {
-      res.status(400).json({ message: 'Invalid provider. Use: google, github, facebook, x, discord', success: false });
+      res
+        .status(400)
+        .json({
+          message: 'Invalid provider. Use: google, github, facebook, x, discord, twitch',
+          success: false,
+        });
       return;
     }
 
-    const doc = await UserModel.findById(user._id).select('+googleToken +githubToken +facebookToken +xToken +discordToken');
+    const doc = await UserModel.findById(user._id).select(
+      '+googleToken +githubToken +facebookToken +xToken +discordToken +twitchToken'
+    );
     if (!doc) {
       res.status(404).json({ message: 'User not found', success: false });
       return;
@@ -96,6 +105,10 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
       unset.discordId = 1;
       unset.discordToken = 1;
       set.isDiscordAccount = false;
+    } else if (provider === 'twitch') {
+      unset.twitchId = 1;
+      unset.twitchToken = 1;
+      set.isTwitchAccount = false;
     }
 
     await UserModel.findByIdAndUpdate(user._id, { $unset: unset, $set: set });
@@ -104,7 +117,10 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
       { $set: { revoked: true } }
     );
     await logSecurityEvent(String(user._id), 'provider_disconnect', req, { provider });
-    void writeAuditLog(req, AuditAction.OAUTH_DISCONNECTED, { actorId: String(user._id), metadata: { provider } });
+    void writeAuditLog(req, AuditAction.OAUTH_DISCONNECTED, {
+      actorId: String(user._id),
+      metadata: { provider },
+    });
 
     res.status(200).json({
       success: true,

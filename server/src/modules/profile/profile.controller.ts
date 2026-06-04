@@ -2,12 +2,27 @@ import type { Request, Response } from 'express';
 import type { AuthUser } from '../../middlewares/auth/index.js';
 import { ProfileErrorCode, isProfileUpdateSection } from './profile.types.js';
 import { profileService } from './profile.service.js';
+import {
+  attachAchievementsToResponse,
+  dispatchAchievementEvents,
+} from '../../achievements/achievement.service.js';
 
-function sendProfileSuccess(res: Response, user: Record<string, unknown>): void {
-  res.status(200).json({
-    success: true,
-    data: { user },
-  });
+async function sendProfileSuccess(
+  res: Response,
+  user: Record<string, unknown>,
+  userId?: string
+): Promise<void> {
+  const newlyUnlocked =
+    userId != null ? await dispatchAchievementEvents(userId, [{ type: 'profile_sync' }]) : [];
+  res.status(200).json(
+    attachAchievementsToResponse(
+      {
+        success: true,
+        data: { user },
+      },
+      newlyUnlocked
+    )
+  );
 }
 
 function sendProfileError(
@@ -31,10 +46,15 @@ export async function me(req: Request, res: Response): Promise<void> {
     const user = (req as Request & { user: AuthUser }).user;
     const result = await profileService.getMe(String(user._id));
     if (!result.ok) {
-      sendProfileError(res, result.status, result.code ?? ProfileErrorCode.USER_NOT_FOUND, result.message);
+      sendProfileError(
+        res,
+        result.status,
+        result.code ?? ProfileErrorCode.USER_NOT_FOUND,
+        result.message
+      );
       return;
     }
-    sendProfileSuccess(res, result.user);
+    res.status(200).json({ success: true, data: { user: result.user } });
   } catch (err) {
     console.error(err);
     sendProfileError(res, 500, ProfileErrorCode.INTERNAL_ERROR, 'Internal Server Error 💀');
@@ -60,7 +80,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       );
       return;
     }
-    sendProfileSuccess(res, result.user);
+    await sendProfileSuccess(res, result.user, String(user._id));
   } catch (err) {
     const code = (err as { code?: number })?.code;
     if (code === 11000) {
@@ -106,7 +126,7 @@ export async function updateProfileSection(req: Request, res: Response): Promise
       );
       return;
     }
-    sendProfileSuccess(res, result.user);
+    await sendProfileSuccess(res, result.user, String(user._id));
   } catch (err) {
     const code = (err as { code?: number })?.code;
     if (code === 11000) {
@@ -133,13 +153,19 @@ export async function parseCv(req: Request, res: Response): Promise<void> {
       res.status(400).json({ success: false, code: 'NO_FILE', message: 'No PDF file uploaded' });
       return;
     }
-    const { extracted, missingFields, incompleteItemHints } = await profileService.parseCvFromPdfBuffer(buffer);
+    const { extracted, missingFields, incompleteItemHints } =
+      await profileService.parseCvFromPdfBuffer(buffer);
+    const user = (req as Request & { user?: { _id?: unknown } }).user;
+    const userId = user?._id ? String(user._id) : null;
+    const newlyUnlocked =
+      userId != null ? await dispatchAchievementEvents(userId, [{ type: 'profile_sync' }]) : [];
     res.status(200).json({
       success: true,
       data: { extracted, missingFields, incompleteItemHints },
       extracted,
       missingFields,
       incompleteItemHints,
+      ...(newlyUnlocked.length > 0 ? { achievements: { newlyUnlocked } } : {}),
     });
   } catch (err) {
     console.error('parseCv error:', err);

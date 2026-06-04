@@ -120,7 +120,10 @@ export async function deleteEmailOtp(purpose: EmailOtpPurpose, emailNorm: string
 }
 
 /** Avoid stale dual challenges: only one purpose active per email at a time. */
-export async function invalidateOppositeEmailOtp(purpose: EmailOtpPurpose, emailNorm: string): Promise<void> {
+export async function invalidateOppositeEmailOtp(
+  purpose: EmailOtpPurpose,
+  emailNorm: string
+): Promise<void> {
   const other: EmailOtpPurpose = purpose === 'login' ? 'signup' : 'login';
   await deleteEmailOtp(other, emailNorm);
 }
@@ -154,7 +157,10 @@ export async function assertOtpMinResendOrReject(
 }
 
 /** After email send succeeds. */
-export async function markOtpResendGate(purpose: EmailOtpPurpose, normalizedEmail: string): Promise<void> {
+export async function markOtpResendGate(
+  purpose: EmailOtpPurpose,
+  normalizedEmail: string
+): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
   const sec = Math.max(15, authConfig.OTP_MIN_RESEND_SECONDS);

@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/core/utils';
 
-
 export const HOVER_CARD_Z_INDEX = 90;
 const HOVER_Z = HOVER_CARD_Z_INDEX;
 const EXIT_DURATION_MS = 180;
@@ -15,7 +14,7 @@ const CARD_WIDTH = 280;
 /** Matches GifPopoverCard + read-only GIF shell: object-contain inside max height/width box. */
 export function estimateGifPopoverDimensions(
   naturalWidth: number,
-  naturalHeight: number,
+  naturalHeight: number
 ): { width: number; height: number } {
   if (
     !naturalWidth ||
@@ -48,7 +47,7 @@ function clampViewport(
   cardW: number,
   cardH: number,
   vw: number,
-  vh: number,
+  vh: number
 ): { top: number; left: number } {
   const maxL = Math.max(VIEWPORT_PAD, vw - cardW - VIEWPORT_PAD);
   const maxT = Math.max(VIEWPORT_PAD, vh - cardH - VIEWPORT_PAD);
@@ -64,7 +63,7 @@ function rectFullyInViewport(
   cardW: number,
   cardH: number,
   vw: number,
-  vh: number,
+  vh: number
 ): boolean {
   return (
     top >= VIEWPORT_PAD &&
@@ -85,7 +84,7 @@ export function computeHoverCardPositionAuto(
   cardHeight: number,
   cardWidth: number = CARD_WIDTH,
   /** Distance between anchor and card (default 8px). Use a smaller value to sit closer to the trigger. */
-  gap: number = GAP_BOTTOM,
+  gap: number = GAP_BOTTOM
 ): { top: number; left: number; side: Side } {
   const vw = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1024;
   const vh = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 768;
@@ -143,7 +142,7 @@ export function computeHoverCardPosition(
   align: Align,
   cardHeight: number,
   cardWidth: number = CARD_WIDTH,
-  gap: number = GAP_BOTTOM,
+  gap: number = GAP_BOTTOM
 ): { top: number; left: number } {
   if (side === 'bottom') {
     return {
@@ -239,7 +238,11 @@ export function HoverCard({
     if (!triggerRef.current || typeof document === 'undefined') return;
     const rect = triggerRef.current.getBoundingClientRect();
     const cardHeight = positioningHeight;
-    const { top, left, side: nextSide } = computeHoverCardPositionAuto(rect, side, align, cardHeight);
+    const {
+      top,
+      left,
+      side: nextSide,
+    } = computeHoverCardPositionAuto(rect, side, align, cardHeight);
     setPosition({ top, left });
     setResolvedSide(nextSide);
   }, [side, align, positioningHeight]);

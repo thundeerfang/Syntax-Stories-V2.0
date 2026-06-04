@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
 import { Terminal } from 'lucide-react';
 
-
 export type HeaderProps = {
   /** Route / module id in the shell bar (e.g. `System.Contact_Active`) */
   systemLabel: string;
@@ -42,7 +41,9 @@ export function Header({
           <Terminal size={14} className="text-primary" strokeWidth={3} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">Route</p>
+          <p className="font-mono text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+            Route
+          </p>
           <p className="truncate font-mono text-[11px] font-bold uppercase tracking-wide text-foreground">
             {systemLabel}
           </p>
@@ -62,7 +63,10 @@ export function Header({
         <div className="relative z-10 flex flex-col gap-5 sm:gap-6">
           <div className="flex items-start gap-4 sm:gap-5">
             {titleIcon ? (
-              <div className="mt-1 shrink-0 text-primary [&_svg]:size-9 sm:[&_svg]:size-11 md:[&_svg]:size-12" aria-hidden>
+              <div
+                className="mt-1 shrink-0 text-primary [&_svg]:size-9 sm:[&_svg]:size-11 md:[&_svg]:size-12"
+                aria-hidden
+              >
                 {titleIcon}
               </div>
             ) : null}

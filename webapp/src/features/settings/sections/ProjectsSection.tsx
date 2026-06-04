@@ -34,7 +34,10 @@ import {
 } from '@/components/retroui';
 import { ProjectCard } from '@/components/settings-list/ProjectCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
-import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+import {
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 import {
   MONTH_SELECT_OPTIONS,
   formatMonthYearMedium,
@@ -54,8 +57,6 @@ import {
   parseMediaLinkLineInput,
 } from '../lib/workExperienceForm';
 
-
-
 type ProjectType = 'project' | 'publication';
 type ProjectForm = {
   type: ProjectType;
@@ -74,7 +75,18 @@ type ProjectForm = {
 };
 const PROJECT_DEFAULT: ProjectForm = {
   type: 'project',
-  title: '', publisher: '', ongoing: false, publicationDate: '', endDate: '', publicationMonth: '', publicationYear: '', endMonth: '', endYear: '', publicationUrl: '', description: '', mediaItems: [],
+  title: '',
+  publisher: '',
+  ongoing: false,
+  publicationDate: '',
+  endDate: '',
+  publicationMonth: '',
+  publicationYear: '',
+  endMonth: '',
+  endYear: '',
+  publicationUrl: '',
+  description: '',
+  mediaItems: [],
 };
 
 export function ProjectsContent() {
@@ -103,7 +115,10 @@ export function ProjectsContent() {
       endYear: end.year,
       publicationUrl: p.publicationUrl ?? (p as { url?: string }).url ?? '',
       description: p.description ?? '',
-      mediaItems: ((p as { media?: MediaItem[] }).media ?? []).map((m) => ({ url: m.url, title: m.title })),
+      mediaItems: ((p as { media?: MediaItem[] }).media ?? []).map((m) => ({
+        url: m.url,
+        title: m.title,
+      })),
     };
   });
   const [saving, setSaving] = useState(false);
@@ -120,25 +135,38 @@ export function ProjectsContent() {
   const [projFullViewMedia, setProjFullViewMedia] = useState<MediaItem | null>(null);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const projMediaDropdownRef = useRef<HTMLDivElement>(null);
-  const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
+  const hasFormChanged = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(initialForm),
+    [form, initialForm]
+  );
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (projMediaDropdownRef.current && !projMediaDropdownRef.current.contains(e.target as Node)) setProjAddMediaDropdownOpen(false);
+      if (projMediaDropdownRef.current && !projMediaDropdownRef.current.contains(e.target as Node))
+        setProjAddMediaDropdownOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const openAdd = () => { setForm(PROJECT_DEFAULT); setInitialForm(PROJECT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = useCallback((i: number) => {
-    const item = list[i];
-    const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type };
-    setForm(next);
-    setInitialForm(next);
-    setEditingIndex(i);
+  const openAdd = () => {
+    setForm(PROJECT_DEFAULT);
+    setInitialForm(PROJECT_DEFAULT);
+    setEditingIndex(null);
     setFieldErrors({});
     setDialogOpen(true);
-  }, [list]);
+  };
+  const openEdit = useCallback(
+    (i: number) => {
+      const item = list[i];
+      const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type };
+      setForm(next);
+      setInitialForm(next);
+      setEditingIndex(i);
+      setFieldErrors({});
+      setDialogOpen(true);
+    },
+    [list]
+  );
   const openedEditFromUrlRefProj = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefProj.current || list.length === 0) return;
@@ -156,8 +184,11 @@ export function ProjectsContent() {
     try {
       await updateProfile({ projects: next }, { section: 'projects' });
       toast.success('Removed.');
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
   };
   const submitDialog = async () => {
     if (!hasFormChanged) {
@@ -168,14 +199,22 @@ export function ProjectsContent() {
     if (!form.title.trim()) err.title = 'Title is required.';
     const pubDateVal = monthYearToValue(form.publicationMonth, form.publicationYear);
     if (!pubDateVal) err.publicationDate = 'Publication date is required.';
-    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
+    if (Object.keys(err).length) {
+      setFieldErrors(err);
+      toast.error('Please fix the errors below.', { id: 'syntax-form-errors' });
+      return;
+    }
     setFieldErrors({});
-    const endDateVal = form.ongoing ? undefined : (monthYearToValue(form.endMonth, form.endYear) || undefined);
+    const endDateVal = form.ongoing
+      ? undefined
+      : monthYearToValue(form.endMonth, form.endYear) || undefined;
     let resolvedProjMedia: { url: string; title?: string }[];
     try {
       resolvedProjMedia = await resolveProfileMediaItems(token, form.mediaItems);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to upload media.', { id: 'syntax-media-upload' });
+      toast.error(e instanceof Error ? e.message : 'Failed to upload media.', {
+        id: 'syntax-media-upload',
+      });
       return;
     }
     const entry = {
@@ -189,48 +228,54 @@ export function ProjectsContent() {
       description: form.description.trim().slice(0, 2000) || undefined,
       media: resolvedProjMedia,
     };
-    const next = editingIndex !== null
-      ? [...githubProjects, ...nonGithubProjects.map((p, j) => (j === editingIndex ? entry : p))]
-      : [...fullProjects, entry];
+    const next =
+      editingIndex !== null
+        ? [...githubProjects, ...nonGithubProjects.map((p, j) => (j === editingIndex ? entry : p))]
+        : [...fullProjects, entry];
     setSaving(true);
     try {
       await updateProfile({ projects: next }, { section: 'projects' });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-project-entry-success' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', {
+        id: 'syntax-project-entry-success',
+      });
       setDialogOpen(false);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <SettingsTabRoot>
       <SettingsSectionHeader variant="projects" onPrimaryAction={openAdd} disabled={saving} />
       <SettingsTabPanel>
-      <FormSection>
-        {list.length === 0 ? (
-          <SettingsSectionEmptyState
-            icon={FolderGit2}
-            title="No projects or publications yet"
-            tagline="Share what you've built or published. Add your first project to get started."
-          />
-        ) : (
-          <>
-            {list.map((e, i) => (
-              <ProjectCard
-                key={i}
-                project={e}
-                index={i}
-                saving={saving}
-                onEdit={() => openEdit(i)}
-                onRemove={() => setRemoveConfirmIndex(i)}
-                onPreviewMedia={(item) => setProjFullViewMedia(item)}
-                formatMonthYear={formatMonthYearMedium}
-                domainFromUrl={domainFromUrl}
-                isImageUrl={isImageUrl}
-              />
-            ))}
-          </>
-        )}
-      </FormSection>
+        <FormSection>
+          {list.length === 0 ? (
+            <SettingsSectionEmptyState
+              icon={FolderGit2}
+              title="No projects or publications yet"
+              tagline="Share what you've built or published. Add your first project to get started."
+            />
+          ) : (
+            <>
+              {list.map((e, i) => (
+                <ProjectCard
+                  key={i}
+                  project={e}
+                  index={i}
+                  saving={saving}
+                  onEdit={() => openEdit(i)}
+                  onRemove={() => setRemoveConfirmIndex(i)}
+                  onPreviewMedia={(item) => setProjFullViewMedia(item)}
+                  formatMonthYear={formatMonthYearMedium}
+                  domainFromUrl={domainFromUrl}
+                  isImageUrl={isImageUrl}
+                />
+              ))}
+            </>
+          )}
+        </FormSection>
       </SettingsTabPanel>
       <ConfirmDialog
         open={removeConfirmIndex !== null}
@@ -240,7 +285,12 @@ export function ProjectsContent() {
         confirmLabel="Remove"
         variant="danger"
         loading={saving}
-        onConfirm={() => { if (removeConfirmIndex !== null) { remove(removeConfirmIndex); setRemoveConfirmIndex(null); } }}
+        onConfirm={() => {
+          if (removeConfirmIndex !== null) {
+            remove(removeConfirmIndex);
+            setRemoveConfirmIndex(null);
+          }
+        }}
       />
       <MediaFullViewDialog
         open={!!projFullViewMedia}
@@ -276,46 +326,136 @@ export function ProjectsContent() {
         panelClassName="max-w-2xl"
         footer={
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+              * Required fields
+            </p>
             <div className="flex gap-3">
-              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>Cancel</GhostOutlineButton>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </GhostOutlineButton>
+              <button
+                type="button"
+                onClick={submitDialog}
+                disabled={saving || !hasFormChanged}
+                className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}
+              >
+                {saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}
+              </button>
             </div>
           </div>
         }
       >
         <div className="space-y-4">
-          <FormInput id="proj-title" label="Title *" placeholder="Ex: Building Scalable APIs with Go" maxLength={120} value={form.title} error={fieldErrors.title} onChange={(e) => { setForm((f) => ({ ...f, title: e.target.value })); if (fieldErrors.title) setFieldErrors((e2) => (e2.title ? { ...e2, title: '' } : e2)); }} />
-          <FormInput id="proj-pub" label="Publisher *" placeholder="Publisher name" maxLength={120} value={form.publisher} onChange={(e) => setForm((f) => ({ ...f, publisher: e.target.value }))} />
+          <FormInput
+            id="proj-title"
+            label="Title *"
+            placeholder="Ex: Building Scalable APIs with Go"
+            maxLength={120}
+            value={form.title}
+            error={fieldErrors.title}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, title: e.target.value }));
+              if (fieldErrors.title) setFieldErrors((e2) => (e2.title ? { ...e2, title: '' } : e2));
+            }}
+          />
+          <FormInput
+            id="proj-pub"
+            label="Publisher *"
+            placeholder="Publisher name"
+            maxLength={120}
+            value={form.publisher}
+            onChange={(e) => setForm((f) => ({ ...f, publisher: e.target.value }))}
+          />
           <FormCheckbox
             id="proj-ongoing"
             label="Ongoing project/publication"
             checked={form.ongoing}
-            onCheckedChange={(v) => setForm((f) => ({ ...f, ongoing: v, ...(v ? { endMonth: '', endYear: '' } : {}) }))}
+            onCheckedChange={(v) =>
+              setForm((f) => ({ ...f, ongoing: v, ...(v ? { endMonth: '', endYear: '' } : {}) }))
+            }
           />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase">Publication date *</Label>
               <div className="flex gap-2">
-                <SearchableSelect id="proj-pub-month" label="" placeholder="Month" value={form.publicationMonth} onChange={(v) => { setForm((f) => ({ ...f, publicationMonth: v })); if (fieldErrors.publicationDate) setFieldErrors((e2) => (e2.publicationDate ? { ...e2, publicationDate: '' } : e2)); }} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" />
-                <SearchableSelect id="proj-pub-year" label="" placeholder="Year" value={form.publicationYear} onChange={(v) => setForm((f) => ({ ...f, publicationYear: v }))} options={YEAR_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" />
+                <SearchableSelect
+                  id="proj-pub-month"
+                  label=""
+                  placeholder="Month"
+                  value={form.publicationMonth}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, publicationMonth: v }));
+                    if (fieldErrors.publicationDate)
+                      setFieldErrors((e2) =>
+                        e2.publicationDate ? { ...e2, publicationDate: '' } : e2
+                      );
+                  }}
+                  options={MONTH_SELECT_OPTIONS}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                />
+                <SearchableSelect
+                  id="proj-pub-year"
+                  label=""
+                  placeholder="Year"
+                  value={form.publicationYear}
+                  onChange={(v) => setForm((f) => ({ ...f, publicationYear: v }))}
+                  options={YEAR_OPTIONS}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                />
               </div>
-              {fieldErrors.publicationDate && <p className="text-xs text-destructive font-medium">{fieldErrors.publicationDate}</p>}
+              {fieldErrors.publicationDate && (
+                <p className="text-xs text-destructive font-medium">
+                  {fieldErrors.publicationDate}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase">End date</Label>
               <div className="flex gap-2">
-                <SearchableSelect id="proj-end-month" label="" placeholder="Month" value={form.endMonth} onChange={(v) => setForm((f) => ({ ...f, endMonth: v }))} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" disabled={form.ongoing} />
-                <SearchableSelect id="proj-end-year" label="" placeholder="Year" value={form.endYear} onChange={(v) => setForm((f) => ({ ...f, endYear: v }))} options={yearOptionsFromMin(form.publicationYear)} listMaxHeight={220} widthClass="flex-1 min-w-0" disabled={form.ongoing} />
+                <SearchableSelect
+                  id="proj-end-month"
+                  label=""
+                  placeholder="Month"
+                  value={form.endMonth}
+                  onChange={(v) => setForm((f) => ({ ...f, endMonth: v }))}
+                  options={MONTH_SELECT_OPTIONS}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                  disabled={form.ongoing}
+                />
+                <SearchableSelect
+                  id="proj-end-year"
+                  label=""
+                  placeholder="Year"
+                  value={form.endYear}
+                  onChange={(v) => setForm((f) => ({ ...f, endYear: v }))}
+                  options={yearOptionsFromMin(form.publicationYear)}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                  disabled={form.ongoing}
+                />
               </div>
-              {form.ongoing && <p className="text-[9px] text-muted-foreground">Disabled for ongoing projects.</p>}
+              {form.ongoing && (
+                <p className="text-[9px] text-muted-foreground">Disabled for ongoing projects.</p>
+              )}
             </div>
           </div>
-          <FormInput id="proj-url" label="Publication URL / Media link" type="url" placeholder="https://example.com/page" maxLength={500} value={form.publicationUrl} onChange={(e) => setForm((f) => ({ ...f, publicationUrl: e.target.value }))} />
+          <FormInput
+            id="proj-url"
+            label="Publication URL / Media link"
+            type="url"
+            placeholder="https://example.com/page"
+            maxLength={500}
+            value={form.publicationUrl}
+            onChange={(e) => setForm((f) => ({ ...f, publicationUrl: e.target.value }))}
+          />
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase">Media (optional, max 5)</Label>
             <p className="text-[9px] text-muted-foreground">
-              Links and images share the limit. One URL per line; optional title when adding a single URL.
+              Links and images share the limit. One URL per line; optional title when adding a
+              single URL.
             </p>
             {form.mediaItems.length > 0 && (
               <ul className="space-y-2">
@@ -324,21 +464,32 @@ export function ProjectsContent() {
                     key={i}
                     item={m}
                     onPreview={() => setProjFullViewMedia(m)}
-                    onRemove={() => setForm((f) => ({ ...f, mediaItems: f.mediaItems.filter((_, j) => j !== i) }))}
+                    onRemove={() =>
+                      setForm((f) => ({ ...f, mediaItems: f.mediaItems.filter((_, j) => j !== i) }))
+                    }
                   />
                 ))}
               </ul>
             )}
             {form.mediaItems.length < 5 && (
               <div className="flex flex-col gap-2" ref={projMediaDropdownRef}>
-                {projAddMediaDropdownOpen && <div className="fixed inset-0 z-[99]" aria-hidden onClick={() => setProjAddMediaDropdownOpen(false)} />}
+                {projAddMediaDropdownOpen && (
+                  <div
+                    className="fixed inset-0 z-[99]"
+                    aria-hidden
+                    onClick={() => setProjAddMediaDropdownOpen(false)}
+                  />
+                )}
                 <div className="relative z-[120] w-fit max-w-full">
                   <button
                     type="button"
                     onClick={() => setProjAddMediaDropdownOpen((o) => !o)}
                     className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
                   >
-                    <Plus className="size-3" /> Add media <ChevronDown className={cn('size-3', projAddMediaDropdownOpen && 'rotate-180')} />
+                    <Plus className="size-3" /> Add media{' '}
+                    <ChevronDown
+                      className={cn('size-3', projAddMediaDropdownOpen && 'rotate-180')}
+                    />
                   </button>
                   {projAddMediaDropdownOpen && (
                     <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow py-1">
@@ -356,17 +507,32 @@ export function ProjectsContent() {
                       >
                         <Link2 className="size-4" /> Add link
                       </button>
-                      <button type="button" onClick={() => { setProjAddMediaDropdownOpen(false); setProjUploadMediaDialogOpen(true); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><ImagePlus className="size-4" /> Upload media</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProjAddMediaDropdownOpen(false);
+                          setProjUploadMediaDialogOpen(true);
+                        }}
+                        className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
+                      >
+                        <ImagePlus className="size-4" /> Upload media
+                      </button>
                     </div>
                   )}
                 </div>
                 {projShowLinkForm && (
                   <div className="relative z-0 overflow-hidden border-2 border-border bg-muted/10">
                     <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-muted/20 px-3 py-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wide">Add link</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide">
+                        Add link
+                      </span>
                       <button
                         type="button"
-                        onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }}
+                        onClick={() => {
+                          setProjShowLinkForm(false);
+                          setProjLinkUrl('');
+                          setProjLinkTitle('');
+                        }}
                         className="flex size-8 shrink-0 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow hover:bg-muted hover:text-foreground"
                         aria-label="Close"
                       >
@@ -384,9 +550,25 @@ export function ProjectsContent() {
                         autoComplete="off"
                       />
                       <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
-                      <Input placeholder="Single-URL adds only" value={projLinkTitle} onChange={(e) => setProjLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
+                      <Input
+                        placeholder="Single-URL adds only"
+                        value={projLinkTitle}
+                        onChange={(e) => setProjLinkTitle(e.target.value)}
+                        className="text-sm"
+                        maxLength={120}
+                      />
                       <div className="flex gap-2">
-                        <GhostOutlineButton type="button" size="sm" onClick={() => { setProjShowLinkForm(false); setProjLinkUrl(''); setProjLinkTitle(''); }}>Cancel</GhostOutlineButton>
+                        <GhostOutlineButton
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            setProjShowLinkForm(false);
+                            setProjLinkUrl('');
+                            setProjLinkTitle('');
+                          }}
+                        >
+                          Cancel
+                        </GhostOutlineButton>
                         <button
                           type="button"
                           onClick={() => {
@@ -422,13 +604,21 @@ export function ProjectsContent() {
                             setProjLinkTitle('');
                             setProjShowLinkForm(nextLen < 5);
                             if (skippedNonEmpty > 0) {
-                              toast.message(`Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`, { id: 'syntax-skip-url-lines' });
+                              toast.message(
+                                `Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`,
+                                { id: 'syntax-skip-url-lines' }
+                              );
                             }
                             if (urls.length > added) {
-                              toast.message(`Added ${added} link(s); max is 5 media items total.`, { id: 'syntax-max-media' });
+                              toast.message(`Added ${added} link(s); max is 5 media items total.`, {
+                                id: 'syntax-max-media',
+                              });
                             }
                           }}
-                          className={cn(settingsBtnBlockPrimarySm, 'px-3 py-1.5 text-[10px] font-bold')}
+                          className={cn(
+                            settingsBtnBlockPrimarySm,
+                            'px-3 py-1.5 text-[10px] font-bold'
+                          )}
                         >
                           Add link(s)
                         </button>
@@ -457,12 +647,26 @@ export function ProjectsContent() {
                 if (!token) throw new Error('Not signed in.');
                 const url = URL.createObjectURL(file);
                 const title = (meta?.imageTitle ?? '').trim() || 'Media image';
-                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5) }));
+                setForm((f) => ({
+                  ...f,
+                  mediaItems: [
+                    ...f.mediaItems,
+                    { url, title, isPending: true, pendingFile: file },
+                  ].slice(0, 5),
+                }));
                 toast.success('Media staged. It will upload when you save.');
               }}
             />
           )}
-          <FormTextarea id="proj-desc" label="Description — Summary of the work" placeholder="Summary of the work" maxLength={2000} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))} />
+          <FormTextarea
+            id="proj-desc"
+            label="Description — Summary of the work"
+            placeholder="Summary of the work"
+            maxLength={2000}
+            rows={3}
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))}
+          />
         </div>
       </FormDialog>
     </SettingsTabRoot>

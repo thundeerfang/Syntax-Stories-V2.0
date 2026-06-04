@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { publicApiAbortSignal } from '@/lib/api/publicApiFetchTimeout';
 
-
 type ApiArticle = {
   slug: string;
   canonicalPath: string;
@@ -48,9 +47,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
           ← Help
         </Link>
         <h1 className="text-3xl font-black tracking-tight">{article.title}</h1>
-        {article.summary ? (
-          <p className="text-muted-foreground">{article.summary}</p>
-        ) : null}
+        {article.summary ? <p className="text-muted-foreground">{article.summary}</p> : null}
         <div className="prose prose-neutral dark:prose-invert max-w-none whitespace-pre-wrap">
           {article.body}
         </div>
