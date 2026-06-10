@@ -12,6 +12,7 @@ import { AppwritePing } from '@/components/appwrite/AppwritePing';
 import { ConnectivityGate } from '@/features/connectivity';
 import { NotificationRealtimeBridge } from '@/components/notifications/NotificationRealtimeBridge';
 import { GlobalEngagementEffects } from '@/components/effects/GlobalEngagementEffects';
+import { AchievementCelebrationHost } from '@/features/achievements/components/AchievementCelebrationHost';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -56,6 +57,7 @@ export default function RootLayout({
           <SonnerToaster />
           <NotificationRealtimeBridge />
           <LayoutShell>{children}</LayoutShell>
+          <AchievementCelebrationHost />
           <GlobalEngagementEffects />
           <ConnectivityGate />
         </Providers>

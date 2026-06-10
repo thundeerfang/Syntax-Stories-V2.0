@@ -4,6 +4,7 @@ export {
   type ProfileHeatmapProps,
 } from './components/ProfileHeatmap';
 export { ProfileSectionHeader } from './components/ProfileSectionHeader';
+export { StackToolsBadgeList } from './components/StackToolsBadgeList';
 export { ProfileSquadsCategoriesCard } from './components/ProfileSquadsCategoriesCard';
 export type { ProfileSquadsCategoriesCardProps } from './components/ProfileSquadsCategoriesCard';
 export { UserProfileBlogsContent } from './components/UserProfileBlogsContent';

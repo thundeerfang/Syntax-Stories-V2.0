@@ -10,6 +10,7 @@ import {
 import { suspendRespectContributionsForPost } from '../../../services/blogRespect.service.js';
 import { sendBlogModerationEmail } from './blogModerationEmail.js';
 import { restoreBlogPostAsAdmin, TrashServiceError } from '../trash/trash.service.js';
+import type { AdminErrorCode } from '../../rbac/adminResponse.js';
 
 async function loadPostById(postId: string) {
   if (!mongoose.Types.ObjectId.isValid(postId)) {
@@ -24,7 +25,7 @@ export class BlogModerationError extends Error {
   constructor(
     public status: number,
     message: string,
-    public code = 'VALIDATION_ERROR'
+    public code: AdminErrorCode = 'VALIDATION_ERROR'
   ) {
     super(message);
     this.name = 'BlogModerationError';
@@ -156,7 +157,11 @@ export async function adminRestoreBlog(
     await restoreBlogPostAsAdmin(postId, actorId, req);
   } catch (e) {
     if (e instanceof TrashServiceError) {
-      throw new BlogModerationError(e.status, e.message, e.code ?? 'VALIDATION_ERROR');
+      throw new BlogModerationError(
+        e.status,
+        e.message,
+        (e.code as AdminErrorCode | undefined) ?? 'VALIDATION_ERROR',
+      );
     }
     throw e;
   }

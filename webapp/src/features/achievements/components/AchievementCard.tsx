@@ -6,7 +6,7 @@ import { cn } from '@/lib/core/utils';
 import {
   ACHIEVEMENT_CATEGORY_LABEL,
   ACHIEVEMENT_CATEGORY_TILE,
-  resolveAchievementIcon,
+  AchievementSlugIcon,
 } from '../achievementIcons';
 
 type AchievementStatus = 'locked' | 'in_progress' | 'unlocked';
@@ -26,7 +26,6 @@ const STATUS_LABEL: Record<AchievementStatus, string> = {
 export function AchievementCard({ item }: Readonly<{ item: AchievementProgressItemDto }>) {
   const status = resolveStatus(item);
   const pct = item.target > 0 ? Math.min(100, (item.current / item.target) * 100) : 0;
-  const Icon = resolveAchievementIcon(item.slug);
   const categoryStyle = ACHIEVEMENT_CATEGORY_TILE[item.category];
 
   return (
@@ -51,13 +50,13 @@ export function AchievementCard({ item }: Readonly<{ item: AchievementProgressIt
         >
           {status === 'locked' ? (
             <>
-              <Icon className="size-6 opacity-25 sm:size-7" strokeWidth={2} />
+              <AchievementSlugIcon slug={item.slug} className="size-6 opacity-25 sm:size-7" strokeWidth={2} />
               <span className="absolute inset-0 flex items-center justify-center bg-background/60">
                 <Lock className="size-5 text-muted-foreground sm:size-6" strokeWidth={2.25} />
               </span>
             </>
           ) : (
-            <Icon className="size-7 sm:size-8" strokeWidth={2} />
+            <AchievementSlugIcon slug={item.slug} className="size-7 sm:size-8" strokeWidth={2} />
           )}
         </div>
 

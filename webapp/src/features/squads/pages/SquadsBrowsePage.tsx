@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { CreateSquadDialog } from '../components/CreateSquadDialog';
 import { SquadDirectoryCard } from '../components/SquadDirectoryCard';
 import { SQUADS_INTRO_SLIDES } from '../components/squadsIntroSlides';
-import { SquadsPageContentSkeleton } from '../components/SquadsPageSkeleton';
+import { SquadsPageContentSkeleton } from '@/components/skeletons/SquadsPageSkeleton';
 import { InfoSwiperDialog } from '@/components/ui/dialog';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { squadCategoryLabel } from '@/lib/squads/squadCategory';

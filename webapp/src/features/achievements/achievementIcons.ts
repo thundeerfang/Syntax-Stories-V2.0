@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   AlignLeft,
@@ -43,6 +44,17 @@ export const ACHIEVEMENT_ICON_BY_SLUG: Record<string, LucideIcon> = {
 
 export function resolveAchievementIcon(slug: string): LucideIcon {
   return ACHIEVEMENT_ICON_BY_SLUG[slug] ?? Award;
+}
+
+type AchievementSlugIconProps = Readonly<{
+  slug: string;
+  className?: string;
+  strokeWidth?: number;
+}>;
+
+/** Renders a catalog icon without assigning a component variable during render. */
+export function AchievementSlugIcon({ slug, className, strokeWidth }: AchievementSlugIconProps) {
+  return createElement(resolveAchievementIcon(slug), { className, strokeWidth });
 }
 
 export const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {

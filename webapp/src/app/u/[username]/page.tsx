@@ -26,7 +26,7 @@ import {
 } from '@/features/profile';
 import { cn } from '@/lib/core/utils';
 import { toast } from 'sonner';
-import { StackToolsBadgeList } from '@/components/profile/StackToolsBadgeList';
+import { StackToolsBadgeList } from '@/features/profile/components/StackToolsBadgeList';
 import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/components/ui/editor';
 import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
 import { EducationCard } from '@/components/settings-list/EducationCard';

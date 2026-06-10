@@ -13,7 +13,7 @@ import {
   InvitePageSkeletonInner,
   AchievementsPageSkeletonInner,
 } from '@/components/skeletons';
-import { SquadsPageContentSkeleton } from '@/features/squads';
+import { SquadsPageContentSkeleton } from '@/components/skeletons/SquadsPageSkeleton';
 
 /**
  * Picks the route-transition skeleton for a pathname.

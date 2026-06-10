@@ -4,7 +4,6 @@ import { AppShellChrome } from './AppShellChrome';
 import { MainLayout } from './MainLayout';
 import { FloatingActions } from './FloatingActions';
 import { FeedbackDialogWrapper, NewCustomFeedDialog } from './_layoutShellOverlays';
-import { AchievementCelebrationHost } from '@/features/achievements/components/AchievementCelebrationHost';
 import { GridBackground } from '@/components/ui/media/grid-background';
 import { DesktopShellInit } from './DesktopShellInit';
 
@@ -19,7 +18,6 @@ export function LayoutShell({ children }: Readonly<{ children: React.ReactNode }
       <FloatingActions />
       <FeedbackDialogWrapper />
       <NewCustomFeedDialog />
-      <AchievementCelebrationHost />
     </div>
   );
 }

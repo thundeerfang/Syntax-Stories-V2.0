@@ -53,7 +53,7 @@ import {
   MediaFullViewDialog,
   ProfileSquadsCategoriesCard,
 } from '@/features/profile';
-import { StackToolsBadgeList } from '@/components/profile/StackToolsBadgeList';
+import { StackToolsBadgeList } from '@/features/profile/components/StackToolsBadgeList';
 import { ProfilePageSkeletonInner } from '@/components/skeletons';
 import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
 import { EducationCard } from '@/components/settings-list/EducationCard';

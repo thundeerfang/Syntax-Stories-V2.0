@@ -73,6 +73,15 @@ export function SearchDialog() {
 
   const flatHits = useMemo(() => flattenSearchGroups(displayGroups), [displayGroups]);
   const sections = useMemo(() => groupedEntries(displayGroups), [displayGroups]);
+  const sectionsWithOffsets = useMemo(
+    () =>
+      sections.map(([groupKey, hits], index) => ({
+        groupKey,
+        hits,
+        flatOffset: sections.slice(0, index).reduce((total, [, groupHits]) => total + groupHits.length, 0),
+      })),
+    [sections]
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -179,8 +188,6 @@ export function SearchDialog() {
   } else if (trimmed && queryReady && !loading) {
     footerStatusLabel = 'No_Matches';
   }
-
-  let flatOffset = 0;
 
   return (
     <Dialog
@@ -297,21 +304,17 @@ export function SearchDialog() {
             </motion.div>
           ) : (
             <div role="listbox" className="flex flex-col">
-              {sections.map(([groupKey, hits]) => {
-                const section = (
-                  <SearchGroupSection
-                    key={groupKey}
-                    groupKey={groupKey}
-                    hits={hits}
-                    selectedIndex={selectedIndex}
-                    flatOffset={flatOffset}
-                    onPick={handlePick}
-                    onHoverIndex={setSelectedIndex}
-                  />
-                );
-                flatOffset += hits.length;
-                return section;
-              })}
+              {sectionsWithOffsets.map(({ groupKey, hits, flatOffset }) => (
+                <SearchGroupSection
+                  key={groupKey}
+                  groupKey={groupKey}
+                  hits={hits}
+                  selectedIndex={selectedIndex}
+                  flatOffset={flatOffset}
+                  onPick={handlePick}
+                  onHoverIndex={setSelectedIndex}
+                />
+              ))}
             </div>
           )}
         </AnimatePresence>
