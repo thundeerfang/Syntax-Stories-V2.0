@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+
+import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -21,26 +24,41 @@ List<InlineSpan> buildParagraphRichSpans({
   while (cursor < text.length) {
     if (text[cursor] == kParagraphGifPlaceholder) {
       if (gifIndex < doc.gifs.length && doc.gifs[gifIndex].url.isNotEmpty) {
-        spans.add(
-          WidgetSpan(
-            alignment: PlaceholderAlignment.baseline,
-            baseline: TextBaseline.alphabetic,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 2),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: Image.network(
-                  doc.gifs[gifIndex].url,
-                  height: gifSize,
-                  width: gifSize,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      Icon(Icons.gif, size: gifSize * 0.85, color: colors.primary),
+        if (forEditing) {
+          spans.add(
+            ImageSpan(
+              NetworkImage(doc.gifs[gifIndex].url),
+              imageWidth: gifSize,
+              imageHeight: gifSize,
+              margin: const EdgeInsets.only(right: 2),
+              actualText: kParagraphGifPlaceholder,
+              alignment: ui.PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              fit: BoxFit.cover,
+            ),
+          );
+        } else {
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 2),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: Image.network(
+                    doc.gifs[gifIndex].url,
+                    height: gifSize,
+                    width: gifSize,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Icon(Icons.gif, size: gifSize * 0.85, color: colors.primary),
+                  ),
                 ),
               ),
             ),
-          ),
-        );
+          );
+        }
       } else {
         spans.add(TextSpan(text: ' ', style: baseStyle));
       }

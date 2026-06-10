@@ -52,6 +52,7 @@ class _BlogWriteOrbitFabState extends State<BlogWriteOrbitFab> with SingleTicker
     if (_open) {
       _controller.reverse();
     } else {
+      FocusManager.instance.primaryFocus?.unfocus();
       _controller.forward();
     }
   }
@@ -62,6 +63,7 @@ class _BlogWriteOrbitFabState extends State<BlogWriteOrbitFab> with SingleTicker
 
   void _pickBlock(String type) {
     if (_atLimit) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     widget.onAddBlock(type);
     _close();
   }
@@ -190,7 +192,7 @@ class _OrbitChip extends StatelessWidget {
               elevation: 3,
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: disabled ? null : onTap,
+                onTapDown: disabled ? null : (_) => onTap(),
                 child: SizedBox(
                   width: size,
                   height: size,

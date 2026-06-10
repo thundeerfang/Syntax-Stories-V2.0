@@ -7,8 +7,7 @@ import '../../theme/app_color_tokens.dart';
 import '../../utils/resolve_profile_media_url.dart';
 import '../../utils/user_message_case.dart';
 import '../ui/dashed_border_box.dart';
-
-const _imageLayouts = ['landscape', 'square', 'fullWidth'];
+import 'blog_image_layout_chips.dart';
 
 /// Unsplash block — opens search sheet directly (no inline search field).
 class UnsplashBlockEditor extends StatefulWidget {
@@ -33,8 +32,8 @@ class _UnsplashBlockEditorState extends State<UnsplashBlockEditor> {
   @override
   void initState() {
     super.initState();
-    final layout = widget.block.payload['layout']?.toString() ?? 'landscape';
-    _layout = _imageLayouts.contains(layout) ? layout : 'landscape';
+    final layout = coerceBlogImageLayout(widget.block.payload['layout']?.toString());
+    _layout = layout;
     if (_selectedUrl == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _openSearchSheet(auto: true));
     }
@@ -338,16 +337,9 @@ class _SelectedPhotoView extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: [
-            for (final value in _imageLayouts)
-              ChoiceChip(
-                label: Text(value),
-                selected: layout == value,
-                onSelected: (_) => onLayoutChanged(value),
-              ),
-          ],
+        BlogImageLayoutChips(
+          selected: layout,
+          onSelected: onLayoutChanged,
         ),
         const SizedBox(height: 4),
         TextButton(onPressed: onChangePhoto, child: const Text('Search another photo')),

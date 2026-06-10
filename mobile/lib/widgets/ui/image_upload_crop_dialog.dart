@@ -275,7 +275,7 @@ class _ImageUploadCropDialogState extends State<ImageUploadCropDialog> {
                 ),
               ],
               if (_imageBytes == null)
-                _ImageUploadPickZone(
+                ImageUploadPickZone(
                   onTap: _uploading ? null : _pickImage,
                   prompt: _kind.pickPrompt,
                   hint: _kind.pickHint,
@@ -349,8 +349,9 @@ class _ImageUploadCropDialogState extends State<ImageUploadCropDialog> {
   }
 }
 
-class _ImageUploadPickZone extends StatelessWidget {
-  const _ImageUploadPickZone({
+class ImageUploadPickZone extends StatelessWidget {
+  const ImageUploadPickZone({
+    super.key,
     required this.onTap,
     required this.prompt,
     required this.hint,

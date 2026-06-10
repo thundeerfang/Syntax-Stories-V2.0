@@ -6,10 +6,13 @@ import '../../theme/app_color_tokens.dart';
 import '../../utils/gallery_image_picker.dart';
 import '../../utils/github_repo_utils.dart';
 import '../../utils/resolve_profile_media_url.dart';
+import '../../utils/upload_image_alt.dart';
 import '../../utils/user_message_case.dart';
 import '../../utils/video_embed_utils.dart';
 import '../auth/auth_text_field.dart';
 import '../ui/dashed_border_box.dart';
+import '../ui/image_upload_crop_dialog.dart';
+import 'blog_image_layout_chips.dart';
 import 'rich_paragraph_editor.dart';
 import 'unsplash_block_editor.dart';
 
@@ -29,8 +32,6 @@ const _codeLanguages = [
   'html',
   'css',
 ];
-
-const _imageLayouts = ['landscape', 'square', 'fullWidth'];
 
 class BlogWriteBlockEditor extends StatelessWidget {
   const BlogWriteBlockEditor({
@@ -269,22 +270,13 @@ class _ImageEditor extends StatefulWidget {
 }
 
 class _ImageEditorState extends State<_ImageEditor> {
-  late final TextEditingController _title;
   late String _layout;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _title = TextEditingController(text: widget.block.payload['title']?.toString() ?? '');
-    _layout = widget.block.payload['layout']?.toString() ?? 'landscape';
-    if (!_imageLayouts.contains(_layout)) _layout = 'landscape';
-  }
-
-  @override
-  void dispose() {
-    _title.dispose();
-    super.dispose();
+    _layout = coerceBlogImageLayout(widget.block.payload['layout']?.toString());
   }
 
   Future<void> _pickImage() async {
@@ -296,18 +288,24 @@ class _ImageEditorState extends State<_ImageEditor> {
       setState(() => _error = formatUserMessage(result.error!));
       return;
     }
+    final fileName = result.fileName ?? 'blog-image.jpg';
+    final deviceLabel = await resolveMobileDeviceLabel();
+    if (!mounted) return;
+    final alt = blogImageAltFromPick(deviceLabel: deviceLabel, fileName: fileName);
+    final payload = Map<String, dynamic>.from(widget.block.payload)
+      ..['title'] = alt
+      ..['layout'] = _layout;
     widget.onChanged(
       widget.block.copyWith(
+        payload: payload,
         pendingImageBytes: result.bytes,
-        pendingImageFileName: result.fileName ?? 'blog-image.jpg',
+        pendingImageFileName: fileName,
       ),
     );
   }
 
-  void _emitMeta() {
-    final payload = Map<String, dynamic>.from(widget.block.payload)
-      ..['title'] = _title.text.trim()
-      ..['layout'] = _layout;
+  void _emitLayout() {
+    final payload = Map<String, dynamic>.from(widget.block.payload)..['layout'] = _layout;
     widget.onChanged(widget.block.copyWith(payload: payload));
   }
 
@@ -317,6 +315,7 @@ class _ImageEditorState extends State<_ImageEditor> {
     final url = widget.block.payload['url']?.toString();
     final resolved = url != null && url.isNotEmpty ? resolveProfileMediaUrl(url) : null;
     final bytes = widget.block.pendingImageBytes;
+    final hasImage = bytes != null || (resolved != null && resolved.isNotEmpty);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,31 +336,26 @@ class _ImageEditorState extends State<_ImageEditor> {
             child: Image.network(resolved, height: 160, width: double.infinity, fit: BoxFit.cover),
           )
         else
-          OutlinedButton.icon(
-            onPressed: _pickImage,
-            icon: const Icon(Icons.upload_rounded, size: 18),
-            label: const Text('Upload image or GIF'),
+          ImageUploadPickZone(
+            onTap: _pickImage,
+            prompt: 'Upload image or GIF',
+            hint: 'JPEG · PNG · GIF · WEBP',
           ),
-        const SizedBox(height: 10),
-        AuthTextField(
-          controller: _title,
-          label: 'Caption / alt text',
-          onChanged: (_) => _emitMeta(),
-        ),
+        if (hasImage) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: _pickImage,
+            icon: const Icon(Icons.photo_library_outlined, size: 16),
+            label: const Text('Choose another'),
+          ),
+        ],
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: [
-            for (final layout in _imageLayouts)
-              ChoiceChip(
-                label: Text(layout),
-                selected: _layout == layout,
-                onSelected: (_) {
-                  setState(() => _layout = layout);
-                  _emitMeta();
-                },
-              ),
-          ],
+        BlogImageLayoutChips(
+          selected: _layout,
+          onSelected: (layout) {
+            setState(() => _layout = layout);
+            _emitLayout();
+          },
         ),
       ],
     );

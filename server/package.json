@@ -46,7 +46,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "express-rate-limit": "^8.2.1",
+    "express-rate-limit": "^8.2.2",
     "express-session": "^1.18.1",
     "flexsearch": "^0.8.212",
     "helmet": "^8.1.0",
@@ -73,7 +73,10 @@
   "overrides": {
     "passport-oauth": {
       "passport": "^0.7.0"
-    }
+    },
+    "handlebars": "4.7.9",
+    "path-to-regexp": "0.1.13",
+    "picomatch@2": "2.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

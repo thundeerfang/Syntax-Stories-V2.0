@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-/// Inline GIF marker in the editing buffer (zero-width; paired with [kParagraphGifSlotTail]).
-const kParagraphGifPlaceholder = '\u200B';
+/// Inline GIF marker — one object-replacement char per GIF ([ExtendedTextField] ImageSpan).
+const kParagraphGifPlaceholder = '\uFFFC';
 
 /// Display size for inline GIFs while editing (matches text line height for cursor alignment).
 const double kParagraphInlineGifEditSize = 21;
@@ -12,11 +12,8 @@ const double kParagraphInlineGifPreviewSize = 48;
 /// Default inline GIF size (editing).
 const double kParagraphInlineGifSize = kParagraphInlineGifEditSize;
 
-/// Width reserve after each marker so the caret sits to the right of the GIF overlay.
-const kParagraphGifSlotTail = '\u2001\u2001';
-
 /// Full editing slot written into the text field for one inline GIF.
-const kParagraphGifEditingSlot = '$kParagraphGifPlaceholder$kParagraphGifSlotTail';
+const kParagraphGifEditingSlot = kParagraphGifPlaceholder;
 
 const int kParagraphGifSlotLength = kParagraphGifEditingSlot.length;
 
@@ -29,31 +26,32 @@ int paragraphGifSlotEnd(String text, int index) {
 
 bool isParagraphGifSlotTailIndex(String text, int index) {
   if (index <= 0 || index >= text.length) return false;
-  for (var back = 1; back < kParagraphGifSlotLength; back++) {
+  if (!_isLegacyGifSlotTailChar(text[index])) return false;
+  for (var back = 1; back <= 2; back++) {
     final start = index - back;
     if (start < 0) break;
-    if (text[start] == kParagraphGifPlaceholder) return true;
+    if (text[start] == '\u200B') return true;
   }
   return false;
 }
 
-bool _isGifSlotTailChar(String char) =>
+bool _isLegacyGifSlotTailChar(String char) =>
     char == '\u2001' || char == '\u2007' || char == '\u2002' || char == ' ';
 
 String normalizeParagraphEditingText(String text) {
-  var normalized = text.replaceAll('\uFFFC', kParagraphGifPlaceholder);
   final buffer = StringBuffer();
   var i = 0;
-  while (i < normalized.length) {
-    if (normalized[i] == kParagraphGifPlaceholder) {
+  while (i < text.length) {
+    final char = text[i];
+    if (char == kParagraphGifPlaceholder || char == '\u200B') {
       buffer.write(kParagraphGifEditingSlot);
       i++;
-      while (i < normalized.length && _isGifSlotTailChar(normalized[i])) {
+      while (i < text.length && _isLegacyGifSlotTailChar(text[i])) {
         i++;
       }
       continue;
     }
-    buffer.write(normalized[i]);
+    buffer.write(char);
     i++;
   }
   return buffer.toString();

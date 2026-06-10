@@ -159,9 +159,11 @@ class _BlogCreateScreenState extends State<BlogCreateScreen> {
                 ],
               ),
             ),
-            BlogWriteOrbitFab(
-              blockCount: _blocks.length,
-              onAddBlock: _addBlock,
+            Positioned.fill(
+              child: BlogWriteOrbitFab(
+                blockCount: _blocks.length,
+                onAddBlock: _addBlock,
+              ),
             ),
           ],
         ),

@@ -1,12 +1,13 @@
 import 'dart:convert';
 
+import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/giphy_api.dart';
 import '../../theme/app_color_tokens.dart';
 import '../../utils/paragraph_doc.dart';
-import '../../utils/paragraph_rich_spans.dart';
+import '../../utils/paragraph_extended_span_builder.dart';
 import '../../utils/url_normalize.dart';
 import '../../utils/user_message_case.dart';
 import '../ui/unfocus_tap_region.dart';
@@ -65,7 +66,11 @@ class _RichParagraphEditorState extends State<RichParagraphEditor> {
     if (_controller.text != text) {
       _controller.text = text;
     }
-    _controller.selection = selection;
+    _setSelection(
+      baseOffset: selection.baseOffset,
+      extentOffset: selection.extentOffset,
+      textLength: _controller.text.length,
+    );
   }
 
   @override
@@ -106,9 +111,28 @@ class _RichParagraphEditorState extends State<RichParagraphEditor> {
     if (_controller.text == next) return;
     final selection = _controller.selection;
     _controller.text = next;
+    _setSelection(
+      baseOffset: selection.baseOffset,
+      extentOffset: selection.extentOffset,
+      textLength: next.length,
+    );
+  }
+
+  void _setCollapsedSelection(int offset, {String? text}) {
+    final length = text?.length ?? _controller.text.length;
+    _controller.selection = TextSelection.collapsed(
+      offset: offset.clamp(0, length),
+    );
+  }
+
+  void _setSelection({
+    required int baseOffset,
+    required int extentOffset,
+    required int textLength,
+  }) {
     _controller.selection = TextSelection(
-      baseOffset: selection.baseOffset.clamp(0, next.length),
-      extentOffset: selection.extentOffset.clamp(0, next.length),
+      baseOffset: baseOffset.clamp(0, textLength),
+      extentOffset: extentOffset.clamp(0, textLength),
     );
   }
 
@@ -125,6 +149,8 @@ class _RichParagraphEditorState extends State<RichParagraphEditor> {
   }
 
   Future<void> _openLinkSheet() async {
+    final linkStart = _cursorStart;
+    final linkEnd = _cursorEnd;
     final initialHref = _doc.pendingLinkHref ?? '';
     final result = await showModalBottomSheet<({String href, String label})?>(
       context: context,
@@ -135,16 +161,16 @@ class _RichParagraphEditorState extends State<RichParagraphEditor> {
     if (!mounted || result == null) return;
 
     if (result.href.isEmpty) {
-      _doc.clearLink(_cursorStart, _cursorEnd);
-      if (_cursorStart != _cursorEnd) _emit();
-    } else if (_cursorStart == _cursorEnd) {
-      _doc.insertLinkLabel(_cursorStart, result.label, result.href);
+      _doc.clearLink(linkStart, linkEnd);
+      if (linkStart != linkEnd) _emit();
+    } else if (linkStart == linkEnd) {
+      _doc.insertLinkLabel(linkStart, result.label, result.href);
       _controller.text = _doc.editingText;
       final labelLen = result.label.trim().isEmpty ? result.href.length : result.label.trim().length;
-      _controller.selection = TextSelection.collapsed(offset: _cursorStart + labelLen);
+      _setCollapsedSelection(linkStart + labelLen, text: _doc.editingText);
       _emit();
     } else {
-      _doc.applyLink(_cursorStart, _cursorEnd, result.href);
+      _doc.applyLink(linkStart, linkEnd, result.href);
       _controller.text = _doc.editingText;
       _emit();
     }
@@ -169,7 +195,7 @@ class _RichParagraphEditorState extends State<RichParagraphEditor> {
     final index = _cursorStart;
     _doc.insertGif(index, gif);
     _controller.text = _doc.editingText;
-    _controller.selection = TextSelection.collapsed(offset: index + kParagraphGifSlotLength);
+    _setCollapsedSelection(index + kParagraphGifSlotLength, text: _doc.editingText);
     _emit();
     setState(() {});
   }
@@ -300,18 +326,6 @@ class _RichParagraphInputState extends State<_RichParagraphInput> {
       forceStrutHeight: true,
       leading: 0,
     );
-    const textHeightBehavior = TextHeightBehavior(
-      applyHeightToFirstAscent: true,
-      applyHeightToLastDescent: true,
-    );
-    final spans = buildParagraphRichSpans(
-      doc: widget.doc,
-      displayText: widget.controller.text,
-      baseStyle: baseStyle,
-      colors: colors,
-      gifSize: kParagraphInlineGifEditSize,
-      forEditing: true,
-    );
     final borderColor = _focusNode.hasFocus ? colors.primary : colors.border;
     final contentPadding = _padding;
 
@@ -322,51 +336,41 @@ class _RichParagraphInputState extends State<_RichParagraphInput> {
         border: Border.all(color: borderColor, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Padding(
-            padding: contentPadding,
-            child: IgnorePointer(
-              child: Text.rich(
-                TextSpan(style: baseStyle, children: spans),
-                textAlign: TextAlign.start,
-                strutStyle: strutStyle,
-                textHeightBehavior: textHeightBehavior,
-              ),
-            ),
+      child: TextSelectionTheme(
+        data: TextSelectionThemeData(
+          cursorColor: colors.primary,
+          selectionColor: colors.primary.withValues(alpha: 0.25),
+        ),
+        child: ExtendedTextField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          minLines: 4,
+          maxLines: null,
+          textCapitalization: TextCapitalization.sentences,
+          onChanged: widget.onChanged,
+          style: baseStyle,
+          strutStyle: strutStyle,
+          cursorHeight: fontSize * lineHeight,
+          specialTextSpanBuilder: ParagraphExtendedSpanBuilder(
+            doc: widget.doc,
+            colors: colors,
+            baseStyle: baseStyle,
           ),
-          TextSelectionTheme(
-            data: TextSelectionThemeData(
-              cursorColor: colors.primary,
-              selectionColor: colors.primary.withValues(alpha: 0.25),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: colors.background,
+            hintText: 'Write your paragraph…',
+            hintStyle: GoogleFonts.inter(
+              fontSize: 14,
+              height: 1.5,
+              color: colors.mutedForeground.withValues(alpha: 0.7),
             ),
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              minLines: 4,
-              maxLines: null,
-              textCapitalization: TextCapitalization.sentences,
-              onChanged: widget.onChanged,
-              style: baseStyle.copyWith(color: Colors.transparent, height: lineHeight),
-              strutStyle: strutStyle,
-              cursorHeight: fontSize * lineHeight,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.transparent,
-                hintText: 'Write your paragraph…',
-                hintStyle: GoogleFonts.inter(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: colors.mutedForeground.withValues(alpha: 0.7),
-                ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: contentPadding,
-              ),
-            ),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: contentPadding,
           ),
-        ],
+        ),
       ),
     );
   }
