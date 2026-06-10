@@ -30,8 +30,8 @@ const ALLOWED_TYPES = new Set([
   'mermaidDiagram',
 ]);
 
-const MAX_TABLE_ROWS = 40;
-const MAX_TABLE_COLS = 16;
+const MAX_TABLE_ROWS = 20;
+const MAX_TABLE_COLS = 5;
 const MAX_TABLE_CELL_CHARS = 4_000;
 const MAX_MERMAID_SOURCE_CHARS = 120_000;
 
@@ -145,13 +145,46 @@ function sanitizeCodePayload(p: unknown): Record<string, unknown> {
   return out;
 }
 
+function parseGithubRepoUrl(url: string): { owner: string; repo: string } | null {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return null;
+  try {
+    const u = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    if (!/^(www\.)?github\.com$/i.test(u.hostname)) return null;
+    const parts = u.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+    if (parts.length >= 2) {
+      return { owner: parts[0], repo: parts[1].replace(/\.git$/, '') };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function sanitizeGithubPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
   if (!isPlainObject(p)) throw new Error('githubRepo payload must be an object');
   const out: Record<string, unknown> = {};
-  for (const key of ['owner', 'repo', 'name', 'url', 'avatarUrl'] as const) {
-    if (typeof p[key] === 'string') out[key] = truncateString(p[key] as string, MAX_URL_LEN);
+
+  const urlRaw = typeof p.url === 'string' ? p.url.trim() : '';
+  const parsedFromUrl = urlRaw ? parseGithubRepoUrl(urlRaw) : null;
+  const ownerRaw = typeof p.owner === 'string' ? p.owner.trim() : '';
+  const repoRaw = typeof p.repo === 'string' ? p.repo.trim() : '';
+
+  if (parsedFromUrl) {
+    out.owner = truncateString(parsedFromUrl.owner, MAX_URL_LEN);
+    out.repo = truncateString(parsedFromUrl.repo, MAX_URL_LEN);
+    out.url = `https://github.com/${parsedFromUrl.owner}/${parsedFromUrl.repo}`;
+  } else if (ownerRaw && repoRaw) {
+    out.owner = truncateString(ownerRaw, MAX_URL_LEN);
+    out.repo = truncateString(repoRaw, MAX_URL_LEN);
+    out.url = `https://github.com/${ownerRaw}/${repoRaw}`;
+  } else if (urlRaw) {
+    throw new Error('githubRepo url must be a valid https://github.com/owner/repo link');
   }
+
+  if (typeof p.name === 'string') out.name = truncateString(p.name, MAX_URL_LEN);
+  if (typeof p.avatarUrl === 'string') out.avatarUrl = truncateString(p.avatarUrl, MAX_URL_LEN);
   if (typeof p.description === 'string')
     out.description = truncateString(p.description, MAX_GITHUB_DESC);
   return out;
@@ -166,6 +199,14 @@ function sanitizeTablePayload(p: unknown): Record<string, unknown> {
   if (!Array.isArray(rowsIn)) {
     out.rows = [];
     return out;
+  }
+  if (rowsIn.length > MAX_TABLE_ROWS) {
+    throw new Error(`table exceeds maximum of ${MAX_TABLE_ROWS} rows`);
+  }
+  for (const row of rowsIn) {
+    if (Array.isArray(row) && row.length > MAX_TABLE_COLS) {
+      throw new Error(`table exceeds maximum of ${MAX_TABLE_COLS} columns`);
+    }
   }
   const rows: string[][] = [];
   for (let r = 0; r < rowsIn.length && r < MAX_TABLE_ROWS; r++) {

@@ -1,4 +1,5 @@
 const MAX_TAGS = 20;
+export const MAX_CATEGORIES = 3;
 const TAG_SLUG_LEN = 32;
 const CATEGORY_SLUG_LEN = 48;
 const LANGUAGE_MAX = 12;
@@ -17,20 +18,43 @@ function slugifyToken(s: string, maxLen: number): string {
 
 export type NormalizedTaxonomy = {
   category?: string;
+  categories?: string[];
   tags?: string[];
   language?: string;
 };
 
+function normalizeCategories(body: {
+  category?: unknown;
+  categories?: unknown;
+}): string[] | undefined {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  if (Array.isArray(body.categories)) {
+    for (const raw of body.categories) {
+      if (typeof raw !== 'string') continue;
+      const c = slugifyToken(raw, CATEGORY_SLUG_LEN);
+      if (!c || seen.has(c)) continue;
+      seen.add(c);
+      out.push(c);
+      if (out.length >= MAX_CATEGORIES) break;
+    }
+  } else if (typeof body.category === 'string' && body.category.trim()) {
+    const c = slugifyToken(body.category, CATEGORY_SLUG_LEN);
+    if (c) out.push(c);
+  }
+
+  return out.length ? out : undefined;
+}
+
 export function normalizeTaxonomyInput(body: {
   category?: unknown;
+  categories?: unknown;
   tags?: unknown;
   language?: unknown;
 }): NormalizedTaxonomy {
-  let category: string | undefined;
-  if (typeof body.category === 'string' && body.category.trim()) {
-    const c = slugifyToken(body.category, CATEGORY_SLUG_LEN);
-    if (c) category = c;
-  }
+  const categories = normalizeCategories(body);
+  const category = categories?.[0];
 
   let tags: string[] | undefined;
   if (Array.isArray(body.tags)) {
@@ -57,5 +81,5 @@ export function normalizeTaxonomyInput(body: {
     if (l) language = l;
   }
 
-  return { category, tags, language };
+  return { category, categories, tags, language };
 }

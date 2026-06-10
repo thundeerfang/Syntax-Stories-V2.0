@@ -73,7 +73,7 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     id: 'githubRepo',
     label: 'GitHub repo',
     icon: GithubIcon,
-    description: 'Showcase an open-source repository directly in your story.',
+    description: 'Link a repository with a https://github.com/owner/repo URL.',
   },
   {
     id: 'unsplashImage',
@@ -85,7 +85,7 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     id: 'table',
     label: 'Table',
     icon: Table2,
-    description: 'Paste tab-separated or pipe markdown; great for feature comparisons.',
+    description: 'Build a grid (up to 20×5) for comparisons and structured data.',
   },
   {
     id: 'mermaidDiagram',

@@ -24,6 +24,7 @@ import { cn } from '@/lib/core/utils';
 import { coerceImageLayout } from '@/lib/blog/blogImageLayout';
 import { uploadMedia } from '@/api/upload';
 import { searchUnsplashPhotos, type UnsplashPhoto } from '@/api/unsplash';
+import { Skeleton } from '@/components/ui/feedback/Skeleton';
 import {
   fetchRepoByUrl,
   fetchMyRepos,
@@ -595,7 +596,11 @@ function ImageBlockEditor({
         onRemove={onRemove}
         onReupload={() => inputRef.current?.click()}
         fieldId={fieldId}
-        imgClassName="h-full w-full object-cover object-center"
+        imgClassName={
+          layout === 'fullWidth'
+            ? 'h-full w-full object-contain object-center'
+            : 'h-full w-full object-cover object-center'
+        }
       />
     );
     if (layout === 'square') {
@@ -610,7 +615,7 @@ function ImageBlockEditor({
     if (layout === 'fullWidth') {
       return (
         <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow">
-          <div className="relative h-80 w-full min-w-0 sm:h-88 lg:h-104">{overlays}</div>
+          <div className="relative aspect-video w-full min-w-0 bg-background">{overlays}</div>
         </div>
       );
     }
@@ -899,14 +904,6 @@ function VideoEmbedBlockEditor({
   return (
     <BlockCard title="Video embed" icon={Film} onRemove={onRemove}>
       <div className="space-y-4">
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Add up to three links. YouTube watch URLs become embeds. Missing{' '}
-          <code className="border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
-            ?v=
-          </code>{' '}
-          shows an error until fixed.
-        </p>
-
         <div className="border-2 border-border bg-muted/25 p-3 shadow">
           <div className={cn('grid gap-4', showColumnLayout ? 'sm:grid-cols-2' : 'grid-cols-1')}>
             <div className="space-y-2">
@@ -1341,7 +1338,7 @@ function UnsplashBlockEditor({
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) return;
+    if (searchQuery.trim().length <= 3) return;
     setSearching(true);
     setSearchError(null);
     try {
@@ -1386,7 +1383,11 @@ function UnsplashBlockEditor({
         onCaptionChange={(value) => onUpdate({ ...payload, caption: value })}
         onRemove={onRemove}
         fieldId={blockId}
-        imgClassName="h-full w-full object-cover object-center"
+        imgClassName={
+          layout === 'fullWidth'
+            ? 'h-full w-full object-contain object-center'
+            : 'h-full w-full object-cover object-center'
+        }
       />
     );
     if (layout === 'square') {
@@ -1401,7 +1402,7 @@ function UnsplashBlockEditor({
     if (layout === 'fullWidth') {
       return (
         <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow">
-          <div className="relative h-80 w-full min-w-0 sm:h-88 lg:h-104">{overlays}</div>
+          <div className="relative aspect-video w-full min-w-0 bg-background">{overlays}</div>
         </div>
       );
     }
@@ -1435,14 +1436,24 @@ function UnsplashBlockEditor({
           <button
             type="button"
             onClick={handleSearch}
-            disabled={searching || !searchQuery.trim()}
-            className="border-0 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase text-primary-foreground hover:brightness-110 disabled:opacity-50"
+            disabled={searching || searchQuery.trim().length <= 3}
+            className="rounded-none border-0 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase text-primary-foreground hover:brightness-110 disabled:opacity-50"
           >
             {searching ? '…' : 'Search'}
           </button>
         </div>
         {searchError && <p className="text-[10px] text-destructive">{searchError}</p>}
-        {results.length > 0 && (
+        {searching ? (
+          <div
+            className="grid grid-cols-4 gap-1.5 max-h-56 overflow-hidden border-0 bg-muted/15 p-1.5 ring-1 ring-border/30"
+            aria-busy
+            aria-label="Loading Unsplash photos"
+          >
+            {Array.from({ length: 12 }, (_, index) => (
+              <Skeleton key={`unsplash-sk-${index}`} className="aspect-square bg-muted/50" />
+            ))}
+          </div>
+        ) : results.length > 0 ? (
           <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto border-0 bg-muted/15 p-1.5 ring-1 ring-border/30">
             {results.map((photo) => (
               <button
@@ -1460,7 +1471,7 @@ function UnsplashBlockEditor({
               </button>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </BlockCard>
   );

@@ -50,6 +50,12 @@ dependencies:
   extended_text: ^15.0.2
   extended_text_field: ^16.0.2
 
+dependency_overrides:
+  extended_text_field:
+    git:
+      url: https://github.com/polbatllo/extended_text_field.git
+      ref: e433ae1aac3daeecc63a7a6d000e9926a4c57cfe
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

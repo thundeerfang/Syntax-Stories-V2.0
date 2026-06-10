@@ -68,3 +68,51 @@ bool _isYoutubeId(String? id) {
   if (id == null || id.isEmpty) return false;
   return RegExp(r'^[\w-]{6,}$', caseSensitive: false).hasMatch(id);
 }
+
+String? youtubeVideoIdFromEmbedUrl(String embedUrl) {
+  final uri = Uri.tryParse(embedUrl.trim());
+  if (uri == null) return null;
+  final host = uri.host.replaceFirst(RegExp(r'^www\.', caseSensitive: false), '').toLowerCase();
+  if (host != 'youtube.com' && host != 'm.youtube.com') return null;
+  final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+  if (segments.isEmpty || segments.first != 'embed') return null;
+  if (segments.length < 2) return null;
+  final id = segments[1];
+  return _isYoutubeId(id) ? id : null;
+}
+
+String? youtubeThumbnailUrl(String embedUrl) {
+  final id = youtubeVideoIdFromEmbedUrl(embedUrl);
+  if (id == null) return null;
+  return 'https://i.ytimg.com/vi/$id/mqdefault.jpg';
+}
+
+String clampVideoEmbedSize({
+  required int videoCount,
+  required String size,
+  required String layout,
+}) {
+  if (layout == 'column') return size;
+  if (videoCount >= 3) return 'sm';
+  if (videoCount == 2) return size == 'lg' ? 'md' : size;
+  return size;
+}
+
+bool videoEmbedSizeDisabled({
+  required String option,
+  required int videoCount,
+  required String layout,
+}) {
+  if (layout == 'column') return false;
+  if (videoCount >= 3) return option != 'sm';
+  if (videoCount == 2) return option == 'lg';
+  return false;
+}
+
+double videoEmbedPreviewWidth(String size) {
+  return switch (size) {
+    'sm' => 124,
+    'lg' => 320,
+    _ => 184,
+  };
+}

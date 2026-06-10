@@ -1,3 +1,4 @@
+const blogMaxCategories = 3;
 const blogMaxTags = 20;
 const blogTagMaxLen = 32;
 const blogCategoryMaxLen = 48;
@@ -27,6 +28,16 @@ String normalizeBlogCategory(String raw) {
       .replaceAll(RegExp(r'-+$'), '');
   if (slug.isEmpty) return '';
   return slug.length <= blogCategoryMaxLen ? slug : slug.substring(0, blogCategoryMaxLen);
+}
+
+List<String> toggleBlogCategory(List<String> current, String slug) {
+  final normalized = normalizeBlogCategory(slug);
+  if (normalized.isEmpty) return current;
+  if (current.contains(normalized)) {
+    return current.where((c) => c != normalized).toList();
+  }
+  if (current.length >= blogMaxCategories) return current;
+  return [...current, normalized];
 }
 
 List<String> addBlogTag(List<String> current, String raw) {

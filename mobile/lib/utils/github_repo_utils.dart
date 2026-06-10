@@ -23,7 +23,9 @@ GithubRepoParseResult parseGithubRepoUrl(String raw) {
   if (uri == null) return const GithubRepoParseResult();
 
   final host = uri.host.toLowerCase();
-  if (!host.contains('github.com')) return const GithubRepoParseResult();
+  if (!RegExp(r'^(www\.)?github\.com$').hasMatch(host)) {
+    return const GithubRepoParseResult();
+  }
 
   final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
   if (segments.length < 2) return const GithubRepoParseResult();

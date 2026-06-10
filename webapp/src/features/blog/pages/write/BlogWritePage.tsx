@@ -13,6 +13,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { ImageUploadCropDialog } from '@/components/upload';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { BlogWriteDeployOverlay } from '@/features/blog';
+import { validateBlocksForPublishAsync } from '@/lib/blog/blockContentValidation';
 import type { BlogPublishTaxonomy } from '@/lib/blog/blogPublishTaxonomy';
 import type { BlogTaxonomyRow } from '@/types/blog';
 import {
@@ -569,19 +570,31 @@ export default function WriteBlogPage() {
       toast.error('ERROR: TITLE_REQUIRED');
       return;
     }
-    setDeployOverlayInitialSquadId(squadMongoIdRef.current);
-    setPublishDialogSnapshot({
-      category: postCategory,
-      tags: [...postTags],
-      language: postLanguage,
-    });
-    setDeployOverlayOpen(true);
-  }, [title, postCategory, postTags, postLanguage]);
+    void (async () => {
+      const blockError = await validateBlocksForPublishAsync(blocks);
+      if (blockError) {
+        toast.error(blockError);
+        return;
+      }
+      setDeployOverlayInitialSquadId(squadMongoIdRef.current);
+      setPublishDialogSnapshot({
+        category: postCategory,
+        tags: [...postTags],
+        language: postLanguage,
+      });
+      setDeployOverlayOpen(true);
+    })();
+  }, [title, blocks, postCategory, postTags, postLanguage]);
 
   const executePublish = useCallback(
     async (taxonomy: BlogPublishTaxonomy, squadMongoId: string | null) => {
       if (!title.trim()) {
         toast.error('ERROR: TITLE_REQUIRED');
+        return;
+      }
+      const blockError = await validateBlocksForPublishAsync(blocks);
+      if (blockError) {
+        toast.error(blockError);
         return;
       }
       if (!token) return;

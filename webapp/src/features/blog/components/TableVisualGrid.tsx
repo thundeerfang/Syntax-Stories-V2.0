@@ -1,12 +1,17 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
-import { MAX_TABLE_CELL_CHARS, truncateCell } from '@/lib/blog/tableBlockLimits';
+import {
+  MAX_TABLE_CELL_CHARS,
+  MAX_TABLE_COLS,
+  MAX_TABLE_ROWS,
+  truncateCell,
+} from '@/lib/blog/tableBlockLimits';
 
-export const MAX_COLS = 12;
-export const MAX_ROWS = 24;
+export const MAX_COLS = MAX_TABLE_COLS;
+export const MAX_ROWS = MAX_TABLE_ROWS;
 export const MIN_COLS = 1;
 export const MIN_ROWS = 1;
 
@@ -77,21 +82,28 @@ export function TableVisualGrid({
     [grid, onChange]
   );
 
+  const deleteRow = useCallback(
+    (ri: number) => {
+      if (rowCount <= MIN_ROWS) return;
+      onChange(grid.filter((_, index) => index !== ri));
+    },
+    [grid, onChange, rowCount]
+  );
+
+  const deleteCol = useCallback(
+    (ci: number) => {
+      if (colCount <= MIN_COLS) return;
+      onChange(grid.map((row) => row.filter((_, index) => index !== ci)));
+    },
+    [colCount, grid, onChange]
+  );
+
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col gap-3', className)}>
       <div className={cn('flex flex-wrap items-center gap-3 text-[10px]', toolbarClassName)}>
         <span className="font-black uppercase text-muted-foreground">Size</span>
         <div className="flex items-center gap-1 border-2 border-border bg-muted/20 px-1 py-0.5">
           <span className="px-1 font-mono text-muted-foreground">Cols</span>
-          <button
-            type="button"
-            aria-label="Remove column"
-            className="p-1 hover:bg-card disabled:opacity-40"
-            disabled={colCount <= MIN_COLS}
-            onClick={() => bumpCols(-1)}
-          >
-            <Minus className="h-3.5 w-3.5" />
-          </button>
           <span className="min-w-[1.5rem] text-center font-mono font-bold">{colCount}</span>
           <button
             type="button"
@@ -105,15 +117,6 @@ export function TableVisualGrid({
         </div>
         <div className="flex items-center gap-1 border-2 border-border bg-muted/20 px-1 py-0.5">
           <span className="px-1 font-mono text-muted-foreground">Rows</span>
-          <button
-            type="button"
-            aria-label="Remove row"
-            className="p-1 hover:bg-card disabled:opacity-40"
-            disabled={rowCount <= MIN_ROWS}
-            onClick={() => bumpRows(-1)}
-          >
-            <Minus className="h-3.5 w-3.5" />
-          </button>
           <span className="min-w-[1.5rem] text-center font-mono font-bold">{rowCount}</span>
           <button
             type="button"
@@ -134,21 +137,68 @@ export function TableVisualGrid({
         )}
       >
         <table className="w-full min-w-[240px] border-collapse text-left text-[11px]">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="w-10 border-r border-border p-0" aria-hidden />
+              {grid[0]?.map((_, ci) => (
+                <th
+                  key={`vg-h-${ci}`}
+                  className="group relative max-w-[10rem] border-r border-border px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wide text-muted-foreground last:border-r-0"
+                >
+                  <span>C{ci + 1}</span>
+                  <button
+                    type="button"
+                    aria-label={`Delete column ${ci + 1}`}
+                    title="Delete column"
+                    disabled={colCount <= MIN_COLS}
+                    className={cn(
+                      'absolute right-0.5 top-0.5 rounded-sm p-0.5 text-destructive transition-opacity',
+                      'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+                      'hover:bg-destructive/10 focus:opacity-100 focus:outline-none focus:ring-1 focus:ring-destructive/40',
+                      'disabled:pointer-events-none disabled:opacity-0'
+                    )}
+                    onClick={() => deleteCol(ci)}
+                  >
+                    <Trash2 className="h-3 w-3" aria-hidden />
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
           <tbody>
             {grid.map((r, ri) => (
               <tr key={`vg-r-${ri}`} className="border-b border-border last:border-b-0">
+                <th className="group relative w-10 border-r border-border bg-muted/20 px-1 py-1 align-top font-mono text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <span>R{ri + 1}</span>
+                  <button
+                    type="button"
+                    aria-label={`Delete row ${ri + 1}`}
+                    title="Delete row"
+                    disabled={rowCount <= MIN_ROWS}
+                    className={cn(
+                      'absolute right-0.5 top-0.5 rounded-sm p-0.5 text-destructive transition-opacity',
+                      'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+                      'hover:bg-destructive/10 focus:opacity-100 focus:outline-none focus:ring-1 focus:ring-destructive/40',
+                      'disabled:pointer-events-none disabled:opacity-0'
+                    )}
+                    onClick={() => deleteRow(ri)}
+                  >
+                    <Trash2 className="h-3 w-3" aria-hidden />
+                  </button>
+                </th>
                 {r.map((cell, ci) => (
                   <td
                     key={`vg-c-${ri}-${ci}`}
-                    className="border-r border-border p-0 last:border-r-0 align-top"
+                    className="max-w-[10rem] border-r border-border p-0 last:border-r-0 align-top"
                   >
                     <input
                       type="text"
                       value={cell}
                       maxLength={MAX_TABLE_CELL_CHARS}
                       onChange={(e) => setCell(ri, ci, e.target.value)}
-                      className="h-full min-h-[2rem] w-full min-w-[4.5rem] border-0 bg-transparent px-2 py-1.5 font-mono text-[11px] focus:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/40"
+                      className="h-full min-h-[2rem] w-full min-w-[4.5rem] max-w-full truncate border-0 bg-transparent px-2 py-1.5 font-mono text-[11px] focus:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/40"
                       aria-label={`Cell row ${ri + 1} column ${ci + 1}`}
+                      title={cell}
                     />
                   </td>
                 ))}

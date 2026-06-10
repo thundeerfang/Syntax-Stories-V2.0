@@ -67,7 +67,14 @@ const BLOG_SQUARE_EMBED_MAX_CLASS = 'w-full max-w-xl shrink-0';
 const BLOG_LANDSCAPE_EMBED_MAX_CLASS = 'w-full max-w-2xl shrink-0';
 
 /** Layout-only; transform/transition live in `globals.css` (`.ss-blog-raster-hover*`) for reliable easing. */
-const BLOG_RASTER_IMG_CLASS = 'ss-blog-raster-hover absolute inset-0 h-full w-full object-cover';
+const BLOG_RASTER_IMG_COVER_CLASS =
+  'ss-blog-raster-hover absolute inset-0 h-full w-full object-cover object-center';
+const BLOG_RASTER_IMG_CONTAIN_CLASS =
+  'ss-blog-raster-hover absolute inset-0 h-full w-full object-contain object-center';
+
+function blogRasterImgClass(layout: ImageBlockLayout): string {
+  return layout === 'fullWidth' ? BLOG_RASTER_IMG_CONTAIN_CLASS : BLOG_RASTER_IMG_COVER_CLASS;
+}
 const BLOG_RASTER_HOVER_GROUP_CLASS = 'ss-blog-raster-hover-group';
 
 function BlogHeroThumbnailPreview({
@@ -203,7 +210,7 @@ function embeddedFigureInnerClass(
       }
       return 'mx-auto aspect-square w-full min-h-0 min-w-0 max-w-xl ';
     case 'fullWidth':
-      return 'w-full min-h-[20rem] max-h-[min(42rem,88vh)]  sm:min-h-[22rem] lg:min-h-[26rem]';
+      return 'relative aspect-video w-full min-h-0';
     case 'landscape':
     default:
       return 'aspect-video w-full ';
@@ -345,7 +352,7 @@ function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>
         BLOG_RASTER_HOVER_GROUP_CLASS
       )}
     >
-      <img src={url} alt={alt} className={BLOG_RASTER_IMG_CLASS} />
+      <img src={url} alt={alt} className={blogRasterImgClass(layout)} />
       {openPreview ? (
         <button
           type="button"
@@ -428,7 +435,7 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
         BLOG_RASTER_HOVER_GROUP_CLASS
       )}
     >
-      <img src={url} alt={alt} className={BLOG_RASTER_IMG_CLASS} />
+      <img src={url} alt={alt} className={blogRasterImgClass(layout)} />
       {openPreview ? (
         <button
           type="button"

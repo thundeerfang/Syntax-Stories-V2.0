@@ -500,14 +500,41 @@ class ParagraphDoc {
     _applyToggle(start, end, clearLink: true);
   }
 
-  void insertLinkLabel(int index, String label, String href) {
+  /// Inserts a link at [index]. Returns the caret index after the inserted link
+  /// (including any auto-added spacing).
+  int insertLinkLabel(int index, String label, String href) {
     final safeLabel = label.trim().isEmpty ? href : label.trim();
+
+    var prefix = '';
+    if (index > 0) {
+      final charBefore = editingText[index - 1];
+      if (charBefore != ' ' &&
+          charBefore != '\n' &&
+          charBefore != kParagraphGifPlaceholder) {
+        prefix = ' ';
+      }
+    }
+
+    var suffix = ' ';
+    if (index < editingText.length) {
+      final charAfter = editingText[index];
+      if (charAfter == ' ' || charAfter == '\n') {
+        suffix = '';
+      }
+    }
+
+    final insertText = '$prefix$safeLabel$suffix';
     final before = editingText.substring(0, index);
     final after = editingText.substring(index);
-    editingText = '$before$safeLabel$after';
-    _shiftMarksAndGifs(index, safeLabel.length);
-    _marks.add(_MarkRange(start: index, end: index + safeLabel.length, linkHref: href));
+    editingText = '$before$insertText$after';
+
+    final linkStart = index + prefix.length;
+    final linkEnd = linkStart + safeLabel.length;
+    _shiftMarksAndGifs(index, insertText.length);
+    _marks.add(_MarkRange(start: linkStart, end: linkEnd, linkHref: href));
+    pendingLinkHref = null;
     _normalizeMarks();
+    return index + insertText.length;
   }
 
   void insertGif(int index, ParagraphGif gif) {
@@ -682,7 +709,8 @@ class ParagraphDoc {
     if (len <= 0) return;
     for (final mark in _marks) {
       if (mark.start >= insertAt) mark.start += len;
-      if (mark.end >= insertAt) mark.end += len;
+      // Only shift the exclusive end when insertion is inside the mark, not after it.
+      if (mark.end > insertAt) mark.end += len;
     }
   }
 
@@ -794,7 +822,7 @@ class ParagraphDoc {
   void _shiftMarksAndGifs(int index, int delta) {
     for (final mark in _marks) {
       if (mark.start >= index) mark.start += delta;
-      if (mark.end >= index) mark.end += delta;
+      if (mark.end > index) mark.end += delta;
     }
   }
 

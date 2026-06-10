@@ -29,7 +29,6 @@ class BlogWriteBlockList extends StatelessWidget {
   }
 
   void _reorder(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex--;
     final copy = List<BlogBlock>.from(blocks);
     final item = copy.removeAt(oldIndex);
     copy.insert(newIndex, item);
@@ -58,7 +57,7 @@ class BlogWriteBlockList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: blocks.length,
-      onReorder: _reorder,
+      onReorderItem: _reorder,
       proxyDecorator: (child, index, animation) {
         return Material(
           elevation: 4,
@@ -124,7 +123,6 @@ class _PartitionDividerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      key: key,
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
@@ -164,7 +162,6 @@ class _BlogWriteBlockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      key: key,
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: BoxDecoration(

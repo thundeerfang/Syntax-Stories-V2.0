@@ -3,7 +3,10 @@ import 'dart:convert';
 import '../models/blog_block.dart';
 import '../services/upload_api.dart';
 import 'blog_block_factory.dart';
+import 'github_repo_utils.dart';
 import 'paragraph_doc.dart';
+import 'mermaid_validate.dart';
+import 'table_block_limits.dart';
 
 String serializeBlogBlocks(List<BlogBlock> blocks) {
   final cleaned = stripLegacyGifBlocks(blocks);
@@ -15,6 +18,47 @@ bool blogBlocksHaveContent(List<BlogBlock> blocks) {
     if (_blockHasContent(block)) return true;
   }
   return false;
+}
+
+/// Returns a user-facing error when blocks fail publish-time validation, or null if ok.
+String? validateBlogBlocksForPublish(List<BlogBlock> blocks) {
+  for (final block in stripLegacyGifBlocks(blocks)) {
+    final p = block.payload;
+    switch (block.type) {
+      case BlogBlockType.githubRepo:
+        final owner = p['owner']?.toString().trim() ?? '';
+        final repo = p['repo']?.toString().trim() ?? '';
+        if (owner.isEmpty || repo.isEmpty) continue;
+        final url = p['url']?.toString().trim() ?? '';
+        if (url.isNotEmpty && !parseGithubRepoUrl(url).isValid) {
+          return 'GitHub repo block must use a valid https://github.com/owner/repo URL.';
+        }
+        if (url.isEmpty && !parseGithubRepoUrl('https://github.com/$owner/$repo').isValid) {
+          return 'GitHub repo block has an invalid owner/repo.';
+        }
+      case BlogBlockType.table:
+        final rows = p['rows'];
+        if (rows is! List) continue;
+        final matrix = rows
+            .whereType<List>()
+            .map((row) => row.map((c) => c.toString()).toList())
+            .toList();
+        if (!tableWithinLimits(matrix)) {
+          return 'Table block exceeds $maxTableRows rows or $maxTableCols columns.';
+        }
+        if (matrix.isNotEmpty && !tableHasContent(matrix)) {
+          return 'Table block needs at least one filled cell.';
+        }
+      case BlogBlockType.mermaidDiagram:
+        final source = p['source']?.toString() ?? '';
+        if (source.trim().isEmpty) continue;
+        final mermaidError = validateMermaidSourceHeuristic(source);
+        if (mermaidError != null) return mermaidError;
+      default:
+        break;
+    }
+  }
+  return null;
 }
 
 bool _blockHasContent(BlogBlock block) {
@@ -39,18 +83,20 @@ bool _blockHasContent(BlogBlock block) {
       if (videos is List && videos.any((v) => v.toString().trim().isNotEmpty)) return true;
       return (p['url']?.toString().trim() ?? '').isNotEmpty;
     case BlogBlockType.githubRepo:
-      return (p['owner']?.toString().trim() ?? '').isNotEmpty &&
-          (p['repo']?.toString().trim() ?? '').isNotEmpty;
+      final owner = p['owner']?.toString().trim() ?? '';
+      final repo = p['repo']?.toString().trim() ?? '';
+      if (owner.isEmpty || repo.isEmpty) return false;
+      final url = p['url']?.toString().trim() ?? '';
+      return url.isEmpty || parseGithubRepoUrl(url).isValid;
     case BlogBlockType.table:
       final rows = p['rows'];
       if (rows is! List) return false;
-      for (final row in rows) {
-        if (row is! List) continue;
-        for (final cell in row) {
-          if (cell.toString().trim().isNotEmpty) return true;
-        }
-      }
-      return false;
+      final matrix = rows
+          .whereType<List>()
+          .map((row) => row.map((c) => c.toString()).toList())
+          .toList();
+      if (!tableWithinLimits(matrix)) return false;
+      return tableHasContent(matrix);
     case BlogBlockType.mermaidDiagram:
       return (p['source']?.toString().trim() ?? '').isNotEmpty;
     default:

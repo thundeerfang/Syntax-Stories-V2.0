@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +6,7 @@ import '../../models/blog_block.dart';
 import '../../theme/app_color_tokens.dart';
 import 'blog_write_toolbar.dart';
 
-/// Bottom-right square FAB — tap to fan block chips in an orbital arc (right → left).
+/// Bottom-right square FAB — tap to stack block chips in a vertical line above it.
 class BlogWriteOrbitFab extends StatefulWidget {
   const BlogWriteOrbitFab({
     super.key,
@@ -25,15 +23,17 @@ class BlogWriteOrbitFab extends StatefulWidget {
 
 class _BlogWriteOrbitFabState extends State<BlogWriteOrbitFab> with SingleTickerProviderStateMixin {
   static const _fabSize = 52.0;
-  static const _orbitRadius = 136.0;
   static const _chipSize = 50.0;
   static const _chipIconSize = 22.0;
+  static const _borderWidth = 2.0;
+  static const _chipGap = 8.0;
 
   late final AnimationController _controller;
   late final Animation<double> _expand;
 
   bool get _open => _controller.value > 0.5;
   bool get _atLimit => widget.blockCount >= blogMaxBlocksPerSection;
+  double get _chipPitch => _chipSize + _chipGap;
 
   @override
   void initState() {
@@ -68,20 +68,12 @@ class _BlogWriteOrbitFabState extends State<BlogWriteOrbitFab> with SingleTicker
     _close();
   }
 
-  /// Upper semicircle arc: right (0 rad) → top → left (−π rad).
-  Offset _orbitOffset(int index, int total) {
-    const start = 0.0;
-    const end = -math.pi;
-    final t = total <= 1 ? 0.5 : index / (total - 1);
-    final angle = start + (end - start) * t;
-    return Offset(math.cos(angle) * _orbitRadius, math.sin(angle) * _orbitRadius);
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final items = blogWriteToolbarItems;
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final stackHeight = _fabSize + _chipGap + items.length * _chipPitch;
 
     return AnimatedBuilder(
       animation: _expand,
@@ -103,18 +95,18 @@ class _BlogWriteOrbitFabState extends State<BlogWriteOrbitFab> with SingleTicker
             Positioned(
               right: 20,
               bottom: 20 + bottom,
-              width: _fabSize + _orbitRadius + _chipSize,
-              height: _fabSize + _orbitRadius + _chipSize,
+              width: _fabSize,
+              height: stackHeight,
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.bottomRight,
                 children: [
                   for (var i = 0; i < items.length; i++)
-                    _OrbitChip(
+                    _FabChip(
                       item: items[i],
                       size: _chipSize,
                       iconSize: _chipIconSize,
-                      offset: _orbitOffset(i, items.length) * progress,
+                      bottom: _fabSize + _chipGap + i * _chipPitch * progress,
                       scale: progress,
                       opacity: progress,
                       disabled: _atLimit,
@@ -132,7 +124,7 @@ class _BlogWriteOrbitFabState extends State<BlogWriteOrbitFab> with SingleTicker
             if (_atLimit && progress > 0.8)
               Positioned(
                 right: 20,
-                bottom: 84 + bottom,
+                bottom: 20 + bottom + stackHeight + 8,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -153,12 +145,12 @@ class _BlogWriteOrbitFabState extends State<BlogWriteOrbitFab> with SingleTicker
   }
 }
 
-class _OrbitChip extends StatelessWidget {
-  const _OrbitChip({
+class _FabChip extends StatelessWidget {
+  const _FabChip({
     required this.item,
     required this.size,
     required this.iconSize,
-    required this.offset,
+    required this.bottom,
     required this.scale,
     required this.opacity,
     required this.onTap,
@@ -168,7 +160,7 @@ class _OrbitChip extends StatelessWidget {
   final BlogWriteToolbarItem item;
   final double size;
   final double iconSize;
-  final Offset offset;
+  final double bottom;
   final double scale;
   final double opacity;
   final VoidCallback onTap;
@@ -179,40 +171,42 @@ class _OrbitChip extends StatelessWidget {
     final colors = context.appColors;
     return Positioned(
       right: 0,
-      bottom: 0,
-      child: Transform.translate(
-        offset: Offset(offset.dx, offset.dy),
-        child: Transform.scale(
-          scale: scale.clamp(0.0, 1.0),
-          child: Opacity(
-            opacity: opacity.clamp(0.0, 1.0),
-            child: Material(
-              color: colors.card,
-              shape: const CircleBorder(),
-              elevation: 3,
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTapDown: disabled ? null : (_) => onTap(),
-                child: SizedBox(
-                  width: size,
-                  height: size,
-                  child: Center(
-                    child: item.iconAsset != null
-                        ? SvgPicture.asset(
-                            item.iconAsset!,
-                            width: iconSize,
-                            height: iconSize,
-                            colorFilter: ColorFilter.mode(
-                              disabled ? colors.mutedForeground : colors.foreground,
-                              BlendMode.srcIn,
-                            ),
-                          )
-                        : Icon(
-                            item.icon,
-                            size: iconSize,
-                            color: disabled ? colors.mutedForeground : colors.foreground,
+      bottom: bottom,
+      child: Transform.scale(
+        scale: scale.clamp(0.0, 1.0),
+        alignment: Alignment.bottomCenter,
+        child: Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Material(
+            color: colors.card,
+            shape: CircleBorder(
+              side: BorderSide(color: colors.primary, width: 2),
+            ),
+            elevation: 3,
+            child: InkWell(
+              customBorder: CircleBorder(
+                side: BorderSide(color: colors.primary, width: 2),
+              ),
+              onTapDown: disabled ? null : (_) => onTap(),
+              child: SizedBox(
+                width: size,
+                height: size,
+                child: Center(
+                  child: item.iconAsset != null
+                      ? SvgPicture.asset(
+                          item.iconAsset!,
+                          width: iconSize,
+                          height: iconSize,
+                          colorFilter: ColorFilter.mode(
+                            disabled ? colors.mutedForeground : colors.foreground,
+                            BlendMode.srcIn,
                           ),
-                  ),
+                        )
+                      : Icon(
+                          item.icon,
+                          size: iconSize,
+                          color: disabled ? colors.mutedForeground : colors.foreground,
+                        ),
                 ),
               ),
             ),

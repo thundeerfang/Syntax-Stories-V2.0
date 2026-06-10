@@ -18,6 +18,44 @@ class BlogApi {
 
   Uri _u(String path) => Uri.parse('$baseUrl$path');
 
+  /// `GET /api/blog/taxonomy/categories` — paginated category list.
+  Future<BlogTaxonomyPage> fetchCategoriesPage({
+    int offset = 0,
+    int limit = 6,
+    String? query,
+  }) async {
+    final params = <String, String>{
+      'offset': '$offset',
+      'limit': '$limit',
+      'sort': 'name-asc',
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+    };
+    final uri = _u('/api/blog/taxonomy/categories').replace(queryParameters: params);
+    try {
+      final res = await http.get(uri, headers: {'Accept': 'application/json'});
+      final text = res.body;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AuthApiException.fromHttp(
+          method: 'GET',
+          url: uri,
+          statusCode: res.statusCode,
+          body: text,
+        );
+      }
+      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      if (data['success'] != true) {
+        throw AuthApiException.internal(
+          context: 'Invalid categories response',
+          debugDetails: text,
+        );
+      }
+      return BlogTaxonomyPage.fromJson(data);
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'GET', url: uri, cause: e);
+    }
+  }
+
   /// `GET /api/blog/taxonomy` — public categories and suggested tags.
   Future<BlogTaxonomyCatalog> fetchTaxonomy() async {
     final uri = _u('/api/blog/taxonomy');
@@ -54,6 +92,7 @@ class BlogApi {
     String? summary,
     String? thumbnailUrl,
     required String status,
+    List<String>? categories,
     String? category,
     List<String>? tags,
     String language = 'en',
@@ -67,6 +106,7 @@ class BlogApi {
       if (summary != null && summary.trim().isNotEmpty) 'summary': summary.trim(),
       if (thumbnailUrl != null && thumbnailUrl.trim().isNotEmpty)
         'thumbnailUrl': thumbnailUrl.trim(),
+      if (categories != null && categories.isNotEmpty) 'categories': categories,
       if (category != null && category.trim().isNotEmpty) 'category': category.trim(),
       if (tags != null && tags.isNotEmpty) 'tags': tags,
     };

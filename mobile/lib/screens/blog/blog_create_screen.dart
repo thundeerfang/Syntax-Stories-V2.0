@@ -65,6 +65,12 @@ class _BlogCreateScreenState extends State<BlogCreateScreen> {
       return;
     }
 
+    final blockError = validateBlogBlocksForPublish(_blocks);
+    if (blockError != null) {
+      _setFeedback(blockError);
+      return;
+    }
+
     final draft = BlogWriteDraft(
       title: _title.text.trim(),
       summary: _summary.text.trim(),

@@ -6,8 +6,10 @@ import '../../services/unsplash_api.dart';
 import '../../theme/app_color_tokens.dart';
 import '../../utils/resolve_profile_media_url.dart';
 import '../../utils/user_message_case.dart';
+import '../auth/auth_button.dart';
 import '../ui/dashed_border_box.dart';
 import 'blog_image_layout_chips.dart';
+import 'blog_image_layout_preview.dart';
 
 /// Unsplash block — opens search sheet directly (no inline search field).
 class UnsplashBlockEditor extends StatefulWidget {
@@ -162,21 +164,29 @@ class _UnsplashSearchSheetState extends State<_UnsplashSearchSheet> {
   String? _error;
   List<UnsplashPhoto> _results = const [];
 
+  bool get _canSearch => _query.text.trim().length > 3;
+
   @override
   void initState() {
     super.initState();
     _query = TextEditingController();
+    _query.addListener(_onQueryChanged);
+  }
+
+  void _onQueryChanged() {
+    setState(() {});
   }
 
   @override
   void dispose() {
+    _query.removeListener(_onQueryChanged);
     _query.dispose();
     super.dispose();
   }
 
   Future<void> _search() async {
     final q = _query.text.trim();
-    if (q.isEmpty) return;
+    if (q.length <= 3) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -231,13 +241,17 @@ class _UnsplashSearchSheetState extends State<_UnsplashSearchSheet> {
                     hintText: 'Search photos…',
                     prefixIcon: Icon(Icons.search, size: 20),
                   ),
-                  onSubmitted: (_) => _search(),
+                  onSubmitted: (_) {
+                    if (_canSearch && !_loading) _search();
+                  },
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton(
-                onPressed: _loading || _query.text.trim().isEmpty ? null : _search,
-                child: Text(_loading ? '…' : 'Go'),
+              AuthButton(
+                label: _loading ? '…' : 'Go',
+                expand: false,
+                loading: _loading,
+                onPressed: _canSearch && !_loading ? _search : null,
               ),
             ],
           ),
@@ -249,7 +263,7 @@ class _UnsplashSearchSheetState extends State<_UnsplashSearchSheet> {
           SizedBox(
             height: 220,
             child: _loading
-                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                ? const _UnsplashGridSkeleton()
                 : _results.isEmpty
                     ? Center(
                         child: Text(
@@ -287,6 +301,58 @@ class _UnsplashSearchSheetState extends State<_UnsplashSearchSheet> {
   }
 }
 
+class _UnsplashGridSkeleton extends StatefulWidget {
+  const _UnsplashGridSkeleton();
+
+  @override
+  State<_UnsplashGridSkeleton> createState() => _UnsplashGridSkeletonState();
+}
+
+class _UnsplashGridSkeletonState extends State<_UnsplashGridSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final alpha = 0.22 + (_pulse.value * 0.18);
+        return GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+          ),
+          itemCount: 9,
+          itemBuilder: (context, index) {
+            return ColoredBox(
+              color: colors.muted.withValues(alpha: alpha),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class _SelectedPhotoView extends StatelessWidget {
   const _SelectedPhotoView({
     required this.url,
@@ -306,43 +372,65 @@ class _SelectedPhotoView extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final resolved = resolveProfileMediaUrl(url);
-    final aspect = switch (layout) {
-      'square' => 1.0,
-      'fullWidth' => 9 / 16,
-      _ => 16 / 9,
-    };
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AspectRatio(
-          aspectRatio: aspect,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: Image.network(
-              resolved,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: colors.muted.withValues(alpha: 0.2),
-                child: Icon(Icons.broken_image_outlined, color: colors.mutedForeground),
+        BlogImageLayoutFrame(
+          layout: layout,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                resolved,
+                width: double.infinity,
+                height: double.infinity,
+                fit: blogImageFitForLayout(layout),
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: colors.muted.withValues(alpha: 0.2),
+                  child: Icon(Icons.broken_image_outlined, color: colors.mutedForeground),
+                ),
               ),
-            ),
+              if (photographer.trim().isNotEmpty)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  right: 48,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.background.withValues(alpha: 0.72),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      child: Text(
+                        photographer.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        if (photographer.trim().isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(
-            photographer.trim(),
-            style: GoogleFonts.inter(fontSize: 11, color: colors.mutedForeground),
-          ),
-        ],
         const SizedBox(height: 8),
         BlogImageLayoutChips(
           selected: layout,
           onSelected: onLayoutChanged,
         ),
         const SizedBox(height: 4),
-        TextButton(onPressed: onChangePhoto, child: const Text('Search another photo')),
+        TextButton.icon(
+          onPressed: onChangePhoto,
+          icon: const Icon(Icons.upload_rounded, size: 18),
+          label: Text(
+            'Another Photo',
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
     );
   }

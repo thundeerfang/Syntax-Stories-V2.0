@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -5,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/app_feedback.dart';
-import '../../models/blog_block.dart';
 import '../../models/blog_post.dart';
 import '../../models/blog_taxonomy.dart';
 import '../../models/blog_write_draft.dart';
@@ -22,7 +22,6 @@ import '../../utils/resolve_profile_media_url.dart';
 import '../../utils/user_message_case.dart';
 import '../../widgets/auth/auth_button.dart';
 import '../../widgets/auth/auth_text_field.dart';
-import '../../widgets/blog_write/blog_blocks_preview.dart';
 import '../../widgets/ui/app_feedback_banner.dart';
 import '../../widgets/ui/dashed_border_box.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
@@ -38,14 +37,19 @@ class BlogReviewScreen extends StatefulWidget {
 }
 
 class _BlogReviewScreenState extends State<BlogReviewScreen> {
+  static const _categoryPageSize = 6;
+
   final _blogApi = BlogApi();
   final _uploadApi = UploadApi();
   final _tagInput = TextEditingController();
-  final _customCategory = TextEditingController();
+  final _categorySearch = TextEditingController();
 
   BlogTaxonomyCatalog _taxonomy = const BlogTaxonomyCatalog();
-  bool _loadingTaxonomy = true;
-  String? _category;
+  var _loadingTaxonomy = true;
+  final List<String> _categories = [];
+  final Map<String, String> _categoryLabels = {};
+  var _categoryPage = 0;
+  var _categoryPageWindowStart = 0;
   final List<String> _tags = [];
   String? _feedback;
   AppFeedbackKind _feedbackKind = AppFeedbackKind.error;
@@ -61,14 +65,31 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     _coverBytes = widget.draft.thumbnailBytes;
     _coverFileName = widget.draft.thumbnailFileName;
     _coverUrl = widget.draft.thumbnailUrl;
+    _categorySearch.addListener(_onCategorySearchChanged);
     _loadTaxonomy();
   }
 
   @override
   void dispose() {
     _tagInput.dispose();
-    _customCategory.dispose();
+    _categorySearch.dispose();
     super.dispose();
+  }
+
+  List<BlogTaxonomyRow> get _filteredCategoryRows {
+    final q = _categorySearch.text.trim().toLowerCase();
+    if (q.isEmpty) return _taxonomy.categories;
+    return _taxonomy.categories
+        .where((row) => row.name.toLowerCase().contains(q) || row.slug.toLowerCase().contains(q))
+        .toList();
+  }
+
+  List<BlogTaxonomyRow> get _pagedCategoryRows {
+    final filtered = _filteredCategoryRows;
+    final start = _categoryPage * _categoryPageSize;
+    if (start >= filtered.length) return const [];
+    final end = math.min(start + _categoryPageSize, filtered.length);
+    return filtered.sublist(start, end);
   }
 
   void _setFeedback(String? message, {AppFeedbackKind kind = AppFeedbackKind.error}) {
@@ -79,6 +100,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
   }
 
   Future<void> _loadTaxonomy() async {
+    setState(() => _loadingTaxonomy = true);
     try {
       final catalog = await _blogApi.fetchTaxonomy();
       if (!mounted) return;
@@ -95,10 +117,76 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     }
   }
 
-  void _selectCategory(String slug) {
+  void _onCategorySearchChanged() {
     setState(() {
-      _category = slug;
-      _customCategory.text = slug;
+      _categoryPage = 0;
+      _categoryPageWindowStart = 0;
+    });
+  }
+
+  int get _categoryPageCount {
+    final total = _filteredCategoryRows.length;
+    if (total <= 0) return 0;
+    return (total / _categoryPageSize).ceil();
+  }
+
+  void _setCategoryPage(int page) {
+    if (page < 0 || page >= _categoryPageCount || page == _categoryPage) return;
+    setState(() {
+      _categoryPage = page;
+      _syncCategoryPageWindow(page);
+    });
+  }
+
+  void _syncCategoryPageWindow(int page) {
+    final count = _categoryPageCount;
+    if (count <= 4) {
+      _categoryPageWindowStart = 0;
+      return;
+    }
+    final maxStart = count - 4;
+    if (page < _categoryPageWindowStart) {
+      _categoryPageWindowStart = page;
+    } else if (page >= _categoryPageWindowStart + 4) {
+      _categoryPageWindowStart = math.min(page - 3, maxStart);
+    }
+    _categoryPageWindowStart = _categoryPageWindowStart.clamp(0, maxStart);
+  }
+
+  void _shiftCategoryPageWindow(int delta) {
+    final count = _categoryPageCount;
+    if (count <= 4) return;
+    final maxStart = count - 4;
+    setState(() {
+      _categoryPageWindowStart = (_categoryPageWindowStart + delta).clamp(0, maxStart);
+    });
+  }
+
+  void _toggleCategory(BlogTaxonomyRow row) {
+    final next = toggleBlogCategory(_categories, row.slug);
+    if (next.length == _categories.length) {
+      if (!_categories.contains(row.slug)) {
+        _setFeedback('You can pick up to $blogMaxCategories categories.');
+      }
+      return;
+    }
+    setState(() {
+      _categories
+        ..clear()
+        ..addAll(next);
+      if (next.contains(row.slug)) {
+        _categoryLabels[row.slug] = row.name;
+      } else {
+        _categoryLabels.remove(row.slug);
+      }
+    });
+    _setFeedback(null);
+  }
+
+  void _removeCategory(String slug) {
+    setState(() {
+      _categories.remove(slug);
+      _categoryLabels.remove(slug);
     });
   }
 
@@ -129,6 +217,13 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
 
   void _removeTag(String tag) {
     setState(() => _tags.remove(tag));
+  }
+
+  String _tagDisplayLabel(String slug) {
+    for (final row in _taxonomy.tags) {
+      if (row.slug == slug) return row.name;
+    }
+    return slug;
   }
 
   Future<void> _pickCover() async {
@@ -173,9 +268,20 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     if (_submitting) return;
     _setFeedback(null);
 
+    final blockError = validateBlogBlocksForPublish(widget.draft.blocks);
+    if (blockError != null) {
+      _setFeedback(blockError);
+      return;
+    }
+
     final token = context.read<AuthState>().accessToken;
     if (token == null || token.isEmpty) {
       _setFeedback('Not signed in.');
+      return;
+    }
+
+    if (_categories.length > blogMaxCategories) {
+      _setFeedback('Pick at most $blogMaxCategories categories.');
       return;
     }
 
@@ -193,7 +299,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
       );
       final content = serializeBlogBlocks(readyBlocks);
       final summary = widget.draft.summary.trim().isEmpty ? null : widget.draft.summary.trim();
-      final category = _category?.trim().isEmpty ?? true ? null : _category;
+      final categories = _categories.isEmpty ? null : List<String>.from(_categories);
       final tags = _tags.isEmpty ? null : List<String>.from(_tags);
 
       final BlogPost post;
@@ -205,7 +311,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
           summary: summary,
           thumbnailUrl: thumbnailUrl,
           status: 'published',
-          category: category,
+          categories: categories,
           tags: tags,
         );
       } else {
@@ -216,7 +322,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
           summary: summary,
           thumbnailUrl: thumbnailUrl,
           status: 'draft',
-          category: category,
+          categories: categories,
           tags: tags,
         );
       }
@@ -243,7 +349,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final draft = widget.draft;
     final coverUrl = _coverUrl != null ? resolveProfileMediaUrl(_coverUrl) : null;
     final hasCover = _coverBytes != null || (coverUrl != null && coverUrl.isNotEmpty);
 
@@ -268,7 +373,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
             Text(
-              'Preview & classify',
+              'Classify & publish',
               style: GoogleFonts.inter(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -278,7 +383,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Check your preview, add an optional cover, then pick a category and tags before saving.',
+              'Add an optional cover, then pick a category and tags before saving.',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 color: colors.mutedForeground,
@@ -287,14 +392,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
             ),
             const SizedBox(height: 20),
             AppFeedbackSlot(message: _feedback, kind: _feedbackKind),
-            _PreviewCard(
-              title: draft.title,
-              summary: draft.summary,
-              blocks: draft.blocks,
-              coverBytes: _coverBytes,
-              coverUrl: hasCover ? coverUrl : null,
-            ),
-            const SizedBox(height: 24),
             _SectionLabel(label: 'Cover image'),
             const SizedBox(height: 10),
             if (_coverBytes != null)
@@ -391,7 +488,31 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
               ),
             ],
             const SizedBox(height: 24),
-            _SectionLabel(label: 'Category'),
+            _SectionLabel(label: 'Category (max $blogMaxCategories)'),
+            const SizedBox(height: 10),
+            if (_categories.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final slug in _categories)
+                      InputChip(
+                        label: Text(_categoryLabels[slug] ?? slug),
+                        onDeleted: () => _removeCategory(slug),
+                        deleteIconColor: colors.mutedForeground,
+                      ),
+                  ],
+                ),
+              ),
+            TextField(
+              controller: _categorySearch,
+              decoration: const InputDecoration(
+                hintText: 'Search categories…',
+                prefixIcon: Icon(Icons.search, size: 20),
+              ),
+            ),
             const SizedBox(height: 10),
             if (_loadingTaxonomy)
               Padding(
@@ -404,7 +525,12 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
               )
             else if (_taxonomy.categories.isEmpty)
               Text(
-                'No categories yet — type one below.',
+                'No categories available yet.',
+                style: GoogleFonts.inter(fontSize: 12, color: colors.mutedForeground),
+              )
+            else if (_pagedCategoryRows.isEmpty)
+              Text(
+                'No categories match your search.',
                 style: GoogleFonts.inter(fontSize: 12, color: colors.mutedForeground),
               )
             else
@@ -412,25 +538,25 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final row in _taxonomy.categories)
+                  for (final row in _pagedCategoryRows)
                     _ChoiceChip(
                       label: row.name,
-                      selected: _category == row.slug,
-                      onTap: () => _selectCategory(row.slug),
+                      selected: _categories.contains(row.slug),
+                      onTap: () => _toggleCategory(row),
                     ),
                 ],
               ),
-            const SizedBox(height: 12),
-            AuthTextField(
-              controller: _customCategory,
-              label: 'Custom category',
-              hintText: 'e.g. web-development',
-              showCounter: false,
-              onChanged: (value) {
-                final slug = normalizeBlogCategory(value);
-                setState(() => _category = slug.isEmpty ? null : slug);
-              },
-            ),
+            if (_categoryPageCount > 1) ...[
+              const SizedBox(height: 10),
+              _CategoryPaginationBar(
+                pageCount: _categoryPageCount,
+                currentPage: _categoryPage,
+                windowStart: _categoryPageWindowStart,
+                onPageSelected: _setCategoryPage,
+                onWindowPrevious: () => _shiftCategoryPageWindow(-1),
+                onWindowNext: () => _shiftCategoryPageWindow(1),
+              ),
+            ],
             const SizedBox(height: 24),
             _SectionLabel(label: 'Tags'),
             const SizedBox(height: 10),
@@ -442,35 +568,32 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                   runSpacing: 8,
                   children: [
                     for (final tag in _tags)
-                      InputChip(
-                        label: Text(tag),
-                        onDeleted: () => _removeTag(tag),
-                        deleteIconColor: colors.mutedForeground,
+                      _TagChip(
+                        label: _tagDisplayLabel(tag),
+                        selected: true,
+                        onDelete: () => _removeTag(tag),
                       ),
                   ],
                 ),
               ),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: AuthTextField(
                     controller: _tagInput,
                     label: 'Add tag',
-                    hintText: 'Press add or return',
+                    hintText: 'Add tag',
+                    showFieldLabel: false,
                     showCounter: false,
                     onChanged: (_) => _setFeedback(null),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(top: 28),
-                  child: AuthButton(
-                    label: 'Add',
-                    expand: false,
-                    variant: AuthButtonVariant.secondary,
-                    onPressed: _addTagFromInput,
-                  ),
+                AuthButton(
+                  label: 'Add',
+                  expand: false,
+                  onPressed: _addTagFromInput,
                 ),
               ],
             ),
@@ -491,9 +614,10 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                 children: [
                   for (final row in _taxonomy.tags.take(12))
                     if (!_tags.contains(row.slug))
-                      ActionChip(
-                        label: Text(row.name),
-                        onPressed: () => _addSuggestedTag(row.slug),
+                      _TagChip(
+                        label: row.name,
+                        selected: false,
+                        onTap: () => _addSuggestedTag(row.slug),
                       ),
                 ],
               ),
@@ -539,6 +663,232 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+class _CategoryPaginationBar extends StatelessWidget {
+  const _CategoryPaginationBar({
+    required this.pageCount,
+    required this.currentPage,
+    required this.windowStart,
+    required this.onPageSelected,
+    required this.onWindowPrevious,
+    required this.onWindowNext,
+  });
+
+  static const _windowSize = 4;
+
+  final int pageCount;
+  final int currentPage;
+  final int windowStart;
+  final ValueChanged<int> onPageSelected;
+  final VoidCallback onWindowPrevious;
+  final VoidCallback onWindowNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final useArrows = pageCount > _windowSize;
+    final maxStart = math.max(0, pageCount - _windowSize);
+    final start = useArrows ? windowStart.clamp(0, maxStart) : 0;
+    final windowEnd = math.min(start + _windowSize, pageCount);
+    final windowPages = [for (var i = start; i < windowEnd; i++) i];
+    final lastPage = pageCount - 1;
+    final showLastSeparate = useArrows && !windowPages.contains(lastPage);
+
+    return Row(
+      children: [
+        if (useArrows)
+          _PaginationArrow(
+            icon: Icons.chevron_left_rounded,
+            enabled: start > 0,
+            onTap: onWindowPrevious,
+          ),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < windowPages.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                _PageChip(
+                  label: '${windowPages[i] + 1}',
+                  selected: currentPage == windowPages[i],
+                  onTap: () => onPageSelected(windowPages[i]),
+                ),
+              ],
+              if (showLastSeparate) ...[
+                const SizedBox(width: 6),
+                Text(
+                  '…',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                _PageChip(
+                  label: '$pageCount',
+                  selected: currentPage == lastPage,
+                  onTap: () => onPageSelected(lastPage),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (useArrows)
+          _PaginationArrow(
+            icon: Icons.chevron_right_rounded,
+            enabled: start < maxStart,
+            onTap: onWindowNext,
+          ),
+      ],
+    );
+  }
+}
+
+class _PaginationArrow extends StatelessWidget {
+  const _PaginationArrow({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: colors.card,
+      borderRadius: BorderRadius.zero,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: enabled ? colors.border : colors.border.withValues(alpha: 0.45),
+              width: 2,
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: enabled ? colors.foreground : colors.mutedForeground,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PageChip extends StatelessWidget {
+  const _PageChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: selected ? colors.primary : colors.card,
+      borderRadius: BorderRadius.zero,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: selected ? colors.primary : colors.border, width: 2),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: selected ? colors.primaryForeground : colors.foreground,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({
+    required this.label,
+    required this.selected,
+    this.onTap,
+    this.onDelete,
+  });
+
+  static const _radius = 20.0;
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final background = selected ? colors.primary.withValues(alpha: 0.12) : colors.card;
+    final borderColor = selected ? colors.primary : colors.border;
+    final textColor = selected ? colors.primary : colors.foreground;
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(_radius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_radius),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_radius),
+            border: Border.all(color: borderColor, width: 1.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '#$label',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+              if (onDelete != null) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: onDelete,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: selected ? colors.primary : colors.mutedForeground,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ChoiceChip extends StatelessWidget {
   const _ChoiceChip({
     required this.label,
@@ -574,83 +924,6 @@ class _ChoiceChip extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({
-    required this.title,
-    required this.summary,
-    required this.blocks,
-    this.coverBytes,
-    this.coverUrl,
-  });
-
-  final String title;
-  final String summary;
-  final List<BlogBlock> blocks;
-  final Uint8List? coverBytes;
-  final String? coverUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: colors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (coverBytes != null)
-            AspectRatio(
-              aspectRatio: 4,
-              child: Image.memory(coverBytes!, fit: BoxFit.cover),
-            )
-          else if (coverUrl != null && coverUrl!.isNotEmpty)
-            AspectRatio(
-              aspectRatio: 4,
-              child: Image.network(coverUrl!, fit: BoxFit.cover),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: colors.foreground,
-                    height: 1.25,
-                  ),
-                ),
-                if (summary.trim().isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    summary.trim(),
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: colors.mutedForeground,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                BlogBlocksPreview(blocks: blocks),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

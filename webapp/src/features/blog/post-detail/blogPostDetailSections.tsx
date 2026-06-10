@@ -377,9 +377,12 @@ export function BlogCodeBlockDisplay({
 export function MermaidBlockDisplay({
   source,
   className,
+  quiet = false,
 }: Readonly<{
   source: string;
   className?: string;
+  /** When true, render errors inline only (no toast). */
+  quiet?: boolean;
 }>) {
   const ref = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -421,7 +424,7 @@ export function MermaidBlockDisplay({
             : `${raw} — Quote labels that contain spaces in the editor.`;
         setErr(detail);
         el.innerHTML = '';
-        if (toastedForSourceRef.current !== trimmed) {
+        if (!quiet && toastedForSourceRef.current !== trimmed) {
           toastedForSourceRef.current = trimmed;
           toast.error('Could not render a Mermaid diagram on this page.', { description: detail });
         }

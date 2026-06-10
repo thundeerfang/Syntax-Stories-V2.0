@@ -98,7 +98,6 @@ Feedback categories still seed separately (platform-wide).
 
 Admin backend lives under `server/src/admin-platform/`:
 
-```
 server/src/admin-platform/
 ├── auth/              # staff-login, operator.service
 ├── rbac/              # permissions, middleware, models, management routes

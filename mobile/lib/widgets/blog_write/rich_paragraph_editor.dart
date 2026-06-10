@@ -10,6 +10,7 @@ import '../../utils/paragraph_doc.dart';
 import '../../utils/paragraph_extended_span_builder.dart';
 import '../../utils/url_normalize.dart';
 import '../../utils/user_message_case.dart';
+import '../auth/auth_button.dart';
 import '../ui/unfocus_tap_region.dart';
 
 /// Web-style rich paragraph block editor: textarea + bold / italic / link / GIF.
@@ -164,13 +165,13 @@ class _RichParagraphEditorState extends State<RichParagraphEditor> {
       _doc.clearLink(linkStart, linkEnd);
       if (linkStart != linkEnd) _emit();
     } else if (linkStart == linkEnd) {
-      _doc.insertLinkLabel(linkStart, result.label, result.href);
+      final cursorAfter = _doc.insertLinkLabel(linkStart, result.label, result.href);
       _controller.text = _doc.editingText;
-      final labelLen = result.label.trim().isEmpty ? result.href.length : result.label.trim().length;
-      _setCollapsedSelection(linkStart + labelLen, text: _doc.editingText);
+      _setCollapsedSelection(cursorAfter, text: _doc.editingText);
       _emit();
     } else {
       _doc.applyLink(linkStart, linkEnd, result.href);
+      _doc.pendingLinkHref = null;
       _controller.text = _doc.editingText;
       _emit();
     }
@@ -540,11 +541,19 @@ class _GifSearchSheet extends StatefulWidget {
 }
 
 class _GifSearchSheetState extends State<_GifSearchSheet> {
-  final _query = TextEditingController();
+  late final TextEditingController _query;
   var _loading = false;
   var _searched = false;
   String? _error;
   List<GiphyGif> _results = const [];
+
+  bool get _canSearch => _query.text.trim().length >= 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _query = TextEditingController()..addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -554,7 +563,7 @@ class _GifSearchSheetState extends State<_GifSearchSheet> {
 
   Future<void> _search() async {
     final q = _query.text.trim();
-    if (q.isEmpty) return;
+    if (!_canSearch) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -603,17 +612,23 @@ class _GifSearchSheetState extends State<_GifSearchSheet> {
               Expanded(
                 child: TextField(
                   controller: _query,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
                   decoration: const InputDecoration(
                     hintText: 'Search GIFs…',
                     prefixIcon: Icon(Icons.search, size: 20),
                   ),
-                  onSubmitted: (_) => _search(),
+                  onSubmitted: (_) {
+                    if (_canSearch && !_loading) _search();
+                  },
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton(
-                onPressed: _loading || _query.text.trim().isEmpty ? null : _search,
-                child: Text(_loading ? '…' : 'Go'),
+              AuthButton(
+                label: _loading ? '…' : 'Go',
+                expand: false,
+                loading: _loading,
+                onPressed: _canSearch && !_loading ? _search : null,
               ),
             ],
           ),
@@ -629,7 +644,11 @@ class _GifSearchSheetState extends State<_GifSearchSheet> {
                 : _results.isEmpty
                     ? Center(
                         child: Text(
-                          _searched ? 'No results' : 'Search to preview',
+                          _searched
+                              ? 'No results'
+                              : _canSearch
+                                  ? 'Tap Go to search'
+                                  : 'Enter at least 3 letters',
                           style: GoogleFonts.inter(fontSize: 12, color: colors.mutedForeground),
                         ),
                       )

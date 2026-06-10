@@ -125,19 +125,42 @@ function slugify(text: string): string {
 }
 
 /** Same author cannot reuse a slug; append a short suffix until unique (schema max 320). */
-type TaxonomyFields = { category?: string; tags?: string[]; language?: string };
+type TaxonomyFields = {
+  category?: string;
+  categories?: string[];
+  tags?: string[];
+  language?: string;
+};
 
 function mapTaxonomyFromDoc(p: TaxonomyFields): {
   category?: string;
+  categories?: string[];
   tags?: string[];
   language?: string;
 } {
+  const categories = Array.isArray(p.categories) && p.categories.length ? p.categories : undefined;
   const category =
-    typeof p.category === 'string' && p.category.trim() ? p.category.trim() : undefined;
+    typeof p.category === 'string' && p.category.trim()
+      ? p.category.trim()
+      : categories?.[0];
   const tags = Array.isArray(p.tags) && p.tags.length ? p.tags : undefined;
   const language =
     typeof p.language === 'string' && p.language.trim() ? p.language.trim().toLowerCase() : 'en';
-  return { category, tags, language };
+  return { category, categories, tags, language };
+}
+
+function taxonomyWriteFields(tax: {
+  category?: string;
+  categories?: string[];
+  tags?: string[];
+  language?: string;
+}) {
+  return {
+    category: tax.categories?.length ? tax.categories[0] : tax.category,
+    categories: tax.categories?.length ? tax.categories : undefined,
+    tags: tax.tags?.length ? tax.tags : undefined,
+    language: tax.language ?? 'en',
+  };
 }
 
 type FeedListItem = {
@@ -335,7 +358,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
       language?: unknown;
     };
     const tax = normalizeTaxonomyInput(
-      req.body as { category?: unknown; tags?: unknown; language?: unknown }
+      req.body as { category?: unknown; categories?: unknown; tags?: unknown; language?: unknown }
     );
     const titleStr = typeof title === 'string' ? title.trim() : '';
     const contentStr = typeof content === 'string' ? content : '';
@@ -384,9 +407,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
           thumbnailUrl: thumb,
           status: finalStatus,
           ...(finalStatus === 'published' ? { publishedAt: new Date() } : {}),
-          ...(tax.category ? { category: tax.category } : {}),
-          ...(tax.tags?.length ? { tags: tax.tags } : {}),
-          ...(tax.language ? { language: tax.language } : { language: 'en' }),
+          ...taxonomyWriteFields(tax),
           ...(squadOid ? { squadId: squadOid } : {}),
         });
         break;
@@ -458,7 +479,11 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       thumbnailUrl?: string;
     };
     const rawBody = req.body as Record<string, unknown>;
-    const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
+    const hasTaxonomyKeys =
+      'category' in rawBody ||
+      'categories' in rawBody ||
+      'tags' in rawBody ||
+      'language' in rawBody;
     const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
     let draftSquadId: mongoose.Types.ObjectId | null | undefined = undefined;
     if ('squadId' in rawBody) {
@@ -512,13 +537,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
         summary: summaryStr || undefined,
         content: contentCheck.normalizedJson,
         thumbnailUrl: thumb,
-        ...(tax
-          ? {
-              category: tax.category,
-              tags: tax.tags?.length ? tax.tags : undefined,
-              language: tax.language ?? 'en',
-            }
-          : {}),
+        ...(tax ? taxonomyWriteFields(tax) : {}),
       };
       if (draftSquadId !== undefined) {
         patch.squadId = draftSquadId;
@@ -569,13 +588,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       thumbnailUrl: thumb,
       status: 'draft',
       ...(draftSquadId ? { squadId: draftSquadId } : {}),
-      ...(tax
-        ? {
-            category: tax.category,
-            tags: tax.tags?.length ? tax.tags : undefined,
-            language: tax.language ?? 'en',
-          }
-        : { language: 'en' }),
+      ...(tax ? taxonomyWriteFields(tax) : { language: 'en' }),
     });
 
     const cSq = (created as { squadId?: mongoose.Types.ObjectId | null }).squadId;
@@ -1399,7 +1412,11 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
     const wasEligibleRespect = isEligibleForPublicRespect(existing);
     const wasPublishedBefore = existing.status === 'published';
     const rawBody = req.body as Record<string, unknown>;
-    const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
+    const hasTaxonomyKeys =
+      'category' in rawBody ||
+      'categories' in rawBody ||
+      'tags' in rawBody ||
+      'language' in rawBody;
     const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
     const { title, summary, content, thumbnailUrl, status, silent } = req.body as {
       title?: string;
@@ -1539,9 +1556,11 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
       }
     }
     if (tax) {
-      existing.category = tax.category;
-      existing.tags = tax.tags?.length ? tax.tags : undefined;
-      existing.language = tax.language ?? 'en';
+      const fields = taxonomyWriteFields(tax);
+      existing.category = fields.category;
+      existing.categories = fields.categories;
+      existing.tags = fields.tags;
+      existing.language = fields.language ?? 'en';
     }
     if (!wasPublishedBefore && existing.status === 'published') {
       const ex = existing as IBlogPost;

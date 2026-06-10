@@ -19,8 +19,10 @@ export interface IBlogPost extends Document {
   /** JSON string of Block[] (full editor state per block, no server-side stripping) */
   content: string;
   thumbnailUrl?: string;
-  /** Lowercase slug; optional. */
+  /** Primary category slug (first entry in `categories`). */
   category?: string;
+  /** Up to 3 lowercase category slugs on write. */
+  categories?: string[];
   /** Lowercase slug tokens, max 20 on write. */
   tags?: string[];
   /** BCP-47-ish language code (e.g. en, en-us). */
@@ -68,6 +70,16 @@ const BlogPostSchema = new Schema<IBlogPost>(
       maxlength: 48,
       default: undefined,
       index: true,
+    },
+    categories: {
+      type: [{ type: String, trim: true, lowercase: true, maxlength: 48 }],
+      default: undefined,
+      validate: {
+        validator(v: string[] | undefined) {
+          return v == null || v.length <= 3;
+        },
+        message: 'At most 3 categories',
+      },
     },
     tags: {
       type: [{ type: String, trim: true, lowercase: true, maxlength: 40 }],
