@@ -6,7 +6,6 @@ import type {
   AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
-  RegistrationResponseJSON,
 } from '@simplewebauthn/browser';
 import { apiUrl } from '@/lib/api';
 import { adminFetchCredentials } from '@/lib/auth/adminFetchDefaults';

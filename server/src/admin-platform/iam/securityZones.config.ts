@@ -34,7 +34,6 @@ export const PERMISSION_TO_ZONE: Record<string, SecurityZone> = {
   'feedback:read': 'support',
   'feedback:manage': 'support',
   'contact_lead:read': 'support',
-  'help:manage': 'support',
   'legal:manage': 'compliance',
   'trash:manage': 'infrastructure',
   'notification:read': 'root',

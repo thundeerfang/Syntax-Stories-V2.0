@@ -53,7 +53,7 @@ import {
   MediaFullViewDialog,
   ProfileSquadsCategoriesCard,
 } from '@/features/profile';
-import { getSkillIconUrl } from '@/lib/profile/skillIcons';
+import { StackToolsBadgeList } from '@/components/profile/StackToolsBadgeList';
 import { ProfilePageSkeletonInner } from '@/components/skeletons';
 import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
 import { EducationCard } from '@/components/settings-list/EducationCard';
@@ -729,38 +729,10 @@ export default function ProfilePage() {
                 />
                 {user?.stackAndTools?.length ? (
                   <div className="relative">
-                    <div className="flex flex-wrap gap-3 py-1">
-                      {user.stackAndTools.slice(0, STACK_AND_TOOLS_MAX).map((t) => {
-                        const iconUrl = getSkillIconUrl(t);
-                        return (
-                          <div
-                            key={`stack-${t}`}
-                            className="border-2 border-border bg-muted/10 px-3 py-2 shadow max-w-full"
-                            title={t}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="size-7 shrink-0 flex items-center justify-center overflow-hidden">
-                                {iconUrl ? (
-                                  <img
-                                    src={iconUrl}
-                                    alt={t}
-                                    className="size-full object-contain"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                  />
-                                ) : (
-                                  <Monitor className="size-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground break-words text-left">
-                                {t}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <StackToolsBadgeList
+                      names={user.stackAndTools}
+                      displayItems={user.stackAndToolsDisplay}
+                    />
                   </div>
                 ) : (
                   <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">

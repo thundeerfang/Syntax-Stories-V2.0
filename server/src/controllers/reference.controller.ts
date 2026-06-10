@@ -1,9 +1,12 @@
 import type { Request, Response } from 'express';
 import { ReferenceEntityModel, type ReferenceEntityKind } from '../models/ReferenceEntity.js';
 import { TechStackReferenceModel } from '../models/TechStackReference.js';
+import { toTechStackItemDto, type TechStackItemDto } from '../lib/techStackReference.mapper.js';
+import { resolveTechStackNames } from '../services/techStackReference.service.js';
 
 const ENTITY_KINDS = new Set<ReferenceEntityKind>(['company', 'school', 'organization']);
 const DEFAULT_LIMIT = 15;
+const RESOLVE_MAX_NAMES = 10;
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -52,7 +55,7 @@ export async function searchTechStackReference(req: Request, res: Response): Pro
   const limit = Math.min(Math.max(Number(req.query.limit) || DEFAULT_LIMIT, 1), 30);
 
   if (!q) {
-    res.status(200).json({ success: true, items: [] });
+    res.status(200).json({ success: true, items: [] satisfies TechStackItemDto[] });
     return;
   }
 
@@ -62,8 +65,39 @@ export async function searchTechStackReference(req: Request, res: Response): Pro
   })
     .sort({ name: 1 })
     .limit(limit)
-    .select({ name: 1, slug: 1, category: 1, _id: 0 })
+    .select({ name: 1, slug: 1, category: 1, iconSlug: 1, _id: 0 })
     .lean();
 
-  res.status(200).json({ success: true, items: rows });
+  res.status(200).json({
+    success: true,
+    items: rows.map((row) => toTechStackItemDto(row)),
+  });
+}
+
+function parseResolveNames(body: unknown): string[] | null {
+  if (!body || typeof body !== 'object') return null;
+  const raw = (body as { names?: unknown }).names;
+  if (!Array.isArray(raw)) return null;
+  return raw
+    .filter((v): v is string => typeof v === 'string')
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0)
+    .slice(0, RESOLVE_MAX_NAMES);
+}
+
+/** POST body: `{ names: string[] }` — enrich badge/suggestion rows with iconSlug + iconUrl. */
+export async function resolveTechStackReference(req: Request, res: Response): Promise<void> {
+  const names = parseResolveNames(req.body);
+  if (names === null) {
+    res.status(400).json({ success: false, message: 'names must be an array of strings' });
+    return;
+  }
+
+  if (names.length === 0) {
+    res.status(200).json({ success: true, items: [] satisfies TechStackItemDto[] });
+    return;
+  }
+
+  const items = await resolveTechStackNames(names);
+  res.status(200).json({ success: true, items });
 }

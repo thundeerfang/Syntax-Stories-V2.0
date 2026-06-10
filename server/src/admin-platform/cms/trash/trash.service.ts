@@ -5,8 +5,6 @@ import { UserModel } from '../../../models/User.js';
 import { NOT_DELETED_FILTER } from '../../../shared/db/notDeleted.js';
 import { AuditAction } from '../../../shared/audit/events.js';
 import { writeAuditLog } from '../../../shared/audit/auditLog.js';
-import { helpService } from '../help/help.service.js';
-import type { StaffRole } from '../../rbac/middleware/requireStaff.middleware.js';
 
 const BLOG_SOFT_DELETE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const SLUG_MAX_LEN = 320;
@@ -178,19 +176,5 @@ export async function restoreUserAsAdmin(
     actorId,
     targetType: 'user',
     targetId: userId,
-  });
-}
-
-export async function restoreHelpFromTrash(
-  id: string,
-  actorId: string,
-  staffRole: StaffRole,
-  req: Request
-): Promise<void> {
-  await helpService.restoreFromTrash(actorId, staffRole, id);
-  void writeAuditLog(req, AuditAction.ADMIN_HELP_RESTORED, {
-    actorId,
-    targetType: 'help_article',
-    targetId: id,
   });
 }

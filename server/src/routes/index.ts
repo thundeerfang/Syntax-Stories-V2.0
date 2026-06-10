@@ -19,10 +19,9 @@ import inviteRoutes from './invite.routes.js';
 import billingRoutes from './billing.routes.js';
 import achievementsRoutes from './achievements.routes.js';
 import searchRoutes from './search.routes.js';
+import mediaRoutes from './media.routes.js';
 import {
   adminManagementRouter,
-  helpAdminRouter,
-  helpPublicRouter,
   legalAdminRouter,
   legalPublicRouter,
   legalUserRouter,
@@ -50,8 +49,7 @@ router.use('/invites', inviteRoutes);
 router.use('/billing', billingRoutes);
 router.use('/achievements', achievementsRoutes);
 router.use('/search', searchRoutes);
-router.use('/v1/help', helpPublicRouter);
-router.use('/v1/admin/help', helpAdminRouter);
+router.use('/media', mediaRoutes);
 router.use('/v1/admin/trash', trashAdminRouter);
 router.use('/v1/admin/management', adminManagementRouter);
 router.use('/v1/admin/saml', samlAdminRouter);

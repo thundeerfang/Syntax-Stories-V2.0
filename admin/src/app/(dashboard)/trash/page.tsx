@@ -29,9 +29,9 @@ export default function TrashPage() {
 
   const isAdmin = me?.staffRole === 'admin';
 
-  async function onRestore(resourceType: 'help' | 'blog' | 'user', id: string) {
+  async function onRestore(resourceType: 'blog' | 'user', id: string) {
     if (!token) return;
-    if ((resourceType === 'blog' || resourceType === 'user') && !isAdmin) return;
+    if (!isAdmin) return;
     setBusyId(`${resourceType}:${id}`);
     setErr(null);
     try {
@@ -44,7 +44,6 @@ export default function TrashPage() {
     }
   }
 
-  const helpRows = data?.help?.data ?? [];
   const blogRows = data?.blog?.data ?? [];
   const userRows = data?.users?.data ?? [];
 
@@ -61,15 +60,14 @@ export default function TrashPage() {
           Soft delete center
         </Typography>
         <Typography variant="body2" color="text.secondary" className="max-w-2xl">
-          Restore help articles you can edit, or (as admin) blog posts and deactivated user
-          accounts. Blog restores respect the same retention window as the main app trash.
+          Restore blog posts and deactivated user accounts from trash. Blog restores respect the same
+          retention window as the main app trash.
         </Typography>
       </Box>
 
       {!isAdmin && (
         <Alert severity="info">
-          Blog and user restore requires <strong>admin</strong> staff role. Help articles follow
-          normal editor permissions.
+          Blog and user restore requires <strong>admin</strong> staff role.
         </Alert>
       )}
 
@@ -78,24 +76,6 @@ export default function TrashPage() {
           {err}
         </Alert>
       )}
-
-      <Box>
-        <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-          Help articles
-        </Typography>
-        <TrashTable
-          empty="No help articles in trash."
-          totalLabel="articles"
-          rows={helpRows.map((r) => ({
-            key: r._id,
-            primary: r.title || r.slug,
-            secondary: r.slugBeforeDelete ? `was: ${r.slugBeforeDelete}` : r.slug,
-            meta: r.deletedAt ? new Date(r.deletedAt).toLocaleString() : '—',
-            onRestore: () => onRestore('help', r._id),
-            disabled: busyId === `help:${r._id}`,
-          }))}
-        />
-      </Box>
 
       <Box>
         <Stack direction="row" alignItems="center" gap={1} className="mb-2">

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/auth_state.dart';
-import '../theme/retro_theme.dart';
+import '../theme/app_color_tokens.dart';
 import 'auth_home_screen.dart';
-import 'dashboard_screen.dart';
+import 'main_shell.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -14,14 +14,15 @@ class AuthGate extends StatelessWidget {
     final auth = context.watch<AuthState>();
 
     if (auth.bootstrapping) {
-      return const Scaffold(
+      final colors = context.appColors;
+      return Scaffold(
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: RetroTheme.glow),
-              SizedBox(height: 16),
-              Text('BOOTSTRAPPING...', style: TextStyle(fontFamily: 'VT323', fontSize: 22, color: RetroTheme.glow)),
+              CircularProgressIndicator(color: colors.primary),
+              const SizedBox(height: 16),
+              const Text('Loading…'),
             ],
           ),
         ),
@@ -29,7 +30,7 @@ class AuthGate extends StatelessWidget {
     }
 
     if (auth.user != null && auth.accessToken != null) {
-      return const DashboardScreen();
+      return const MainShell();
     }
 
     return const AuthHomeScreen();

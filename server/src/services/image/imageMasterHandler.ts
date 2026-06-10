@@ -1,8 +1,8 @@
 import sharp from 'sharp';
 import { env } from '../../config/env.js';
 import {
-  imageBufferMatchesClaimedMime,
   isAllowedImageMime,
+  rasterBufferMatchesUpload,
 } from '../../config/uploadValidation.js';
 import { scanBufferWithClamAV } from '../security/clamScanBuffer.js';
 import { IMAGE_MASTER_PROFILES, type ImageMasterProfile } from './imageMaster.constants.js';
@@ -48,10 +48,10 @@ export async function processUploadedImageBuffer(
       'too_large'
     );
   }
-  if (!isAllowedImageMime(mime)) {
+  if (!isAllowedImageMime(mime) && mime !== 'application/octet-stream') {
     throw new ImageMasterError('Unsupported image type.', 'invalid_image');
   }
-  if (!imageBufferMatchesClaimedMime(input, mime)) {
+  if (!rasterBufferMatchesUpload(input, mime)) {
     throw new ImageMasterError('File content does not match declared image type.', 'invalid_image');
   }
 

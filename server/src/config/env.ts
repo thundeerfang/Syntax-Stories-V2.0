@@ -264,4 +264,10 @@ export const env = {
     5,
     Number.parseInt(process.env.SEARCH_RATE_LIMIT_PER_MIN ?? '30', 10) || 30
   ),
+
+  /** Giphy GIF search proxy (`GET /api/media/giphy/search`). Server-side only — do not expose to clients. */
+  GIPHY_API_KEY: process.env.GIPHY_API_KEY?.trim() || '',
+
+  /** Unsplash photo search proxy (`GET /api/media/unsplash/search`). Access key only; secret stays optional. */
+  UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY?.trim() || '',
 } as const;

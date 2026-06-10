@@ -39,7 +39,7 @@ export async function reserveUniqueSlug(
   const style = opts?.style ?? 'hyphen';
   let candidate = slugifyDisplayName(displayName, { maxLen, style });
   if (!candidate) {
-    candidate = style === 'underscore' ? 'item' : 'item';
+    candidate = 'item';
   }
   if (!(await exists(candidate))) return candidate;
 

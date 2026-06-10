@@ -31,6 +31,7 @@ import {
 } from '@/app/settings/settings-list/SettingsSectionHeading';
 import {
   MONTH_SELECT_OPTIONS,
+  PROFILE_CERT_EXPIRATION_END_YEAR,
   formatMonthYearMedium,
   monthYearToValue,
   valueToMonthYear,
@@ -490,7 +491,7 @@ export function CertificationsContent() {
                   placeholder="Year"
                   value={form.expYear}
                   onChange={(v) => setForm((f) => ({ ...f, expYear: v }))}
-                  options={yearOptionsFromMin(form.issueYear)}
+                  options={yearOptionsFromMin(form.issueYear, PROFILE_CERT_EXPIRATION_END_YEAR)}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
                 />

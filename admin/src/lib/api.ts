@@ -40,138 +40,6 @@ export async function fetchMe(token?: string | null): Promise<{ user: MeUser }> 
   return { user: json.data.user };
 }
 
-export type HelpListItem = {
-  _id: string;
-  slug: string;
-  title: string;
-  category?: string;
-  status: string;
-  isPublished: boolean;
-  icon?: string;
-  sortOrder?: number;
-  draftVersion: number;
-  publishedVersion: number;
-  publishAt: string | null;
-  updatedAt: string;
-  authorId: string;
-};
-
-export type HelpHubConfig = {
-  title: string;
-  description: string;
-  supportLinkLabel: string;
-  supportLinkHref: string;
-  headerIcon: string;
-  emptyTitle: string;
-  emptyDescription: string;
-  updatedAt?: string | null;
-};
-
-export async function listHelpArticles(
-  token: string,
-  page = 1,
-  pageSize = 100
-): Promise<{ data: HelpListItem[]; total: number }> {
-  const res = await adminAuthenticatedFetch(
-    `/api/v1/admin/help/articles?page=${page}&pageSize=${pageSize}`,
-    { token }
-  );
-  const json = (await res.json()) as {
-    data?: HelpListItem[];
-    total?: number;
-    message?: string;
-  };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Failed to list articles');
-  }
-  return { data: json.data ?? [], total: json.total ?? 0 };
-}
-
-export type HelpArticleDetail = {
-  _id: string;
-  slug: string;
-  slugHistory: string[];
-  title: string;
-  summary: string;
-  body: string;
-  icon: string;
-  sortOrder: number;
-  draftTitle?: string;
-  draftSummary?: string;
-  draftBody?: string;
-  status: string;
-  isPublished: boolean;
-  draftVersion: number;
-  publishedVersion: number;
-  publishAt: string | null;
-  publishedAt: string | null;
-  authorId: string;
-  updatedAt: string;
-};
-
-export async function getHelpArticle(token: string, id: string): Promise<HelpArticleDetail> {
-  const res = await adminAuthenticatedFetch(`/api/v1/admin/help/articles/${id}`, { token });
-  const json = (await res.json()) as {
-    success?: boolean;
-    data?: HelpArticleDetail;
-    message?: string;
-  };
-  if (!res.ok || !json.data) {
-    throw new Error(json.message ?? 'Failed to load article');
-  }
-  return json.data;
-}
-
-export async function patchHelpArticle(
-  token: string,
-  id: string,
-  body: Record<string, unknown>
-): Promise<{ draftVersion: number }> {
-  const res = await adminAuthenticatedFetch(`/api/v1/admin/help/articles/${id}`, {
-    method: 'PATCH',
-    token,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as {
-    success?: boolean;
-    data?: { draftVersion: number };
-    message?: string;
-  };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Save failed');
-  }
-  return { draftVersion: json.data?.draftVersion ?? 0 };
-}
-
-export async function publishHelpArticle(
-  token: string,
-  id: string,
-  expectedPublishedVersion?: number
-): Promise<void> {
-  const res = await adminAuthenticatedFetch(`/api/v1/admin/help/articles/${id}/publish`, {
-    method: 'POST',
-    token,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(
-      expectedPublishedVersion !== undefined ? { expectedPublishedVersion } : {}
-    ),
-  });
-  const json = (await res.json()) as { message?: string };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Publish failed');
-  }
-}
-
-export type TrashHelpItem = {
-  _id: string;
-  slug: string;
-  slugBeforeDelete: string | null;
-  title: string;
-  deletedAt: string | null;
-  authorId: string;
-};
-
 export type TrashBlogItem = {
   _id: string;
   title: string;
@@ -194,7 +62,6 @@ export type TrashResponse = {
   success: boolean;
   page: number;
   pageSize: number;
-  help?: { data: TrashHelpItem[]; total: number; page: number; pageSize: number };
   blog?: { data: TrashBlogItem[]; total: number; page: number; pageSize: number };
   users?: { data: TrashUserItem[]; total: number; page: number; pageSize: number };
 };
@@ -205,7 +72,7 @@ export async function fetchTrash(
 ): Promise<TrashResponse> {
   const page = opts?.page ?? 1;
   const pageSize = opts?.pageSize ?? 20;
-  const sections = opts?.sections ?? 'help,blog,user';
+  const sections = opts?.sections ?? 'blog,user';
   const res = await adminAuthenticatedFetch(
     `/api/v1/admin/trash?sections=${encodeURIComponent(sections)}&page=${page}&pageSize=${pageSize}`,
     { token }
@@ -219,7 +86,7 @@ export async function fetchTrash(
 
 export async function restoreTrashItem(
   token: string,
-  resourceType: 'help' | 'blog' | 'user',
+  resourceType: 'blog' | 'user',
   id: string
 ): Promise<void> {
   const res = await adminAuthenticatedFetch('/api/v1/admin/trash/restore', {
@@ -231,17 +98,6 @@ export async function restoreTrashItem(
   const json = (await res.json()) as { success?: boolean; message?: string };
   if (!res.ok || !json.success) {
     throw new Error(json.message ?? 'Restore failed');
-  }
-}
-
-export async function deleteHelpArticleSoft(token: string, id: string): Promise<void> {
-  const res = await adminAuthenticatedFetch(`/api/v1/admin/help/articles/${id}`, {
-    method: 'DELETE',
-    token,
-  });
-  const json = (await res.json()) as { success?: boolean; message?: string };
-  if (!res.ok || !json.success) {
-    throw new Error(json.message ?? 'Delete failed');
   }
 }
 
@@ -501,54 +357,6 @@ export async function getContactLead(
   };
   if (!res.ok || !json.success || !json.data) {
     throw new Error(json.error?.message ?? json.message ?? 'Failed to load contact lead');
-  }
-  return json.data;
-}
-
-export async function createHelpArticle(
-  token: string,
-  input: { title: string; summary?: string; icon?: string }
-): Promise<{ id: string; slug: string }> {
-  const res = await adminAuthenticatedFetch('/api/v1/admin/help/articles', {
-    method: 'POST',
-    token,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-  const json = (await res.json()) as {
-    success?: boolean;
-    data?: { id: string; slug: string };
-    message?: string;
-  };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Create failed');
-  }
-  if (!json.data) throw new Error('Invalid response');
-  return json.data;
-}
-
-export async function getHelpHubConfig(token: string): Promise<HelpHubConfig> {
-  const res = await adminAuthenticatedFetch('/api/v1/admin/help/config', { token });
-  const json = (await res.json()) as { success?: boolean; data?: HelpHubConfig; message?: string };
-  if (!res.ok || !json.data) {
-    throw new Error(json.message ?? 'Failed to load help page settings');
-  }
-  return json.data;
-}
-
-export async function patchHelpHubConfig(
-  token: string,
-  body: HelpHubConfig
-): Promise<HelpHubConfig> {
-  const res = await adminAuthenticatedFetch('/api/v1/admin/help/config', {
-    method: 'PATCH',
-    token,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as { success?: boolean; data?: HelpHubConfig; message?: string };
-  if (!res.ok || !json.data) {
-    throw new Error(json.message ?? 'Failed to save help page settings');
   }
   return json.data;
 }

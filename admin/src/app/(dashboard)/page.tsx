@@ -8,30 +8,14 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import { CentricPageHeader } from '@/components/layout/CentricPageHeader';
 import { pageBreadcrumbs } from '@/components/layout/pageHeaderBreadcrumbs';
-import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
-import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import { OverviewIamMetrics } from '@/components/dashboard/OverviewIamMetrics';
 
 const cards = [
   {
-    title: 'FAQ',
-    description: 'Manage FAQ items and page copy for the public /help section.',
-    href: '/help',
-    icon: HelpOutlineRoundedIcon,
-    action: 'Open',
-  },
-  {
-    title: 'Documentation',
-    description: 'Internal platform notes, API contracts, and publishing reference.',
-    href: '/documentation',
-    icon: MenuBookRoundedIcon,
-    action: 'Open',
-  },
-  {
     title: 'Soft delete center',
-    description: 'Restore help articles, blog posts, or deactivated users from trash.',
+    description: 'Restore blog posts or deactivated users from trash.',
     href: '/trash',
     icon: DeleteOutlineRoundedIcon,
     action: 'Open',

@@ -11,7 +11,6 @@ import {
   PlusSquare,
   ChevronRight,
   Settings,
-  HelpCircle,
   Users,
   ChevronDown,
   Rss,
@@ -45,10 +44,7 @@ const MAIN_NAV = [
   { href: '/reposts', label: 'REPOSTS', icon: Repeat2 },
 ];
 
-const RAIL_UTILITY_LINKS = [
-  { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/help', label: 'Support Center', icon: HelpCircle },
-];
+const RAIL_UTILITY_LINKS = [{ href: '/settings', label: 'Settings', icon: Settings }];
 
 const SQUADS_LINKS = [{ href: '/squads', label: 'Browse squads' }] as const;
 
@@ -678,13 +674,6 @@ export function SidebarDrawer({
                   className="flex cursor-pointer items-center gap-3 border-0 bg-transparent px-3 py-2 text-[10px] font-black uppercase text-muted-foreground transition-colors hover:bg-primary/[0.1] hover:text-primary dark:hover:bg-primary/[0.14]"
                 >
                   <Settings className="size-3.5 shrink-0" /> Settings
-                </Link>
-                <Link
-                  href="/help"
-                  onClick={close}
-                  className="flex cursor-pointer items-center gap-3 border-0 bg-transparent px-3 py-2 text-[10px] font-black uppercase text-muted-foreground transition-colors hover:bg-primary/[0.1] hover:text-primary dark:hover:bg-primary/[0.14]"
-                >
-                  <HelpCircle className="size-3.5 shrink-0" /> Support Center
                 </Link>
               </section>
             ) : null}

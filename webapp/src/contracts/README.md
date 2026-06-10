@@ -194,6 +194,7 @@ Paths are relative to `NEXT_PUBLIC_API_BASE_URL` (or same-origin `/api` when uns
 | GET    | `/api/companies/search`     | `companiesApi` |
 | GET    | `/api/reference/entities`   | `referenceApi` |
 | GET    | `/api/reference/tech-stack` | `referenceApi` |
+| POST   | `/api/reference/tech-stack/resolve` | `referenceApi` |
 
 ### GitHub proxy — [`githubApi.ts`](./githubApi.ts)
 

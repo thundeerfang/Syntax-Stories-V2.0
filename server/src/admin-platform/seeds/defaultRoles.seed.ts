@@ -39,7 +39,6 @@ const CONTENT_EDITOR_PERMISSIONS = [
   'blog_tag:list',
   'blog_tag:read',
   'blog_tag:manage',
-  'help:manage',
   'legal:manage',
   'trash:manage',
   'achievement:list',

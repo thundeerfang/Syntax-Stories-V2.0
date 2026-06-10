@@ -16,8 +16,6 @@ import {
   CreditCard,
   Settings,
   UserPlus,
-  BookOpen,
-  HelpCircle,
   MessageSquare,
   ChevronRight,
   Copy,
@@ -375,23 +373,6 @@ export function AccountDropdown() {
                       aria-label="Show online status indicator"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 bg-card">
-                  <Link
-                    href="/docs"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-center gap-2 py-2 border-r-2 border-border border-b-2 border-b-transparent hover:border-b-primary hover:bg-muted transition-all text-[9px] font-black uppercase text-foreground"
-                  >
-                    <BookOpen className="h-3 w-3 text-muted-foreground" /> Documentation
-                  </Link>
-                  <Link
-                    href="/support"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-center gap-2 py-2 border-b-2 border-b-transparent hover:border-b-primary hover:bg-muted transition-all text-[9px] font-black uppercase text-foreground"
-                  >
-                    <HelpCircle className="h-3 w-3 text-muted-foreground" /> Get Help
-                  </Link>
                 </div>
               </div>
             </div>

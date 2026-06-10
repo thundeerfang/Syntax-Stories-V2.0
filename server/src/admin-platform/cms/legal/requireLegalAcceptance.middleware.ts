@@ -23,10 +23,8 @@ function isMutationExempt(p: string, method: string): boolean {
   if (p === '/api/v1/legal/accept-intent') return true;
   if (p.startsWith('/api/v1/legal/data-deletion-requests')) return true;
   if (p.startsWith('/api/v1/admin/legal')) return true;
-  if (p.startsWith('/api/v1/admin/help')) return true;
   if (p.startsWith('/api/v1/admin/trash')) return true;
   if (p.startsWith('/api/v1/admin/management')) return true;
-  if (p.startsWith('/api/v1/help/')) return true;
   if (p.startsWith('/api/feedback')) return true;
   if (p.startsWith('/api/contact')) return true;
   if (p.startsWith('/api/invites')) return true;

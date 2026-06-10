@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/app_feedback.dart';
+import '../services/api_errors.dart';
 import '../services/auth_api.dart';
 import '../state/auth_state.dart';
-import '../theme/retro_theme.dart';
-import '../widgets/retro_panel.dart';
+import '../utils/field_validation_rules.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/auth/auth_oauth_icon_row.dart';
+import '../widgets/auth/auth_screen_layout.dart';
+import '../widgets/auth/auth_text_field.dart';
+import '../widgets/auth/auth_ui.dart';
+import '../widgets/ui/app_feedback_banner.dart';
 import 'verify_code_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -17,6 +24,7 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _email = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _apiError;
 
   @override
   void dispose() {
@@ -24,57 +32,69 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
+  void _clearApiError() {
+    if (_apiError != null) setState(() => _apiError = null);
+  }
+
+  void _setApiError(String message) {
+    setState(() => _apiError = message);
+  }
+
   Future<void> _send() async {
+    _clearApiError();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final auth = context.read<AuthState>();
     try {
-      await auth.sendLoginOtp(_email.text);
+      await auth.sendLoginOtp(_email.text.trim());
       if (!mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const VerifyCodeScreen(isSignup: false)));
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const VerifyCodeScreen(isSignup: false)),
+      );
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      _setApiError(e.message);
+    } catch (e, st) {
+      logApiError('Send login OTP failed', method: 'POST', url: Uri.parse('app://local'), cause: '$e\n$st');
+      if (!mounted) return;
+      _setApiError(kGenericUserError);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('SIGN IN')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: RetroPanel(
-              title: 'email otp',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                    style: TextStyle(color: RetroTheme.glow, fontSize: 22, fontFamily: 'VT323'),
-                    decoration: const InputDecoration(labelText: 'EMAIL'),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Required';
-                      if (!v.contains('@')) return 'Invalid email';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: auth.busy ? null : _send,
-                    child: auth.busy ? const Text('SENDING...') : const Text('SEND CODE'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+
+    return AuthScreenLayout(
+      formKey: _formKey,
+      title: 'Sign in',
+      subtitle: 'Enter your email address',
+      children: [
+        AppFeedbackSlot(
+          message: _apiError,
+          kind: AppFeedbackKind.error,
+          onDismiss: _clearApiError,
         ),
-      ),
+        AuthTextField(
+          controller: _email,
+          label: 'EMAIL ADDRESS',
+          rule: AppFieldRule.email,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          onChanged: (_) => _clearApiError(),
+        ),
+        const SizedBox(height: 16),
+        AuthButton(
+          label: 'Send code',
+          loadingLabel: 'Sending…',
+          loading: auth.busy,
+          onPressed: auth.busy ? null : _send,
+        ),
+        const AuthOrDivider(),
+        AuthOAuthIconRow(
+          mode: OAuthMode.login,
+          onError: (msg) => _setApiError(msg),
+        ),
+      ],
     );
   }
 }

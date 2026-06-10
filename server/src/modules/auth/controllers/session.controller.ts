@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 import { SessionModel } from '../../../models/Session.js';
 import { SecurityEventModel } from '../../../models/SecurityEvent.js';

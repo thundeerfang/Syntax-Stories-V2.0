@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Stack } from '@mui/material';
 import {
   listUsers,
   searchUsers,

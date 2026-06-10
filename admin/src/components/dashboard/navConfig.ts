@@ -1,7 +1,5 @@
 import type { SvgIconComponent } from '@mui/icons-material';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
-import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
-import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import SubscriptionsRoundedIcon from '@mui/icons-material/SubscriptionsRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
@@ -75,12 +73,6 @@ export const mainNav: NavEntry[] = [
         permission: 'feedback:read',
       },
       {
-        label: 'Documentation',
-        href: '/documentation',
-        Icon: MenuBookRoundedIcon,
-        staffOnly: true,
-      },
-      {
         label: 'Contact leads',
         href: '/contact-leads',
         Icon: ContactMailRoundedIcon,
@@ -113,12 +105,6 @@ export const mainNav: NavEntry[] = [
     Icon: EmojiEventsRoundedIcon,
     staffOnly: true,
     anyPermissions: ['achievement:list', 'achievement:manage'],
-  },
-  {
-    label: 'FAQ',
-    href: '/help',
-    Icon: HelpOutlineRoundedIcon,
-    permission: 'help:manage',
   },
 ];
 
@@ -172,7 +158,6 @@ export function titleForPath(pathname: string): string {
   const items = flattenNavItems(mainNav);
   const hit = items.find((n) => n.href !== '/' && pathname.startsWith(n.href));
   if (hit) return hit.label;
-  if (pathname.startsWith('/help')) return 'FAQ';
   if (pathname.startsWith('/settings')) return 'Settings';
   if (pathname.startsWith('/security')) return 'Settings';
   return 'Admin';

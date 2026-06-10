@@ -440,6 +440,7 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     github: backendUser.github,
     youtube: backendUser.youtube,
     stackAndTools: backendUser.stackAndTools,
+    stackAndToolsDisplay: backendUser.stackAndToolsDisplay,
     workExperiences: backendUser.workExperiences,
     education: backendUser.education,
     certifications: backendUser.certifications,

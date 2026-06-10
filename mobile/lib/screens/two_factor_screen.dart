@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/app_feedback.dart';
 import '../services/auth_api.dart';
 import '../state/auth_state.dart';
-import '../theme/retro_theme.dart';
-import '../widgets/retro_panel.dart';
+import '../utils/field_validation_rules.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/auth/auth_screen_layout.dart';
+import '../widgets/auth/auth_text_field.dart';
+import '../widgets/auth/auth_ui.dart';
+import '../widgets/ui/app_feedback_banner.dart';
 
 class TwoFactorScreen extends StatefulWidget {
   const TwoFactorScreen({super.key});
@@ -16,6 +21,7 @@ class TwoFactorScreen extends StatefulWidget {
 class _TwoFactorScreenState extends State<TwoFactorScreen> {
   final _token = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _apiError;
 
   @override
   void dispose() {
@@ -23,59 +29,55 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
     super.dispose();
   }
 
+  void _clearApiError() {
+    if (_apiError != null) setState(() => _apiError = null);
+  }
+
   Future<void> _submit() async {
+    _clearApiError();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final auth = context.read<AuthState>();
     try {
-      await auth.submitTwoFactor(_token.text);
+      await auth.submitTwoFactor(_token.text.trim());
       if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      setState(() => _apiError = e.message);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('2FA')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: RetroPanel(
-              title: 'authenticator',
-              accent: RetroTheme.amber,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    '> ENTER TOTP FROM YOUR APP',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _token,
-                    keyboardType: TextInputType.number,
-                    autocorrect: false,
-                    style: TextStyle(color: RetroTheme.glow, fontSize: 28, fontFamily: 'VT323', letterSpacing: 4),
-                    decoration: const InputDecoration(labelText: '6-DIGIT CODE'),
-                    validator: (v) => (v == null || v.trim().length < 6) ? 'Enter code' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: auth.busy ? null : _submit,
-                    child: auth.busy ? const Text('...') : const Text('UNLOCK'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+
+    return AuthScreenLayout(
+      formKey: _formKey,
+      appBarTitle: 'Two-factor auth',
+      header: const AuthVerifyHeader(
+        title: 'Authenticator code',
+        subtitle: 'Enter the 6-digit code from your authenticator app.',
       ),
+      children: [
+        AppFeedbackSlot(
+          message: _apiError,
+          kind: AppFeedbackKind.error,
+          onDismiss: _clearApiError,
+        ),
+        AuthOtpField(
+          controller: _token,
+          label: '6-DIGIT CODE',
+          rule: AppFieldRule.totp,
+          enabled: !auth.busy,
+        ),
+        const SizedBox(height: 20),
+        AuthButton(
+          label: 'Unlock',
+          loadingLabel: 'Verifying…',
+          loading: auth.busy,
+          onPressed: auth.busy ? null : _submit,
+        ),
+      ],
     );
   }
 }

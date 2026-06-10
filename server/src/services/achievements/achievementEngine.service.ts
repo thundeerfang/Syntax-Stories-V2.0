@@ -211,7 +211,7 @@ export async function evaluateAchievementsForUser(
 
   await migrateLegacyUnlocks(userId);
 
-  const { catalog, byId, version, metricIndex } = await getCachedAchievementCatalog();
+  const { catalog, version, metricIndex } = await getCachedAchievementCatalog();
   const stats = await getOrCreateUserStats(userId);
   if (stats.catalogVersion !== version) {
     stats.catalogVersion = version;

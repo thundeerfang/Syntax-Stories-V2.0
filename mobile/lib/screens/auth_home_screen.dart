@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../theme/retro_theme.dart';
-import '../widgets/retro_panel.dart';
+import '../models/app_feedback.dart';
+import '../state/auth_state.dart';
+import '../theme/app_color_tokens.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/auth/auth_ui.dart';
+import '../widgets/ui/app_feedback_banner.dart';
 import 'sign_in_screen.dart';
 import 'sign_up_screen.dart';
 
@@ -10,71 +15,60 @@ class AuthHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
+    final auth = context.watch<AuthState>();
+    final colors = context.appColors;
+
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 12),
-              Text(
-                'SYNTAX STORIES',
-                textAlign: TextAlign.center,
-                style: t.headlineLarge?.copyWith(
-                  color: RetroTheme.glow,
-                  shadows: [
-                    Shadow(color: RetroTheme.glow.withValues(alpha: 0.45), blurRadius: 18),
-                  ],
+      backgroundColor: colors.primary,
+      body: DecoratedBox(
+        decoration: BoxDecoration(gradient: colors.welcomeGradient),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              children: [
+                AppFeedbackSlot(
+                  message: auth.authBannerMessage,
+                  kind: auth.authBannerKind ?? AppFeedbackKind.error,
+                  onDismiss: () => context.read<AuthState>().clearAuthBanner(),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'MOBILE TERMINAL v1.0',
-                textAlign: TextAlign.center,
-                style: t.bodyMedium,
-              ),
-              const SizedBox(height: 28),
-              RetroPanel(
-                title: 'session',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      '> AWAITING CREDENTIALS',
-                      style: t.bodyLarge,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SignInScreen()));
-                      },
-                      child: const Text('SIGN IN'),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SignUpScreen()));
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: RetroTheme.amber,
-                        side: const BorderSide(color: RetroTheme.amber, width: 2),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: RetroTheme.amber),
+                const Spacer(flex: 2),
+                const AuthHero(
+                  light: true,
+                  subtitle: 'Sign in to continue reading and writing.',
+                ),
+                const Spacer(flex: 3),
+                AuthButton(
+                  label: 'Sign in',
+                  onPressed: () {
+                    context.read<AuthState>().clearAuthBanner();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SignInScreen(),
                       ),
-                      child: const Text('CREATE ACCOUNT'),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                '// Uses server OTP auth: /auth/send-otp · /auth/signup-email · /auth/verify-otp',
-                style: t.bodyMedium?.copyWith(fontSize: 16, color: RetroTheme.dimGreen),
-              ),
-            ],
+                const SizedBox(height: 12),
+                AuthButton(
+                  label: 'Sign up',
+                  variant: AuthButtonVariant.frost,
+                  onPressed: () {
+                    context.read<AuthState>().clearAuthBanner();
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SignUpScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Spacer(),
+                const AuthCopyrightFooter(
+                  light: true,
+                  padding: EdgeInsets.only(top: 8, bottom: 0),
+                ),
+              ],
+            ),
           ),
         ),
       ),

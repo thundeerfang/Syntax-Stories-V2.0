@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { env } from './env.js';
 import { runAdminPlatformSeeds } from '../admin-platform/seeds/runAdminPlatformSeeds.js';
+import { ensureTechStackReferenceSeed } from '../bootstrap/ensureTechStackReferenceSeed.js';
 
 export async function connectDatabase(): Promise<void> {
   const uri = env.MONGODB_URI;
@@ -26,6 +27,7 @@ export async function connectDatabase(): Promise<void> {
     });
 
     await runAdminPlatformSeeds();
+    await ensureTechStackReferenceSeed();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[MongoDB] Connection error:', msg);

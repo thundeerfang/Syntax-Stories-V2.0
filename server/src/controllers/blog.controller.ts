@@ -9,10 +9,7 @@ import {
 } from '../modules/blog/blogContentValidation.js';
 import { BlogPostModel, type IBlogPost } from '../models/BlogPost.js';
 import { BlogReadDayModel } from '../models/BlogReadDay.js';
-import { BlogCategoryModel } from '../models/BlogCategory.js';
-import { BlogTagModel } from '../models/BlogTag.js';
 import { UserModel, normalizeProfileImg } from '../models/User.js';
-import { ensureBlogTaxonomySeeds } from '../modules/blog/ensureBlogTaxonomySeeds.js';
 import { normalizeTaxonomyInput } from '../modules/blog/postTaxonomy.js';
 import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';

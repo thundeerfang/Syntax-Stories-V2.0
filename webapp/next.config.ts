@@ -13,7 +13,6 @@ const nextConfig: NextConfig = {
       { source: '/squads/discover/:category', destination: '/squads/:category', permanent: true },
       { source: '/squads/discover', destination: '/squads/featured', permanent: true },
       { source: '/upgrade', destination: '/pricing', permanent: true },
-      { source: '/documentation', destination: '/docs', permanent: false },
       { source: '/categories/:slug', destination: '/topics/category/:slug', permanent: true },
     ];
   },

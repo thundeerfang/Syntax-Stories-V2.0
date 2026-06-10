@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/retroui/Checkbox';
 import { Text } from '@/components/retroui/Text';
-import { HelpCircle } from 'lucide-react';
 import {
   GoogleIcon,
   GithubIcon,
@@ -115,13 +114,11 @@ function SocialButton({
 
 function AuthFooter({
   children,
-  showHelp = false,
   closeDialog,
   compact = false,
   showLegalBlurb = true,
 }: Readonly<{
   children: React.ReactNode;
-  showHelp?: boolean;
   closeDialog?: () => void;
   /** Tighter top spacing so tall steps (e.g. signup + back link) stay inside the dialog without a sliver of scroll. */
   compact?: boolean;
@@ -137,16 +134,6 @@ function AuthFooter({
     >
       <div className="space-y-2">
         {children}
-        {showHelp && (
-          <Link
-            href="/help/sign-in"
-            onClick={closeDialog}
-            className="flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
-          >
-            <HelpCircle className="h-3.5 w-3.5" />
-            Trouble signing in?
-          </Link>
-        )}
       </div>
       {showLegalBlurb ? (
         <p className="text-[8px] leading-snug font-medium uppercase tracking-[0.04em] text-muted-foreground/60 px-2">
@@ -323,7 +310,7 @@ function renderAuthWelcomeStep(p: AuthDialogRenderProps): ReactNode {
         label="Sign in with email"
         onClick={() => p.goToStep('login-email')}
       />
-      <AuthFooter compact showHelp closeDialog={p.close}>
+      <AuthFooter compact closeDialog={p.close}>
         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
           No account?{' '}
           <button
@@ -378,7 +365,7 @@ function renderAuthLoginEmailStep(p: AuthDialogRenderProps): ReactNode {
           </Button>
         </div>
       </form>
-      <AuthFooter compact showHelp closeDialog={p.close}>
+      <AuthFooter compact closeDialog={p.close}>
         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
           Need an account?{' '}
           <button

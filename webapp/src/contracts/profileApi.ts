@@ -4,6 +4,7 @@
  */
 
 import type { AchievementsPayload } from './achievementsApi';
+import type { TechStackItem } from './referenceApi';
 
 export interface WorkExperience {
   workId?: string;
@@ -119,6 +120,7 @@ export interface AuthUser {
   github?: string;
   youtube?: string;
   stackAndTools?: string[];
+  stackAndToolsDisplay?: TechStackItem[];
   workExperiences?: WorkExperience[];
   education?: EducationItem[];
   certifications?: CertificationItem[];
@@ -155,6 +157,7 @@ export type AccountUser = {
   github?: string;
   youtube?: string;
   stackAndTools?: string[];
+  stackAndToolsDisplay?: TechStackItem[];
   workExperiences?: WorkExperience[];
   education?: EducationItem[];
   certifications?: CertificationItem[];

@@ -55,3 +55,21 @@ export async function searchTechStackApi(query: string, limit = 15): Promise<Tec
     return [];
   }
 }
+
+export async function resolveTechStackApi(names: string[]): Promise<TechStackItem[]> {
+  const list = names.map((n) => n.trim()).filter(Boolean).slice(0, 10);
+  if (list.length === 0) return [];
+  try {
+    const res = await fetch(referenceUrl('/tech-stack/resolve'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ names: list }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { success?: boolean; items?: TechStackItem[] };
+    return Array.isArray(data.items) ? data.items : [];
+  } catch {
+    return [];
+  }
+}

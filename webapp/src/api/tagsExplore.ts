@@ -4,7 +4,6 @@ import type {
   CategoryListSort,
   PaginatedCategoriesResponse,
   PaginatedTagsResponse,
-  TagExploreRow,
   TagListSort,
   TagsExploreResponse,
 } from '@contracts/tagsExploreApi';

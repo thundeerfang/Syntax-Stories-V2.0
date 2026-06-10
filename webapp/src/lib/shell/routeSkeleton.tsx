@@ -4,7 +4,6 @@ import {
   BlogPostPageSkeletonInner,
   BlogWritePageSkeletonInner,
   ContactPageSkeletonInner,
-  DocsPageSkeletonInner,
   ExplorePageSkeletonInner,
   FollowingPageContentSkeleton,
   HomePageSkeletonInner,
@@ -41,14 +40,8 @@ export function pickRouteSkeleton(pathname: string): ReactNode {
   if (path === '/categories') {
     return <ExplorePageSkeletonInner />;
   }
-  if (path === '/docs' || path.startsWith('/docs/')) {
-    return <DocsPageSkeletonInner />;
-  }
   if (path === '/contact' || path.startsWith('/contact/')) {
     return <ContactPageSkeletonInner />;
-  }
-  if (path === '/help' || path.startsWith('/help/')) {
-    return <DocsPageSkeletonInner />;
   }
   if (path === '/settings' || path.startsWith('/settings/')) {
     return <SettingsPageSkeletonInner />;

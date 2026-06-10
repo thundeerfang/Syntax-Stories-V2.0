@@ -6,13 +6,22 @@ import { sendAppHttpError } from '../errors/sendAppHttpError.js';
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction): void {
   if (err instanceof MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      res.status(400).json({ success: false, message: 'File too large' });
+      res.status(400).json({ success: false, message: 'Image file is too large.' });
       return;
     }
     if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
       res.status(400).json({ success: false, message: 'Invalid file upload' });
       return;
     }
+  }
+  const uploadMsg = err.message?.trim() ?? '';
+  if (
+    uploadMsg.includes('Please upload a JPEG') ||
+    uploadMsg.includes('Only JPEG, PNG, GIF, or WebP') ||
+    uploadMsg.includes('Only images (JPEG')
+  ) {
+    res.status(400).json({ success: false, message: uploadMsg });
+    return;
   }
   if (isAppHttpError(err)) {
     sendAppHttpError(res, err);

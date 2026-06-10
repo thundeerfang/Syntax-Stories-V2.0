@@ -11,10 +11,6 @@ import { suspendRespectContributionsForPost } from '../../../services/blogRespec
 import { sendBlogModerationEmail } from './blogModerationEmail.js';
 import { restoreBlogPostAsAdmin, TrashServiceError } from '../trash/trash.service.js';
 
-function notDeletedFilter(): Record<string, unknown> {
-  return { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
-}
-
 async function loadPostById(postId: string) {
   if (!mongoose.Types.ObjectId.isValid(postId)) {
     throw new BlogModerationError(400, 'Invalid post id');

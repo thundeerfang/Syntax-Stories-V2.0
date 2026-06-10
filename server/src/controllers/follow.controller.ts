@@ -18,6 +18,7 @@ import {
   attachAchievementsToResponse,
   dispatchAchievementEvents,
 } from '../achievements/achievement.service.js';
+import { attachStackAndToolsDisplay } from '../modules/profile/profile.enrich.js';
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
 const PUBLIC_PROFILE_FIELDS =
@@ -105,9 +106,15 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
         Number((user as { blogRespectReceivedCount?: number }).blogRespectReceivedCount ?? 0)
       )
     );
+    const profileUser = await attachStackAndToolsDisplay({
+      ...user,
+      id: String(user._id),
+      profileImg,
+      blogRespectReceivedCount,
+    } as Record<string, unknown>);
     res.status(200).json({
       success: true,
-      user: { ...user, id: String(user._id), profileImg, blogRespectReceivedCount },
+      user: profileUser,
       followersCount: counts.followersCount,
       followingCount: counts.followingCount,
       blogRespectReceivedCount,

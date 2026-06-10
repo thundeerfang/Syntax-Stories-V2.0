@@ -19,6 +19,8 @@ export interface ITechStackReference extends Document {
   name: string;
   slug: string;
   category: TechStackReferenceCategory;
+  /** Optional override when catalog slug ≠ skillicons.dev slug (e.g. ts, nextjs). */
+  iconSlug?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +34,7 @@ const TechStackReferenceSchema = new Schema<ITechStackReference>(
       required: true,
       enum: TECH_STACK_REFERENCE_CATEGORIES,
     },
+    iconSlug: { type: String, trim: true, lowercase: true, maxlength: 64 },
   },
   { timestamps: true }
 );

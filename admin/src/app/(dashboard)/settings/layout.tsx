@@ -10,7 +10,6 @@ import {
   ListItemText,
   Paper,
   Stack,
-  Typography,
   alpha,
   useTheme,
 } from '@mui/material';

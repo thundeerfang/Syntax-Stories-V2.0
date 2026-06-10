@@ -1,5 +1,4 @@
 export { adminManagementRouter } from './rbac/routes/management.routes.js';
-export { helpAdminRouter, helpPublicRouter } from './cms/help/help.routes.js';
 export { legalAdminRouter, legalPublicRouter, legalUserRouter } from './cms/legal/legal.routes.js';
 export { trashAdminRouter } from './cms/trash/trash.routes.js';
 export { staffLogin } from './auth/staffLogin.controller.js';

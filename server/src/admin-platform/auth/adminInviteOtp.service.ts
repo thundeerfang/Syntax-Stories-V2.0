@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import { getRedis } from '../../config/redis.js';
-import { authConfig } from '../../config/auth.config.js';
 import {
   generateEmailOtpDigits,
   hashEmailOtp,

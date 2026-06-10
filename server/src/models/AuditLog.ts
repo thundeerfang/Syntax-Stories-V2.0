@@ -60,8 +60,6 @@ export const AUDIT_ACTIONS = [
   'my_setup_removed',
   'account_locked',
   'account_deleted',
-  'admin.help.soft_deleted',
-  'admin.help.restored',
   'admin.blog.restored',
   'admin.user.restored',
   'admin.trash.listed',

@@ -69,6 +69,7 @@ export function getSkillIconSlug(displayName: string): string {
 
 /**
  * Return the Skill Icons API URL for a single tech (e.g. "React" → "https://skillicons.dev/icons?i=react").
+ * @deprecated Prefer `iconUrl` from `/api/reference/tech-stack` search or resolve.
  */
 export function getSkillIconUrl(displayName: string): string {
   const slug = getSkillIconSlug(displayName);
@@ -77,6 +78,7 @@ export function getSkillIconUrl(displayName: string): string {
 
 /**
  * Return the Skill Icons API URL from a known slug (e.g. from techStack list).
+ * @deprecated Prefer `iconUrl` from `/api/reference/tech-stack` search or resolve.
  */
 export function getSkillIconUrlBySlug(slug: string): string {
   const s = slug?.trim();
@@ -92,7 +94,25 @@ export function getSkillIconsCombinedUrl(displayNames: string[]): string {
   return slugs.length ? `${SKILL_ICONS_BASE}${slugs.map(encodeURIComponent).join(',')}` : '';
 }
 
-/** Warm the browser cache for stack badge icons (combined + per-item). */
+/** Warm the browser cache for stack badge icons from API rows. */
+export function preloadTechStackItems(
+  items: ReadonlyArray<{ name: string; iconUrl?: string }>
+): void {
+  if (typeof window === 'undefined' || items.length === 0) return;
+
+  for (const item of items) {
+    const url = item.iconUrl?.trim();
+    if (!url) continue;
+    const img = new window.Image();
+    img.decoding = 'async';
+    img.src = url;
+  }
+}
+
+/**
+ * @deprecated Prefer `iconUrl` from `/api/reference/tech-stack` search or resolve.
+ * Warm the browser cache for stack badge icons (combined + per-item).
+ */
 export function preloadSkillIcons(displayNames: string[]): void {
   if (typeof window === 'undefined' || displayNames.length === 0) return;
 

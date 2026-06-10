@@ -5,6 +5,7 @@ import { applyBasicProfileRules } from './profile-basic.service.js';
 import { normalizeCertifications } from './profile-certifications.service.js';
 import { normalizeEducation } from './profile-education.service.js';
 import { toAccountUser } from './profile.mapper.js';
+import { attachStackAndToolsDisplay } from './profile.enrich.js';
 import { normalizeProjectsPrjLog } from './profile-projects.service.js';
 import { profileRepository } from './profile.repository.js';
 import type { ProfileSections, ProfileUpdateSection } from './profile.types.js';
@@ -151,7 +152,7 @@ async function applyProfileUpdate(
     section,
   });
 
-  return { ok: true, user: toAccountUser(updated as Record<string, unknown>) };
+  return { ok: true, user: await attachStackAndToolsDisplay(toAccountUser(updated as Record<string, unknown>)) };
 }
 
 export const profileService = {
@@ -165,7 +166,7 @@ export const profileService = {
         code: ProfileErrorCode.USER_NOT_FOUND,
       };
     }
-    return { ok: true, user: toAccountUser(found as Record<string, unknown>) };
+    return { ok: true, user: await attachStackAndToolsDisplay(toAccountUser(found as Record<string, unknown>)) };
   },
 
   async updateProfile(

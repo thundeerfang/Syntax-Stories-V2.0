@@ -10,13 +10,10 @@ import { STACK_TOOL_NAME_MAX, STACK_TOOL_NAME_MIN } from '@/lib/profile/profileL
 import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import {
-  getSkillIconUrl,
-  getSkillIconUrlBySlug,
-  preloadSkillIcons,
-} from '@/lib/profile/skillIcons';
+import { preloadTechStackItems } from '@/lib/profile/skillIcons';
 import { SkillIconImage } from '@/components/ui/media';
 import { searchTechStack, type TechStackItem } from '@/lib/blog/referenceSearch';
+import { useResolvedTechStack } from '@/hooks/useResolvedTechStack';
 import {
   SettingsSectionHeading,
   SettingsTabPanel,
@@ -34,6 +31,11 @@ export function StackAndToolsContent() {
   const [highlight, setHighlight] = useState(0);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<TechStackItem[]>([]);
+  const baseline = (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX);
+  const itemsMatchBaseline = JSON.stringify(items) === JSON.stringify(baseline);
+  const serverDisplay = itemsMatchBaseline ? user?.stackAndToolsDisplay : undefined;
+  const resolvedItems = useResolvedTechStack(serverDisplay?.length ? [] : items);
+  const badgeItems = serverDisplay?.length ? serverDisplay : resolvedItems;
   const atMax = items.length >= STACK_AND_TOOLS_MAX;
   const showSearchDropdown = open && input.trim().length >= 2 && !atMax;
 
@@ -42,12 +44,12 @@ export function StackAndToolsContent() {
   }, [user?.stackAndTools]);
 
   useEffect(() => {
-    preloadSkillIcons(items);
-  }, [items]);
+    preloadTechStackItems(badgeItems);
+  }, [badgeItems]);
 
   useEffect(() => {
     if (suggestions.length > 0) {
-      preloadSkillIcons(suggestions.map((s) => s.name));
+      preloadTechStackItems(suggestions);
     }
   }, [suggestions]);
 
@@ -150,7 +152,9 @@ export function StackAndToolsContent() {
           </h3>
           <div className="flex flex-wrap gap-2">
             <AnimatePresence mode="popLayout">
-              {items.map((t, i) => (
+              {items.map((t, i) => {
+                const iconUrl = badgeItems[i]?.iconUrl?.trim() ?? '';
+                return (
                 <motion.div
                   key={t}
                   layout
@@ -160,7 +164,11 @@ export function StackAndToolsContent() {
                   className="group flex items-center gap-2 pl-2 pr-1 py-1 border-2 border-border bg-card shadow hover:border-primary transition-colors"
                 >
                   <div className="size-5 shrink-0 flex items-center justify-center">
-                    <SkillIconImage src={getSkillIconUrl(t)} alt={t} />
+                    {iconUrl ? (
+                      <SkillIconImage src={iconUrl} alt={t} />
+                    ) : (
+                      <Monitor className="size-3.5 text-muted-foreground" aria-hidden />
+                    )}
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-wider">{t}</span>
                   <button
@@ -171,7 +179,8 @@ export function StackAndToolsContent() {
                     <X className="size-3" />
                   </button>
                 </motion.div>
-              ))}
+                );
+              })}
             </AnimatePresence>
             {items.length === 0 && (
               <div className="flex w-full flex-col items-center gap-2 border-2 border-dashed border-border bg-muted/10 px-4 py-3 text-center">
@@ -276,7 +285,7 @@ export function StackAndToolsContent() {
                             )}
                           >
                             <SkillIconImage
-                              src={getSkillIconUrlBySlug(item.slug)}
+                              src={item.iconUrl}
                               alt={item.name}
                             />
                           </div>

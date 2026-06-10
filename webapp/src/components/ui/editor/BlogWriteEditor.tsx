@@ -1339,7 +1339,6 @@ function UnsplashBlockEditor({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UnsplashPhoto[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const hasUnsplashKey = !!process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
@@ -1424,55 +1423,43 @@ function UnsplashBlockEditor({
   return (
     <BlockCard title="Unsplash" icon={Camera} onRemove={onRemove}>
       <div className="space-y-3">
-        {hasUnsplashKey ? (
-          <>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search photos..."
-                className="flex-1 border-0 bg-muted/25 p-2 text-xs ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-primary/35"
-              />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Search photos..."
+            className="flex-1 border-0 bg-muted/25 p-2 text-xs ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-primary/35"
+          />
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={searching || !searchQuery.trim()}
+            className="border-0 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase text-primary-foreground hover:brightness-110 disabled:opacity-50"
+          >
+            {searching ? '…' : 'Search'}
+          </button>
+        </div>
+        {searchError && <p className="text-[10px] text-destructive">{searchError}</p>}
+        {results.length > 0 && (
+          <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto border-0 bg-muted/15 p-1.5 ring-1 ring-border/30">
+            {results.map((photo) => (
               <button
+                key={photo.id}
                 type="button"
-                onClick={handleSearch}
-                disabled={searching || !searchQuery.trim()}
-                className="border-0 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase text-primary-foreground hover:brightness-110 disabled:opacity-50"
+                onClick={() => selectPhoto(photo)}
+                onKeyDown={(e) => e.key === 'Enter' && selectPhoto(photo)}
+                className="aspect-square overflow-hidden border-0 ring-1 ring-border/40 hover:ring-primary/60 focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                {searching ? '…' : 'Search'}
+                <img
+                  src={photo.urls?.small ?? photo.urls?.thumb}
+                  alt={photo.alt_description ?? 'Unsplash'}
+                  className="w-full h-full object-cover"
+                />
               </button>
-            </div>
-            {searchError && <p className="text-[10px] text-destructive">{searchError}</p>}
-            {results.length > 0 && (
-              <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto border-0 bg-muted/15 p-1.5 ring-1 ring-border/30">
-                {results.map((photo) => (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    onClick={() => selectPhoto(photo)}
-                    onKeyDown={(e) => e.key === 'Enter' && selectPhoto(photo)}
-                    className="aspect-square overflow-hidden border-0 ring-1 ring-border/40 hover:ring-primary/60 focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <img
-                      src={photo.urls?.small ?? photo.urls?.thumb}
-                      alt={photo.alt_description ?? 'Unsplash'}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-[10px] text-muted-foreground">
-            Add{' '}
-            <code className="border border-border bg-muted px-1">
-              NEXT_PUBLIC_UNSPLASH_ACCESS_KEY
-            </code>{' '}
-            to .env.local to search photos.
-          </p>
+            ))}
+          </div>
         )}
       </div>
     </BlockCard>

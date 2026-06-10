@@ -42,7 +42,6 @@ const FALLBACK_PERMISSION_KEYS = [
   'feedback:read',
   'feedback:manage',
   'contact_lead:read',
-  'help:manage',
   'legal:manage',
   'trash:manage',
   'achievement:list',

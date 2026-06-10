@@ -29,7 +29,6 @@ export const SEARCH_FEATURES: readonly FeatureCatalogEntry[] = [
   },
   { id: 'invite', label: 'Invite friends', keywords: ['invite', 'referral'], href: '/invite' },
   { id: 'settings', label: 'Settings', keywords: ['settings', 'account'], href: '/settings' },
-  { id: 'help', label: 'Help center', keywords: ['help', 'support'], href: '/help' },
   { id: 'wallet', label: 'Wallet', keywords: ['wallet', 'credits'], href: '/wallet' },
   { id: 'pricing', label: 'Pricing', keywords: ['pricing', 'plans'], href: '/pricing' },
 ] as const;

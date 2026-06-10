@@ -1,23 +1,16 @@
 import type { Request, Response } from 'express';
 import type { AuthUser } from '../../../middlewares/auth/index.js';
 import { isAdminRequest } from '../../rbac/middleware/requireStaff.middleware.js';
-import type { StaffRole } from '../../rbac/middleware/requireStaff.middleware.js';
 import {
   listBlogTrash,
   listUserTrash,
   restoreBlogPostAsAdmin,
-  restoreHelpFromTrash,
   restoreUserAsAdmin,
   TrashServiceError,
 } from './trash.service.js';
-import { HelpServiceError, helpService } from '../help/help.service.js';
 
 function sendTrashError(res: Response, err: unknown): void {
   if (err instanceof TrashServiceError) {
-    res.status(err.status).json({ success: false, message: err.message, code: err.code });
-    return;
-  }
-  if (err instanceof HelpServiceError) {
     res.status(err.status).json({ success: false, message: err.message, code: err.code });
     return;
   }
@@ -25,10 +18,10 @@ function sendTrashError(res: Response, err: unknown): void {
   res.status(500).json({ success: false, message: 'Internal server error' });
 }
 
-type TrashSection = 'help' | 'blog' | 'user';
+type TrashSection = 'blog' | 'user';
 
 function parseSections(raw: unknown): TrashSection[] {
-  const all: TrashSection[] = ['help', 'blog', 'user'];
+  const all: TrashSection[] = ['blog', 'user'];
   if (raw == null || raw === '') return all;
   const s = String(raw);
   const parts = s
@@ -37,7 +30,7 @@ function parseSections(raw: unknown): TrashSection[] {
     .filter(Boolean);
   const set = new Set<TrashSection>();
   for (const p of parts) {
-    if (p === 'help' || p === 'blog' || p === 'user') set.add(p);
+    if (p === 'blog' || p === 'user') set.add(p);
   }
   return set.size ? [...set] : all;
 }
@@ -53,9 +46,6 @@ export async function getTrash(req: Request, res: Response): Promise<void> {
 
     const out: Record<string, unknown> = { page, pageSize };
 
-    if (sections.includes('help')) {
-      out.help = await helpService.listTrash(page, pageSize);
-    }
     if (sections.includes('blog')) {
       out.blog = await listBlogTrash(page, pageSize);
     }
@@ -72,7 +62,6 @@ export async function getTrash(req: Request, res: Response): Promise<void> {
 export async function postRestore(req: Request, res: Response): Promise<void> {
   try {
     const user = (req as Request & { user: AuthUser }).user;
-    const staffRole = (req as Request & { staffRole: StaffRole }).staffRole;
     if (!user?._id) {
       res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
@@ -84,12 +73,6 @@ export async function postRestore(req: Request, res: Response): Promise<void> {
 
     if (!resourceType || !id) {
       res.status(400).json({ success: false, message: 'resourceType and id required' });
-      return;
-    }
-
-    if (resourceType === 'help') {
-      await restoreHelpFromTrash(id, user._id, staffRole, req);
-      res.json({ success: true });
       return;
     }
 

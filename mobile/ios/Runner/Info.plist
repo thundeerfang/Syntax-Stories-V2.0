@@ -66,6 +66,28 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>dev.syntaxstories.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>syntaxstories</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Syntax Stories needs photo library access so you can choose a profile photo or cover image.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Syntax Stories saves cropped profile and cover images to your photo library when you choose them.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

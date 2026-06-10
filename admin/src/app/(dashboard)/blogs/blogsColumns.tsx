@@ -25,7 +25,11 @@ export const blogsColumns: ColumnDef<AdminBlogListItem, unknown>[] = [
     accessorFn: (r) => r.authorUsername,
     cell: ({ row }) => {
       const { authorRef, authorUsername, authorFullName } = row.original;
-      const label = authorFullName ? `${authorFullName} (@${authorUsername})` : `@${authorUsername}`;
+      const label = authorFullName
+        ? `${authorFullName} (@${authorUsername})`
+        : authorUsername
+          ? `@${authorUsername}`
+          : '';
       if (authorRef) {
         return (
           <Typography

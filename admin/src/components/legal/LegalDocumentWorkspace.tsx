@@ -100,13 +100,7 @@ export function LegalDocumentWorkspace({
     setError(null);
     try {
       let p = await ensureLegalPolicyForKind(apiToken, kind, cachedPolicy);
-      if (
-        startDraft &&
-        mode === 'draft' &&
-        !readOnly &&
-        p.status === 'published' &&
-        apiToken
-      ) {
+      if (startDraft && mode === 'draft' && !readOnly && p.status === 'published') {
         p = await patchLegalPolicy(apiToken, p._id, { action: 'start_draft' });
       }
       setPolicy(p);

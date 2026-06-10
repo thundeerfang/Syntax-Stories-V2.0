@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { EMPLOYMENT_TYPE_VALUES, LOCATION_TYPE_VALUES } from '@syntax-stories/shared';
+import {
+  EMPLOYMENT_TYPE_VALUES,
+  LOCATION_TYPE_VALUES,
+  PROFILE_CERT_EXPIRATION_END_YEAR,
+  PROFILE_DATE_START_YEAR,
+} from '@syntax-stories/shared';
 
 function isMonthYear(val: unknown): val is string {
   return typeof val === 'string' && /^\d{4}-\d{2}$/.test(val);
@@ -10,14 +15,13 @@ function compareMonthYear(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
-function safeMonthYear(val: unknown): string {
+function safeMonthYear(val: unknown, maxYear = new Date().getFullYear()): string {
   if (!isMonthYear(val)) return '';
   const [yStr, mStr] = val.split('-');
   const y = Number.parseInt(yStr, 10);
   const m = Number.parseInt(mStr, 10);
   if (!Number.isFinite(y) || !Number.isFinite(m)) return '';
-  const maxYear = new Date().getFullYear();
-  if (y < 1980 || y > maxYear) return '';
+  if (y < PROFILE_DATE_START_YEAR || y > maxYear) return '';
   if (m < 1 || m > 12) return '';
   return val;
 }
@@ -224,22 +228,55 @@ export const educationItemSchema = z
     }
   });
 
-export const certificationItemSchema = z.object({
-  certId: z.string().max(20).trim().optional(),
-  name: z.string().max(120).trim(),
-  issuingOrganization: z.string().max(120).trim(),
-  issuerLogo: optUriMax(2000),
-  issuerLogoAlt: z.string().max(120).trim().optional(),
-  currentlyValid: z.boolean().optional(),
-  issueDate: z.string().max(20).trim(),
-  expirationDate: z.string().max(20).trim().optional(),
-  certValType: z.string().max(20).trim().optional(),
-  credentialId: z.string().max(80).trim().optional(),
-  credentialUrl: optUriMax(500),
-  description: z.string().max(2000).trim().optional(),
-  skills: z.array(z.string().max(80).trim()).min(1).max(30),
-  media: z.array(mediaItemSchema).max(5).optional(),
-});
+export const certificationItemSchema = z
+  .object({
+    certId: z.string().max(20).trim().optional(),
+    name: z.string().max(120).trim(),
+    issuingOrganization: z.string().max(120).trim(),
+    issuerLogo: optUriMax(2000),
+    issuerLogoAlt: z.string().max(120).trim().optional(),
+    currentlyValid: z.boolean().optional(),
+    issueDate: z.string().max(20).trim(),
+    expirationDate: z.string().max(20).trim().optional(),
+    certValType: z.string().max(20).trim().optional(),
+    credentialId: z.string().max(80).trim().optional(),
+    credentialUrl: optUriMax(500),
+    description: z.string().max(2000).trim().optional(),
+    skills: z.array(z.string().max(80).trim()).min(1).max(30),
+    media: z.array(mediaItemSchema).max(5).optional(),
+  })
+  .superRefine((val, ctx) => {
+    const issue = safeMonthYear(val.issueDate);
+    if (!issue) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['issueDate'],
+        message: 'Invalid issue date.',
+      });
+      return;
+    }
+
+    const expRaw = val.expirationDate?.trim();
+    if (!expRaw) return;
+
+    const exp = safeMonthYear(expRaw, PROFILE_CERT_EXPIRATION_END_YEAR);
+    if (!exp) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['expirationDate'],
+        message: `Expiration date must be between ${PROFILE_DATE_START_YEAR} and ${PROFILE_CERT_EXPIRATION_END_YEAR}.`,
+      });
+      return;
+    }
+
+    if (compareMonthYear(exp, issue) < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['expirationDate'],
+        message: 'Expiration date cannot be earlier than issue date.',
+      });
+    }
+  });
 
 export const projectItemSchema = z
   .object({
@@ -260,6 +297,7 @@ export const projectItemSchema = z
   .superRefine((val, ctx) => {
     const src = String(val.source ?? '').trim();
     if (src === 'github') return;
+
     if (!val.publisher?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -267,11 +305,47 @@ export const projectItemSchema = z
         message: 'Required',
       });
     }
-    if (!val.publicationDate?.trim()) {
+
+    const pubRaw = val.publicationDate?.trim();
+    if (!pubRaw) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['publicationDate'],
         message: 'Required',
+      });
+      return;
+    }
+
+    const pub = safeMonthYear(pubRaw);
+    if (!pub) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['publicationDate'],
+        message: 'Invalid publication date.',
+      });
+      return;
+    }
+
+    if (val.ongoing) return;
+
+    const endRaw = val.endDate?.trim();
+    if (!endRaw) return;
+
+    const end = safeMonthYear(endRaw, PROFILE_CERT_EXPIRATION_END_YEAR);
+    if (!end) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['endDate'],
+        message: `End date must be between ${PROFILE_DATE_START_YEAR} and ${PROFILE_CERT_EXPIRATION_END_YEAR}.`,
+      });
+      return;
+    }
+
+    if (compareMonthYear(end, pub) < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['endDate'],
+        message: 'End date cannot be earlier than publication date.',
       });
     }
   });

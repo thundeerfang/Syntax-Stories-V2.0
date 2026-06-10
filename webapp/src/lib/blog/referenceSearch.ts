@@ -2,6 +2,7 @@ import { searchCompaniesApi } from '@/api/companies';
 import {
   searchReferenceEntitiesApi,
   searchTechStackApi,
+  resolveTechStackApi,
   type EntityOption,
   type TechStackItem,
 } from '@/api/reference';
@@ -31,4 +32,8 @@ export async function searchOrganizations(query: string): Promise<EntityOption[]
 
 export async function searchTechStack(query: string, limit = 15): Promise<TechStackItem[]> {
   return searchTechStackApi(query, limit);
+}
+
+export async function resolveTechStack(names: string[]): Promise<TechStackItem[]> {
+  return resolveTechStackApi(names);
 }

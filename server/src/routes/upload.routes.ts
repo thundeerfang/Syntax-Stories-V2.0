@@ -1,12 +1,14 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
 import multer from 'multer';
 import sharp from 'sharp';
 import { verifyToken } from '../middlewares/auth/index.js';
 import {
+  IMAGE_UPLOAD_REJECT_MESSAGE,
   MAX_FILE_SIZE_BYTES,
-  imageBufferMatchesClaimedMime,
+  isAllowedImageUploadMime,
+  rasterBufferMatchesUpload,
   imageDimensionsAllowed,
 } from '../config/uploadValidation.js';
 import { jpegBlurDataUrlFromFile } from '../utils/imageBlurPlaceholder.js';
@@ -60,10 +62,29 @@ const storageMedia = multer.diskStorage({
 });
 
 const imageFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowed = /^image\/(jpeg|jpg|png|gif|webp)$/i.test(file.mimetype);
-  if (allowed) cb(null, true);
-  else cb(new Error('Only images (JPEG, PNG, GIF, WebP) are allowed'));
+  if (isAllowedImageUploadMime(file.mimetype, file.originalname)) {
+    cb(null, true);
+    return;
+  }
+  cb(new Error(IMAGE_UPLOAD_REJECT_MESSAGE));
 };
+
+function runImageUpload(upload: multer.Multer, field: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    upload.single(field)(req, res, (err: unknown) => {
+      if (!err) {
+        next();
+        return;
+      }
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        res.status(400).json({ success: false, message: 'Image file is too large.' });
+        return;
+      }
+      const msg = err instanceof Error ? err.message : IMAGE_UPLOAD_REJECT_MESSAGE;
+      res.status(400).json({ success: false, message: msg });
+    });
+  };
+}
 
 const uploadAvatar = multer({
   storage: storageAvatar,
@@ -92,15 +113,26 @@ const storageLogo = multer.diskStorage({
   },
 });
 
+const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+
+const LOGO_UPLOAD_REJECT_MESSAGE =
+  'Please upload a JPEG, PNG, WebP, or iPhone photo (HEIC) for logos.';
+
 const logoFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowed = /^image\/(jpeg|jpg|png|webp|svg\+xml)$/i.test(file.mimetype);
-  if (allowed) cb(null, true);
-  else cb(new Error('Only images (JPEG, PNG, WebP, SVG) are allowed for logos'));
+  if (!isAllowedImageUploadMime(file.mimetype, file.originalname)) {
+    cb(new Error(LOGO_UPLOAD_REJECT_MESSAGE));
+    return;
+  }
+  if (/gif/i.test(file.mimetype)) {
+    cb(new Error(LOGO_UPLOAD_REJECT_MESSAGE));
+    return;
+  }
+  cb(null, true);
 };
 
 const uploadLogo = multer({
   storage: storageLogo,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: LOGO_MAX_BYTES },
   fileFilter: logoFilter,
 });
 
@@ -115,7 +147,7 @@ const storageSchoolLogo = multer.diskStorage({
 
 const uploadSchoolLogo = multer({
   storage: storageSchoolLogo,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: LOGO_MAX_BYTES },
   fileFilter: logoFilter,
 });
 
@@ -130,7 +162,7 @@ const storageOrgLogo = multer.diskStorage({
 
 const uploadOrgLogo = multer({
   storage: storageOrgLogo,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: LOGO_MAX_BYTES },
   fileFilter: logoFilter,
 });
 
@@ -147,7 +179,7 @@ function assertRasterMagicBytesOrCleanup(filePath: string, mimetype: string): bo
   try {
     const buf = Buffer.alloc(32);
     fs.readSync(fd, buf, 0, 32, 0);
-    return imageBufferMatchesClaimedMime(buf, mimetype);
+    return rasterBufferMatchesUpload(buf, mimetype);
   } finally {
     try {
       fs.closeSync(fd);
@@ -245,7 +277,7 @@ async function finalizeRasterLogo(
 router.post(
   '/avatar',
   verifyToken,
-  uploadAvatar.single('avatar'),
+  runImageUpload(uploadAvatar, 'avatar'),
   async (req: Request, res: Response) => {
     if (!req.file) {
       res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -259,7 +291,7 @@ router.post(
       }
       res
         .status(400)
-        .json({ success: false, message: 'File content does not match declared image type.' });
+        .json({ success: false, message: 'That file is not a supported image.' });
       return;
     }
     try {
@@ -305,7 +337,7 @@ router.post(
 router.post(
   '/cover',
   verifyToken,
-  uploadCover.single('cover'),
+  runImageUpload(uploadCover, 'cover'),
   async (req: Request, res: Response) => {
     if (!req.file) {
       res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -319,7 +351,7 @@ router.post(
       }
       res
         .status(400)
-        .json({ success: false, message: 'File content does not match declared image type.' });
+        .json({ success: false, message: 'That file is not a supported image.' });
       return;
     }
     try {
@@ -369,7 +401,7 @@ const MEDIA_THUMB_SIZE = 400;
 router.post(
   '/media',
   verifyToken,
-  uploadMedia.single('media'),
+  runImageUpload(uploadMedia, 'media'),
   async (req: Request, res: Response) => {
     if (!req.file) {
       res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -383,7 +415,7 @@ router.post(
       }
       res
         .status(400)
-        .json({ success: false, message: 'File content does not match declared image type.' });
+        .json({ success: false, message: 'That file is not a supported image.' });
       return;
     }
     try {
@@ -446,15 +478,6 @@ router.post(
     }
     try {
       const inputPath = req.file.path;
-      const isSvg = /svg/i.test(req.file.mimetype);
-
-      if (isSvg) {
-        const pathSegment = `uploads/logos/${req.file.filename}`;
-        const url = getPublicUrl(req, pathSegment);
-        res.status(201).json({ success: true, url });
-        return;
-      }
-
       const { outputPath, outputFilename } = await finalizeRasterLogo(
         req,
         inputPath,
@@ -489,15 +512,6 @@ router.post(
     }
     try {
       const inputPath = req.file.path;
-      const isSvg = /svg/i.test(req.file.mimetype);
-
-      if (isSvg) {
-        const pathSegment = `uploads/school-logos/${req.file.filename}`;
-        const url = getPublicUrl(req, pathSegment);
-        res.status(201).json({ success: true, url });
-        return;
-      }
-
       const { outputPath, outputFilename } = await finalizeRasterLogo(
         req,
         inputPath,
@@ -532,15 +546,6 @@ router.post(
     }
     try {
       const inputPath = req.file.path;
-      const isSvg = /svg/i.test(req.file.mimetype);
-
-      if (isSvg) {
-        const pathSegment = `uploads/org-logos/${req.file.filename}`;
-        const url = getPublicUrl(req, pathSegment);
-        res.status(201).json({ success: true, url });
-        return;
-      }
-
       const { outputPath, outputFilename } = await finalizeRasterLogo(
         req,
         inputPath,
