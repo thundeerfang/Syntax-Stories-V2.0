@@ -36,12 +36,12 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.4.0
   crypto: ^3.0.6
-  shared_preferences: ^2.5.6
+  shared_preferences: ^2.5.5
   provider: ^6.1.5
   google_fonts: ^8.1.0
   flutter_svg: ^2.0.17
   url_launcher: ^6.3.2
-  app_links: ^7.1.1
+  app_links: ^7.0.0
   lottie: ^3.3.3
   image_picker: ^1.2.2
   crop_your_image: ^2.0.0
