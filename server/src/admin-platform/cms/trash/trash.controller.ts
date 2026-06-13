@@ -2,6 +2,10 @@ import type { Request, Response } from 'express';
 import type { AuthUser } from '../../../middlewares/auth/index.js';
 import { isAdminRequest } from '../../rbac/middleware/requireStaff.middleware.js';
 import {
+  TRASH_SECTIONS,
+  type TrashSection,
+} from '../../../variable/constants.js';
+import {
   listBlogTrash,
   listUserTrash,
   restoreBlogPostAsAdmin,
@@ -18,10 +22,8 @@ function sendTrashError(res: Response, err: unknown): void {
   res.status(500).json({ success: false, message: 'Internal server error' });
 }
 
-type TrashSection = 'blog' | 'user';
-
 function parseSections(raw: unknown): TrashSection[] {
-  const all: TrashSection[] = ['blog', 'user'];
+  const all: TrashSection[] = [...TRASH_SECTIONS];
   if (raw == null || raw === '') return all;
   const s = String(raw);
   const parts = s
@@ -30,7 +32,7 @@ function parseSections(raw: unknown): TrashSection[] {
     .filter(Boolean);
   const set = new Set<TrashSection>();
   for (const p of parts) {
-    if (p === 'blog' || p === 'user') set.add(p);
+    if ((TRASH_SECTIONS as readonly string[]).includes(p)) set.add(p as TrashSection);
   }
   return set.size ? [...set] : all;
 }

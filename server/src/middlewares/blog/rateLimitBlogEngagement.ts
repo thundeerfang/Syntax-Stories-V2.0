@@ -1,11 +1,12 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request } from 'express';
+import { RATE_LIMITS } from '../../config/rateLimits.js';
 import { RedisRateLimitStore } from '../auth/redisRateLimitStore.js';
 
 /** Repost + bookmark writes (same budget as Respect). */
 export const rateLimitBlogEngagementWrite = rateLimit({
-  windowMs: 60_000,
-  limit: 120,
+  windowMs: RATE_LIMITS.blogEngagementWrite.windowMs,
+  limit: RATE_LIMITS.blogEngagementWrite.max,
   message: { message: 'Too many engagement updates. Please slow down.', success: false },
   standardHeaders: true,
   legacyHeaders: false,
@@ -22,5 +23,5 @@ export const rateLimitBlogEngagementWrite = rateLimit({
     });
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  store: RedisRateLimitStore('rl:blog:engagement:write:', 60_000) as any,
+  store: RedisRateLimitStore('rl:blog:engagement:write:', RATE_LIMITS.blogEngagementWrite.windowMs) as any,
 });

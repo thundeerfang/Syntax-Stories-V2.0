@@ -2,21 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/certification_item.dart';
-import '../../models/education_item.dart';
 import '../../models/project_item.dart';
 import '../../models/setup_item.dart';
 import '../../models/user_summary.dart';
-import '../../models/work_experience_item.dart';
 import '../stack_tools/stack_tools_display_list.dart';
 import '../certifications/certification_entry_badge.dart';
-import '../education/education_entry_badge.dart';
 import '../my_setup/setup_component_badge.dart';
 import '../open_source/open_source_repo_card.dart';
 import '../projects/project_entry_badge.dart';
-import '../work_experience/work_experience_entry_badge.dart';
 import 'profile_overview_section_card.dart';
 
-/// Profile overview tab — stack, setup, work, education, certs, projects, open source.
+/// Profile overview tab — stack, setup, certs, projects, open source.
 class ProfileOverviewPanel extends StatelessWidget {
   const ProfileOverviewPanel({
     super.key,
@@ -30,8 +26,6 @@ class ProfileOverviewPanel extends StatelessWidget {
     final stack = user?.stackAndTools ?? const [];
     final stackDisplay = user?.stackAndToolsDisplay ?? const [];
     final setup = user?.mySetup ?? const [];
-    final work = user?.workExperiences ?? const [];
-    final education = user?.education ?? const [];
     final certifications = user?.certifications ?? const [];
     final allProjects = user?.projects ?? const [];
     final projects = ProjectItem.manualOnly(allProjects);
@@ -54,20 +48,6 @@ class ProfileOverviewPanel extends StatelessWidget {
         isEmpty: setup.isEmpty,
         emptyMessage: 'No setup yet',
         child: _SetupList(setup: setup),
-      ),
-      ProfileOverviewSectionCard(
-        title: 'Work Experiences',
-        icon: Icons.work_outline_rounded,
-        isEmpty: work.isEmpty,
-        emptyMessage: 'No work experience yet',
-        child: _WorkList(work: work),
-      ),
-      ProfileOverviewSectionCard(
-        title: 'Education',
-        icon: Icons.school_outlined,
-        isEmpty: education.isEmpty,
-        emptyMessage: 'No education yet',
-        child: _EducationList(education: education),
       ),
       if (certifications.isNotEmpty)
         ProfileOverviewSectionCard(
@@ -128,50 +108,6 @@ class _SetupList extends StatelessWidget {
             onRemove: () {},
           ),
           if (i < setup.length - 1) const SizedBox(height: 10),
-        ],
-      ],
-    );
-  }
-}
-
-class _WorkList extends StatelessWidget {
-  const _WorkList({required this.work});
-
-  final List<WorkExperienceItem> work;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (var i = 0; i < work.length; i++) ...[
-          WorkExperienceEntryBadge(
-            item: work[i],
-            showActions: false,
-            onRemove: () {},
-          ),
-          if (i < work.length - 1) const SizedBox(height: 10),
-        ],
-      ],
-    );
-  }
-}
-
-class _EducationList extends StatelessWidget {
-  const _EducationList({required this.education});
-
-  final List<EducationItem> education;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (var i = 0; i < education.length; i++) ...[
-          EducationEntryBadge(
-            item: education[i],
-            showActions: false,
-            onRemove: () {},
-          ),
-          if (i < education.length - 1) const SizedBox(height: 10),
         ],
       ],
     );

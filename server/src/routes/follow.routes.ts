@@ -7,14 +7,12 @@ import {
   followUser,
   unfollowUser,
   checkFollowing,
-  searchUsers,
 } from '../controllers/follow.controller.js';
 import { verifyToken } from '../middlewares/auth/index.js';
 import { rateLimitFollowWrite } from '../middlewares/follow/rateLimitFollow.js';
 
 const router = Router();
 
-router.get('/search', searchUsers);
 router.get('/profile/:username', getPublicProfile);
 router.get('/counts/:username', getFollowCounts);
 router.get('/followers/:username', getFollowers);

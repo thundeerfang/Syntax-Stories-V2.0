@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/core/utils';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
-import { triggerFollowConfetti } from '@/store/engagementEffects';
+import { triggerFollowConfetti, followConfettiRectFromClick } from '@/store/engagementEffects';
 import { toast } from 'sonner';
 
 const CARD_FRAME = 'retro-card flex h-full min-h-[12rem] flex-col p-4 sm:p-5';
@@ -74,7 +74,7 @@ export function FeaturedCategoryCard({
     const nowFollowing = toggleFollowedCategorySlug(slug, userId);
     setFollowing(nowFollowing);
     if (nowFollowing) {
-      triggerFollowConfetti(e.currentTarget);
+      triggerFollowConfetti(followConfettiRectFromClick(e.currentTarget));
     }
     toast.success(nowFollowing ? `Following ${name}` : `Unfollowed ${name}`);
   };

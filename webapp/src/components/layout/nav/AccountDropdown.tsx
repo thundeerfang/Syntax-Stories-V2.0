@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useDesktopShell } from '@/hooks/useDesktopShell';
+import { useDropdown } from '@/components/ui/dropdown';
 import { cn } from '@/lib/core/utils';
 import {
   User,
@@ -20,13 +21,14 @@ import {
   ChevronRight,
   Copy,
   Check,
+  Repeat2,
 } from 'lucide-react';
 import { Switch } from '@/components/retroui/Switch';
 import { UserPresenceDot } from '@/components/ui/UserPresenceDot';
-import { WalletLottie, SparkLottie, StreakFireLottie } from '@/components/ui';
+import { SparkLottie, StreakFireLottie } from '@/components/ui';
+import { followApi } from '@/api/follow';
 import { useUserPresenceStatus } from '@/lib/presence/useUserPresenceStatus';
 import { useUIStore } from '@/store/ui';
-import { SyntaxCardDialog } from '@/components/profile';
 
 /** Same rules as profile/u pages: absolute http(s), `data:` SVG defaults from API, or API-relative uploads. */
 function resolveAccountAvatarSrc(
@@ -47,6 +49,17 @@ function resolveAccountAvatarSrc(
 
 const MENU_WIDTH = 256;
 
+type AccountDropdownStats = {
+  repostCount: number;
+  respectCount: number;
+  streakCount: number;
+};
+
+function formatDropdownStat(n: number): string {
+  const v = Math.max(0, Math.floor(n));
+  return v > 99 ? '99+' : String(v);
+}
+
 function readMenuAnchor(triggerEl: HTMLElement | null): { top: number; left: number } | null {
   if (!triggerEl) return null;
   const rect = triggerEl.getBoundingClientRect();
@@ -59,9 +72,13 @@ function readMenuAnchor(triggerEl: HTMLElement | null): { top: number; left: num
 export function AccountDropdown() {
   const { user, logout } = useAuth();
   const isDesktop = useDesktopShell();
-  const [open, setOpen] = useState(false);
-  const [syntaxCardOpen, setSyntaxCardOpen] = useState(false);
+  const { open, setOpen, close, rootRef, contentRef } = useDropdown();
   const [copied, setCopied] = useState(false);
+  const [stats, setStats] = useState<AccountDropdownStats>({
+    repostCount: 0,
+    respectCount: 0,
+    streakCount: 0,
+  });
   const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number } | null>(null);
   const [portalReady, setPortalReady] = useState(false);
   const feedbackVisible = useUIStore((s) => s.feedbackButtonVisible);
@@ -69,34 +86,14 @@ export function AccountDropdown() {
   const presenceIndicatorEnabled = useUIStore((s) => s.presenceIndicatorEnabled);
   const setPresenceIndicatorEnabled = useUIStore((s) => s.setPresenceIndicatorEnabled);
   const presenceStatus = useUserPresenceStatus();
-  const ref = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const syncMenuAnchor = useCallback(() => {
-    const anchor = readMenuAnchor(ref.current);
+    const anchor = readMenuAnchor(rootRef.current);
     if (anchor) setMenuAnchor(anchor);
   }, []);
 
   useEffect(() => {
     setPortalReady(true);
-  }, []);
-
-  useEffect(() => {
-    const handlePointerDown = (e: PointerEvent) => {
-      const target = e.target;
-      if (!(target instanceof Node)) return;
-      if (ref.current?.contains(target) || menuRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
   }, []);
 
   useLayoutEffect(() => {
@@ -105,21 +102,37 @@ export function AccountDropdown() {
 
   useEffect(() => {
     if (!open || !isDesktop) return;
-    const onLayout = () => syncMenuAnchor();
-    window.addEventListener('resize', onLayout);
-    window.addEventListener('scroll', onLayout, true);
-    return () => {
-      window.removeEventListener('resize', onLayout);
-      window.removeEventListener('scroll', onLayout, true);
-    };
+    const onResize = () => syncMenuAnchor();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, [open, isDesktop, syncMenuAnchor]);
+
+  useEffect(() => {
+    const username = user?.username?.trim();
+    if (!open || !username) return;
+    let cancelled = false;
+    void followApi
+      .getPublicProfile(username)
+      .then((res) => {
+        if (cancelled || !res.success) return;
+        setStats({
+          repostCount: res.blogRepostCount ?? 0,
+          respectCount: res.blogRespectReceivedCount ?? 0,
+          streakCount: res.readStreak?.current ?? 0,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user?.username]);
 
   const handleToggle = () => {
     if (open) {
-      setOpen(false);
+      close();
       return;
     }
-    setMenuAnchor(readMenuAnchor(ref.current));
+    setMenuAnchor(readMenuAnchor(rootRef.current));
     setOpen(true);
   };
 
@@ -136,8 +149,7 @@ export function AccountDropdown() {
   };
 
   type MenuLink = { href: string; label: string; icon: typeof User };
-  type MenuAction = { action: 'syntax-card'; label: string; icon: typeof CreditCard };
-  type MenuItem = MenuLink | MenuAction;
+  type MenuItem = MenuLink;
 
   const menuSections: Array<{ id: string; items: MenuItem[] }> = [
     {
@@ -146,7 +158,7 @@ export function AccountDropdown() {
         { href: '/profile', label: 'Your profile', icon: User },
         { href: '/wallet', label: 'Wallet', icon: Wallet },
         { href: '/achievements', label: 'Achievements', icon: Award },
-        { action: 'syntax-card', label: 'Syntax card', icon: CreditCard },
+        { href: '/settings?section=syntax-card', label: 'Syntax card', icon: CreditCard },
       ],
     },
     {
@@ -160,7 +172,7 @@ export function AccountDropdown() {
   ];
 
   return (
-    <div className="relative inline-block" ref={ref}>
+    <div className="relative inline-block" ref={rootRef}>
       {/* Trigger Button */}
       <button
         type="button"
@@ -191,7 +203,7 @@ export function AccountDropdown() {
             {open ? (
               <motion.div
                 key="account-dropdown-menu"
-                ref={menuRef}
+                ref={contentRef}
                 role="menu"
                 initial={{ opacity: 0, y: 4, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -234,55 +246,62 @@ export function AccountDropdown() {
 
               <Link
                 href="/pricing"
-                onClick={() => setOpen(false)}
-                className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 border-2 border-border bg-primary text-primary-foreground text-[9px] font-black uppercase tracking-tight shadow hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+                onClick={() => close()}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 border-2 border-border bg-primary py-1.5 text-[9px] font-black uppercase tracking-tight text-primary-foreground"
               >
                 <Sparkles className="h-3 w-3 fill-current" />
                 Upgrade Member
               </Link>
             </div>
 
-            {/* Compressed Stats Grid - Cleaned hover and padding */}
             <div className="grid grid-cols-3 border-b-2 border-border bg-border gap-[2px]">
-              {[
-                { label: 'Wallet', val: 0, icon: WalletLottie },
-                { label: 'Streak', val: 0, icon: StreakFireLottie },
-                { label: 'Respect', val: 0, icon: SparkLottie },
-              ].map((stat) => {
-                const inner = (
-                  <>
-                    <div className="h-5 w-5 mb-0.5 flex items-center justify-center">
-                      <stat.icon play={open} size={20} />
-                    </div>
-                    <span className="text-[10px] font-black tabular-nums text-foreground">
-                      {stat.val}
-                    </span>
-                    <span className="text-[7px] font-black uppercase text-muted-foreground group-hover/stat:text-primary transition-colors">
-                      {stat.label}
-                    </span>
-                  </>
-                );
-                if (stat.label === 'Wallet') {
-                  return (
-                    <Link
-                      key={stat.label}
-                      href="/wallet"
-                      onClick={() => setOpen(false)}
-                      className="bg-card py-1.5 flex flex-col items-center justify-center hover:bg-muted transition-colors group/stat"
-                    >
-                      {inner}
-                    </Link>
-                  );
-                }
-                return (
-                  <div
-                    key={stat.label}
-                    className="bg-card py-1.5 flex flex-col items-center justify-center hover:bg-muted transition-colors group/stat"
-                  >
-                    {inner}
-                  </div>
-                );
-              })}
+              <Link
+                href="/reposts"
+                onClick={() => close()}
+                className="flex flex-col items-center justify-center bg-card py-1.5 hover:bg-muted transition-colors group/stat"
+              >
+                <Repeat2
+                  className="mb-0.5 size-4 shrink-0 text-primary"
+                  strokeWidth={2.5}
+                  aria-hidden
+                />
+                <span className="text-[10px] font-black tabular-nums text-foreground">
+                  {formatDropdownStat(stats.repostCount)}
+                </span>
+                <span className="text-[7px] font-black uppercase text-muted-foreground group-hover/stat:text-primary transition-colors">
+                  Reposts
+                </span>
+              </Link>
+              <Link
+                href="/profile"
+                onClick={() => close()}
+                className="flex flex-col items-center justify-center bg-card py-1.5 hover:bg-muted transition-colors group/stat"
+              >
+                <div className="mb-0.5 flex h-5 w-5 items-center justify-center">
+                  <SparkLottie play={open} size={20} />
+                </div>
+                <span className="text-[10px] font-black tabular-nums text-foreground">
+                  {formatDropdownStat(stats.respectCount)}
+                </span>
+                <span className="text-[7px] font-black uppercase text-muted-foreground group-hover/stat:text-primary transition-colors">
+                  Respect
+                </span>
+              </Link>
+              <Link
+                href="/profile"
+                onClick={() => close()}
+                className="flex flex-col items-center justify-center bg-card py-1.5 hover:bg-muted transition-colors group/stat"
+              >
+                <div className="mb-0.5 flex h-5 w-5 items-center justify-center">
+                  <StreakFireLottie play={open} size={20} />
+                </div>
+                <span className="text-[10px] font-black tabular-nums text-foreground">
+                  {formatDropdownStat(stats.streakCount)}
+                </span>
+                <span className="text-[7px] font-black uppercase text-muted-foreground group-hover/stat:text-primary transition-colors">
+                  Streak
+                </span>
+              </Link>
             </div>
 
             {/* Menu Sections */}
@@ -296,36 +315,18 @@ export function AccountDropdown() {
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ delay: sectionIdx * 0.1 + itemIdx * 0.03 }}
                     >
-                      {'action' in item ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpen(false);
-                            setSyntaxCardOpen(true);
-                          }}
-                          className="group flex w-full items-center gap-3 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide text-foreground hover:bg-muted transition-all active:bg-primary active:text-primary-foreground"
-                        >
-                          <item.icon
-                            className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all"
-                            strokeWidth={2.5}
-                          />
-                          <span className="flex-1 text-left">{item.label}</span>
-                          <ChevronRight className="h-3 w-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                        </button>
-                      ) : (
-                        <Link
-                          href={'href' in item ? item.href : '#'}
-                          onClick={() => setOpen(false)}
-                          className="group flex items-center gap-3 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide text-foreground hover:bg-muted transition-all active:bg-primary active:text-primary-foreground"
-                        >
-                          <item.icon
-                            className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all"
-                            strokeWidth={2.5}
-                          />
-                          <span className="flex-1">{item.label}</span>
-                          <ChevronRight className="h-3 w-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                        </Link>
-                      )}
+                      <Link
+                        href={item.href}
+                        onClick={() => close()}
+                        className="group flex items-center gap-3 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wide text-foreground hover:bg-muted transition-all active:bg-primary active:text-primary-foreground"
+                      >
+                        <item.icon
+                          className="h-3.5 w-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all"
+                          strokeWidth={2.5}
+                        />
+                        <span className="flex-1">{item.label}</span>
+                        <ChevronRight className="h-3 w-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                      </Link>
                     </motion.div>
                   ))}
                 </div>
@@ -381,10 +382,10 @@ export function AccountDropdown() {
             <div className="p-3 bg-card border-t-2 border-border">
               <button
                 onClick={() => {
-                  setOpen(false);
+                  close();
                   logout();
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2 border-2 border-destructive bg-destructive/5 text-destructive text-[10px] font-black uppercase shadow hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all active:bg-destructive active:text-destructive-foreground"
+                className="w-full flex items-center justify-center gap-2 border-2 border-destructive bg-destructive/5 py-2 text-[10px] font-black uppercase text-destructive shadow transition-all hover:bg-destructive/10 active:translate-x-[1px] active:translate-y-[1px] active:bg-destructive active:text-destructive-foreground active:shadow-none"
               >
                 <LogOut className="h-3.5 w-3.5" strokeWidth={3} />
                 Sign Out
@@ -393,7 +394,7 @@ export function AccountDropdown() {
               <div className="mt-2.5 flex flex-wrap justify-center items-center gap-2">
                 <Link
                   href="/terms"
-                  onClick={() => setOpen(false)}
+                  onClick={() => close()}
                   className="text-[8px] font-bold uppercase text-muted-foreground hover:text-primary transition-colors"
                 >
                   Terms
@@ -401,7 +402,7 @@ export function AccountDropdown() {
                 <div className="w-1 h-1 bg-border" />
                 <Link
                   href="/privacy"
-                  onClick={() => setOpen(false)}
+                  onClick={() => close()}
                   className="text-[8px] font-bold uppercase text-muted-foreground hover:text-primary transition-colors"
                 >
                   Privacy
@@ -409,7 +410,7 @@ export function AccountDropdown() {
                 <div className="w-1 h-1 bg-border" />
                 <Link
                   href="/user-data-deletion"
-                  onClick={() => setOpen(false)}
+                  onClick={() => close()}
                   className="text-[8px] font-bold uppercase text-muted-foreground hover:text-primary transition-colors"
                 >
                   UDD
@@ -426,15 +427,6 @@ export function AccountDropdown() {
         }
         return menuPanel;
       })()}
-
-      <SyntaxCardDialog
-        open={syntaxCardOpen}
-        onClose={() => setSyntaxCardOpen(false)}
-        username={user.username ?? ''}
-        fullName={user.fullName ?? user.name ?? user.username ?? 'Developer'}
-        profileImg={user.profileImg ?? user.image}
-        coverBanner={user.coverBanner}
-      />
     </div>
   );
 }

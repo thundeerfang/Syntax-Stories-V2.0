@@ -2,6 +2,7 @@ import { UserModel } from '../../models/User.js';
 import { CheckoutIntentModel } from '../../models/CheckoutIntent.js';
 import { getStripe } from '../stripe/stripeClient.js';
 import { applyStripeSubscription } from './applyStripeSubscription.js';
+import { syncPaymentLedgerFromStripe } from './ledger.service.js';
 import { getSubscriptionForUser } from './getSubscriptionForUser.js';
 import type { BillingSubscriptionDto } from './getSubscriptionForUser.js';
 
@@ -66,5 +67,10 @@ export async function verifyCheckoutAndSync(
   }
 
   await applyStripeSubscription(stripeSubRaw, { source: 'verify' });
+  try {
+    await syncPaymentLedgerFromStripe(userId);
+  } catch (e) {
+    console.warn('[billing] ledger sync after verify-checkout failed', e);
+  }
   return getSubscriptionForUser(userId, { forceSync: false });
 }

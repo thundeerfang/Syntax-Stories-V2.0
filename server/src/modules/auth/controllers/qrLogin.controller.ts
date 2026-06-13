@@ -9,8 +9,7 @@ import { AuditAction } from '../../../shared/audit/events.js';
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { createSession, generateRefreshToken } from '../../../services/session.service.js';
 import { logSecurityEvent } from '../securityEventLog.js';
-
-const QR_LOGIN_TTL_SECONDS = 5 * 60;
+import { AUTH_TTL } from '../../../config/auth.ttls.js';
 
 export async function initQrLogin(_req: Request, res: Response): Promise<void> {
   try {
@@ -21,7 +20,7 @@ export async function initQrLogin(_req: Request, res: Response): Promise<void> {
     }
     const token = crypto.randomBytes(24).toString('hex');
     const key = redisKeys.auth.qrLogin(token);
-    await redis.setEx(key, QR_LOGIN_TTL_SECONDS, JSON.stringify({ approved: false }));
+    await redis.setEx(key, AUTH_TTL.qrLoginSec, JSON.stringify({ approved: false }));
     res.status(201).json({ success: true, qrToken: token });
   } catch (err) {
     console.error(err);
@@ -54,7 +53,7 @@ export async function approveQrLogin(req: Request, res: Response): Promise<void>
     }
     await redis.setEx(
       key,
-      QR_LOGIN_TTL_SECONDS,
+      AUTH_TTL.qrLoginSec,
       JSON.stringify({ approved: true, userId: String(user._id) })
     );
     res.status(200).json({ success: true, message: 'QR login approved' });

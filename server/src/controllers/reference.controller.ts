@@ -3,10 +3,9 @@ import { ReferenceEntityModel, type ReferenceEntityKind } from '../models/Refere
 import { TechStackReferenceModel } from '../models/TechStackReference.js';
 import { toTechStackItemDto, type TechStackItemDto } from '../lib/techStackReference.mapper.js';
 import { resolveTechStackNames } from '../services/techStackReference.service.js';
+import { PAGINATION, parseLimit } from '../shared/http/pagination.js';
 
 const ENTITY_KINDS = new Set<ReferenceEntityKind>(['company', 'school', 'organization']);
-const DEFAULT_LIMIT = 15;
-const RESOLVE_MAX_NAMES = 10;
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -27,7 +26,7 @@ export async function searchReferenceEntities(req: Request, res: Response): Prom
   }
 
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-  const limit = Math.min(Math.max(Number(req.query.limit) || DEFAULT_LIMIT, 1), 30);
+  const limit = parseLimit(req.query.limit, PAGINATION.reference);
 
   const filter: Record<string, unknown> = { kind };
   if (q.length >= 2) {
@@ -52,7 +51,7 @@ export async function searchReferenceEntities(req: Request, res: Response): Prom
 
 export async function searchTechStackReference(req: Request, res: Response): Promise<void> {
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
-  const limit = Math.min(Math.max(Number(req.query.limit) || DEFAULT_LIMIT, 1), 30);
+  const limit = parseLimit(req.query.limit, PAGINATION.reference);
 
   if (!q) {
     res.status(200).json({ success: true, items: [] satisfies TechStackItemDto[] });
@@ -82,7 +81,7 @@ function parseResolveNames(body: unknown): string[] | null {
     .filter((v): v is string => typeof v === 'string')
     .map((v) => v.trim())
     .filter((v) => v.length > 0)
-    .slice(0, RESOLVE_MAX_NAMES);
+    .slice(0, PAGINATION.reference.resolveMaxNames);
 }
 
 /** POST body: `{ names: string[] }` — enrich badge/suggestion rows with iconSlug + iconUrl. */

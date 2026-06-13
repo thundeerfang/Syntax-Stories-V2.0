@@ -1,16 +1,15 @@
 import type { Request } from 'express';
 import mongoose from 'mongoose';
+import type { AcceptPolicyKind, LegalAcceptSource } from '../../../variable/constants.js';
 import { UserLegalAcceptanceModel } from './models/legal.models.js';
 import { getPublishedPolicyResponse } from './legalPolicyQueries.js';
 import { getLegalDbNow } from './legalDbTime.js';
 
-type AcceptSource = 'signup' | 'api';
-
 async function upsertAcceptance(
   userId: mongoose.Types.ObjectId,
-  kind: 'terms' | 'privacy',
+  kind: AcceptPolicyKind,
   opts: {
-    source: AcceptSource;
+    source: LegalAcceptSource;
     acknowledgementType?: 'checkbox' | 'implicit';
     req?: Pick<Request, 'ip' | 'get'>;
   }

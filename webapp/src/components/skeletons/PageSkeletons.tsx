@@ -1126,7 +1126,7 @@ export function FollowingToolbarSkeleton() {
           />
         ))}
       </div>
-      <SkBlock className="h-[42px] w-36 shrink-0 border-2 border-border bg-muted/15 sm:w-44" />
+      <SkBlock className="h-[42px] w-[12.5rem] shrink-0 border-2 border-border bg-muted/15 sm:w-[16.5rem]" />
     </div>
   );
 }
@@ -1256,7 +1256,7 @@ export function CompactBlogPostsSwiperSkeleton({
 export function ExploreSpotlightSkeleton() {
   return (
     <section className="relative w-full min-w-0" aria-busy="true" aria-label="Loading spotlight">
-      <div className="relative flex min-h-[min(48vh,380px)] w-full flex-col justify-end overflow-hidden border-2 border-border shadow md:min-h-[360px]">
+      <div className="relative flex h-[min(40vh,320px)] w-full flex-col justify-end overflow-hidden border-2 border-border shadow md:h-[300px]">
         <SkGradientFill className="absolute inset-0" />
         <div className="relative z-10 flex flex-col justify-end p-6 md:p-10">
           <SkBar className="h-6 w-28 bg-primary-foreground/20" />

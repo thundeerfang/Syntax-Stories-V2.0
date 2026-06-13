@@ -2,16 +2,13 @@ import { BlogPostModel } from '../../models/BlogPost.js';
 import { UserModel } from '../../models/User.js';
 import type { SearchHit } from './search.types.js';
 import { escapeRegex } from './searchQuery.util.js';
-
-const NOT_DELETED = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
+import { NOT_DELETED_FILTER } from '../../shared/db/notDeleted.js';
 
 /** Published blog search — `$text` when available, regex fallback. */
 export async function searchBlogsForUnified(q: string, limit: number): Promise<SearchHit[]> {
   const publishedFilter = {
     status: 'published' as const,
-    ...NOT_DELETED,
+    ...NOT_DELETED_FILTER,
   };
 
   try {

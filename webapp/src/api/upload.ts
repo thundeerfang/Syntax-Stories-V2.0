@@ -145,7 +145,7 @@ export async function uploadMedia(
 export async function uploadSettingsLogo(
   token: string,
   file: File,
-  kind: 'company-logo' | 'school-logo' | 'org-logo',
+  kind: 'org-logo',
   crop: CropArea | undefined,
   onProgress?: (progress: number) => void
 ): Promise<UploadResponse> {

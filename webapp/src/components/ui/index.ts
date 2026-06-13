@@ -13,3 +13,4 @@ export * from './media';
 export * from './editor';
 export * from './layout';
 export * from './lottie';
+export * from './dropdown';

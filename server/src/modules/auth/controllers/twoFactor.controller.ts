@@ -15,8 +15,7 @@ import { createSession, generateRefreshToken } from '../../../services/session.s
 import { createStaffPermissionSnapshot } from '../../../admin-platform/iam/permissionSnapshot.service.js';
 import { completeAdminStepUp } from '../../../admin-platform/iam/adminSessionIdle.service.js';
 import { markStepUpVerified } from '../../../admin-platform/iam/stepUp.service.js';
-
-const TWO_FA_SETUP_TTL_SECONDS = 10 * 60;
+import { AUTH_TTL } from '../../../config/auth.ttls.js';
 
 async function getTwoFactorSetupSecret(userId: string): Promise<string | null> {
   const redis = getRedis();
@@ -31,7 +30,7 @@ async function storeTwoFactorSetupSecret(userId: string, secret: string): Promis
     throw new Error('Redis required for 2FA setup');
   }
   const key = redisKeys.auth.twoFactorSetup(userId);
-  await redis.setEx(key, TWO_FA_SETUP_TTL_SECONDS, secret);
+  await redis.setEx(key, AUTH_TTL.twoFactorSetupSec, secret);
 }
 
 export async function verifyTwoFactorLogin(req: Request, res: Response): Promise<void> {

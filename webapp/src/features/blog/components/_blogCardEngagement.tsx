@@ -134,9 +134,21 @@ export function ShareToSquadDialog({
 const EXIT_MS = 180;
 const SQUAD_HOVER_GAP_PX = 4;
 
+/** Equal hit targets — spacing between actions lives on the rail `gap`. */
+const ACTION_BTN_BASE = cn(
+  'relative inline-flex shrink-0 items-center justify-center self-center',
+  'h-9 w-9 min-h-9 min-w-9 p-1.5',
+  ' border-0 bg-transparent',
+  'transition-colors duration-150 ease-out',
+  'hover:bg-muted/50',
+  'disabled:pointer-events-none disabled:opacity-55'
+);
+
+const ICON_WRAP = 'relative flex size-[22px] shrink-0 items-center justify-center self-center';
+
 export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }>) {
   const router = useRouter();
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -291,26 +303,21 @@ export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }
 
   return (
     <>
-      <div
+      <button
         ref={wrapRef}
-        className="inline-flex max-w-full min-w-0 shrink-0"
-        role="group"
+        type="button"
+        onClick={onLogoClick}
+        title={squad.visibility === 'public' ? squad.name : `${squad.name} (private)`}
         aria-label="Squad"
         onMouseEnter={scheduleOpen}
         onMouseLeave={scheduleClose}
+        className={cn(
+          ACTION_BTN_BASE,
+          'overflow-hidden border-2 border-border bg-muted p-0 transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+        )}
       >
-        <button
-          type="button"
-          onClick={onLogoClick}
-          title={squad.visibility === 'public' ? squad.name : `${squad.name} (private)`}
-          className={cn(
-            'relative shrink-0 overflow-hidden  border-2 border-border bg-muted object-cover transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-            'h-6 w-6'
-          )}
-        >
-          <img src={iconSrc} alt="" className="size-full object-cover" />
-        </button>
-      </div>
+        <img src={iconSrc} alt="" className="size-full object-cover" />
+      </button>
       {portal}
       <ConfirmDialog
         open={privateWarnOpen}
@@ -326,18 +333,6 @@ export function BlogCardSquadChip({ squad }: Readonly<{ squad: PublicFeedSquad }
     </>
   );
 }
-
-/** Equal hit targets — spacing between actions lives on the rail `gap`. */
-const ACTION_BTN_BASE = cn(
-  'relative inline-flex shrink-0 items-center justify-center',
-  'h-9 w-9 min-h-9 min-w-9 p-1.5',
-  ' border-0 bg-transparent',
-  'transition-colors duration-150 ease-out',
-  'hover:bg-muted/50',
-  'disabled:pointer-events-none disabled:opacity-55'
-);
-
-const ICON_WRAP = 'relative flex size-[22px] shrink-0 items-center justify-center';
 
 function formatEngagementCount(n: number): string {
   if (n > 99) return '99+';
@@ -395,7 +390,7 @@ export function BlogCardEngagementRail({ post, className }: BlogCardEngagementRa
 
   return (
     <>
-      <div className={cn('flex shrink-0 items-center gap-1.5', className)}>
+      <div className={cn('flex shrink-0 items-center gap-1.5 self-center', className)}>
         <button
           type="button"
           disabled={actionsDisabled}

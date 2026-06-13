@@ -191,12 +191,34 @@ function StatRow({
   label,
   value,
   valueClassName,
+  compact = false,
 }: Readonly<{
   icon: LucideIcon;
   label: string;
   value: string;
   valueClassName?: string;
+  compact?: boolean;
 }>) {
+  if (compact) {
+    return (
+      <li
+        className="flex min-w-[3.25rem] items-center justify-between gap-1.5"
+        title={label}
+        aria-label={`${label} ${value}`}
+      >
+        <Icon className="size-3 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+        <span
+          className={cn(
+            'shrink-0 font-mono text-[11px] font-black tabular-nums text-foreground',
+            valueClassName
+          )}
+        >
+          {value}
+        </span>
+      </li>
+    );
+  }
+
   return (
     <li className="flex items-center justify-between gap-2">
       <span className="flex min-w-0 items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -225,6 +247,7 @@ export function BlogPostSidebarStats({
   viewCount,
   commentTotal,
   commentLoading,
+  compact = false,
 }: Readonly<{
   respectCount: number;
   repostCount: number;
@@ -232,19 +255,32 @@ export function BlogPostSidebarStats({
   viewCount: number;
   commentTotal: number;
   commentLoading: boolean;
+  compact?: boolean;
 }>) {
   return (
-    <section className={RAIL_CARD} aria-label="Post engagement">
-      <h2 className="mb-3 flex items-center gap-2 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-        <Activity className="size-3.5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
-        Stats
+    <section
+      className={cn(
+        RAIL_CARD,
+        compact && 'w-fit max-w-[4.75rem] p-2 shadow-sm'
+      )}
+      aria-label="Post engagement"
+    >
+      <h2
+        className={cn(
+          'flex items-center font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground',
+          compact ? 'mb-1.5 justify-center' : 'mb-3 gap-2'
+        )}
+      >
+        <Activity className="size-3 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+        <span className={compact ? 'sr-only' : undefined}>Stats</span>
       </h2>
-      <ul className="m-0 list-none space-y-2 p-0">
-        <StatRow icon={Zap} label="Respect" value={formatStat(respectCount)} />
-        <StatRow icon={Repeat2} label="Repost" value={formatStat(repostCount)} />
-        <StatRow icon={Bookmark} label="Saved" value={formatStat(bookmarkCount)} />
-        <StatRow icon={Eye} label="Views" value={formatStat(viewCount)} />
+      <ul className={cn('m-0 list-none p-0', compact ? 'space-y-1.5' : 'space-y-2')}>
+        <StatRow compact={compact} icon={Zap} label="Respect" value={formatStat(respectCount)} />
+        <StatRow compact={compact} icon={Repeat2} label="Repost" value={formatStat(repostCount)} />
+        <StatRow compact={compact} icon={Bookmark} label="Saved" value={formatStat(bookmarkCount)} />
+        <StatRow compact={compact} icon={Eye} label="Views" value={formatStat(viewCount)} />
         <StatRow
+          compact={compact}
           icon={MessageSquare}
           label="Comments"
           value={commentLoading ? '…' : formatStat(commentTotal)}

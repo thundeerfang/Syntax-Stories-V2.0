@@ -14,9 +14,6 @@ export interface IUserAchievementProgress extends Document {
     briefsRead: number;
     hotTakeSwipes: number;
   };
-  flags: {
-    cvImported: boolean;
-  };
   totalPoints: number;
   catalogVersion: number;
   createdAt?: Date;
@@ -46,9 +43,6 @@ const UserAchievementProgressSchema = new Schema<IUserAchievementProgress>(
       respectGiven: { type: Number, default: 0, min: 0 },
       briefsRead: { type: Number, default: 0, min: 0 },
       hotTakeSwipes: { type: Number, default: 0, min: 0 },
-    },
-    flags: {
-      cvImported: { type: Boolean, default: false },
     },
     totalPoints: { type: Number, default: 0, min: 0 },
     catalogVersion: { type: Number, default: 1, min: 1 },

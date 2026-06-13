@@ -5,9 +5,10 @@ import { UserModel } from '../../../models/User.js';
 import { NOT_DELETED_FILTER } from '../../../shared/db/notDeleted.js';
 import { AuditAction } from '../../../shared/audit/events.js';
 import { writeAuditLog } from '../../../shared/audit/auditLog.js';
+import { SEVEN_DAYS_MS } from '../../../constants/durations.js';
+import { BLOG_LIMITS } from '@syntax-stories/shared';
 
-const BLOG_SOFT_DELETE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-const SLUG_MAX_LEN = 320;
+const SLUG_MAX_LEN = BLOG_LIMITS.slugMaxLen;
 
 function slugify(text: string): string {
   return (
@@ -110,7 +111,7 @@ export async function restoreBlogPostAsAdmin(
     throw new TrashServiceError(404, 'Post not found or not in trash');
   }
   const del = doc.deletedAt;
-  if (del.getTime() < Date.now() - BLOG_SOFT_DELETE_RETENTION_MS) {
+  if (del.getTime() < Date.now() - SEVEN_DAYS_MS) {
     throw new TrashServiceError(410, 'Post is outside the recoverable trash window');
   }
 

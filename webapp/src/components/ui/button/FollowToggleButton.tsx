@@ -13,7 +13,6 @@ export type FollowToggleButtonProps = Readonly<{
   disabled?: boolean;
   followLabel?: string;
   unfollowLabel?: string;
-  pendingLabel?: string;
   className?: string;
 }>;
 
@@ -24,10 +23,9 @@ export function FollowToggleButton({
   disabled = false,
   followLabel = 'Follow',
   unfollowLabel = 'Unfollow',
-  pendingLabel = '…',
   className,
 }: FollowToggleButtonProps) {
-  const label = disabled ? pendingLabel : isFollowing ? unfollowLabel : followLabel;
+  const label = isFollowing ? unfollowLabel : followLabel;
 
   return (
     <Button

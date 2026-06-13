@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import { NotificationModel, type INotification } from '../../models/Notification.js';
 import {
-  NotificationAuditLogModel,
-  type NotificationAuditAction,
-} from '../../models/NotificationAuditLog.js';
+  writeNotificationAudit,
+} from '../../shared/audit/auditLog.js';
+import { NotificationAuditAction } from '../../shared/audit/domains.js';
 import {
   UserNotificationPreferencesModel,
   type IUserNotificationPreferences,
@@ -16,8 +16,7 @@ import type {
   NotificationPayload,
   NotificationType,
 } from './notification.types.js';
-import { deliverNotificationWebhook } from './notificationWebhook.service.js';
-import { getActivePlatformWebhook } from './platformNotificationConfig.service.js';
+import { enqueueNotificationWebhookDelivery } from './notificationWebhookOutbox.service.js';
 
 const DEFAULT_ICON: NotificationIcon = 'bell';
 
@@ -57,28 +56,6 @@ function mapDoc(doc: INotification): NotificationListItem {
     unread: doc.readAt == null,
     metadata: doc.metadata as Record<string, unknown> | undefined,
   };
-}
-
-async function writeNotificationAudit(
-  action: NotificationAuditAction,
-  params: {
-    userId?: string;
-    notificationId?: string;
-    metadata?: Record<string, unknown>;
-  }
-): Promise<void> {
-  try {
-    await NotificationAuditLogModel.create({
-      action,
-      userId: params.userId ? new mongoose.Types.ObjectId(params.userId) : undefined,
-      notificationId: params.notificationId
-        ? new mongoose.Types.ObjectId(params.notificationId)
-        : undefined,
-      metadata: params.metadata,
-    });
-  } catch (e) {
-    console.warn('[notificationAudit]', action, String(e));
-  }
 }
 
 export async function getOrCreateNotificationPreferences(
@@ -151,13 +128,12 @@ export async function publishNotificationRealtime(
   if (redis) {
     try {
       await redis.publish(redisKeys.notifications.userChannel(userId), msg);
-      await redis.lPush(redisKeys.notifications.outbox, msg);
     } catch (e) {
       console.warn('[notificationPublish]', String(e));
     }
   }
 
-  await writeNotificationAudit('notification.realtime.published', {
+  await writeNotificationAudit(NotificationAuditAction.REALTIME_PUBLISHED, {
     userId,
     notificationId: item.id,
     metadata: { kind: item.type },
@@ -168,7 +144,7 @@ export async function publishNotificationRealtime(
 export async function createNotification(input: CreateNotificationInput): Promise<NotificationListItem | null> {
   const prefs = await getOrCreateNotificationPreferences(input.userId);
   if (!isTypeAllowedByPrefs(input.type, prefs)) {
-    await writeNotificationAudit('notification.webhook.skipped', {
+    await writeNotificationAudit(NotificationAuditAction.WEBHOOK_SKIPPED, {
       userId: input.userId,
       metadata: { reason: 'prefs_disabled', kind: input.type },
     });
@@ -186,7 +162,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
   });
 
   const item = mapDoc(doc);
-  await writeNotificationAudit('notification.created', {
+  await writeNotificationAudit(NotificationAuditAction.CREATED, {
     userId: input.userId,
     notificationId: item.id,
     metadata: { kind: input.type },
@@ -195,26 +171,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
   void publishNotificationRealtime(input.userId, item);
 
   if (!input.skipWebhook) {
-    void getActivePlatformWebhook().then((wh) => {
-      if (!wh?.enabled || !wh.url) return;
-      void deliverNotificationWebhook({
-        userId: input.userId,
-        notificationId: item.id,
-        webhookUrl: wh.url,
-        webhookSecret: wh.secret,
-        payload: {
-          id: item.id,
-          type: item.type,
-          title: item.title,
-          message: item.message,
-          href: item.href,
-          icon: item.icon,
-          time: item.time,
-          userId: input.userId,
-          metadata: input.metadata,
-        },
-      });
-    });
+    void enqueueNotificationWebhookDelivery(input.userId, item);
   }
 
   return item;

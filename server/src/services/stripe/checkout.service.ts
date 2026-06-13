@@ -1,16 +1,37 @@
+import type Stripe from 'stripe';
 import type { IUser } from '../../models/User.js';
 import { UserModel } from '../../models/User.js';
 import { SubscriptionModel } from '../../models/Subscription.js';
 import { CheckoutIntentModel, type PaidPlanKey } from '../../models/CheckoutIntent.js';
 import { env } from '../../config/env.js';
 import { getStripe, isStripeConfigured } from './stripeClient.js';
-import { planKeyToPriceId } from '../billing/planConfig.js';
+import { planDisplayName } from '../billing/planConfig.js';
+import { resolvePlanStripePriceId } from './stripePriceResolver.js';
+import { CHECKOUT_INTENT_TTL_MS } from '../../variable/constants.js';
 
-const CHECKOUT_INTENT_TTL_MS = 55 * 60 * 1000;
+/** Bump when Checkout Session params change — avoids Stripe idempotency clashes after deploys. */
+const CHECKOUT_IDEMPOTENCY_VERSION = 'in-export-v1';
+
+function customerDisplayName(user: IUser): string {
+  const name = user.fullName?.trim();
+  if (name) return name;
+  const username = user.username?.trim();
+  if (username) return username;
+  const emailLocal = user.email?.split('@')[0]?.trim();
+  return emailLocal || 'Syntax Stories customer';
+}
 
 function hourBucket(): string {
   const d = new Date();
   return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}-${d.getUTCHours()}`;
+}
+
+function checkoutIdempotencyKey(
+  userId: string,
+  planKey: PaidPlanKey,
+  priceId: string
+): string {
+  return `checkout:${CHECKOUT_IDEMPOTENCY_VERSION}:${userId}:${planKey}:${priceId}:${hourBucket()}`;
 }
 
 function paidActive(status: string): boolean {
@@ -20,10 +41,23 @@ function paidActive(status: string): boolean {
 export async function ensureStripeCustomer(user: IUser): Promise<string> {
   const stripe = getStripe();
   if (!stripe) throw new Error('Stripe is not configured');
-  if (user.stripeCustomerId) return user.stripeCustomerId;
+
+  const name = customerDisplayName(user);
+
+  if (user.stripeCustomerId) {
+    const existing = await stripe.customers.retrieve(user.stripeCustomerId);
+    if (!('deleted' in existing && existing.deleted)) {
+      const c = existing as Stripe.Customer;
+      if (!c.name?.trim() && name) {
+        await stripe.customers.update(c.id, { name });
+      }
+      return c.id;
+    }
+  }
+
   const customer = await stripe.customers.create({
     email: user.email,
-    name: user.fullName,
+    name,
     metadata: { appUserId: String(user._id) },
   });
   await UserModel.findByIdAndUpdate(user._id, { $set: { stripeCustomerId: customer.id } });
@@ -51,8 +85,7 @@ export async function createCheckoutSessionForUser(
     throw err;
   }
 
-  const priceId = planKeyToPriceId(planKey);
-  if (!priceId) throw new Error('Unknown plan or price not configured');
+  const priceId = await resolvePlanStripePriceId(planKey);
 
   const customerId = await ensureStripeCustomer(user);
 
@@ -63,23 +96,43 @@ export async function createCheckoutSessionForUser(
   const successUrl = `${base}/settings?section=payments&checkout=success&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${base}/pricing?checkout=canceled`;
 
-  const idempotencyKey = `checkout:${userId}:${planKey}:${hourBucket()}`;
+  const planLabel = planDisplayName(planKey);
+  const serviceDescription = `Syntax Stories ${planLabel} — monthly software subscription`;
 
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: 'subscription',
-      customer: customerId,
-      client_reference_id: String(user._id),
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      allow_promotion_codes: true,
-      subscription_data: {
-        metadata: { appUserId: String(user._id), planKey },
-      },
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'subscription',
+    customer: customerId,
+    client_reference_id: String(user._id),
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    allow_promotion_codes: true,
+    // India export compliance — name + billing address required on the Customer.
+    billing_address_collection: 'required',
+    customer_update: {
+      address: 'auto',
+      name: 'auto',
     },
-    { idempotencyKey }
-  );
+    subscription_data: {
+      metadata: { appUserId: String(user._id), planKey },
+      description: serviceDescription,
+    },
+  };
+
+  const idempotencyKey = checkoutIdempotencyKey(userId, planKey, priceId);
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.create(sessionParams, { idempotencyKey });
+  } catch (e) {
+    const err = e as Stripe.errors.StripeError;
+    if (err.type === 'StripeIdempotencyError') {
+      session = await stripe.checkout.sessions.create(sessionParams, {
+        idempotencyKey: `${idempotencyKey}:retry-${Date.now()}`,
+      });
+    } else {
+      throw e;
+    }
+  }
 
   if (!session.url) {
     throw new Error('Checkout session missing redirect URL');

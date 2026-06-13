@@ -48,20 +48,6 @@ const settingsNavItems = <SettingsNavItem>[
     group: SettingsGroup.account,
   ),
   SettingsNavItem(
-    id: 'work-experiences',
-    label: 'Work Experiences',
-    icon: Icons.work_outline_rounded,
-    description: 'Roles and companies shown on your profile.',
-    group: SettingsGroup.account,
-  ),
-  SettingsNavItem(
-    id: 'education',
-    label: 'Education',
-    icon: Icons.school_outlined,
-    description: 'Degrees, institutions, and study history.',
-    group: SettingsGroup.account,
-  ),
-  SettingsNavItem(
     id: 'certifications',
     label: 'License & Certifications',
     icon: Icons.verified_outlined,
@@ -98,7 +84,7 @@ const settingsNavItems = <SettingsNavItem>[
   ),
   SettingsNavItem(
     id: 'connected-accounts',
-    label: 'Connected accounts',
+    label: 'Connected Accounts',
     icon: Icons.link_rounded,
     description: 'OAuth providers and linked sign-in methods.',
     group: SettingsGroup.security,

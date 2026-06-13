@@ -96,17 +96,44 @@ export function getSkillIconsCombinedUrl(displayNames: string[]): string {
 
 /** Warm the browser cache for stack badge icons from API rows. */
 export function preloadTechStackItems(
-  items: ReadonlyArray<{ name: string; iconUrl?: string }>
+  items: ReadonlyArray<{ name: string; iconUrl?: string; iconSlug?: string }>
 ): void {
   if (typeof window === 'undefined' || items.length === 0) return;
 
+  const slugs = items
+    .map((item) => {
+      const fromSlug = item.iconSlug?.trim();
+      if (fromSlug) return fromSlug;
+      return getSkillIconSlug(item.name);
+    })
+    .filter(Boolean);
+
+  const combined = slugs.length
+    ? `${SKILL_ICONS_BASE}${slugs.map(encodeURIComponent).join(',')}`
+    : '';
+  if (combined) {
+    const batch = new window.Image();
+    batch.decoding = 'async';
+    batch.src = combined;
+  }
+
   for (const item of items) {
-    const url = item.iconUrl?.trim();
+    const url = resolveTechStackIconSrc(item);
     if (!url) continue;
     const img = new window.Image();
     img.decoding = 'async';
     img.src = url;
   }
+}
+
+/** Best icon URL for a catalog row — instant client fallback when API row is present. */
+export function resolveTechStackIconSrc(
+  item: Readonly<{ name: string; iconUrl?: string; iconSlug?: string }>
+): string {
+  const fromApi = item.iconUrl?.trim();
+  if (fromApi) return fromApi;
+  const slug = item.iconSlug?.trim() || getSkillIconSlug(item.name);
+  return slug ? getSkillIconUrlBySlug(slug) : getSkillIconUrl(item.name);
 }
 
 /**

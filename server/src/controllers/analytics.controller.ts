@@ -12,12 +12,10 @@ import { getRedis } from '../config/redis.js';
 import { writeAuditLog } from '../shared/audit/auditLog.js';
 import { AuditAction } from '../shared/audit/events.js';
 import { redisKeys } from '../shared/redis/keys.js';
+import { ANALYTICS_CACHE_TTL_SEC } from '../variable/constants.js';
+import { MS_PER_DAY } from '../constants/durations.js';
 
 const BOT_UA_SUBSTRINGS = ['googlebot', 'bingbot', 'curl', 'wget', 'headlesschrome'] as const;
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-const CACHE_TTL_SEC = 60;
 
 type LeanUserWithId = { _id: unknown };
 
@@ -335,7 +333,7 @@ export async function getProfileOverview(req: Request, res: Response): Promise<v
     );
 
     if (redis) {
-      await redis.setEx(cacheKey, CACHE_TTL_SEC, JSON.stringify(responseMetrics));
+      await redis.setEx(cacheKey, ANALYTICS_CACHE_TTL_SEC, JSON.stringify(responseMetrics));
     }
 
     res.status(200).json({ success: true, metrics: responseMetrics });
@@ -389,7 +387,7 @@ export async function getProfileTimeSeries(req: Request, res: Response): Promise
     }));
 
     if (redis) {
-      await redis.setEx(cacheKey, CACHE_TTL_SEC, JSON.stringify(series));
+      await redis.setEx(cacheKey, ANALYTICS_CACHE_TTL_SEC, JSON.stringify(series));
     }
 
     res.status(200).json({ success: true, series });

@@ -1,14 +1,5 @@
 import { normalizeProfileImg } from '../../models/User.js';
-
-/** Matches `User` schema default — legacy docs may omit `bio` until first profile save. */
-const DEFAULT_PROFILE_BIO =
-  'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀';
-
-function resolveProfileBio(raw: unknown): string | undefined {
-  if (typeof raw === 'string') return raw;
-  if (raw === undefined || raw === null) return DEFAULT_PROFILE_BIO;
-  return undefined;
-}
+import { normalizeProfileBio } from '../../utils/profileBio.js';
 
 /**
  * Account-owner projection: `GET /auth/me`, `PATCH /auth/profile*`.
@@ -25,7 +16,7 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     profileImgAlt: found.profileImgAlt,
     coverBanner: found.coverBanner,
     coverBannerAlt: found.coverBannerAlt,
-    bio: resolveProfileBio(found.bio),
+    bio: normalizeProfileBio(found.bio),
     job: found.job,
     portfolioUrl: found.portfolioUrl,
     linkedin: found.linkedin,
@@ -33,8 +24,6 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     github: found.github,
     youtube: found.youtube,
     stackAndTools: found.stackAndTools,
-    workExperiences: found.workExperiences,
-    education: found.education,
     certifications: found.certifications,
     projects: found.projects,
     openSourceContributions: found.openSourceContributions,

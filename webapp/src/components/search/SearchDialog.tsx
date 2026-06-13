@@ -11,7 +11,6 @@ import {
   type SearchGroups,
   type SearchHit,
 } from '@contracts/searchApi';
-import { filterFeatureCatalog } from '@/lib/search/featureCatalog';
 import {
   countSearchHits,
   flattenSearchGroups,
@@ -30,16 +29,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/core/utils';
-
-function localFeatureHits(q: string): SearchHit[] {
-  return filterFeatureCatalog(q, 6).map((f) => ({
-    id: `feature:${f.id}`,
-    type: 'feature' as const,
-    label: f.label,
-    sublabel: 'App shortcut',
-    href: f.href,
-  }));
-}
 
 export function SearchDialog() {
   const { isOpen, close } = useSearchDialogStore();
@@ -60,19 +49,8 @@ export function SearchDialog() {
   const charCount = searchQueryCharCount(query);
   const queryReady = isSearchQueryReady(query);
 
-  const localFeatures = useMemo(() => {
-    if (!trimmed) return [];
-    return localFeatureHits(trimmed);
-  }, [trimmed]);
-
-  const displayGroups = useMemo((): SearchGroups => {
-    if (queryReady) return groups;
-    if (localFeatures.length === 0) return {};
-    return { features: localFeatures };
-  }, [queryReady, groups, localFeatures]);
-
-  const flatHits = useMemo(() => flattenSearchGroups(displayGroups), [displayGroups]);
-  const sections = useMemo(() => groupedEntries(displayGroups), [displayGroups]);
+  const flatHits = useMemo(() => flattenSearchGroups(groups), [groups]);
+  const sections = useMemo(() => groupedEntries(groups), [groups]);
   const sectionsWithOffsets = useMemo(
     () =>
       sections.map(([groupKey, hits], index) => ({
@@ -142,7 +120,7 @@ export function SearchDialog() {
       setGroups({});
       setLoading(false);
       setTookMs(null);
-      setMatchCount(localFeatures.length);
+      setMatchCount(0);
       setSelectedIndex(0);
       return;
     }
@@ -151,7 +129,7 @@ export function SearchDialog() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [trimmed, queryReady, runSearch, localFeatures.length]);
+  }, [trimmed, queryReady, runSearch]);
 
   useEffect(() => {
     setMatchCount(flatHits.length);
@@ -280,20 +258,6 @@ export function SearchDialog() {
                 Type {SEARCH_MIN_CHARS - charCount} more character
                 {SEARCH_MIN_CHARS - charCount === 1 ? '' : 's'} to search
               </p>
-              {localFeatures.length > 0 ? (
-                <ul className="mt-4 divide-y divide-border/40" role="listbox">
-                  {localFeatures.map((hit, i) => (
-                    <li key={hit.id}>
-                      <SearchHitRow
-                        hit={hit}
-                        selected={selectedIndex === i}
-                        onPick={() => handlePick(hit)}
-                        onHover={() => setSelectedIndex(i)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
             </motion.div>
           ) : flatHits.length === 0 && !loading ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-12 text-center">

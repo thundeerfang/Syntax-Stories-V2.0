@@ -12,17 +12,13 @@ import {
   setDefaultGroupForUser,
   updateGroupForUser,
 } from '../services/bookmarkGroups.service.js';
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
 
 function paramString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
   if (Array.isArray(v)) return v[0];
   return v;
 }
-
-/** Active rows are not soft-deleted (`deletedAt` unset or null). */
-const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
 
 /** GET /api/bookmarks/groups */
 export async function listBookmarkGroups(req: Request, res: Response): Promise<void> {
@@ -213,7 +209,7 @@ export async function listBookmarkedPosts(req: Request, res: Response): Promise<
     const postsRaw = await BlogPostModel.find({
       _id: { $in: postIds },
       status: 'published',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })

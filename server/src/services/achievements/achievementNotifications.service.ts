@@ -44,7 +44,13 @@ export async function notifyAchievementUnlocks(
         id: u.id,
         slug: u.slug,
         title: u.title,
+        description: u.description,
+        category: u.category,
         points: u.points,
+        celebrateAs: u.celebrateAs,
+        metric: u.metric,
+        target: u.target,
+        current: u.current,
       })),
     },
   });

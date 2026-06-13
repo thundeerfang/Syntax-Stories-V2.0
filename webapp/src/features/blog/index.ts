@@ -3,6 +3,7 @@ export {
   type BlogCardOwnerActions,
   type BlogCardProps,
   type SquadFeedPinChrome,
+  type SquadFeedShareChrome,
 } from './components/BlogCard';
 export { BlogPostAuthor } from './components/BlogPostAuthor';
 export {
@@ -17,8 +18,10 @@ export {
 } from './components/CompactBlogPostsSwiper';
 export {
   ProfileActivityBlogList,
+  ProfileActivitySwiperNav,
   PROFILE_ACTIVITY_PREVIEW_LIMIT,
   profileBlogsPageHref,
+  type ProfileActivityKind,
 } from './components/ProfileActivityBlogList';
 export { PublicUserBlogGrid } from './components/PublicUserBlogGrid';
 export {

@@ -21,7 +21,6 @@ export * from './tagsExploreApi';
 export * from './billingApi';
 export * from './feedbackApi';
 export * from './contactApi';
-export * from './companiesApi';
 export * from './githubApi';
 export * from './referenceApi';
 export * from './analyticsApi';

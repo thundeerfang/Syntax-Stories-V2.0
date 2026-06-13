@@ -144,7 +144,9 @@ export const redisKeys = {
   },
 
   notifications: {
+    /** Per-user Pub/Sub for SSE toasts (API). */
     userChannel: (userId: string) => `notifications:user:${userId}`,
+    /** Redis list outbox for the dedicated notification webhook worker. */
     outbox: 'notifications:outbox',
     milestoneSent: (postId: string, metric: string, threshold: number) =>
       `notif:milestone:${postId}:${metric}:${threshold}`,
@@ -153,10 +155,23 @@ export const redisKeys = {
 
   achievements: {
     stream: 'stream:achievements',
+    /** Per-user Pub/Sub for achievement unlock SSE (dialog). */
+    userChannel: (userId: string) => `achievements:unlock:${userId}`,
+    /** Redis list outbox when Pub/Sub publish fails. */
+    unlockOutbox: 'achievements:unlock:outbox',
     catalog: (version: number) => `achievement:catalog:v${version}`,
     leaderboardPoints: 'achievement:leaderboard:points',
     lock: (userId: string, achievementId: string) =>
       `achievement:lock:${userId}:${achievementId}`,
+  },
+
+  platform: {
+    storageBlocked: 'platform:storage:blocked',
+    storageReason: 'platform:storage:reason',
+    storageSince: 'platform:storage:since',
+    storageAlerted: 'platform:storage:alerted',
+    publicStats: 'platform:stats:public',
+    uptimeHour: (bucket: string) => `platform:uptime:hour:${bucket}`,
   },
 
   search: {

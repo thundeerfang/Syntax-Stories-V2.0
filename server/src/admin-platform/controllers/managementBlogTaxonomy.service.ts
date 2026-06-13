@@ -5,6 +5,8 @@ import { BlogTagModel } from '../../models/BlogTag.js';
 import { BlogPostModel } from '../../models/BlogPost.js';
 import { BlogCategoryFollowModel } from '../../models/BlogCategoryFollow.js';
 import { reserveUniqueSlug } from '../../shared/slug/slugifyDisplayName.js';
+import { NOT_DELETED_FILTER } from '../../shared/db/notDeleted.js';
+import { parseAdminTaxonomyListLimit } from '../../shared/http/pagination.js';
 
 const CATEGORY_SLUG_MAX = 64;
 const TAG_SLUG_MAX = 48;
@@ -16,21 +18,15 @@ async function blogTaxonomySlugTaken(slug: string): Promise<boolean> {
   ]);
   return Boolean(category || tag);
 }
-const MAX_LIMIT = 200;
-
 function iso(d: Date | undefined | null): string | null {
   if (!d) return null;
   const t = new Date(d);
   return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
 
-function notDeletedPostFilter(): Record<string, unknown> {
-  return { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
-}
-
 async function postCountByCategorySlug(slug: string): Promise<number> {
   return BlogPostModel.countDocuments({
-    ...notDeletedPostFilter(),
+    ...NOT_DELETED_FILTER,
     status: 'published',
     category: slug.toLowerCase(),
   });
@@ -38,7 +34,7 @@ async function postCountByCategorySlug(slug: string): Promise<number> {
 
 async function postCountByTagSlug(slug: string): Promise<number> {
   return BlogPostModel.countDocuments({
-    ...notDeletedPostFilter(),
+    ...NOT_DELETED_FILTER,
     status: 'published',
     tags: slug.toLowerCase(),
   });
@@ -105,14 +101,14 @@ export async function loadAdminBlogCategory(ref: string) {
     postCountByCategorySlug(categorySlug),
     followerCountByCategorySlug(categorySlug),
     BlogPostModel.countDocuments({
-      ...notDeletedPostFilter(),
+      ...NOT_DELETED_FILTER,
       status: 'draft',
       category: categorySlug,
     }),
   ]);
 
   const recentPosts = await BlogPostModel.find({
-    ...notDeletedPostFilter(),
+    ...NOT_DELETED_FILTER,
     status: 'published',
     category: categorySlug,
   })
@@ -309,14 +305,14 @@ export async function loadAdminBlogTag(ref: string) {
   const [postCount, draftCount] = await Promise.all([
     postCountByTagSlug(tagSlug),
     BlogPostModel.countDocuments({
-      ...notDeletedPostFilter(),
+      ...NOT_DELETED_FILTER,
       status: 'draft',
       tags: tagSlug,
     }),
   ]);
 
   const recentPosts = await BlogPostModel.find({
-    ...notDeletedPostFilter(),
+    ...NOT_DELETED_FILTER,
     status: 'published',
     tags: tagSlug,
   })
@@ -458,5 +454,5 @@ export async function patchAdminBlogTag(
 export function parseTaxonomyListLimit(raw: unknown): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 1) return 100;
-  return Math.min(Math.floor(n), MAX_LIMIT);
+  return parseAdminTaxonomyListLimit(n);
 }

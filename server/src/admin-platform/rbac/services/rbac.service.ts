@@ -12,8 +12,7 @@ import {
   setL1PermissionCache,
 } from './adminPermissionL1Cache.js';
 import { publishPermissionInvalidation } from '../../iam/permissionInvalidation.service.js';
-
-const CACHE_TTL_SEC = 300;
+import { RBAC_CACHE_TTL_SEC } from '../../../variable/constants.js';
 
 /**
  * Monotonic permission version per staff user (invalidation / snapshot staleness).
@@ -127,7 +126,7 @@ export async function getEffectiveAdminPermissions(userId: string): Promise<Set<
 
   if (redis) {
     try {
-      await redis.setEx(cacheKey, CACHE_TTL_SEC, JSON.stringify([...union]));
+      await redis.setEx(cacheKey, RBAC_CACHE_TTL_SEC, JSON.stringify([...union]));
     } catch {
       /* ignore */
     }

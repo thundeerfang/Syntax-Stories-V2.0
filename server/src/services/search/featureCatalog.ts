@@ -1,4 +1,4 @@
-/** Keep in sync with `webapp/src/lib/search/featureCatalog.ts`. */
+/** In-app feature catalog for unified search (server-only). */
 export type FeatureCatalogEntry = {
   id: string;
   label: string;

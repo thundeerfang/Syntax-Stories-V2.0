@@ -8,7 +8,7 @@ import {
   shouldHandleFollowedCategoriesEvent,
 } from '@/lib/feeds/followedCategoriesStorage';
 import { toggleCategoryFollowWithSync } from '@/lib/feeds/categoryFollowActions';
-import { triggerFollowConfetti } from '@/store/engagementEffects';
+import { triggerFollowConfetti, followConfettiRectFromClick } from '@/store/engagementEffects';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
@@ -61,13 +61,14 @@ export function CategoryFollowButton({
       return;
     }
     if (busy) return;
+    const confettiRect = followConfettiRectFromClick(e.currentTarget);
     setBusy(true);
     void (async () => {
       try {
         const nowFollowing = await toggleCategoryFollowWithSync(slug, userId, token);
         setFollowing(nowFollowing);
         if (nowFollowing) {
-          triggerFollowConfetti(e.currentTarget);
+          triggerFollowConfetti(confettiRect);
         }
         toast.success(nowFollowing ? `Following ${name}` : `Unfollowed ${name}`);
         onToggle?.(nowFollowing);

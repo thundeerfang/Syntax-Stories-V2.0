@@ -8,12 +8,16 @@ import {
   RailFeedEmptyState,
   RailFeedErrorState,
   RailSectionSubheader,
+  RailCountPill,
+  RailCountPillLoading,
+  RailCountPillPair,
   ShellPageIntroHeader,
   SignInRequiredPanel,
   type RailSectionSubheaderSortProps,
 } from '@/components/layout';
 import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
 import { useAuthStore } from '@/store/auth';
+import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
@@ -30,6 +34,7 @@ export default function RepostsPage() {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const routeRestoreNonce = useRouteRestoreNonce();
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,7 +71,7 @@ export default function RepostsPage() {
   useEffect(() => {
     if (!isHydrated || !token || !user) return;
     void loadPosts();
-  }, [isHydrated, token, user, loadPosts]);
+  }, [isHydrated, token, user, loadPosts, routeRestoreNonce]);
 
   const filteredPosts = useMemo(() => {
     if (!searchDebounced) return posts;
@@ -111,10 +116,23 @@ export default function RepostsPage() {
         ) : (
           <>
             <RailSectionSubheader
+              label="Reposts"
               text={
-                searchDebounced
-                  ? `Reposts · ${filteredPosts.length} of ${posts.length}`
-                  : `Reposts · ${posts.length} ${posts.length === 1 ? 'post' : 'posts'}`
+                loading ? (
+                  <RailCountPillLoading />
+                ) : searchDebounced ? (
+                  <RailCountPillPair
+                    primary={filteredPosts.length}
+                    secondary={posts.length}
+                    primaryLabel={`${filteredPosts.length} matching`}
+                    secondaryLabel={`${posts.length} total`}
+                  />
+                ) : (
+                  <RailCountPill
+                    count={posts.length}
+                    aria-label={`${posts.length} reposts`}
+                  />
+                )
               }
               search={{
                 value: searchInput,

@@ -73,8 +73,8 @@ export async function startGamificationWorker(): Promise<void> {
       }
       try {
         const rows = await sub.xReadGroup(group, consumer, { key: streamKey, id: '>' }, {
-          COUNT: 5,
-          BLOCK: 5000,
+          COUNT: 10,
+          BLOCK: 500,
         });
 
         if (!rows) continue;
@@ -157,5 +157,5 @@ export async function startGamificationOutboxProcessor(): Promise<void> {
   };
 
   void tick();
-  setInterval(() => void tick(), 30_000);
+  setInterval(() => void tick(), 10_000);
 }

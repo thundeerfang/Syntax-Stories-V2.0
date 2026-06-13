@@ -7,7 +7,6 @@ import {
   Monitor,
   Users,
   Wrench,
-  Terminal,
   Activity,
   ChevronRight,
   Globe,
@@ -19,6 +18,7 @@ import {
 import { followApi, type ReadStreakPayload, type PublicProfileUser } from '@/api/follow';
 import { analyticsApi } from '@/api/analytics';
 import { useAuthStore } from '@/store/auth';
+import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
 import {
   FollowersFollowingDialog,
   MediaFullViewDialog,
@@ -28,21 +28,21 @@ import { cn } from '@/lib/core/utils';
 import { toast } from 'sonner';
 import { StackToolsBadgeList } from '@/features/profile/components/StackToolsBadgeList';
 import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/components/ui/editor';
-import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
-import { EducationCard } from '@/components/settings-list/EducationCard';
 import { CertificationCard } from '@/components/settings-list/CertificationCard';
 import { ProjectCard } from '@/components/settings-list/ProjectCard';
 import { OpenSourceCard } from '@/components/settings-list/OpenSourceCard';
-import { SparkLottie, StreakFireLottie, WalletLottie, TestAccountLottie } from '@/components/ui';
+import { SparkLottie, StreakFireLottie, TestAccountLottie } from '@/components/ui';
 import { AreaChart } from '@/components/retroui';
-import { ProfileHeatmap } from '@/features/profile';
+import { ProfileActivityTabs, ProfileHeatmap } from '@/features/profile';
+import type { ActivityTab } from '@/features/profile/lib/profilePageHelpers';
 import { HoverCard } from '@/components/ui/popover';
 import { LinkPreviewCardContent } from '@/components/ui/popover';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { PROFILE_PUBLIC_SOCIAL_BTN } from '@/lib/profile/profilePublicCard';
-import { ProfileActivityBlogList, profileBlogsPageHref } from '@/features/blog';
+import { ProfileActivityBlogList, ProfileActivitySwiperNav, profileBlogsPageHref } from '@/features/blog';
+import type { CompactBlogPostsSwiperHandle } from '@/features/blog';
 import { ProfilePageSkeletonInner } from '@/components/skeletons';
-import { formatJoinedDate, markdownBioToHtml } from '@/lib/profile/profileDisplay';
+import { formatJoinedDate, isPlaceholderProfileBio, markdownBioToHtml } from '@/lib/profile/profileDisplay';
 import { formatMonthYearShort } from '@/lib/profile/dateLabels';
 import {
   GithubIcon,
@@ -98,23 +98,6 @@ function reposCountSubtitle(count: number): string | undefined {
 function minVisibleAfterOpen(variant: ProfileSectionVariant, prior: number | undefined): number {
   const floor = variant === 'openSource' || variant === 'mySetup' ? 2 : 1;
   return Math.max(prior ?? floor, floor);
-}
-
-function workExperienceListKey(e: Record<string, unknown>): string {
-  const id = e.id ?? e.workId;
-  if (typeof id === 'string' && id.length > 0) return `we-${id}`;
-  const company = typeof e.company === 'string' ? e.company : '';
-  const start = typeof e.startDate === 'string' ? e.startDate : '';
-  const title = typeof e.title === 'string' ? e.title : '';
-  return `we-${company}-${start}-${title}`.replaceAll(/\s+/g, '-');
-}
-
-function educationListKey(e: Record<string, unknown>): string {
-  const id = e.eduId ?? e.id;
-  if (typeof id === 'string' && id.length > 0) return `edu-${id}`;
-  const school = typeof e.school === 'string' ? e.school : '';
-  const start = typeof e.startDate === 'string' ? e.startDate : '';
-  return `edu-${school}-${start}`.replaceAll(/\s+/g, '-');
 }
 
 function certificationListKey(c: Record<string, unknown>): string {
@@ -176,8 +159,7 @@ function PublicProfileFollowCta({
     );
   }
   let followLabel: string;
-  if (followLoading) followLabel = '…';
-  else if (following) followLabel = 'Following';
+  if (following) followLabel = 'Following';
   else followLabel = 'Follow';
   return (
     <button
@@ -211,9 +193,11 @@ export default function PublicProfilePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [profileUrlCopied, setProfileUrlCopied] = useState(false);
   const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
-  const [activityTab, setActivityTab] = useState<'posts' | 'repost'>('posts');
+  const [activityTab, setActivityTab] = useState<ActivityTab>('posts');
+  const activitySwiperRef = useRef<CompactBlogPostsSwiperHandle>(null);
   const [readStreak, setReadStreak] = useState<ReadStreakPayload | null>(null);
   const [readHeatmapDays, setReadHeatmapDays] = useState<string[] | null>(null);
+  const routeRestoreNonce = useRouteRestoreNonce();
 
   useEffect(() => {
     if (!username) {
@@ -240,7 +224,7 @@ export default function PublicProfilePage() {
         router.replace('/');
       })
       .finally(() => setLoading(false));
-  }, [username, router]);
+  }, [username, router, routeRestoreNonce]);
 
   useEffect(() => {
     if (!token || !username || !currentUser) return;
@@ -314,7 +298,7 @@ export default function PublicProfilePage() {
   }, [profileProjects.github, profile?.openSourceContributions]);
 
   const [openSectionId, setOpenSectionId] = useState<ProfileSectionVariant | null>(
-    'workExperience'
+    'certification'
   );
   const accordionsRootRef = useRef<HTMLDivElement>(null);
 
@@ -329,16 +313,12 @@ export default function PublicProfilePage() {
   }, [openSectionId]);
 
   const [visibleCounts, setVisibleCounts] = useState<Record<ProfileSectionVariant, number>>({
-    workExperience: 1,
-    education: 1,
     certification: 1,
     project: 1,
     openSource: 2,
     mySetup: 2,
   });
   const [sectionLoading, setSectionLoading] = useState<Record<ProfileSectionVariant, boolean>>({
-    workExperience: false,
-    education: false,
     certification: false,
     project: false,
     openSource: false,
@@ -495,39 +475,20 @@ export default function PublicProfilePage() {
                     </div>
                   </div>
 
-                  {profile.bio?.trim() ? (
-                    <div className="relative border-2 border-primary bg-muted/5 p-6 pt-8 group">
-                      <div className="absolute -top-3 left-6 inline-flex items-center bg-background px-2">
-                        <div className="flex items-center bg-primary px-2 py-1">
-                          <Terminal className="size-3 text-primary-foreground" />
-                          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
-                            Summary_Report
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="absolute top-2 right-4 text-[8px] font-mono text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
-                        REF_NO: {String(profile.id ?? '').slice(-8) || '0000X-SYS'}
-                      </div>
-
-                      <div
-                        className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
-                        dangerouslySetInnerHTML={{ __html: markdownBioToHtml(profile.bio) }}
-                      />
-
-                      <div className="absolute bottom-1 right-1 size-3 border-r-2 border-b-2 border-border/50" />
-                    </div>
+                  {profile.bio?.trim() && !isPlaceholderProfileBio(profile.bio) ? (
+                    <div
+                      className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
+                      dangerouslySetInnerHTML={{ __html: markdownBioToHtml(profile.bio) }}
+                    />
                   ) : (
-                    <div className="border-2 border-dashed border-border p-10 flex flex-col items-center justify-center text-center bg-muted/5">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">
-                        &gt; Biography_Data_Missing
-                      </p>
+                    <div className="py-6 text-center">
+                      <p className="text-sm text-muted-foreground italic mb-4">No bio yet.</p>
                       {isSelf ? (
                         <Link
                           href="/settings"
                           className="px-4 py-2 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
                         >
-                          Initialize Summary
+                          Add bio
                         </Link>
                       ) : null}
                     </div>
@@ -541,13 +502,6 @@ export default function PublicProfilePage() {
                     <span className="font-black text-sm uppercase">10</span>
                     <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
                       Respect
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <WalletLottie play size={24} />
-                    <span className="font-black text-sm uppercase">0</span>
-                    <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
-                      Wallet
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -575,47 +529,34 @@ export default function PublicProfilePage() {
               </div>
             </section>
 
-            {/* ACTIVITY (public): Posts + Repost */}
+            {/* ACTIVITY (public) */}
             <section className="space-y-4 border-4 border-border bg-card shadow p-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
                   <Activity className="size-4 text-primary" /> Activity
                 </h2>
-                <Link
-                  href={profileBlogsPageHref(username)}
-                  className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest shadow hover:bg-muted transition-all"
-                >
-                  View all
-                </Link>
-              </div>
-              <div className="flex gap-1 border-b-4 border-border pb-3">
-                {(['posts', 'repost'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActivityTab(tab)}
-                    className={cn(
-                      'flex-1 px-3 py-2 font-black text-[10px] uppercase tracking-widest border-2 border-border transition-all',
-                      activityTab === tab
-                        ? 'bg-primary text-primary-foreground border-primary shadow'
-                        : 'bg-card hover:bg-muted text-muted-foreground'
-                    )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={profileBlogsPageHref(username)}
+                    className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest shadow hover:bg-muted transition-all"
                   >
-                    {tab === 'posts' ? 'Posts' : 'Repost'}
-                  </button>
-                ))}
+                    View all
+                  </Link>
+                  <ProfileActivitySwiperNav swiperRef={activitySwiperRef} />
+                </div>
               </div>
-              <div>
-                {activityTab === 'posts' ? (
-                  <ProfileActivityBlogList username={username} />
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      No reposts found.
-                    </p>
-                  </div>
-                )}
-              </div>
+              <ProfileActivityTabs
+                tabs={['posts', 'replies', 'repost']}
+                value={activityTab}
+                onChange={setActivityTab}
+              />
+              <ProfileActivityBlogList
+                key={activityTab}
+                ref={activitySwiperRef}
+                username={username}
+                kind={activityTab}
+                accessToken={token}
+              />
             </section>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -725,106 +666,6 @@ export default function PublicProfilePage() {
             </div>
 
             <div ref={accordionsRootRef} className="space-y-6">
-              <ProfileSectionAccordion
-                variant="workExperience"
-                open={openSectionId === 'workExperience'}
-                onOpenChange={(open) => setSectionOpen('workExperience', open)}
-                subtitle={entriesCountSubtitle(profile.workExperiences?.length ?? 0)}
-              >
-                {profile.workExperiences?.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.workExperience ? (
-                      <ProfileCardSkeleton lines={4} />
-                    ) : (
-                      (profile.workExperiences as any[])
-                        .slice(0, visibleCounts.workExperience)
-                        .map((e, i) => (
-                          <WorkExperienceCard
-                            key={workExperienceListKey(e as Record<string, unknown>)}
-                            experience={e}
-                            index={i}
-                            saving={false}
-                            onEdit={() => {}}
-                            onRemove={() => {}}
-                            onPreviewMedia={() => {}}
-                            formatMonthYear={formatMonthYearShort}
-                            locationWithoutType={locationWithoutType}
-                            normalizeDomain={normalizeDomain}
-                            isImageUrl={isImageUrl}
-                            hideActions
-                          />
-                        ))
-                    )}
-                    {(profile.workExperiences as any[]).length > visibleCounts.workExperience ? (
-                      <button
-                        type="button"
-                        disabled={sectionLoading.workExperience}
-                        onClick={() => viewMore('workExperience', 1)}
-                        className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                      >
-                        {sectionLoading.workExperience
-                          ? 'LOADING…'
-                          : `View more (${visibleCounts.workExperience}/${(profile.workExperiences as any[]).length})`}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      No work experience
-                    </p>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
-              <ProfileSectionAccordion
-                variant="education"
-                open={openSectionId === 'education'}
-                onOpenChange={(open) => setSectionOpen('education', open)}
-                subtitle={entriesCountSubtitle(profile.education?.length ?? 0)}
-              >
-                {profile.education?.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.education ? (
-                      <ProfileCardSkeleton lines={3} />
-                    ) : (
-                      (profile.education as any[])
-                        .slice(0, visibleCounts.education)
-                        .map((e, i) => (
-                          <EducationCard
-                            key={educationListKey(e as Record<string, unknown>)}
-                            education={e}
-                            index={i}
-                            saving={false}
-                            onEdit={() => {}}
-                            onRemove={() => {}}
-                            formatMonthYear={formatMonthYearShort}
-                            hideActions
-                          />
-                        ))
-                    )}
-                    {(profile.education as any[]).length > visibleCounts.education ? (
-                      <button
-                        type="button"
-                        disabled={sectionLoading.education}
-                        onClick={() => viewMore('education', 1)}
-                        className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                      >
-                        {sectionLoading.education
-                          ? 'LOADING…'
-                          : `View more (${visibleCounts.education}/${(profile.education as any[]).length})`}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      No education
-                    </p>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
               <ProfileSectionAccordion
                 variant="certification"
                 open={openSectionId === 'certification'}
@@ -989,11 +830,16 @@ export default function PublicProfilePage() {
           </div>
 
           <div className="lg:col-span-4 space-y-6">
-            <div className="border-4 border-border bg-card p-4 shadow">
+            <button
+              type="button"
+              onClick={() => setDialogOpen(true)}
+              aria-label="Open followers and following"
+              className="w-full border-4 border-border bg-card p-4 shadow text-left transition-transform active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center">
-                    <Users className="size-4 text-primary" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center shrink-0">
+                    <Users className="size-4 text-primary" aria-hidden />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-black uppercase">Followers & Following</p>
@@ -1008,16 +854,11 @@ export default function PublicProfilePage() {
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setDialogOpen(true)}
-                  aria-label="Open followers and following"
-                  className="p-2 border-2 border-border bg-card hover:bg-muted shadow active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all shrink-0"
-                >
+                <span className="p-2 border-2 border-border bg-card shrink-0" aria-hidden>
                   <ChevronRight className="size-4 text-foreground" />
-                </button>
+                </span>
               </div>
-            </div>
+            </button>
 
             <ProfileSquadsCategoriesCard
               username={username}
@@ -1136,32 +977,6 @@ export default function PublicProfilePage() {
               </div>
               <div className="h-2 bg-muted border-2 border-border mt-3">
                 <div className="h-full bg-primary" style={{ width: '0%' }} />
-              </div>
-            </div>
-
-            {/* BADGES */}
-            <div className="border-4 border-border bg-card p-5 shadow space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[10px] font-black uppercase tracking-widest">
-                  Badges & Awards
-                </h3>
-                <span className="text-[9px] font-black text-muted-foreground uppercase">
-                  Coming soon
-                </span>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between py-2 border-b-2 border-border border-dashed">
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground">
-                    Top reader badge
-                  </span>
-                  <span className="text-xs font-black">x0</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground">
-                    Total Awards
-                  </span>
-                  <span className="text-xs font-black">x0</span>
-                </div>
               </div>
             </div>
 

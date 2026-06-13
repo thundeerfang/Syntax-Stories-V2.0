@@ -1,4 +1,5 @@
 import { env } from '../../config/env.js';
+import { AUTH_TTL } from '../../config/auth.ttls.js';
 
 /** Admin app origin for WebAuthn ceremonies (must match browser `window.location.origin`). */
 export function getWebAuthnOrigin(): string {
@@ -21,7 +22,7 @@ export function getWebAuthnRpId(): string {
 
 export const WEBAUTHN_RP_NAME = process.env.WEBAUTHN_RP_NAME?.trim() || 'Syntax Stories Admin';
 
-export const PASSKEY_CHALLENGE_TTL_SEC = 5 * 60;
+export const PASSKEY_CHALLENGE_TTL_SEC = AUTH_TTL.passkeyChallengeSec;
 
 export function isPasskeyFeatureEnabled(): boolean {
   return env.FEATURE_ADMIN_PASSKEY_STEPUP;

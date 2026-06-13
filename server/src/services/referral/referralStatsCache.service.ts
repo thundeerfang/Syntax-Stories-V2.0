@@ -1,8 +1,8 @@
 import { getRedis, isRedisAvailable } from '../../config/redis.js';
 import { redisKeys } from '../../shared/redis/keys.js';
 import { getReferralStatsCounts } from './referralConversion.service.js';
+import { REFERRAL_STATS_CACHE_TTL_SEC } from '../../variable/constants.js';
 
-const STATS_CACHE_TTL_SEC = 120;
 const LEADERBOARD_MAX = 500;
 
 export type ReferralUserStatsCache = {
@@ -52,7 +52,7 @@ export async function getReferralUserStatsCached(
       try {
         await redis.setEx(
           redisKeys.invite.userStats(userId),
-          STATS_CACHE_TTL_SEC,
+          REFERRAL_STATS_CACHE_TTL_SEC,
           JSON.stringify(payload)
         );
       } catch {

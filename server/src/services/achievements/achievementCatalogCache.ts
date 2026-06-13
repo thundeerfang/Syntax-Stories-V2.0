@@ -3,8 +3,7 @@ import { redisKeys } from '../../shared/redis/keys.js';
 import type { AchievementDef } from '../../achievements/achievement.types.js';
 import { loadActiveAchievementCatalog } from './achievementCatalogStore.js';
 import { buildAchievementMetricIndex, type AchievementMetricIndex } from './metricIndex.js';
-
-const CATALOG_TTL_SEC = 24 * 60 * 60;
+import { ACHIEVEMENT_CATALOG_TTL_SEC } from '../../variable/constants.js';
 
 type CachedCatalog = {
   catalog: AchievementDef[];
@@ -82,7 +81,7 @@ export async function getCachedAchievementCatalog(): Promise<{
         memoryCache = {
           data: parsed,
           metricIndex: idx,
-          expiresAt: now + CATALOG_TTL_SEC * 1000,
+          expiresAt: now + ACHIEVEMENT_CATALOG_TTL_SEC * 1000,
         };
         return {
           catalog: parsed.catalog,
@@ -107,7 +106,7 @@ export async function getCachedAchievementCatalog(): Promise<{
 
   if (redis) {
     try {
-      await redis.setEx(cacheKey, CATALOG_TTL_SEC, JSON.stringify(serialized));
+      await redis.setEx(cacheKey, ACHIEVEMENT_CATALOG_TTL_SEC, JSON.stringify(serialized));
     } catch {
       /* ignore */
     }
@@ -116,7 +115,7 @@ export async function getCachedAchievementCatalog(): Promise<{
   memoryCache = {
     data: serialized,
     metricIndex,
-    expiresAt: now + CATALOG_TTL_SEC * 1000,
+    expiresAt: now + ACHIEVEMENT_CATALOG_TTL_SEC * 1000,
   };
 
   return {

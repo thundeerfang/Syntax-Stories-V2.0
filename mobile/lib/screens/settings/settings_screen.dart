@@ -24,13 +24,11 @@ import 'stack_tools_screen.dart';
 import 'my_setup_screen.dart';
 import 'connected_accounts_screen.dart';
 import 'certifications_screen.dart';
-import 'education_screen.dart';
 import 'open_source_screen.dart';
 import 'blog_streak_screen.dart';
 import 'update_email_screen.dart';
 import 'notifications_screen.dart';
 import 'projects_screen.dart';
-import 'work_experience_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -158,18 +156,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (item.id == 'connected-accounts') {
       Navigator.of(context).push<void>(
         MaterialPageRoute<void>(builder: (_) => const ConnectedAccountsScreen()),
-      );
-      return;
-    }
-    if (item.id == 'work-experiences') {
-      Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const WorkExperienceScreen()),
-      );
-      return;
-    }
-    if (item.id == 'education') {
-      Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const EducationScreen()),
       );
       return;
     }

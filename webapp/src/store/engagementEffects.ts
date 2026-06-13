@@ -47,10 +47,25 @@ export function triggerRespectLightning(origin: Element | DOMRect): void {
 }
 
 /** Local confetti burst on follow / squad join (not unfollow). Signed-in users only. */
-export function triggerFollowConfetti(origin: Element | DOMRect): void {
+export function triggerFollowConfetti(origin: Element | DOMRect | null | undefined): void {
+  if (!origin) return;
   if (!useAuthStore.getState().token) {
+    return;
+  }
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
     return;
   }
   const rect = origin instanceof DOMRect ? origin : origin.getBoundingClientRect();
   burstConfettiAtRect(rect);
+}
+
+/** Capture click origin before an async handler — React nulls `currentTarget` after await. */
+export function followConfettiRectFromClick(
+  target: EventTarget | null
+): DOMRect | null {
+  if (!target || !(target instanceof Element)) return null;
+  return target.getBoundingClientRect();
 }

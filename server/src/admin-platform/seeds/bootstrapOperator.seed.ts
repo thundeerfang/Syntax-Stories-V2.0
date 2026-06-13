@@ -10,8 +10,7 @@ import {
   SYNTAX_ADMIN_EMAIL,
 } from './bootstrap.constants.js';
 import { applySeedTwoFactor, printTwoFactorSeedBanner } from './seedOperatorTwoFactor.js';
-
-const BCRYPT_ROUNDS = 10;
+import { BCRYPT_ROUNDS } from '../../variable/constants.js';
 
 type TwoFactorSeedMode = 'disabled' | 'setup_required' | 'preconfigured';
 

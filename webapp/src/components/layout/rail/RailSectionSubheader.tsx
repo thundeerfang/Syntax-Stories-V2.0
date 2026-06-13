@@ -55,6 +55,8 @@ function hasRailText(text: ReactNode | undefined): boolean {
   return true;
 }
 
+export type RailSectionSubheaderFilterProps = RailSectionSubheaderSortProps;
+
 export type RailSectionSubheaderProps = Readonly<{
   /** Small / secondary label (left, before text). Omit for title-only rails. */
   label?: ReactNode;
@@ -62,6 +64,8 @@ export type RailSectionSubheaderProps = Readonly<{
   text?: ReactNode;
   /** Built-in search field (icon included). Omit to hide search. */
   search?: RailSectionSubheaderSearchProps;
+  /** Optional filter dropdown (e.g. All / Followed). */
+  filter?: RailSectionSubheaderFilterProps;
   /** Optional value-based sort dropdown. */
   sort?: RailSectionSubheaderSortProps;
   /** Toolbar actions — use `variant: 'primary'` for the main CTA. */
@@ -113,9 +117,10 @@ export function RailSectionSubheaderButton({
 
 function RailToolbarButtons({
   buttons,
-}: Readonly<{ buttons: ReadonlyArray<RailSectionSubheaderButtonProps> }>) {
+  nowrap = false,
+}: Readonly<{ buttons: ReadonlyArray<RailSectionSubheaderButtonProps>; nowrap?: boolean }>) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-1">
+    <div className={cn('flex min-w-0 items-center gap-1', nowrap ? 'flex-nowrap' : 'flex-wrap')}>
       {buttons.map((btn, i) => (
         <RailSectionSubheaderButton key={btn.href ?? btn.ariaLabel ?? i} {...btn} />
       ))}
@@ -132,6 +137,7 @@ export function RailSectionSubheader({
   label,
   text,
   search,
+  filter,
   sort,
   buttons,
   swiperButtons,
@@ -145,6 +151,22 @@ export function RailSectionSubheader({
   const hasButtons = buttons != null && buttons.length > 0;
   const buttonsOnLeft = hasButtons && !showText;
   const buttonsOnRight = hasButtons && showText;
+  const compactButtonsWithSearch = buttonsOnLeft && search != null;
+
+  const searchField = search != null ? (
+    <SearchField
+      value={search.value}
+      onChange={onSearchChange}
+      onFocus={search.onFocus}
+      placeholder={search.placeholder ?? 'Search…'}
+      aria-label={search.ariaLabel}
+      disabled={search.disabled}
+      wrapperClassName={cn(
+        'h-[42px] w-[12.5rem] max-w-none shrink-0 sm:w-[16.5rem] sm:max-w-none',
+        search.wrapperClassName
+      )}
+    />
+  ) : null;
 
   return (
     <div className={cn('w-full min-w-0', className)}>
@@ -153,62 +175,81 @@ export function RailSectionSubheader({
           'flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-2 border-border bg-white px-3 py-2 shadow sm:gap-x-4 sm:px-4 sm:py-2.5 dark:bg-card'
         )}
       >
-        <div className="flex min-h-[42px] min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
-          {showLabel ? (
-            <div className="shrink-0 font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {label}
+        {compactButtonsWithSearch ? (
+          <div className="flex w-full min-w-0 items-center gap-2 sm:gap-3">
+            <div className="min-h-[42px] min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex w-max items-center pr-1">
+                <RailToolbarButtons buttons={buttons} nowrap />
+              </div>
             </div>
-          ) : null}
-          {showText ? (
-            <div className="min-w-0 flex-1 truncate font-sans text-sm font-bold leading-none text-foreground sm:text-base">
-              {text}
+            <div className="shrink-0">{searchField}</div>
+          </div>
+        ) : (
+          <>
+            <div className="flex min-h-[42px] min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
+              {showLabel ? (
+                <div className="shrink-0 font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  {label}
+                </div>
+              ) : null}
+              {showText ? (
+                <div className="min-w-0 flex-1 truncate font-sans text-sm font-bold leading-none text-foreground sm:text-base">
+                  {text}
+                </div>
+              ) : buttonsOnLeft ? (
+                <RailToolbarButtons buttons={buttons} />
+              ) : null}
             </div>
-          ) : buttonsOnLeft ? (
-            <RailToolbarButtons buttons={buttons} />
-          ) : null}
-        </div>
 
-        <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-2">
-          {search != null ? (
-            <div className="flex min-w-0 shrink-0 items-center">
-              <SearchField
-                value={search.value}
-                onChange={onSearchChange}
-                onFocus={search.onFocus}
-                placeholder={search.placeholder ?? 'Search…'}
-                aria-label={search.ariaLabel}
-                disabled={search.disabled}
-                wrapperClassName={cn(
-                  'min-w-0 max-w-[11rem] sm:max-w-[15rem]',
-                  search.wrapperClassName
-                )}
-              />
+            <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-2">
+              {searchField != null ? (
+                <div className="flex shrink-0 items-center">{searchField}</div>
+              ) : null}
+              {filter != null ? (
+                <div className="flex shrink-0 items-center">
+                  <SearchableSelect
+                    id={filter.id}
+                    label=""
+                    placeholder={filter.placeholder ?? 'Filter'}
+                    value={filter.value}
+                    onChange={filter.onChange}
+                    options={filter.options}
+                    disabled={filter.disabled}
+                    searchable={false}
+                    listMaxHeight={220}
+                    widthClass={filter.widthClass ?? 'w-[8.75rem] sm:w-[9.75rem]'}
+                    className="gap-0 [&>label]:hidden"
+                    triggerClassName="h-[42px]  py-0 font-mono text-[10px] font-black uppercase tracking-widest"
+                    listboxClassName=" shadow-none"
+                  />
+                </div>
+              ) : null}
+              {sort != null ? (
+                <div className="flex shrink-0 items-center">
+                  <SearchableSelect
+                    id={sort.id}
+                    label=""
+                    placeholder={sort.placeholder ?? 'Sort'}
+                    value={sort.value}
+                    onChange={sort.onChange}
+                    options={sort.options}
+                    disabled={sort.disabled}
+                    searchable={false}
+                    listMaxHeight={220}
+                    widthClass={sort.widthClass ?? 'w-[8.75rem] sm:w-[9.75rem]'}
+                    className="gap-0 [&>label]:hidden"
+                    triggerClassName="h-[42px]  py-0 font-mono text-[10px] font-black uppercase tracking-widest"
+                    listboxClassName=" shadow-none"
+                  />
+                </div>
+              ) : null}
+              {buttonsOnRight ? <RailToolbarButtons buttons={buttons} /> : null}
+              {swiperButtons != null ? (
+                <div className="flex shrink-0 items-center gap-1">{swiperButtons}</div>
+              ) : null}
             </div>
-          ) : null}
-          {sort != null ? (
-            <div className="flex shrink-0 items-center">
-              <SearchableSelect
-                id={sort.id}
-                label=""
-                placeholder={sort.placeholder ?? 'Sort'}
-                value={sort.value}
-                onChange={sort.onChange}
-                options={sort.options}
-                disabled={sort.disabled}
-                searchable={false}
-                listMaxHeight={220}
-                widthClass={sort.widthClass ?? 'w-[8.75rem] sm:w-[9.75rem]'}
-                className="gap-0 [&>label]:hidden"
-                triggerClassName="h-[42px]  py-0 font-mono text-[10px] font-black uppercase tracking-widest"
-                listboxClassName=" shadow-none"
-              />
-            </div>
-          ) : null}
-          {buttonsOnRight ? <RailToolbarButtons buttons={buttons} /> : null}
-          {swiperButtons != null ? (
-            <div className="flex shrink-0 items-center gap-1">{swiperButtons}</div>
-          ) : null}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

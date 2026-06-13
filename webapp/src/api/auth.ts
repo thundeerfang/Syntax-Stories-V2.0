@@ -173,8 +173,6 @@ async function authFetch<T>(
 }
 
 export type {
-  WorkExperience,
-  EducationItem,
   CertificationItem,
   ProjectItem,
   OpenSourceContribution,
@@ -184,19 +182,12 @@ export type {
   AccountResponseJson,
   AccountResponse,
   UpdateProfilePayload,
-  ParseCvMissingFieldKey,
-  IncompleteItemHint,
-  IncompleteItemHints,
-  ParseCvResponse,
 } from '@contracts/profileApi';
 import type {
   AccountResponse,
   AccountResponseJson,
   AccountUser,
   AuthUser,
-  IncompleteItemHints,
-  ParseCvMissingFieldKey,
-  ParseCvResponse,
   ProjectItem,
   UpdateProfilePayload,
 } from '@contracts/profileApi';
@@ -214,22 +205,11 @@ export type { ProfileUpdateSection };
 export {
   profileBasicPatchSchema,
   profileCertificationsPatchSchema,
-  profileEducationPatchSchema,
   profileProjectsPatchSchema,
   profileSetupPatchSchema,
   profileSocialPatchSchema,
   profileStackPatchSchema,
-  profileWorkPatchSchema,
 } from '@syntax-stories/shared';
-
-type ParseCvResponseJson = ParseCvResponse & {
-  message?: string;
-  data?: {
-    extracted?: Partial<UpdateProfilePayload>;
-    missingFields?: ParseCvMissingFieldKey[];
-    incompleteItemHints?: IncompleteItemHints;
-  };
-};
 
 export const authApi = {
   sendOtp: (data: SendOtpPayload) =>
@@ -336,32 +316,6 @@ export const authApi = {
     };
   },
 
-  /** Parse CV/Resume PDF and return extracted profile + missing field keys. Does not update profile. */
-  parseCv: async (accessToken: string, file: File) => {
-    const path = `${getAuthBase()}/parse-cv`;
-    const url = resolveSameOriginRequestUrl(path);
-    const formData = new FormData();
-    formData.append('pdf', file);
-    const headers: HeadersInit = { Authorization: `Bearer ${accessToken}` };
-    const res = await fetch(url, { method: 'POST', body: formData, headers });
-    const data = (await res.json().catch(() => ({}))) as ParseCvResponseJson;
-    if (!res.ok) throw new Error((data.message as string) || 'Failed to parse PDF');
-    const extracted = data.data?.extracted ?? data.extracted ?? {};
-    const missingFields = (data.data?.missingFields ??
-      data.missingFields ??
-      []) as ParseCvMissingFieldKey[];
-    const incompleteItemHints = data.data?.incompleteItemHints ?? data.incompleteItemHints ?? {};
-    return {
-      success: Boolean(data.success),
-      extracted,
-      missingFields,
-      incompleteItemHints,
-      achievements: (
-        data as { achievements?: import('@/contracts/achievementsApi').AchievementsPayload }
-      ).achievements,
-    };
-  },
-
   disconnectProvider: (accessToken: string, provider: string) =>
     authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/disconnect/${provider}`, {
       method: 'POST',
@@ -441,8 +395,6 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     youtube: backendUser.youtube,
     stackAndTools: backendUser.stackAndTools,
     stackAndToolsDisplay: backendUser.stackAndToolsDisplay,
-    workExperiences: backendUser.workExperiences,
-    education: backendUser.education,
     certifications: backendUser.certifications,
     projects: backendUser.projects,
     openSourceContributions: backendUser.openSourceContributions,

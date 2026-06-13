@@ -4,8 +4,7 @@ import { SubscriptionModel } from '../../models/Subscription.js';
 import { UserModel } from '../../models/User.js';
 import { getStripe } from '../stripe/stripeClient.js';
 import { applyStripeSubscription } from './applyStripeSubscription.js';
-
-const RECONCILE_AGE_MS = 72 * 60 * 60 * 1000;
+import { BILLING_RECONCILE_AGE_MS } from '../../variable/constants.js';
 
 function shardHit(userId: string, pct: number): boolean {
   const h = crypto.createHash('sha256').update(userId).digest()[0] ?? 0;
@@ -17,7 +16,7 @@ export function startReconcileJob(): void {
     try {
     const stripe = getStripe();
     if (!stripe) return;
-    const cutoff = new Date(Date.now() - RECONCILE_AGE_MS);
+    const cutoff = new Date(Date.now() - BILLING_RECONCILE_AGE_MS);
     const candidates = await SubscriptionModel.find({
       stripeSubscriptionId: { $exists: true, $ne: null },
       $or: [{ lastReconciledAt: null }, { lastReconciledAt: { $lt: cutoff } }],

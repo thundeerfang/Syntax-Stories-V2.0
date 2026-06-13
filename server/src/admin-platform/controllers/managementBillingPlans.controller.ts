@@ -1,9 +1,12 @@
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import type { PaidPlanKey } from '../../models/CheckoutIntent.js';
+import type { PaidPlanKey } from '../../variable/constants.js';
+import {
+  isPaidPlanKey,
+  PAID_PLAN_KEY_VALIDATION_MESSAGE,
+} from '../../variable/constants.js';
 import { sendAdminError, sendAdminOk, type AdminErrorCode } from '../rbac/adminResponse.js';
 import {
-  ALL_PAID_PLAN_KEYS,
   PlanCatalogStoreError,
   createBillingPlanInStore,
   deleteBillingPlanFromStore,
@@ -33,8 +36,8 @@ function parseFeatures(raw: unknown): string[] | null {
 
 function parsePlanKey(raw: unknown): PaidPlanKey | null {
   if (typeof raw !== 'string') return null;
-  const k = raw.trim() as PaidPlanKey;
-  return ALL_PAID_PLAN_KEYS.includes(k) ? k : null;
+  const k = raw.trim();
+  return isPaidPlanKey(k) ? k : null;
 }
 
 export async function listBillingPlansAdmin(_req: Request, res: Response): Promise<void> {
@@ -51,7 +54,7 @@ export async function postBillingPlan(req: Request, res: Response): Promise<void
   const body = req.body as Record<string, unknown>;
   const key = parsePlanKey(body.key);
   if (!key) {
-    sendAdminError(res, 400, 'VALIDATION_ERROR', 'key must be pro, proplus, or ultra');
+    sendAdminError(res, 400, 'VALIDATION_ERROR', PAID_PLAN_KEY_VALIDATION_MESSAGE);
     return;
   }
 

@@ -1,10 +1,11 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request } from 'express';
+import { RATE_LIMITS } from '../../config/rateLimits.js';
 import { RedisRateLimitStore } from '../auth/redisRateLimitStore.js';
 
 export const rateLimitBlogRespectWrite = rateLimit({
-  windowMs: 60_000,
-  limit: 120,
+  windowMs: RATE_LIMITS.blogRespectWrite.windowMs,
+  limit: RATE_LIMITS.blogRespectWrite.max,
   message: { message: 'Too many Respect updates. Please slow down.', success: false },
   standardHeaders: true,
   legacyHeaders: false,
@@ -21,5 +22,5 @@ export const rateLimitBlogRespectWrite = rateLimit({
     });
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  store: RedisRateLimitStore('rl:blog:respect:write:', 60_000) as any,
+  store: RedisRateLimitStore('rl:blog:respect:write:', RATE_LIMITS.blogRespectWrite.windowMs) as any,
 });

@@ -41,6 +41,20 @@ function discordRedirectError(): string {
   );
 }
 
+/** Route keys for all registered OAuth providers (link / disconnect validation). */
+export function getOAuthLinkRouteKeys(): readonly string[] {
+  return getOAuthProviderRegistrations({
+    hasDiscordConfig: true,
+    hasFacebookConfig: true,
+    hasXConfig: true,
+    hasTwitchConfig: true,
+  }).map((p) => p.routeKey);
+}
+
+export function isOAuthLinkRouteKey(routeKey: string): boolean {
+  return getOAuthLinkRouteKeys().includes(routeKey);
+}
+
 /** Registry order is stable; use this for route factories and future shared OAuth service. */
 function twitchRedirectError(): string {
   return encodeURIComponent(

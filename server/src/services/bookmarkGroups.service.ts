@@ -2,8 +2,7 @@ import mongoose from 'mongoose';
 import { sanitizeBookmarkFolderEmoji } from '../lib/bookmarkFolderEmojis.js';
 import { BookmarkGroupModel } from '../models/BookmarkGroup.js';
 import { BlogBookmarkModel } from '../models/BlogBookmark.js';
-
-const DEFAULT_GROUP_NAME = 'General';
+import { DEFAULT_BOOKMARK_GROUP_NAME } from '../variable/constants.js';
 
 /**
  * Ensures the user has exactly one default group (creates **General** if needed) and backfills
@@ -21,7 +20,7 @@ export async function ensureDefaultBookmarkGroup(
   } else {
     const created = await BookmarkGroupModel.create({
       userId: userOid,
-      name: DEFAULT_GROUP_NAME,
+      name: DEFAULT_BOOKMARK_GROUP_NAME,
       isDefault: true,
     });
     id = created._id as mongoose.Types.ObjectId;

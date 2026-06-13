@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import { NotificationAuditLogModel } from '../../models/NotificationAuditLog.js';
+import { writeNotificationAudit } from '../../shared/audit/auditLog.js';
+import { NotificationAuditAction } from '../../shared/audit/domains.js';
 
 export async function deliverNotificationWebhook(params: {
   userId: string;
@@ -34,23 +34,15 @@ export async function deliverNotificationWebhook(params: {
       throw new Error(`HTTP ${res.status}`);
     }
 
-    await NotificationAuditLogModel.create({
-      action: 'notification.webhook.sent',
-      userId: mongoose.Types.ObjectId.isValid(userId)
-        ? new mongoose.Types.ObjectId(userId)
-        : undefined,
-      notificationId: new mongoose.Types.ObjectId(notificationId),
+    await writeNotificationAudit(NotificationAuditAction.WEBHOOK_SENT, {
+      userId,
+      notificationId,
       metadata: { status: res.status, webhookUrl: webhookUrl.slice(0, 120) },
     });
   } catch (e) {
-    await NotificationAuditLogModel.create({
-      action: 'notification.webhook.failed',
-      userId: mongoose.Types.ObjectId.isValid(userId)
-        ? new mongoose.Types.ObjectId(userId)
-        : undefined,
-      notificationId: mongoose.Types.ObjectId.isValid(notificationId)
-        ? new mongoose.Types.ObjectId(notificationId)
-        : undefined,
+    await writeNotificationAudit(NotificationAuditAction.WEBHOOK_FAILED, {
+      userId,
+      notificationId,
       metadata: { err: String(e), webhookUrl: webhookUrl.slice(0, 120) },
     });
   }

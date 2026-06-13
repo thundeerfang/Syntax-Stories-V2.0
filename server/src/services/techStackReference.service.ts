@@ -1,4 +1,4 @@
-import { STACK_AND_TOOLS_MAX } from '../constants/profileLimits.js';
+import { STACK_AND_TOOLS_MAX } from '../variable/constants.js';
 import { normalizeCatalogSlug } from '../lib/skillIcons.js';
 import {
   toCustomTechStackItemDto,

@@ -82,15 +82,17 @@ export async function unifiedSearch(opts: {
   q: string;
   types: string[];
   limit: number;
+  minChars?: number;
 }): Promise<UnifiedSearchResult> {
   const t0 = performance.now();
   const q = normalizeSearchQuery(opts.q);
+  const minChars = opts.minChars ?? SEARCH_MIN_CHARS;
 
-  if (q.length < SEARCH_MIN_CHARS) {
+  if (q.length < minChars) {
     return {
       success: true,
       q,
-      minChars: SEARCH_MIN_CHARS,
+      minChars,
       cached: false,
       tookMs: performance.now() - t0,
       groups: {},
@@ -128,7 +130,7 @@ export async function unifiedSearch(opts: {
   const body: UnifiedSearchResult = {
     success: true,
     q,
-    minChars: SEARCH_MIN_CHARS,
+    minChars,
     cached: false,
     tookMs: performance.now() - t0,
     groups,

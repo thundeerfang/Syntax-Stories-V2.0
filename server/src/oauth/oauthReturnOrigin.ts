@@ -4,9 +4,9 @@ import {
   getFrontendRedirectBase,
   getProductionAllowedOrigins,
 } from '../config/frontendUrl.js';
+import { OAUTH_RETURN_COOKIE_MAX_MS } from '../variable/constants.js';
 
 const COOKIE_NAME = 'ss_oauth_return';
-const COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
 const DESKTOP_OAUTH_SCHEME = 'syntaxstories:';
 const DESKTOP_OAUTH_HOST = 'app';
 
@@ -40,7 +40,7 @@ function setOAuthReturnOriginCookie(res: Response, origin: string): void {
   res.cookie(COOKIE_NAME, origin, {
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: COOKIE_MAX_AGE_MS,
+    maxAge: OAUTH_RETURN_COOKIE_MAX_MS,
     path: '/',
   });
 }

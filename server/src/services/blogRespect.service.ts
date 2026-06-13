@@ -2,10 +2,7 @@ import mongoose from 'mongoose';
 import { BlogPostModel } from '../models/BlogPost.js';
 import { BlogRespectModel } from '../models/BlogRespect.js';
 import { UserModel } from '../models/User.js';
-
-const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -29,7 +26,7 @@ export async function findEligiblePublishedPostByUsernameSlug(
     authorId: user._id,
     slug: slug.trim(),
     status: 'published',
-    ...NOT_DELETED,
+    ...NOT_DELETED_FILTER,
   })
     .select('_id authorId respectCount')
     .lean();
@@ -145,7 +142,7 @@ export async function setRespectDesiredState(params: {
   const postCheck = await BlogPostModel.findOne({
     _id: params.postId,
     status: 'published',
-    ...NOT_DELETED,
+    ...NOT_DELETED_FILTER,
   })
     .select('authorId')
     .lean();

@@ -6,6 +6,7 @@ import { Label } from './Label';
 import { cn } from '@/lib/core/utils';
 import type { EntityOption } from '@/lib/core/entityOption';
 import { getLogoUrl } from '@/lib/core/entityOption';
+import { useDropdown } from '@/components/ui/dropdown';
 
 const DEBOUNCE_MS = 300;
 
@@ -73,11 +74,10 @@ export function EntitySearchInput({
   maxLength = 200,
 }: Readonly<EntitySearchInputProps>) {
   const listboxId = React.useId();
-  const [open, setOpen] = React.useState(false);
+  const { open, setOpen, close, rootRef: containerRef } = useDropdown();
   const [query, setQuery] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<EntityOption[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = React.useRef(0);
@@ -126,18 +126,10 @@ export function EntitySearchInput({
     };
   }, [query, searchOptions]);
 
-  React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const handleSelect = (opt: EntityOption) => {
     onChange(opt.name);
     onDomainSelect?.(opt.domain);
-    setOpen(false);
+    close();
     setQuery('');
   };
 

@@ -53,6 +53,8 @@ function chipHandleLabel(username: string): string {
   return `@${username.trim().toLowerCase()}`;
 }
 
+import { SEARCH_MIN_CHARS } from '@syntax-stories/shared';
+
 /** Primary line in search rows: full name in all caps, or username if no name. */
 function searchPrimaryLabel(u: FollowUser): string {
   const name = u.fullName?.trim();
@@ -171,11 +173,14 @@ export default function FollowingPage() {
 
   const filteredSidebar = useMemo(() => {
     const q = sidebarQuery.trim().toLowerCase();
-    if (!q) return following;
+    if (q.length < SEARCH_MIN_CHARS) return [];
     return following.filter(
       (u) => u.username.toLowerCase().includes(q) || (u.fullName ?? '').toLowerCase().includes(q)
     );
   }, [following, sidebarQuery]);
+
+  const searchDropdownOpen =
+    searchOpen && sidebarQuery.trim().length >= SEARCH_MIN_CHARS;
 
   const pickFollowingUser = useCallback((u: FollowUser) => {
     setSelectedUsername(u.username);
@@ -278,18 +283,17 @@ export default function FollowingPage() {
                   value: sidebarQuery,
                   onChange: (v) => {
                     setSidebarQuery(v);
-                    setSearchOpen(true);
+                    setSearchOpen(v.trim().length >= SEARCH_MIN_CHARS);
                   },
-                  onFocus: () => setSearchOpen(true),
                   placeholder: 'Search people you follow…',
                   ariaLabel: 'Search people you follow',
                 }}
               />
-              {searchOpen ? (
+              {searchDropdownOpen ? (
                 <div
                   id="following-search-results"
                   role="listbox"
-                  className="absolute right-3 top-[calc(100%+4px)] z-50 max-h-60 w-[min(100%,18rem)] overflow-y-auto overscroll-contain border-2 border-border bg-card py-1 shadow sm:right-4 sm:w-72"
+                  className="absolute right-3 top-[calc(100%+4px)] z-50 max-h-60 w-[12.5rem] overflow-y-auto overscroll-contain border-2 border-border bg-card py-1 shadow sm:right-4 sm:w-[16.5rem]"
                 >
                   {filteredSidebar.length === 0 ? (
                     <p className="px-3 py-3 font-mono text-[11px] text-muted-foreground">

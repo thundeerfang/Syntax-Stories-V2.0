@@ -1,6 +1,7 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request } from 'express';
 import { authConfig } from '../../config/auth.config.js';
+import { RATE_LIMITS } from '../../config/rateLimits.js';
 import { redisKeys } from '../../shared/redis/keys.js';
 import { RedisRateLimitStore } from './redisRateLimitStore.js';
 
@@ -56,8 +57,8 @@ export const rateLimitVerifyOtp = createRateLimiter(
 
 /** POST /auth/staff-login — per IP (brute-force protection). */
 export const rateLimitStaffLogin = createRateLimiter(
-  15 * 60 * 1000,
-  30,
+  RATE_LIMITS.staffLogin.windowMs,
+  RATE_LIMITS.staffLogin.max,
   redisKeys.rateLimit.staffLogin,
   false
 );
@@ -81,16 +82,16 @@ export const rateLimitUpdateProfile = createRateLimiter(
 
 /** POST /api/feedback — per IP + optional device fingerprint. */
 export const rateLimitFeedback = createRateLimiter(
-  60 * 60 * 1000,
-  20,
+  RATE_LIMITS.feedback.windowMs,
+  RATE_LIMITS.feedback.max,
   redisKeys.rateLimit.feedback,
   true
 );
 
 /** POST /api/contact — per IP + optional device fingerprint. */
 export const rateLimitContact = createRateLimiter(
-  60 * 60 * 1000,
-  15,
+  RATE_LIMITS.contact.windowMs,
+  RATE_LIMITS.contact.max,
   redisKeys.rateLimit.contact,
   true
 );

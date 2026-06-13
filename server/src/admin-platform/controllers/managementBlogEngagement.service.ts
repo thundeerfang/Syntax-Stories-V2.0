@@ -6,8 +6,7 @@ import { BlogRespectModel } from '../../models/BlogRespect.js';
 import { BlogBookmarkModel } from '../../models/BlogBookmark.js';
 import { AnalyticsEventModel } from '../../models/AnalyticsEvent.js';
 import { adminUserRefFromObjectId } from '../iam/adminUserRef.js';
-
-const MAX_LIMIT = 100;
+import { PAGINATION } from '../../shared/http/pagination.js';
 
 export type BlogEngagementMetric = 'views' | 'respects' | 'comments' | 'reposts' | 'bookmarks';
 
@@ -60,7 +59,7 @@ export async function loadBlogEngagement(
   const post = await ensurePost(postId);
   if (!post) return null;
 
-  const cap = Math.min(Math.max(limit, 1), MAX_LIMIT);
+  const cap = Math.min(Math.max(limit, 1), PAGINATION.adminList.max);
 
   if (metric === 'views') {
     const events = await AnalyticsEventModel.find({

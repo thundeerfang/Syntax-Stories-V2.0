@@ -4,11 +4,7 @@ import type { AuthUser } from '../middlewares/auth/index.js';
 import { BlogPostModel } from '../models/BlogPost.js';
 import { BlogRepostModel } from '../models/BlogRepost.js';
 import { buildFeedListItemsForPosts } from '../controllers/blog.controller.js';
-
-/** Active rows are not soft-deleted (`deletedAt` unset or null). */
-const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
 
 /** GET /api/reposts/posts?q=&sort=newest|oldest&limit= */
 export async function listRepostedPosts(req: Request, res: Response): Promise<void> {
@@ -41,7 +37,7 @@ export async function listRepostedPosts(req: Request, res: Response): Promise<vo
     const postsRaw = await BlogPostModel.find({
       _id: { $in: postIds },
       status: 'published',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })

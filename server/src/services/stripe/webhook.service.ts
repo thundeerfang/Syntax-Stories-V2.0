@@ -6,11 +6,12 @@ import { upsertLedgerFromStripeInvoice } from '../billing/ledger.service.js';
 import { CheckoutIntentModel } from '../../models/CheckoutIntent.js';
 import { UserModel } from '../../models/User.js';
 import { sendAuthEmail, isAuthEmailConfigured } from '../../infrastructure/mail/sendAuthEmail.js';
+import { SEVEN_DAYS_MS } from '../../constants/durations.js';
 
 function graceUntilFromInvoice(invoice: Stripe.Invoice): Date {
   const npt = invoice.next_payment_attempt;
   if (npt) return new Date(npt * 1000);
-  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  return new Date(Date.now() + SEVEN_DAYS_MS);
 }
 
 async function resolveUserIdForCustomer(

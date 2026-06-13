@@ -3,15 +3,10 @@ import mongoose from 'mongoose';
 import { ContactLeadModel } from '../../models/ContactLead.js';
 import { adminUserRefFromObjectId } from '../iam/adminUserRef.js';
 import { sendAdminError, sendAdminOk } from '../rbac/adminResponse.js';
-
-const MAX_LIMIT = 100;
+import { parseAdminListLimit } from '../../shared/http/pagination.js';
 
 export async function listContactLeads(req: Request, res: Response): Promise<void> {
-  const rawLimit = Number(req.query.limit);
-  const limit = Math.min(
-    Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 25,
-    MAX_LIMIT
-  );
+  const limit = parseAdminListLimit(req.query.limit);
   const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
 
   const filter: Record<string, unknown> = {};

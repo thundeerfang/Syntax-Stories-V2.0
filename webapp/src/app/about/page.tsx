@@ -1,296 +1,433 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui';
-import { GithubIcon, XIcon } from '@/components/icons/SocialProviderIcons';
-import { RailFeedEmptyState } from '@/components/layout';
-import {
-  AboutPageLoadError,
-  aboutPageUnavailableCopy,
-  getAboutMarketingPage,
-  type AboutMarketingPage,
-  type AboutPageLoadReason,
-} from '@/api/marketing';
+import { GithubIcon, LinkedinIcon } from '@/components/icons/SocialProviderIcons';
+import { ShellPageIntroHeader } from '@/components/layout';
+import { getAboutPageContent } from '@/lib/marketing/aboutPage';
 import { MarketingIcon } from '@/lib/marketing/marketingIcons';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
 import { fetchBillingPlans, type BillingPlanCatalogItem } from '@/api/billing';
-import { BookOpen, CheckCircle2, Compass, Home } from 'lucide-react';
+import { fetchPlatformStats, type PublicPlatformStatsDto } from '@/api/platform';
+import { 
+  CheckCircle2, 
+  Heart, 
+  ArrowRight, 
+  Zap, 
+  ExternalLink, 
+  Layers, 
+  Globe, 
+  Terminal,
+  Download,
+  FileText,
+  Users,
+  Activity,
+} from 'lucide-react';
 
-function AboutPageSkeleton() {
-  return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'animate-pulse space-y-16 py-8')}>
-      <div className="h-12 w-48 bg-muted" />
-      <div className="h-24 max-w-3xl bg-muted" />
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="h-64 border-2 border-border bg-muted/30 lg:col-span-7" />
-        <div className="h-64 border-2 border-border bg-muted/30 lg:col-span-5" />
-      </div>
-    </div>
-  );
+const page = getAboutPageContent();
+
+// Animation constants
+const BEZIER = "cubic-bezier(0.34, 1.56, 0.64, 1)";
+
+const PILLAR_ICONS = {
+  layers: Layers,
+  globe: Globe,
+  zap: Zap,
+} as const;
+
+const PILLAR_STYLES: Record<
+  (typeof page.pillars)[number]['variant'],
+  { card: string; icon: string; body: string }
+> = {
+  dark: {
+    card: 'border-4 border-foreground bg-foreground text-background shadow-[8px_8px_0px_0px_var(--primary)]',
+    icon: 'text-primary',
+    body: 'text-sm font-bold leading-relaxed opacity-80 uppercase',
+  },
+  card: {
+    card: 'border-4 border-foreground bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+    icon: 'text-primary',
+    body: 'text-sm font-bold leading-relaxed text-muted-foreground uppercase',
+  },
+  primary: {
+    card: 'border-4 border-foreground bg-primary text-primary-foreground shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]',
+    icon: 'text-primary-foreground',
+    body: 'text-sm font-bold leading-relaxed opacity-90 uppercase',
+  },
+};
+
+function formatPlatformCount(value: number): string {
+  return value.toLocaleString();
 }
 
-function AboutPageUnavailable({
-  reason,
-  onRetry,
-}: Readonly<{ reason: AboutPageLoadReason; onRetry: () => void }>) {
-  const { title, description } = aboutPageUnavailableCopy(reason);
+function formatPlatformUptime(value: number): string {
+  return `${value.toFixed(1)}%`;
+}
+
+function buildPlayStoreQrSrc(playStoreUrl: string): string {
+  return `https://quickchart.io/qr?text=${encodeURIComponent(playStoreUrl)}&size=160&margin=2&light=ffffff`;
+}
+
+const PLATFORM_STATS = [
+  {
+    key: 'linesWritten',
+    label: 'Lines written',
+    icon: FileText,
+    format: formatPlatformCount,
+  },
+  {
+    key: 'activeUsers',
+    label: 'Active Users',
+    icon: Users,
+    format: formatPlatformCount,
+  },
+  {
+    key: 'components',
+    label: 'Components',
+    icon: Layers,
+    format: formatPlatformCount,
+  },
+  {
+    key: 'uptimePercent',
+    label: 'Uptime',
+    icon: Activity,
+    format: formatPlatformUptime,
+  },
+] as const;
+
+function AboutMobileAppCard() {
+  const app = page.mobileApp;
+  const qrSrc = buildPlayStoreQrSrc(app.playStoreUrl);
+
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-12 md:py-16')}>
-      <RailFeedEmptyState
-        bordered={false}
-        icon={BookOpen}
-        title={title}
-        description={description}
-        className="py-16 sm:py-20"
-        actions={[
-          {
-            label: 'Try again',
-            onClick: onRetry,
-            variant: 'primary',
-          },
-          {
-            label: 'Explore',
-            href: '/explore',
-            variant: 'default',
-            icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
-          },
-          {
-            label: 'Home',
-            href: '/',
-            variant: 'default',
-            icon: <Home className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
-          },
-        ]}
-      />
+    <div className="w-full max-w-[17.5rem] overflow-hidden border-4 border-foreground bg-card shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      <div className="flex items-center gap-2.5 border-b-2 border-foreground bg-primary px-4 py-3 text-primary-foreground">
+        <img
+          src={app.iconSrc}
+          alt=""
+          width={36}
+          height={36}
+          className="size-9 shrink-0 object-cover"
+        />
+        <div className="min-w-0 text-left">
+          <p className="truncate text-sm font-black uppercase tracking-tight">{app.name}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/80">
+            {app.subtitle}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-2 p-4 sm:p-5">
+        <div className="relative border-2 border-foreground bg-white p-2">
+          <img
+            src={qrSrc}
+            alt={`QR code for ${app.name} on Google Play`}
+            width={140}
+            height={140}
+            className="size-[8.75rem]"
+          />
+          <img
+            src={app.iconSrc}
+            alt=""
+            width={32}
+            height={32}
+            className="pointer-events-none absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 border border-foreground bg-black object-cover"
+          />
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-primary">{app.qrLabel}</p>
+      </div>
     </div>
   );
 }
 
 export default function AboutPage() {
   const openAuthDialog = useAuthDialogStore((s) => s.open);
-  const [page, setPage] = useState<AboutMarketingPage | null>(null);
   const [plans, setPlans] = useState<BillingPlanCatalogItem[]>([]);
-  const [unavailableReason, setUnavailableReason] = useState<AboutPageLoadReason | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [platformStats, setPlatformStats] = useState<PublicPlatformStatsDto | null>(null);
 
-  const loadPage = useCallback(async () => {
-    setLoading(true);
-    setUnavailableReason(null);
-    try {
-      const [data, billingPlans] = await Promise.all([
-        getAboutMarketingPage(),
-        fetchBillingPlans().catch(() => [] as BillingPlanCatalogItem[]),
-      ]);
-      setPage(data);
-      setPlans(billingPlans);
-    } catch (e: unknown) {
-      setPage(null);
-      setPlans([]);
-      const reason =
-        e instanceof AboutPageLoadError
-          ? e.reason
-          : e instanceof TypeError
-            ? 'network'
-            : 'unavailable';
-      setUnavailableReason(reason);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    void fetchBillingPlans()
+      .then(setPlans)
+      .catch(() => setPlans([]));
   }, []);
 
   useEffect(() => {
-    void loadPage();
-  }, [loadPage]);
-
-  if (loading && !page) {
-    return <AboutPageSkeleton />;
-  }
-
-  if (unavailableReason) {
-    return <AboutPageUnavailable reason={unavailableReason} onRetry={() => void loadPage()} />;
-  }
-
-  if (!page) {
-    return <AboutPageSkeleton />;
-  }
+    void fetchPlatformStats()
+      .then(setPlatformStats)
+      .catch(() => setPlatformStats(null));
+  }, []);
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS)}>
-      <div className="w-full space-y-32">
-        <header className="max-w-3xl">
-          <div className="mb-6 inline-block border-2 border-border bg-primary px-3 py-1 text-xs font-black uppercase text-primary-foreground shadow">
-            {page.hero.badge}
-          </div>
-          <h1 className="text-5xl font-black uppercase italic tracking-tighter text-foreground sm:text-7xl">
-            {page.hero.title}{' '}
-            <span className="text-primary underline decoration-8 underline-offset-8">
-              {page.hero.titleHighlight}
-            </span>
-          </h1>
-          <p className="mt-8 border-l-4 border-primary pl-6 text-xl font-medium leading-relaxed text-muted-foreground">
-            {page.hero.description}
-          </p>
-        </header>
-
-        <section className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className="border-2 border-border bg-card p-8 shadow lg:col-span-7">
-            <h2 className="mb-8 flex items-center gap-3 text-2xl font-black uppercase italic">
-              <MarketingIcon name="Workflow" className="text-primary" />
-              The Journey
-            </h2>
-            <div className="relative space-y-8 before:absolute before:bottom-2 before:left-3 before:top-2 before:w-1 before:bg-border">
-              {page.journey.map((item) => (
-                <div key={`${item.year}-${item.sortOrder}`} className="group relative pl-10">
-                  <div className="absolute left-0 top-1 z-10 flex h-7 w-7 items-center justify-center border-2 border-border bg-card transition-colors group-hover:bg-primary">
-                    <div className="h-2 w-2 bg-border" />
-                  </div>
-                  <h4 className="text-sm font-black uppercase text-primary">{item.year}</h4>
-                  <p className="mt-1 font-medium text-muted-foreground">{item.event}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-2 border-border bg-card p-8 shadow lg:col-span-5">
-            <h2 className="mb-8 flex items-center gap-3 text-2xl font-black uppercase italic">
-              <MarketingIcon name="Cpu" className="text-primary" />
-              Built With
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              {page.techStack.map((tech) => (
-                <div
-                  key={tech.name}
-                  className="flex cursor-default items-center gap-3 border-2 border-border bg-muted/20 p-3 transition-transform hover:-translate-y-1 hover:translate-x-1"
-                >
-                  <MarketingIcon name={tech.icon} className="h-5 w-5" />
-                  <span className="text-[11px] font-black uppercase">{tech.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-12">
-          <div className="text-center">
-            <h2 className="inline-block bg-primary px-4 py-2 text-4xl font-black uppercase italic text-primary-foreground shadow">
-              Next-Gen AI Features
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {page.features.map((f) => (
-              <div
-                key={f.title}
-                className="border-2 border-border bg-card p-6 shadow transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
-              >
-                <MarketingIcon name={f.icon} className="mb-4 h-8 w-8 text-primary" />
-                <h3 className="mb-2 text-lg font-black uppercase">{f.title}</h3>
-                <p className="text-sm font-medium text-muted-foreground">{f.description}</p>
+    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'pb-16 pt-8')}>
+      <div className="w-full space-y-24 md:space-y-40">
+        
+        {/* --- HERO & TEAM --- */}
+        <div className="space-y-8 md:space-y-10">
+        <ShellPageIntroHeader
+          breadcrumbItems={[{ href: '/', label: 'Home' }, { label: 'About' }]}
+          breadcrumbEnd={
+            <a
+              href="https://syntax-stories.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'inline-flex rotate-[4deg] items-center gap-2 border-4 border-foreground bg-yellow-400 px-4 py-2 font-black uppercase tracking-tighter text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:rotate-0 hover:bg-yellow-300',
+                `transition-all duration-500 ${BEZIER}`
+              )}
+            >
+              <Terminal className="size-5" />
+              Legacy v1.0
+              <ExternalLink className="size-4" />
+            </a>
+          }
+          description={page.hero.description}
+          descriptionEnd={<AboutMobileAppCard />}
+          title={
+            <div className="space-y-4">
+              <div className="inline-block border-2 border-foreground bg-primary px-4 py-1 text-sm font-black uppercase tracking-[0.2em] text-primary-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                {page.hero.badge}
               </div>
-            ))}
-          </div>
-        </section>
-
-        {plans.length > 0 ? (
-          <section className="border-2 border-border bg-muted/30 p-12 shadow">
-            <h2 className="mb-12 text-center text-3xl font-black uppercase italic">
-              Membership Plans
-            </h2>
-            <div className="mx-auto grid max-w-4xl grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
-              {plans.map((plan) => (
-                <div key={plan.key} className="flex flex-col border-2 border-border bg-card p-8">
-                  <h3 className="text-xl font-black uppercase">{plan.name}</h3>
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">{plan.description}</p>
-                  <div className="my-4 text-4xl font-black">
-                    {plan.amountDisplay}
-                    <span className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                      {' '}
-                      {plan.cadence}
-                    </span>
-                  </div>
-                  <ul className="mb-8 flex-1 space-y-3">
-                    {plan.features.map((feat) => (
-                      <li
-                        key={feat}
-                        className="flex items-center gap-2 text-sm font-bold uppercase tracking-tighter"
-                      >
-                        <CheckCircle2 className="h-4 w-4 text-green-500" /> {feat}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href="/pricing"
-                    className="w-full border-2 border-border bg-primary py-3 text-center font-black uppercase text-primary-foreground shadow transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
-                  >
-                    View {plan.name}
-                  </Link>
-                </div>
-              ))}
+              <h1 className="text-3xl font-black uppercase italic leading-[0.95] tracking-tighter text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
+                {page.hero.title} <br />
+                <span className="relative inline-block text-primary">
+                  {page.hero.titleHighlight}
+                </span>
+              </h1>
             </div>
-          </section>
-        ) : null}
+          }
+        />
 
-        <section className="space-y-12">
-          <h2 className="text-center text-3xl font-black uppercase italic">Meet the Architects</h2>
-          <div className="grid grid-cols-1 gap-8 text-center sm:grid-cols-3">
-            {page.team.map((dev) => (
-              <div key={dev.name} className="group">
-                <div className="relative mb-4 inline-block overflow-hidden border-4 border-border shadow">
-                  <img src={dev.imageUrl} alt={dev.name} className="h-48 w-48 object-cover" />
+        {/* --- TEAM --- */}
+        <section className="space-y-6 md:space-y-8">
+          <div className="space-y-2 text-center">
+            <div className="inline-block border-2 border-foreground bg-primary px-4 py-1 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              {page.teamSection.badge}
+            </div>
+            <h2 className="text-4xl font-black uppercase italic tracking-tighter sm:text-6xl">
+              {page.teamSection.title}
+            </h2>
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground sm:text-sm">
+              {page.teamSection.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-3 md:gap-6">
+            {page.team.map((dev) => {
+              const hasShadow = dev.featured || dev.shadowCard;
+              const hasPortraitFrame = dev.featured || dev.shadowCard;
+              const isSideCard = dev.shadowCard && !dev.featured;
+
+              return (
+              <article key={dev.name} className="flex flex-col items-center text-center">
+                <div className="relative mb-3 sm:mb-4">
+                  {hasShadow ? (
+                    <div
+                      className={cn(
+                        'absolute h-full w-full border-foreground',
+                        dev.featured
+                          ? '-right-3 -bottom-3 border-4 bg-primary'
+                          : '-right-2 -bottom-2 border-[3px] bg-foreground'
+                      )}
+                    />
+                  ) : null}
+                  <div
+                    className={cn(
+                      'relative overflow-hidden bg-muted',
+                      dev.featured
+                        ? 'h-56 w-56 border-4 border-foreground sm:h-64 sm:w-64'
+                        : hasPortraitFrame
+                          ? 'h-44 w-44 border-4 border-foreground sm:h-48 sm:w-48'
+                          : 'h-48 w-48 border-2 border-border sm:h-52 sm:w-52'
+                    )}
+                  >
+                    <img
+                      src={dev.imageSrc}
+                      alt={dev.name}
+                      width={dev.featured ? 256 : isSideCard ? 192 : 208}
+                      height={dev.featured ? 256 : isSideCard ? 192 : 208}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
                 </div>
-                <h3 className="text-xl font-black uppercase italic">{dev.name}</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+
+                <h3
+                  className={cn(
+                    'font-black uppercase italic tracking-tighter',
+                    dev.featured ? 'text-2xl' : 'text-xl'
+                  )}
+                >
+                  {dev.name}
+                </h3>
+                <p className="mt-1 whitespace-pre-line text-[10px] font-black uppercase leading-snug tracking-widest text-primary">
                   {dev.role}
                 </p>
-                <div className="mt-4 flex justify-center gap-4">
+
+                <div
+                  className={cn(
+                    'flex flex-wrap items-center justify-center',
+                    dev.featured ? 'mt-4 gap-3' : 'mt-4 gap-3'
+                  )}
+                >
                   {dev.githubUrl ? (
                     <a
                       href={dev.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label="GitHub"
+                      aria-label={`${dev.name} on GitHub`}
+                      className="border-2 border-foreground p-2"
                     >
-                      <GithubIcon className="h-5 w-5 cursor-pointer hover:text-primary" />
+                      <GithubIcon className="size-4" />
                     </a>
-                  ) : (
-                    <GithubIcon className="h-5 w-5 text-muted-foreground/40" aria-hidden />
-                  )}
-                  {dev.xUrl ? (
-                    <a href={dev.xUrl} target="_blank" rel="noopener noreferrer" aria-label="X">
-                      <XIcon className="h-5 w-5 cursor-pointer hover:text-primary" />
+                  ) : null}
+                  {dev.linkedinUrl ? (
+                    <a
+                      href={dev.linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${dev.name} on LinkedIn`}
+                      className="border-2 border-foreground p-2"
+                    >
+                      <LinkedinIcon className="size-4" />
                     </a>
-                  ) : (
-                    <XIcon className="h-5 w-5 text-muted-foreground/40" aria-hidden />
-                  )}
+                  ) : null}
+                  {dev.resumeUrl ? (
+                    <Button
+                      variant={dev.featured ? 'primary' : 'outline'}
+                      size="sm"
+                      href={dev.resumeUrl}
+                      download
+                    >
+                      <Download className="size-4" aria-hidden />
+                      Download resume
+                    </Button>
+                  ) : null}
                 </div>
-              </div>
-            ))}
+              </article>
+            );
+            })}
           </div>
         </section>
 
-        <section className="border-4 border-border bg-foreground p-12 text-background shadow dark:bg-primary">
-          <div className="flex flex-col items-center gap-8 text-center">
-            <h2 className="whitespace-pre-line text-4xl font-black uppercase italic tracking-tighter sm:text-6xl">
-              {page.cta.title}
-            </h2>
-            <p className="max-w-md text-lg font-bold uppercase opacity-90">
-              {page.cta.description}
-            </p>
-            <div className="w-full max-w-xs scale-110">
-              <Button variant="primary" className="w-full" onClick={() => openAuthDialog('signup')}>
-                {page.cta.buttonLabel}
-              </Button>
+        {/* --- PLATFORM STATS --- */}
+        <section className="space-y-4 md:space-y-5">
+          <div className="text-center">
+            <div className="inline-block border-2 border-foreground bg-primary px-4 py-1 text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              {page.statsSection.badge}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {PLATFORM_STATS.map((stat) => {
+              const Icon = stat.icon;
+              const rawValue = platformStats?.[stat.key];
+              const value =
+                rawValue != null && platformStats ? stat.format(rawValue as number) : '—';
+
+              return (
+                <div
+                  key={stat.key}
+                  className="border-4 border-foreground bg-card p-5 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:p-6"
+                >
+                  <Icon className="mx-auto mb-3 size-6 text-primary sm:size-7" aria-hidden />
+                  <div className="text-3xl font-black italic tracking-tighter text-primary sm:text-4xl">
+                    {value}
+                  </div>
+                  <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    {stat.label}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        </div>
+
+        {/* --- CORE PHILOSOPHY --- */}
+        <section className="grid grid-cols-1 gap-12 lg:grid-cols-3">
+          {page.pillars.map((pillar) => {
+            const Icon = PILLAR_ICONS[pillar.icon];
+            const styles = PILLAR_STYLES[pillar.variant];
+
+            return (
+              <div key={pillar.title} className={cn('p-8', styles.card)}>
+                <Icon className={cn('mb-4 size-10', styles.icon)} />
+                <h3 className="mb-4 text-2xl font-black uppercase italic">{pillar.title}</h3>
+                <p className={styles.body}>{pillar.description}</p>
+              </div>
+            );
+          })}
+        </section>
+
+        {/* --- THE JOURNEY & TECH --- */}
+        <section className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:items-stretch">
+          <div className="border-4 border-foreground bg-card p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] lg:col-span-7">
+            <h2 className="mb-12 text-3xl font-black uppercase italic tracking-tighter">The journey</h2>
+            <div className="relative space-y-12 before:absolute before:bottom-0 before:left-[18px] before:top-0 before:w-1 before:bg-foreground/10">
+              {page.journey.map((item, idx) => (
+                <div key={item.year} className="group relative pl-16 transition-all duration-500 hover:translate-x-2">
+                  <div className={cn(
+                    "absolute left-0 top-0 z-10 flex h-10 w-10 items-center justify-center border-4 border-foreground bg-background",
+                    `transition-all duration-500 ${BEZIER}`,
+                    "group-hover:rotate-[360deg] group-hover:bg-primary group-hover:scale-110"
+                  )}>
+                     <span className="text-[10px] font-black group-hover:text-primary-foreground">{idx + 1}</span>
+                  </div>
+                  <h3 className="text-lg font-black uppercase text-primary">{item.year}</h3>
+                  <p className="mt-2 text-base font-bold leading-snug text-muted-foreground transition-colors group-hover:text-foreground">
+                    {item.event}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex h-full flex-col border-4 border-foreground bg-card p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] lg:col-span-5">
+            <h2 className="mb-8 shrink-0 text-2xl font-black uppercase italic">Built with</h2>
+            <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-4 gap-3">
+              {page.techStack.map((tech) => (
+                <div
+                  key={tech.name}
+                  className={cn(
+                    'group flex h-full min-h-0 flex-col items-center justify-center border-2 border-foreground bg-background p-3 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:p-4',
+                    `transition-all duration-500 ${BEZIER}`,
+                    'hover:-translate-y-2 hover:shadow-[8px_8px_0px_0px_var(--primary)]'
+                  )}
+                >
+                  <MarketingIcon name={tech.icon} className="mb-2 h-7 w-7 shrink-0 text-primary group-hover:scale-125 sm:h-8 sm:w-8" />
+                  <span className="text-[10px] font-black uppercase leading-tight sm:text-xs">{tech.name}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {page.footerNote ? (
-          <footer className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            {page.footerNote}
+        <div className="space-y-6 md:space-y-8">
+        {/* --- FINAL CTA --- */}
+        <section className="border-4 border-foreground bg-primary px-5 py-8 text-primary-foreground shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] sm:px-8 sm:py-10 sm:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] lg:px-12 lg:py-12">
+          <div className="flex flex-col items-center gap-4 text-center sm:gap-5">
+            <h2 className="whitespace-pre-line text-3xl font-black uppercase italic leading-[0.9] tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
+              {page.cta.title}
+            </h2>
+            <p className="max-w-md px-2 text-xs font-bold uppercase tracking-wide opacity-90 sm:px-0 sm:text-sm">
+              {page.cta.description}
+            </p>
+            <Button variant="secondary" size="lg" onClick={() => openAuthDialog('signup')}>
+              {page.cta.buttonLabel}
+            </Button>
+          </div>
+        </section>
+
+        {page.footerNote && (
+          <footer className="flex flex-col items-center py-4 md:py-5">
+            <div className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">
+              <Heart className="size-4 text-primary fill-primary" />
+              <span>{page.footerNote}</span>
+            </div>
           </footer>
-        ) : null}
+        )}
+        </div>
       </div>
     </div>
   );

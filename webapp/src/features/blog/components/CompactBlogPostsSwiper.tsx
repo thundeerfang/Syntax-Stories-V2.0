@@ -32,6 +32,12 @@ export type CompactBlogPostsSwiperProps = Readonly<{
   showPagination?: boolean;
   /** Snap between slides. Default true. */
   snapSlides?: boolean;
+  /** Optional trailing slide (e.g. load-more skeleton). */
+  endContent?: ReactNode;
+  /** Fired when the user scrolls near the end of the track. */
+  onNearEnd?: () => void;
+  /** When true, suppresses `onNearEnd` (e.g. while loading more). */
+  nearEndDisabled?: boolean;
 }>;
 
 function getScrollStridePx(scroller: HTMLDivElement): number {
@@ -62,6 +68,9 @@ export const CompactBlogPostsSwiper = forwardRef<
     showToolbarArrows = true,
     showPagination = true,
     snapSlides = true,
+    endContent,
+    onNearEnd,
+    nearEndDisabled = false,
   },
   ref
 ) {
@@ -108,6 +117,19 @@ export const CompactBlogPostsSwiper = forwardRef<
 
     return () => el.removeEventListener('scroll', syncIndexFromScroll);
   }, [n, posts, syncIndexFromScroll]);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || !onNearEnd || nearEndDisabled) return;
+
+    const onScroll = () => {
+      const nearEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 180;
+      if (nearEnd) onNearEnd();
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [onNearEnd, nearEndDisabled, n, endContent]);
 
   const scrollByStep = useCallback(
     (dir: -1 | 1) => {
@@ -241,6 +263,7 @@ export const CompactBlogPostsSwiper = forwardRef<
             </div>
           </div>
         ))}
+        {endContent ? <div className={slideCn}>{endContent}</div> : null}
       </div>
 
       {showPagination && n > 1 ? (

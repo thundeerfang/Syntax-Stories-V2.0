@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import type { PaidPlanKey } from './CheckoutIntent.js';
+import { PAID_PLAN_KEYS, type PaidPlanKey } from '../variable/constants.js';
+
+export type { PaidPlanKey };
 
 export interface IBillingPlanCatalog extends Document {
   key: PaidPlanKey;
@@ -14,6 +16,8 @@ export interface IBillingPlanCatalog extends Document {
   badge?: string | null;
   sortOrder: number;
   active: boolean;
+  /** Stripe Price id (`price_…`) — auto-provisioned when missing. */
+  stripePriceId?: string | null;
 }
 
 const BillingPlanCatalogSchema = new Schema<IBillingPlanCatalog>(
@@ -22,7 +26,7 @@ const BillingPlanCatalogSchema = new Schema<IBillingPlanCatalog>(
       type: String,
       required: true,
       unique: true,
-      enum: ['pro', 'proplus', 'ultra'],
+      enum: [...PAID_PLAN_KEYS],
     },
     name: { type: String, required: true, trim: true, maxlength: 80 },
     description: { type: String, required: true, trim: true, maxlength: 280 },
@@ -35,6 +39,7 @@ const BillingPlanCatalogSchema = new Schema<IBillingPlanCatalog>(
     badge: { type: String, trim: true, maxlength: 40, default: null },
     sortOrder: { type: Number, default: 0 },
     active: { type: Boolean, default: true, index: true },
+    stripePriceId: { type: String, trim: true, default: null },
   },
   { timestamps: true, collection: 'billingplancatalog' }
 );

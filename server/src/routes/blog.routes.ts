@@ -25,6 +25,10 @@ import {
   upsertDraft,
 } from '../controllers/blog.controller.js';
 import {
+  listUserRepliedPosts,
+  listUserRepostedPosts,
+} from '../controllers/profileActivity.controller.js';
+import {
   addBlogComment,
   deleteBlogComment,
   listBlogComments,
@@ -62,6 +66,8 @@ router.get('/tags/explore', getBlogTagsExplore);
 router.get('/tags/list', listBlogTagsPaginated);
 router.get('/feed', optionalVerifyToken, listPublishedFeed);
 router.get('/u/:username/posts', optionalVerifyToken, listUserPublishedPosts);
+router.get('/u/:username/reposts', optionalVerifyToken, listUserRepostedPosts);
+router.get('/u/:username/replies', optionalVerifyToken, listUserRepliedPosts);
 router.get('/p/:username/:slug/stats/stream', streamBlogPostStats);
 router.get('/p/:username/:slug/comments', optionalVerifyToken, listBlogComments);
 router.patch('/p/:username/:slug/comments/:commentId', verifyToken, updateBlogComment);

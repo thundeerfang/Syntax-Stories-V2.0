@@ -1,13 +1,16 @@
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { NotificationAuditLogModel } from '../../models/NotificationAuditLog.js';
+import { AuditLogModel } from '../../models/AuditLog.js';
 import { NotificationModel } from '../../models/Notification.js';
+import { NotificationAuditAction } from '../../shared/audit/domains.js';
 import { sendAdminError, sendAdminOk } from '../rbac/adminResponse.js';
 import {
   getPlatformNotificationConfig,
   patchPlatformNotificationConfig,
   type PlatformNotificationConfigAdmin,
 } from '../../services/notifications/platformNotificationConfig.service.js';
+
+const NOTIFICATION_DOMAIN_FILTER = { domain: 'notification' as const };
 
 export async function getAdminNotificationConfig(_req: Request, res: Response): Promise<void> {
   const config = (await getPlatformNotificationConfig(true)) as PlatformNotificationConfigAdmin;
@@ -41,9 +44,15 @@ export async function getAdminNotificationStats(_req: Request, res: Response): P
     await Promise.all([
       NotificationModel.countDocuments(),
       NotificationModel.countDocuments({ readAt: null }),
-      NotificationAuditLogModel.countDocuments(),
-      NotificationAuditLogModel.countDocuments({ action: 'notification.webhook.sent' }),
-      NotificationAuditLogModel.countDocuments({ action: 'notification.webhook.failed' }),
+      AuditLogModel.countDocuments(NOTIFICATION_DOMAIN_FILTER),
+      AuditLogModel.countDocuments({
+        ...NOTIFICATION_DOMAIN_FILTER,
+        action: NotificationAuditAction.WEBHOOK_SENT,
+      }),
+      AuditLogModel.countDocuments({
+        ...NOTIFICATION_DOMAIN_FILTER,
+        action: NotificationAuditAction.WEBHOOK_FAILED,
+      }),
     ]);
   sendAdminOk(res, {
     stats: {
@@ -64,12 +73,12 @@ export async function listAdminNotificationAudit(req: Request, res: Response): P
       : 50;
   const cursorRaw = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
 
-  const filter: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = { ...NOTIFICATION_DOMAIN_FILTER };
   if (cursorRaw && mongoose.Types.ObjectId.isValid(cursorRaw)) {
     filter._id = { $lt: new mongoose.Types.ObjectId(cursorRaw) };
   }
 
-  const rows = await NotificationAuditLogModel.find(filter)
+  const rows = await AuditLogModel.find(filter)
     .sort({ _id: -1 })
     .limit(limit + 1)
     .lean();
@@ -82,8 +91,8 @@ export async function listAdminNotificationAudit(req: Request, res: Response): P
     items: slice.map((r) => ({
       id: String(r._id),
       action: r.action,
-      userId: r.userId ? String(r.userId) : null,
-      notificationId: r.notificationId ? String(r.notificationId) : null,
+      userId: r.actorId ? String(r.actorId) : null,
+      notificationId: r.targetId ? String(r.targetId) : null,
       metadata: r.metadata ?? null,
       timestamp: r.timestamp?.toISOString?.() ?? null,
     })),

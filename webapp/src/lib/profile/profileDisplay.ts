@@ -68,6 +68,21 @@ export function profileSectionMinVisible(variant: string, prior: number | undefi
   return Math.max(prior ?? floor, floor);
 }
 
+const PLACEHOLDER_PROFILE_BIOS = new Set([
+  'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀',
+  'Welcome to Syntax Stories 🧑🏻‍💻',
+]);
+
+export function isPlaceholderProfileBio(bio?: string | null): boolean {
+  const t = (bio ?? '').trim();
+  return t.length === 0 || PLACEHOLDER_PROFILE_BIOS.has(t);
+}
+
+export function normalizeBioForEdit(bio?: string | null): string {
+  if (isPlaceholderProfileBio(bio)) return '';
+  return bio ?? '';
+}
+
 export function markdownBioToHtml(raw: string): string {
   const escapeHtml = (str: string) =>
     str
@@ -80,23 +95,6 @@ export function markdownBioToHtml(raw: string): string {
   s = s.replaceAll(/__([^_\n]+)__/g, '<u>$1</u>');
   s = s.replaceAll(/\*([^*\n]+)\*/g, '<em>$1</em>');
   return s.replaceAll('\n', '<br>');
-}
-
-export function workExperienceListKey(e: Record<string, unknown>): string {
-  const id = e.id ?? e.workId;
-  if (typeof id === 'string' && id.length > 0) return `we-${id}`;
-  const company = typeof e.company === 'string' ? e.company : '';
-  const start = typeof e.startDate === 'string' ? e.startDate : '';
-  const title = typeof e.title === 'string' ? e.title : '';
-  return `we-${company}-${start}-${title}`.replaceAll(/\s+/g, '-');
-}
-
-export function educationListKey(e: Record<string, unknown>): string {
-  const id = e.eduId ?? e.id;
-  if (typeof id === 'string' && id.length > 0) return `edu-${id}`;
-  const school = typeof e.school === 'string' ? e.school : '';
-  const start = typeof e.startDate === 'string' ? e.startDate : '';
-  return `edu-${school}-${start}`.replaceAll(/\s+/g, '-');
 }
 
 export function certificationListKey(c: Record<string, unknown>): string {

@@ -24,62 +24,6 @@ function auditStackTools(
   }
 }
 
-function auditEducation(
-  log: SectionLogFn,
-  currentProfile: ProfileSections,
-  updatedProfile: ProfileSections & { _id: unknown }
-): void {
-  const oldE = (currentProfile.education ?? []) as Array<{ eduId?: string; school?: string }>;
-  const newE = (updatedProfile.education ?? []) as Array<{ eduId?: string; school?: string }>;
-  const oldIds = new Set(oldE.map((e) => (e.eduId ?? '').trim()).filter(Boolean));
-  const newIds = new Set(newE.map((e) => (e.eduId ?? '').trim()).filter(Boolean));
-  for (const e of newE) {
-    const id = (e.eduId ?? '').trim();
-    if (!id) continue;
-    if (oldIds.has(id)) {
-      const prev = oldE.find((x) => (x.eduId ?? '').trim() === id);
-      if (prev && JSON.stringify(prev) !== JSON.stringify(e))
-        log(AuditAction.EDUCATION_UPDATED, 'education', { eduId: id });
-    } else {
-      log(AuditAction.EDUCATION_ADDED, 'education', { eduId: id, school: e.school });
-    }
-  }
-  for (const id of oldIds) {
-    if (!newIds.has(id)) log(AuditAction.EDUCATION_REMOVED, 'education', { eduId: id });
-  }
-}
-
-function auditWorkExperiences(
-  log: SectionLogFn,
-  currentProfile: ProfileSections,
-  updatedProfile: ProfileSections & { _id: unknown }
-): void {
-  const oldW = (currentProfile.workExperiences ?? []) as Array<{
-    workId?: string;
-    company?: string;
-  }>;
-  const newW = (updatedProfile.workExperiences ?? []) as Array<{
-    workId?: string;
-    company?: string;
-  }>;
-  const oldIds = new Set(oldW.map((w) => (w.workId ?? '').trim()).filter(Boolean));
-  const newIds = new Set(newW.map((w) => (w.workId ?? '').trim()).filter(Boolean));
-  for (const w of newW) {
-    const id = (w.workId ?? '').trim();
-    if (!id) continue;
-    if (oldIds.has(id)) {
-      const prev = oldW.find((x) => (x.workId ?? '').trim() === id);
-      if (prev && JSON.stringify(prev) !== JSON.stringify(w))
-        log(AuditAction.WORK_UPDATED, 'work', { workId: id });
-    } else {
-      log(AuditAction.WORK_ADDED, 'work', { workId: id, company: w.company });
-    }
-  }
-  for (const id of oldIds) {
-    if (!newIds.has(id)) log(AuditAction.WORK_REMOVED, 'work', { workId: id });
-  }
-}
-
 function auditCertifications(
   log: SectionLogFn,
   currentProfile: ProfileSections,
@@ -200,7 +144,7 @@ function auditMySetup(
   }
 }
 
-/** Diff profile sections for granular audit lines (stack, education, work, …). */
+/** Diff profile sections for granular audit lines (stack, certifications, projects, …). */
 export function runProfileSectionAudits(payload: ProfileUpdatedPayload): void {
   const { req, actorId, updates, currentProfile, updatedProfile } = payload;
   if (!currentProfile) return;
@@ -211,12 +155,6 @@ export function runProfileSectionAudits(payload: ProfileUpdatedPayload): void {
 
   if (updates.stackAndTools !== undefined) {
     auditStackTools(log, currentProfile, updatedProfile);
-  }
-  if (updates.education !== undefined) {
-    auditEducation(log, currentProfile, updatedProfile);
-  }
-  if (updates.workExperiences !== undefined) {
-    auditWorkExperiences(log, currentProfile, updatedProfile);
   }
   if (updates.certifications !== undefined) {
     auditCertifications(log, currentProfile, updatedProfile);

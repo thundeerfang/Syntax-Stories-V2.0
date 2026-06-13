@@ -1,8 +1,7 @@
-import mongoose from 'mongoose';
 import type { AchievementEvent, AchievementUnlockDto } from '../../achievements/achievement.types.js';
 import { env } from '../../config/env.js';
 import { isRedisAvailable } from '../../config/redis.js';
-import { AchievementEventLogModel } from '../../models/AchievementEventLog.js';
+import { writeAchievementEventLogs } from '../../shared/audit/auditLog.js';
 import { enqueueAchievementGamificationOutbox } from '../gamification/gamificationOutbox.service.js';
 import {
   attachAchievementsToResponse,
@@ -21,21 +20,11 @@ async function logAchievementEvents(
   events: AchievementEvent[],
   ctx?: AchievementDispatchContext
 ): Promise<void> {
-  if (events.length === 0) return;
-  try {
-    await AchievementEventLogModel.insertMany(
-      events.map((e) => ({
-        userId: new mongoose.Types.ObjectId(userId),
-        event: e.type,
-        source: ctx?.source,
-        ip: ctx?.ip,
-        userAgent: ctx?.userAgent,
-        sessionId: ctx?.sessionId,
-      }))
-    );
-  } catch {
-    /* non-fatal */
-  }
+  void writeAchievementEventLogs(
+    userId,
+    events.map((e) => e.type),
+    ctx
+  );
 }
 
 async function enqueueOutbox(
@@ -48,7 +37,8 @@ async function enqueueOutbox(
 
 /**
  * Single entry for controllers: sync evaluation or async outbox + worker.
- * When ACHIEVEMENT_ASYNC=1 and Redis is up, returns [] (unlocks via SSE notifications).
+ * Unlocks always fan out via Redis Pub/Sub (`/api/achievements/stream`) for instant dialogs.
+ * When ACHIEVEMENT_ASYNC=1 and Redis is up, API returns [] (evaluation runs in background).
  */
 export async function dispatchAchievementEvents(
   userId: string,

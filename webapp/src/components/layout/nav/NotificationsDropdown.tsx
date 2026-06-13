@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, BellOff, Loader2, Settings } from 'lucide-react';
+import { Bell, BellOff, CheckCheck, Loader2, Settings } from 'lucide-react';
+import { useDropdown } from '@/components/ui/dropdown';
 import { cn } from '@/lib/core/utils';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
@@ -22,11 +23,10 @@ export function NotificationsDropdown() {
   const storeUnread = useNotificationStore((s) => s.unreadCount);
   const bumpVersion = useNotificationStore((s) => s.bumpVersion);
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
-  const [isOpen, setIsOpen] = useState(false);
+  const { open: isOpen, setOpen: setIsOpen, close, rootRef: panelRef } = useDropdown();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -45,18 +45,6 @@ export function NotificationsDropdown() {
       setLoading(false);
     }
   }, [token, setUnreadCount]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('click', handleClickOutside);
-    }
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && token) {
@@ -146,9 +134,14 @@ export function NotificationsDropdown() {
                 type="button"
                 disabled={markingRead}
                 onClick={() => void handleMarkAllRead()}
-                className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest disabled:opacity-50 shrink-0"
+                aria-label="Mark all read"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-primary transition-colors hover:text-primary/80 disabled:opacity-50"
               >
-                {markingRead ? '…' : 'Mark all read'}
+                {markingRead ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <CheckCheck className="size-4" aria-hidden />
+                )}
               </button>
             )}
           </div>
@@ -163,7 +156,7 @@ export function NotificationsDropdown() {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsOpen(false);
+                    close();
                     openAuth('login');
                   }}
                   className="mt-4 border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest text-primary-foreground shadow hover:opacity-90"
@@ -198,7 +191,7 @@ export function NotificationsDropdown() {
                       href={n.href}
                       onClick={() => {
                         void handleItemClick(n);
-                        setIsOpen(false);
+                        close();
                       }}
                       role="menuitem"
                       className={cn(
@@ -246,7 +239,7 @@ export function NotificationsDropdown() {
             <div className="border-t-2 border-border px-3 py-2 bg-muted/20">
               <Link
                 href="/settings?section=notifications"
-                onClick={() => setIsOpen(false)}
+                onClick={() => close()}
                 className="flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
               >
                 <Settings className="size-3.5" aria-hidden />

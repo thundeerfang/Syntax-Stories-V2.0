@@ -75,8 +75,6 @@ export function toUserProfileDto(user: IUser & { _id: { toString(): string } }) 
     github: user.github?.trim() || null,
     youtube: user.youtube?.trim() || null,
     stackAndTools: user.stackAndTools ?? [],
-    workExperiences: user.workExperiences ?? [],
-    education: user.education ?? [],
     certifications: user.certifications ?? [],
     projects: user.projects ?? [],
     openSourceContributions: user.openSourceContributions ?? [],

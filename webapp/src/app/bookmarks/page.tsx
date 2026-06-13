@@ -21,6 +21,7 @@ import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { useAuthStore } from '@/store/auth';
+import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 
@@ -44,6 +45,7 @@ export default function BookmarksPage() {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const routeRestoreNonce = useRouteRestoreNonce();
 
   const [groups, setGroups] = useState<BookmarkGroupRow[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(() => Boolean(useAuthStore.getState().token));
@@ -136,7 +138,7 @@ export default function BookmarksPage() {
 
   useEffect(() => {
     void loadGroups();
-  }, [loadGroups]);
+  }, [loadGroups, routeRestoreNonce]);
 
   useEffect(() => {
     if (!groupFromUrl || groups.length === 0) return;
@@ -148,7 +150,7 @@ export default function BookmarksPage() {
   useEffect(() => {
     if (!token) return;
     void loadPosts();
-  }, [token, loadPosts]);
+  }, [token, loadPosts, routeRestoreNonce]);
 
   const openCreateFolder = useCallback(() => {
     setFolderDialogMode('create');

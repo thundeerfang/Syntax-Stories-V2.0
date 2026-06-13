@@ -7,10 +7,10 @@ import { FormDialog } from '@/components/ui/dialog';
 import { CropperKeyboardWrapper } from '@/components/ui/media';
 import { ImageDropzone } from '@/components/ui/form';
 import { Button } from '@/components/ui';
-import { Input, Label } from '@/components/retroui';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { uploadMedia, type CropArea } from '@/api/upload';
+import { uploadResponseAlt } from '@/lib/media/uploadImageMeta';
 
 export interface UploadMediaDialogProps {
   open: boolean;
@@ -19,6 +19,7 @@ export interface UploadMediaDialogProps {
   onSuccess: (item: {
     url: string;
     title?: string;
+    alt?: string;
     blurDataUrl?: string;
     /** When true, this item is only staged locally and must be uploaded by the caller later. */
     isPending?: boolean;
@@ -46,7 +47,6 @@ export function UploadMediaDialog({
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [title, setTitle] = useState('');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -55,7 +55,6 @@ export function UploadMediaDialog({
   const resetState = () => {
     setSelectedFile(null);
     setImageUrl(null);
-    setTitle('');
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setCroppedAreaPixels(null);
@@ -100,12 +99,9 @@ export function UploadMediaDialog({
 
     // Staged mode: do not hit the upload API yet; hand back a blob URL + pending data.
     if (mode === 'staged') {
-      const fallbackTitle = 'Media image';
-      const stagedTitle = title.trim() || fallbackTitle;
       const blobUrl = imageUrl ?? URL.createObjectURL(selectedFile);
       onSuccess({
         url: blobUrl,
-        title: stagedTitle,
         isPending: true,
         pendingFile: selectedFile,
         pendingCrop: cropArea,
@@ -123,10 +119,11 @@ export function UploadMediaDialog({
     try {
       const data = await uploadMedia(token, selectedFile, cropArea, (p) => setProgress(p));
       if (data.url) {
-        const fallbackTitle = 'Media image';
+        const alt = uploadResponseAlt(data);
         onSuccess({
           url: data.url,
-          title: title.trim() || fallbackTitle,
+          title: alt,
+          alt,
           blurDataUrl: data.blurDataUrl,
         });
         toast.success('Media added.');
@@ -157,24 +154,12 @@ export function UploadMediaDialog({
       titleId="upload-media-title"
       title="Upload media"
       titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
-      subtitle={`Crop to thumbnail. JPEG, PNG, GIF or WebP. Max ${MAX_MB} MB. Title is used as the image description.`}
+      subtitle={`Crop to thumbnail. JPEG, PNG, GIF or WebP. Max ${MAX_MB} MB. Title and alt are set automatically when uploaded.`}
       subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
       panelClassName="max-w-md sm:max-w-lg"
       interactionLock={uploading}
     >
       <div className="flex flex-col gap-4">
-        <div className="grid gap-1.5">
-          <Label htmlFor="media-title">Title (optional)</Label>
-          <Input
-            id="media-title"
-            placeholder="e.g. Certificate, project screenshot"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={120}
-            disabled={uploading}
-          />
-        </div>
-
         {!imageUrl && (
           <ImageDropzone
             disabled={uploading}

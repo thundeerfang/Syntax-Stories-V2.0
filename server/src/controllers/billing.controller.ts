@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
+import { PAID_PLAN_KEYS } from '../variable/constants.js';
 import type { AuthUser } from '../middlewares/auth/verifyToken.js';
 import {
   createBillingPortalSession,
@@ -9,8 +10,9 @@ import { verifyCheckoutAndSync } from '../services/billing/verifyCheckout.servic
 import { getSubscriptionForUser } from '../services/billing/getSubscriptionForUser.js';
 import { listBillingPlanCatalog } from '../services/billing/planCatalog.js';
 import { PaymentLedgerModel } from '../models/PaymentLedger.js';
+import { syncPaymentLedgerFromStripe } from '../services/billing/ledger.service.js';
 
-const planKeySchema = z.enum(['pro', 'proplus', 'ultra']);
+const planKeySchema = z.enum(PAID_PLAN_KEYS);
 const verifyBodySchema = z.object({ sessionId: z.string().min(1) });
 
 export async function getPlans(_req: Request, res: Response): Promise<void> {
@@ -86,6 +88,16 @@ export async function getTransactions(req: Request, res: Response): Promise<void
     Math.max(1, Number.parseInt(String(req.query.limit ?? '20'), 10) || 20)
   );
   const skip = (page - 1) * limit;
+
+  const existingCount = await PaymentLedgerModel.countDocuments({ userId: user._id });
+  const forceSync = req.query.sync === 'true';
+  if (existingCount === 0 || forceSync) {
+    try {
+      await syncPaymentLedgerFromStripe(user._id);
+    } catch (e) {
+      console.warn('[billing] ledger sync from Stripe failed', e);
+    }
+  }
 
   const [rows, total] = await Promise.all([
     PaymentLedgerModel.find({ userId: user._id })

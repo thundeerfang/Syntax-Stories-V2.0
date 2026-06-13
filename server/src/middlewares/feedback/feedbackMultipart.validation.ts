@@ -1,17 +1,21 @@
 import { z } from 'zod';
 import { formatZodFeedbackError } from './feedbackBody.validation.js';
+import { countFeedbackWords, FEEDBACK_MIN_DESC_WORDS } from './feedbackWordCount.js';
 
 const objectId24 = z.string().regex(/^[a-fA-F0-9]{24}$/);
 
 const multipartBase = z.object({
   categoryId: objectId24,
-  subject: z.string().trim().min(1).max(200),
-  description: z.string().trim().min(10).max(5000),
+  subject: z.string().trim().min(1, 'Subject is required.').max(200),
+  description: z
+    .string()
+    .trim()
+    .min(1, 'Message is required.')
+    .max(5000)
+    .refine((s) => countFeedbackWords(s) >= FEEDBACK_MIN_DESC_WORDS, {
+      message: `Message must be at least ${FEEDBACK_MIN_DESC_WORDS} words.`,
+    }),
   clientMeta: z.string().max(50_000).optional(),
-  altcha: z.string().max(50_000).optional(),
-  firstName: z.string().trim().max(80).optional(),
-  lastName: z.string().trim().max(80).optional(),
-  email: z.string().trim().max(254).optional(),
   attachmentTitle: z.string().trim().max(120).optional(),
 });
 
@@ -20,10 +24,6 @@ export type ParsedMultipartFeedback = {
   subject: string;
   description: string;
   clientMeta?: Record<string, unknown>;
-  altcha?: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
   attachmentTitle?: string;
 };
 
@@ -38,14 +38,9 @@ function parseClientMetaJson(raw: string | undefined): Record<string, unknown> |
   }
 }
 
-function isValidEmail(s: string): boolean {
-  if (!s || s.length > 254) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-}
-
+/** Signed-in users only — guest fields are rejected at the route layer. */
 export function parseMultipartFeedback(
-  body: Record<string, unknown>,
-  isAuthed: boolean
+  body: Record<string, unknown>
 ): { ok: true; data: ParsedMultipartFeedback } | { ok: false; message: string } {
   const flat: Record<string, string | undefined> = {};
   for (const [k, v] of Object.entries(body)) {
@@ -62,31 +57,6 @@ export function parseMultipartFeedback(
     return { ok: false, message: 'clientMeta must be a JSON object.' };
   }
 
-  if (!isAuthed) {
-    const fn = parsed.data.firstName?.trim() ?? '';
-    const ln = parsed.data.lastName?.trim() ?? '';
-    const em = parsed.data.email?.trim().toLowerCase() ?? '';
-    if (fn.length < 1 || fn.length > 80)
-      return { ok: false, message: 'firstName: First name is required (1–80 characters).' };
-    if (ln.length < 1 || ln.length > 80)
-      return { ok: false, message: 'lastName: Last name is required (1–80 characters).' };
-    if (!isValidEmail(em)) return { ok: false, message: 'email: Valid email is required.' };
-    return {
-      ok: true,
-      data: {
-        categoryId: parsed.data.categoryId,
-        subject: parsed.data.subject,
-        description: parsed.data.description,
-        clientMeta,
-        altcha: parsed.data.altcha?.trim() || undefined,
-        firstName: fn,
-        lastName: ln,
-        email: em,
-        attachmentTitle: parsed.data.attachmentTitle?.trim() || undefined,
-      },
-    };
-  }
-
   return {
     ok: true,
     data: {
@@ -94,7 +64,6 @@ export function parseMultipartFeedback(
       subject: parsed.data.subject,
       description: parsed.data.description,
       clientMeta,
-      altcha: parsed.data.altcha?.trim() || undefined,
       attachmentTitle: parsed.data.attachmentTitle?.trim() || undefined,
     },
   };

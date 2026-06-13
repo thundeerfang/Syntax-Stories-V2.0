@@ -75,7 +75,7 @@ const notificationCategoryPrefs = [
   NotificationPrefItem(
     key: notificationPrefKeySettings,
     label: 'Account & settings',
-    hint: 'Profile, education, email, and settings changes.',
+    hint: 'Profile, email, and settings changes.',
     icon: Icons.settings_outlined,
   ),
 ];

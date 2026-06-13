@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRef, useState } from 'react';
-import { CalendarDays, Pin, PinOff } from 'lucide-react';
+import { CalendarDays, Pin, PinOff, Share2 } from 'lucide-react';
 import { BlogCardEngagementRail } from './_blogCardEngagement';
 import { BlogCardOwnerActionsOverlay, type BlogCardOwnerActions } from './_blogCardOwnerActions';
 import { BlogPostAuthor } from './BlogPostAuthor';
@@ -125,6 +125,29 @@ export type SquadFeedPinChrome = Readonly<{
   onUnpin?: () => void;
 }>;
 
+/** Squad detail feed only: shared-post ribbon on the cover image. */
+export type SquadFeedShareChrome = Readonly<{
+  sharedBy: {
+    username: string;
+    fullName?: string;
+    profileImg?: string;
+  };
+}>;
+
+function squadShareAvatarSrc(profileImg: string | undefined, username: string): string | null {
+  const trimmed = profileImg?.trim();
+  if (!trimmed) return null;
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:')
+  ) {
+    return trimmed;
+  }
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+  return `${base.replace(/\/$/, '')}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+}
+
 export type { BlogCardOwnerActions };
 
 export type BlogCardProps = Readonly<{
@@ -136,6 +159,8 @@ export type BlogCardProps = Readonly<{
   ownerActions?: BlogCardOwnerActions;
   /** When set (squad page), shows top-left PINNED tab and optional admin pin button on hover. */
   squadFeedPin?: SquadFeedPinChrome;
+  /** When set (squad page), shows shared-to-squad label + sharer badge on the cover. */
+  squadFeedShare?: SquadFeedShareChrome;
 }>;
 
 const RETRO_SHADOW = 'shadow-[4px_4px_0_0_var(--border)]';
@@ -148,6 +173,7 @@ export function BlogCard({
   className,
   ownerActions,
   squadFeedPin,
+  squadFeedShare,
 }: BlogCardProps) {
   const suppressChromeHover = ownerActions ? true : suppressChromeHoverProp;
   const username = post.author.username ?? post.author.id;
@@ -279,6 +305,44 @@ export function BlogCard({
               ) : (
                 <PrimaryCoverFallback variant="blog" />
               )}
+              {squadFeedShare ? (
+                <span
+                  className="pointer-events-none absolute left-2 top-2 z-10 inline-flex max-w-[calc(100%-1rem)] items-center gap-1.5 border-2 border-white/90 bg-black/70 px-1.5 py-1 shadow-sm backdrop-blur-[2px] sm:left-2.5 sm:top-2.5"
+                  aria-label={`Shared to squad by ${squadFeedShare.sharedBy.username}`}
+                  title="Shared to squad"
+                >
+                  <Share2
+                    className="size-4 shrink-0 text-white"
+                    strokeWidth={2.5}
+                    aria-hidden
+                  />
+                  {(() => {
+                    const uname = squadFeedShare.sharedBy.username;
+                    const avatarSrc = squadShareAvatarSrc(
+                      squadFeedShare.sharedBy.profileImg,
+                      uname
+                    );
+                    const label = squadFeedShare.sharedBy.fullName?.trim() || uname;
+                    return avatarSrc ? (
+                      <img
+                        src={avatarSrc}
+                        alt=""
+                        className="size-6 shrink-0 border border-white/80 object-cover"
+                      />
+                    ) : (
+                      <span
+                        className="flex size-6 shrink-0 items-center justify-center border border-white/80 bg-white/15 font-mono text-[9px] font-black uppercase text-white"
+                        aria-hidden
+                      >
+                        {label.slice(0, 1)}
+                      </span>
+                    );
+                  })()}
+                  <span className="min-w-0 truncate font-mono text-[9px] font-bold uppercase tracking-wide text-white">
+                    @{squadFeedShare.sharedBy.username}
+                  </span>
+                </span>
+              ) : null}
             </div>
           </div>
 

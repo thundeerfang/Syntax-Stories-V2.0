@@ -24,7 +24,7 @@ class SetupDraftForm extends StatelessWidget {
   final TextEditingController productUrlController;
   final String imageUrl;
   final bool disabled;
-  final ValueChanged<String> onPickImage;
+  final ValueChanged<ImageUploadAssetResult> onPickImage;
   final VoidCallback? onChanged;
 
   @override
@@ -76,9 +76,9 @@ class SetupDraftForm extends StatelessWidget {
               onTap: disabled
                   ? null
                   : () async {
-                      final url = await ImageUploadCropDialog.showSetupComponent(context);
-                      if (url != null && url.isNotEmpty) {
-                        onPickImage(url);
+                      final result = await ImageUploadCropDialog.showSetupComponent(context);
+                      if (result != null && result.url.isNotEmpty) {
+                        onPickImage(result);
                         onChanged?.call();
                       }
                     },

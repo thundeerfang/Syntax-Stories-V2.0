@@ -12,6 +12,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onSearch,
     this.onNotifications,
     this.onSettings,
+    this.onCreate,
     this.showNotifications = true,
   });
 
@@ -19,6 +20,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onSearch;
   final VoidCallback? onNotifications;
   final VoidCallback? onSettings;
+  final VoidCallback? onCreate;
   final bool showNotifications;
 
   static const toolbarHeight = kToolbarHeight;
@@ -97,7 +99,9 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
                               color: inactive,
                               onTap: onSearch,
                             ),
-                            if (showNotifications)
+                            if (onCreate != null)
+                              _TopNavAddButton(onTap: onCreate)
+                            else if (showNotifications)
                               _TopNavIcon(
                                 icon: Icons.notifications_none_rounded,
                                 tooltip: 'Notifications',
@@ -121,6 +125,32 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             Container(height: bottomBorderHeight, color: primary),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopNavAddButton extends StatelessWidget {
+  const _TopNavAddButton({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return SizedBox(
+      width: MainAppBar.iconHitSize,
+      height: MainAppBar.iconHitSize,
+      child: Material(
+        color: colors.primary,
+        child: InkWell(
+          onTap: onTap,
+          child: Icon(
+            Icons.add_rounded,
+            color: colors.primaryForeground,
+            size: MainAppBar.iconSize,
+          ),
         ),
       ),
     );

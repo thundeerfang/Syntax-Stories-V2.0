@@ -3,12 +3,8 @@ import { BlogPostModel } from '../../models/BlogPost.js';
 import { BlogRepostModel } from '../../models/BlogRepost.js';
 import { adminUserRefFromObjectId } from '../iam/adminUserRef.js';
 import { parseBlogContentForAdmin } from '../cms/blog/parseBlogContentForAdmin.js';
-
-const MAX_LIMIT = 100;
-
-function notDeletedPostFilter(): Record<string, unknown> {
-  return { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
-}
+import { NOT_DELETED_FILTER } from '../../shared/db/notDeleted.js';
+import { parseAdminListLimit } from '../../shared/http/pagination.js';
 
 function iso(d: Date | undefined | null): string | null {
   if (!d) return null;
@@ -22,7 +18,7 @@ export async function listAdminBlogs(opts: {
   status?: 'draft' | 'published' | 'suspended';
   q?: string;
 }) {
-  const clauses: Record<string, unknown>[] = [notDeletedPostFilter()];
+  const clauses: Record<string, unknown>[] = [NOT_DELETED_FILTER];
   if (opts.status) clauses.push({ status: opts.status });
   if (opts.q) {
     const rx = new RegExp(opts.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -188,6 +184,5 @@ export async function loadAdminBlogDetail(postId: mongoose.Types.ObjectId) {
 }
 
 export function parseBlogListLimit(raw: unknown): number {
-  const n = Number(raw);
-  return Math.min(Number.isFinite(n) && n > 0 ? Math.floor(n) : 25, MAX_LIMIT);
+  return parseAdminListLimit(raw);
 }

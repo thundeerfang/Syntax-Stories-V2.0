@@ -40,7 +40,6 @@ import type { SquadSummary, SendOtpPayload } from '@contracts';
 | [`billingApi.ts`](./billingApi.ts)             | `/api/billing/*`                              | [`api/billing.ts`](../api/billing.ts)                                                                          |
 | [`feedbackApi.ts`](./feedbackApi.ts)           | `/api/feedback/*`                             | [`api/feedback.ts`](../api/feedback.ts)                                                                        |
 | [`contactApi.ts`](./contactApi.ts)             | `/api/contact`                                | [`api/contact.ts`](../api/contact.ts)                                                                          |
-| [`companiesApi.ts`](./companiesApi.ts)         | `/api/companies/search`                       | [`api/companies.ts`](../api/companies.ts)                                                                      |
 | [`githubApi.ts`](./githubApi.ts)               | `/api/github/*`                               | [`api/github.ts`](../api/github.ts), [`api/auth.ts`](../api/auth.ts) (import-batch)                            |
 | [`referenceApi.ts`](./referenceApi.ts)         | `/api/reference/*`                            | [`api/reference.ts`](../api/reference.ts)                                                                      |
 | [`analyticsApi.ts`](./analyticsApi.ts)         | `/api/analytics/*`                            | [`api/analytics.ts`](../api/analytics.ts)                                                                      |
@@ -137,7 +136,6 @@ Paths are relative to `NEXT_PUBLIC_API_BASE_URL` (or same-origin `/api` when uns
 
 | Method      | Path                              | Auth |
 | ----------- | --------------------------------- | ---- |
-| GET         | `/api/follow/search`              | —    |
 | GET         | `/api/follow/profile/:username`   | —    |
 | GET         | `/api/follow/counts/:username`    | —    |
 | GET         | `/api/follow/followers/:username` | —    |
@@ -187,11 +185,10 @@ Paths are relative to `NEXT_PUBLIC_API_BASE_URL` (or same-origin `/api` when uns
 | POST   | `/api/feedback`            | `feedbackApi` multipart |
 | POST   | `/api/contact`             | `contactApi`            |
 
-### Reference & companies
+### Reference
 
 | Method | Path                        | Module         |
 | ------ | --------------------------- | -------------- |
-| GET    | `/api/companies/search`     | `companiesApi` |
 | GET    | `/api/reference/entities`   | `referenceApi` |
 | GET    | `/api/reference/tech-stack` | `referenceApi` |
 | POST   | `/api/reference/tech-stack/resolve` | `referenceApi` |

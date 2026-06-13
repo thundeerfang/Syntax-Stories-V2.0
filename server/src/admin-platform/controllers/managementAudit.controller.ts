@@ -1,11 +1,12 @@
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { AuditLogModel } from '../../models/AuditLog.js';
+import { AUDIT_DOMAINS, type AuditDomain } from '../../shared/audit/domains.js';
 import { sendAdminOk } from '../rbac/adminResponse.js';
 
 /**
  * GET /api/v1/admin/management/audit-logs
- * Cursor pagination; defaults to admin + auth namespace actions.
+ * Cursor pagination; defaults to admin + auth namespace actions on core domain.
  */
 export async function listAuditLogs(req: Request, res: Response): Promise<void> {
   const limitRaw = (req.query.limit as string | undefined) ?? '30';
@@ -15,12 +16,20 @@ export async function listAuditLogs(req: Request, res: Response): Promise<void> 
   const actorId = (req.query.actorId as string | undefined)?.trim();
   const targetId = (req.query.targetId as string | undefined)?.trim();
   const userId = (req.query.userId as string | undefined)?.trim();
+  const domainRaw = (req.query.domain as string | undefined)?.trim();
 
   const filter: Record<string, unknown> = {};
+
+  if (domainRaw && (AUDIT_DOMAINS as readonly string[]).includes(domainRaw)) {
+    filter.domain = domainRaw as AuditDomain;
+  } else {
+    filter.domain = 'core';
+  }
+
   if (userId && mongoose.isValidObjectId(userId)) {
     const oid = new mongoose.Types.ObjectId(userId);
     filter.$or = [{ actorId: oid }, { targetId: oid }];
-  } else {
+  } else if (filter.domain === 'core') {
     if (actionPrefix) {
       filter.action = { $regex: `^${actionPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` };
     } else {
@@ -32,6 +41,8 @@ export async function listAuditLogs(req: Request, res: Response): Promise<void> 
     if (targetId && mongoose.isValidObjectId(targetId)) {
       filter.targetId = new mongoose.Types.ObjectId(targetId);
     }
+  } else if (actionPrefix) {
+    filter.action = { $regex: `^${actionPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` };
   }
   if (cursor && mongoose.isValidObjectId(cursor)) {
     const cur = await AuditLogModel.findById(cursor).select('timestamp').lean();
@@ -52,6 +63,7 @@ export async function listAuditLogs(req: Request, res: Response): Promise<void> 
   sendAdminOk(res, {
     items: page.map((r) => ({
       id: String(r._id),
+      domain: r.domain ?? 'core',
       action: r.action,
       actorId: r.actorId ? String(r.actorId) : null,
       targetType: r.targetType ?? null,

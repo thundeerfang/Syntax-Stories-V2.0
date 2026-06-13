@@ -9,6 +9,7 @@ import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { ImageUploadCropDialog } from '@/components/upload';
 import { uploadMedia } from '@/api/upload';
+import { uploadResponseAlt } from '@/lib/media/uploadImageMeta';
 import { type SetupItem as MySetupItem } from '@/app/settings/settings-list/MySetupCard';
 import {
   SettingsSectionHeading,
@@ -265,17 +266,13 @@ export function MySetupContent() {
         maxSizeBytes={5 * 1024 * 1024}
         aspect={16 / 9}
         cropMinHeightClass="min-h-[12rem] h-48"
-        imageTitleField
-        imageTitleLabel="Title (optional)"
         confirmLabel="Use image"
-        onConfirm={async (file, meta) => {
+        onConfirm={async (file) => {
           if (!token) throw new Error('Not signed in.');
           const data = await uploadMedia(token, file);
           if (!data.url) throw new Error(data.message ?? 'Upload failed');
           setDraftImageUrl(data.url);
-          const alt = meta?.imageTitle?.trim();
-          if (alt) setDraftImageAlt(alt);
-          else setDraftImageAlt('');
+          setDraftImageAlt(uploadResponseAlt(data) ?? '');
           toast.success('Image ready.');
         }}
       />

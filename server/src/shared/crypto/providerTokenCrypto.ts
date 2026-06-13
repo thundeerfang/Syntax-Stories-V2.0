@@ -1,6 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
-
-const PREFIX = 'sspt1:';
+import { PROVIDER_TOKEN_PREFIX } from '../../variable/constants.js';
 
 function deriveKey(raw: string): Buffer {
   const t = raw.trim();
@@ -30,20 +29,20 @@ export function sealProviderToken(plain: string | undefined | null): string | un
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return PREFIX + Buffer.concat([iv, tag, enc]).toString('base64url');
+  return PROVIDER_TOKEN_PREFIX + Buffer.concat([iv, tag, enc]).toString('base64url');
 }
 
 /** Decrypt sealed token, or return legacy plaintext if not prefixed. */
 export function unsealProviderToken(sealed: string | undefined | null): string | undefined {
   if (sealed == null || sealed === '') return undefined;
-  if (!sealed.startsWith(PREFIX)) return sealed;
+  if (!sealed.startsWith(PROVIDER_TOKEN_PREFIX)) return sealed;
   const key = getKey();
   if (!key) {
     console.warn('[providerTokenCrypto] cannot decrypt: OAUTH_PROVIDER_TOKEN_KEY missing');
     return undefined;
   }
   try {
-    const raw = Buffer.from(sealed.slice(PREFIX.length), 'base64url');
+    const raw = Buffer.from(sealed.slice(PROVIDER_TOKEN_PREFIX.length), 'base64url');
     const iv = raw.subarray(0, 12);
     const tag = raw.subarray(12, 28);
     const data = raw.subarray(28);

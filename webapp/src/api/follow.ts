@@ -12,15 +12,6 @@ export type {
 import type { FollowUser, PublicProfileUser, ReadStreakPayload } from '@contracts/followApi';
 
 export const followApi = {
-  searchUsers: (q: string) => {
-    const query = q.trim();
-    if (!query) return Promise.resolve({ success: true as const, list: [] as FollowUser[] });
-    return fetch(`${getApiBase()}/api/follow/search?q=${encodeURIComponent(query)}`).then((r) => {
-      if (!r.ok) throw new Error(r.statusText);
-      return r.json() as Promise<{ success: boolean; list: FollowUser[] }>;
-    });
-  },
-
   getPublicProfile: (username: string) =>
     fetch(`${getApiBase()}/api/follow/profile/${encodeURIComponent(username)}`).then((r) => {
       if (!r.ok) throw new Error(r.statusText);
@@ -30,6 +21,7 @@ export const followApi = {
         followersCount: number;
         followingCount: number;
         blogRespectReceivedCount?: number;
+        blogRepostCount?: number;
         readStreak?: ReadStreakPayload;
         /** UTC days (YYYY-MM-DD) with a recorded blog read in the heatmap window */
         readHeatmapDays?: string[];

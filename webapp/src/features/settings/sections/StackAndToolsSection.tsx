@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Monitor, Plus, X, Search, SearchX } from 'lucide-react';
@@ -10,10 +10,11 @@ import { STACK_TOOL_NAME_MAX, STACK_TOOL_NAME_MIN } from '@/lib/profile/profileL
 import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import { preloadTechStackItems } from '@/lib/profile/skillIcons';
+import { preloadTechStackItems, resolveTechStackIconSrc } from '@/lib/profile/skillIcons';
 import { SkillIconImage } from '@/components/ui/media';
-import { searchTechStack, type TechStackItem } from '@/lib/blog/referenceSearch';
+import { searchApi, type TechStackItem } from '@/api/search';
 import { useResolvedTechStack } from '@/hooks/useResolvedTechStack';
+import { SEARCH_DEBOUNCE_MS } from '@contracts/searchApi';
 import {
   SettingsSectionHeading,
   SettingsTabPanel,
@@ -31,6 +32,10 @@ export function StackAndToolsContent() {
   const [highlight, setHighlight] = useState(0);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<TechStackItem[]>([]);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [knownItems, setKnownItems] = useState<Map<string, TechStackItem>>(() => new Map());
+  const searchCacheRef = useRef(new Map<string, TechStackItem[]>());
   const baseline = (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX);
   const itemsMatchBaseline = JSON.stringify(items) === JSON.stringify(baseline);
   const serverDisplay = itemsMatchBaseline ? user?.stackAndToolsDisplay : undefined;
@@ -44,31 +49,66 @@ export function StackAndToolsContent() {
   }, [user?.stackAndTools]);
 
   useEffect(() => {
+    const map = new Map<string, TechStackItem>();
+    for (const row of user?.stackAndToolsDisplay ?? []) {
+      if (row.name?.trim()) map.set(row.name.trim(), row);
+    }
+    setKnownItems(map);
+  }, [user?.stackAndToolsDisplay]);
+
+  useEffect(() => {
     preloadTechStackItems(badgeItems);
   }, [badgeItems]);
 
   useEffect(() => {
-    if (suggestions.length > 0) {
-      preloadTechStackItems(suggestions);
-    }
-  }, [suggestions]);
+    const t = window.setTimeout(() => setDebouncedQuery(input.trim()), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [input]);
 
   useEffect(() => {
-    const q = input.trim();
+    const q = debouncedQuery;
     if (q.length < 2) {
       setSuggestions([]);
+      setSearching(false);
       return;
     }
+
+    const cacheKey = q.toLowerCase();
+    const cached = searchCacheRef.current.get(cacheKey);
+    if (cached) {
+      preloadTechStackItems(cached);
+      setSuggestions(cached);
+      setSearching(false);
+      return;
+    }
+
     let cancelled = false;
-    void searchTechStack(q, 12).then((list) => {
-      if (!cancelled) setSuggestions(list);
+    setSearching(true);
+    void searchApi.searchTechStack(q, 12).then((list) => {
+      if (cancelled) return;
+      searchCacheRef.current.set(cacheKey, list);
+      preloadTechStackItems(list);
+      setSuggestions(list);
+      setSearching(false);
     });
+
     return () => {
       cancelled = true;
     };
-  }, [input]);
+  }, [debouncedQuery]);
 
-  const addByName = (name: string) => {
+  const iconSrcForName = useCallback(
+    (name: string, index: number) => {
+      const fromBadge = badgeItems[index]?.iconUrl?.trim();
+      if (fromBadge) return fromBadge;
+      const known = knownItems.get(name);
+      if (known) return resolveTechStackIconSrc(known);
+      return resolveTechStackIconSrc({ name });
+    },
+    [badgeItems, knownItems]
+  );
+
+  const addByName = (name: string, meta?: TechStackItem) => {
     const trimmed = name.trim().slice(0, STACK_TOOL_NAME_MAX);
     if (!trimmed) {
       setInput('');
@@ -87,6 +127,16 @@ export function StackAndToolsContent() {
       return;
     }
     setItems([...items, trimmed]);
+    if (meta) {
+      setKnownItems((prev) => {
+        const next = new Map(prev);
+        next.set(trimmed, meta);
+        return next;
+      });
+      preloadTechStackItems([meta]);
+    } else {
+      preloadTechStackItems([{ name: trimmed }]);
+    }
     toast.success(`${trimmed} added to arsenal.`);
     setInput('');
     setOpen(false);
@@ -94,7 +144,7 @@ export function StackAndToolsContent() {
   };
 
   const selectSuggestion = (item: TechStackItem) => {
-    addByName(item.name);
+    addByName(item.name, item);
   };
 
   const handleSave = async () => {
@@ -153,7 +203,7 @@ export function StackAndToolsContent() {
           <div className="flex flex-wrap gap-2">
             <AnimatePresence mode="popLayout">
               {items.map((t, i) => {
-                const iconUrl = badgeItems[i]?.iconUrl?.trim() ?? '';
+                const iconUrl = iconSrcForName(t, i);
                 return (
                 <motion.div
                   key={t}
@@ -247,7 +297,13 @@ export function StackAndToolsContent() {
                   exit={{ opacity: 0 }}
                   className="max-h-72 overflow-y-auto divide-y-2 divide-border border-t-2 border-border bg-card"
                 >
-                  {suggestions.length === 0 ? (
+                  {searching ? (
+                    <li className="px-4 py-4 text-center">
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                        Searching…
+                      </p>
+                    </li>
+                  ) : suggestions.length === 0 ? (
                     <li className="flex flex-col items-center gap-2 px-4 py-4 text-center">
                       <SearchX
                         className="size-7 shrink-0 text-muted-foreground/70"
@@ -285,7 +341,7 @@ export function StackAndToolsContent() {
                             )}
                           >
                             <SkillIconImage
-                              src={item.iconUrl}
+                              src={resolveTechStackIconSrc(item)}
                               alt={item.name}
                             />
                           </div>

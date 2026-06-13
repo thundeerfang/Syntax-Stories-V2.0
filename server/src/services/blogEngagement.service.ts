@@ -3,10 +3,7 @@ import { BlogBookmarkModel } from '../models/BlogBookmark.js';
 import { BlogPostModel } from '../models/BlogPost.js';
 import { BlogRepostModel } from '../models/BlogRepost.js';
 import { resolveBookmarkGroupForViewer } from './bookmarkGroups.service.js';
-
-const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
 
 export type SetRepostResult =
   | { ok: true; reposting: boolean; repostCount: number }
@@ -39,7 +36,7 @@ export async function setRepostDesiredState(params: {
   const postCheck = await BlogPostModel.findOne({
     _id: params.postId,
     status: 'published',
-    ...NOT_DELETED,
+    ...NOT_DELETED_FILTER,
   })
     .select('authorId')
     .lean();
@@ -118,7 +115,7 @@ export async function setBookmarkDesiredState(params: {
   const postCheck = await BlogPostModel.findOne({
     _id: params.postId,
     status: 'published',
-    ...NOT_DELETED,
+    ...NOT_DELETED_FILTER,
   })
     .select('authorId')
     .lean();

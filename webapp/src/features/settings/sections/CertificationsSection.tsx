@@ -10,6 +10,7 @@ import { settingsBtnBlockPrimarySm } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { UploadLogoDialog, MediaFullViewDialog } from '@/features/profile';
 import { ImageUploadCropDialog } from '@/components/upload';
+import { buildUploadImageMeta } from '@/lib/media/uploadImageMeta';
 import { FormDialog } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { GhostOutlineButton } from '@/components/ui';
@@ -22,7 +23,7 @@ import {
   EntitySearchInput,
   Textarea,
 } from '@/components/retroui';
-import { searchOrganizations } from '@/lib/blog/referenceSearch';
+import { searchApi } from '@/api/search';
 import { CertificationCard } from '@/components/settings-list/CertificationCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
 import {
@@ -47,7 +48,7 @@ import {
   YEAR_OPTIONS,
   MediaThumbnailRow,
   parseMediaLinkLineInput,
-} from '../lib/workExperienceForm';
+} from '../lib/profileMediaForm';
 
 type CertForm = {
   name: string;
@@ -386,7 +387,7 @@ export function CertificationsContent() {
                   e2.issuingOrganization ? { ...e2, issuingOrganization: '' } : e2
                 );
             }}
-            searchOptions={searchOrganizations}
+            searchOptions={searchApi.searchOrganizations}
             error={fieldErrors.issuingOrganization}
             maxLength={120}
           />
@@ -764,13 +765,12 @@ export function CertificationsContent() {
               subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
               maxSizeBytes={5 * 1024 * 1024}
               aspect={1}
-              imageTitleField
               confirmLabel="Save & add"
               chooseAnotherLabel="Choose another"
-              onConfirm={async (file, meta) => {
+              onConfirm={async (file) => {
                 if (!token) throw new Error('Not signed in.');
                 const url = URL.createObjectURL(file);
-                const title = (meta?.imageTitle ?? '').trim() || 'Media image';
+                const title = buildUploadImageMeta(file.name, user?.username ?? 'user').title;
                 setForm((f) => ({
                   ...f,
                   mediaItems: [

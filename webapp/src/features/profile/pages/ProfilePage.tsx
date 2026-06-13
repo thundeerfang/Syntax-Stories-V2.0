@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { followApi, type ReadStreakPayload } from '@/api/follow';
@@ -8,11 +8,9 @@ import { analyticsApi, type ProfileOverviewMetrics, type ProfileTimePoint } from
 import {
   Edit3,
   Plus,
-  FileText,
   Monitor,
   Users,
   Award,
-  Terminal,
   TrendingUp,
   Copy,
   Check,
@@ -27,36 +25,31 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
-import { STACK_AND_TOOLS_MAX } from '@/lib/profile/stackAndToolsLimits';
 import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
 import { AreaChart } from '@/components/retroui';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { useAuthStore } from '@/store/auth';
-import { authApi, type IncompleteItemHints, type ParseCvMissingFieldKey } from '@/api/auth';
 import { achievementsApi } from '@/api/achievements';
-import { handleAchievementsResponse } from '@/lib/achievements/handleAchievementsResponse';
-import type { CompleteItemDialogSection } from '@/features/profile';
+import type { AchievementProgressItemDto } from '@/contracts/achievementsApi';
+import { RecentAchievementsPreview } from '@/features/achievements/components/RecentAchievementsPreview';
+import { ProfileActivitySparklinePlaceholder } from '@/features/profile/components/ProfileActivitySparklinePlaceholder';
 import { ProfileCardSkeleton } from '@/components/skeletons';
-import { ProfileSectionHeader } from '@/features/profile';
+import { ProfileSectionHeader, ProfileActivityTabs } from '@/features/profile';
 import {
-  WalletLottie,
   SparkLottie,
   StreakFireLottie,
   TestAccountLottie,
   ProfileActivityIconLottie,
 } from '@/components/ui';
 import { ProfileHeatmap } from '@/features/profile';
-import { ProfileActivityBlogList, profileBlogsPageHref } from '@/features/blog';
+import { ProfileActivityBlogList, ProfileActivitySwiperNav, profileBlogsPageHref } from '@/features/blog';
+import type { CompactBlogPostsSwiperHandle } from '@/features/blog';
 import {
   FollowersFollowingDialog,
-  MissingFieldsDialog,
   MediaFullViewDialog,
   ProfileSquadsCategoriesCard,
 } from '@/features/profile';
 import { StackToolsBadgeList } from '@/features/profile/components/StackToolsBadgeList';
 import { ProfilePageSkeletonInner } from '@/components/skeletons';
-import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
-import { EducationCard } from '@/components/settings-list/EducationCard';
 import { CertificationCard } from '@/components/settings-list/CertificationCard';
 import { ProjectCard } from '@/components/settings-list/ProjectCard';
 import { OpenSourceCard } from '@/components/settings-list/OpenSourceCard';
@@ -74,11 +67,11 @@ import { PROFILE_PUBLIC_SOCIAL_BTN } from '@/lib/profile/profilePublicCard';
 import {
   certificationListKey,
   domainFromUrl,
-  educationListKey,
   entriesCountSubtitle,
   formatJoinedDate,
   formatMonthYear,
   isImageUrl,
+  isPlaceholderProfileBio,
   locationWithoutType,
   markdownBioToHtml,
   normalizeDomain,
@@ -86,57 +79,39 @@ import {
   profileSectionMinVisible,
   projectListKey,
   reposCountSubtitle,
-  workExperienceListKey,
 } from '@/lib/profile/profileDisplay';
 import {
   type ActivityTab,
-  activityTabLabel,
-  filterIncompleteHintsAfterIndex,
-  incompleteHintsBlockingCount,
-  completeItemSectionToSettingsId,
-  COMPLETE_ITEM_PROFILE_SECTION,
 } from '../lib/profilePageHelpers';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, token, isHydrated, shouldBlock } = useRequireAuth();
-  const updateProfile = useAuthStore((s) => s.updateProfile);
   const [activityTab, setActivityTab] = useState<ActivityTab>('posts');
+  const activitySwiperRef = useRef<CompactBlogPostsSwiperHandle>(null);
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [profileUrlCopied, setProfileUrlCopied] = useState(false);
-  const [pdfUploading, setPdfUploading] = useState(false);
-  const [missingFieldsDialogOpen, setMissingFieldsDialogOpen] = useState(false);
   const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
-  const [missingFieldsList, setMissingFieldsList] = useState<ParseCvMissingFieldKey[]>([]);
-  const [incompleteItemHints, setIncompleteItemHints] = useState<IncompleteItemHints | null>(null);
-  /** Pending CV-extracted data: only saved when user clicks Save in the dialog; discarded on Skip. */
-  const [pendingCvExtracted, setPendingCvExtracted] = useState<
-    Parameters<typeof updateProfile>[0] | null
-  >(null);
-  const pdfInputRef = useRef<HTMLInputElement>(null);
   const [followCounts, setFollowCounts] = useState({ followersCount: 0, followingCount: 0 });
   const [readStreak, setReadStreak] = useState<ReadStreakPayload | null>(null);
   const [readHeatmapDays, setReadHeatmapDays] = useState<string[] | null>(null);
   const [achievementSummary, setAchievementSummary] = useState({ unlocked: 0, total: 10 });
+  const [achievementItems, setAchievementItems] = useState<AchievementProgressItemDto[]>([]);
   const [overviewMetrics, setOverviewMetrics] = useState<ProfileOverviewMetrics | null>(null);
   const [timeSeries, setTimeSeries] = useState<ProfileTimePoint[]>([]);
-  /** Only one section accordion open at a time; default Work Experience */
+  /** Only one section accordion open at a time; default Certifications */
   const [openSectionId, setOpenSectionId] = useState<ProfileSectionVariant | null>(
-    'workExperience'
+    'certification'
   );
   const accordionsRootRef = useRef<HTMLDivElement>(null);
 
   const [visibleCounts, setVisibleCounts] = useState<Record<ProfileSectionVariant, number>>({
-    workExperience: 1,
-    education: 1,
     certification: 1,
     project: 1,
     openSource: 2,
     mySetup: 2,
   });
   const [sectionLoading, setSectionLoading] = useState<Record<ProfileSectionVariant, boolean>>({
-    workExperience: false,
-    education: false,
     certification: false,
     project: false,
     openSource: false,
@@ -199,10 +174,11 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!token) return;
     achievementsApi
-      .summary(token)
-      .then((s) => {
-        if (s.success) {
-          setAchievementSummary({ unlocked: s.unlockedCount, total: s.total });
+      .list(token)
+      .then((data) => {
+        if (data.success) {
+          setAchievementItems(data.items);
+          setAchievementSummary({ unlocked: data.unlockedCount, total: data.total });
         }
       })
       .catch(() => {});
@@ -288,89 +264,6 @@ export default function ProfilePage() {
     }));
     return [...fromProjects, ...fromContributions].slice(0, 7);
   }, [profileProjects.github, user?.openSourceContributions]);
-
-  const missingFieldsDialogCurrentProfile = useMemo(() => {
-    if (pendingCvExtracted) {
-      return {
-        workExperiences: pendingCvExtracted.workExperiences ?? user?.workExperiences,
-        education: pendingCvExtracted.education ?? user?.education,
-        certifications: pendingCvExtracted.certifications ?? user?.certifications,
-        projects: pendingCvExtracted.projects ?? user?.projects,
-      };
-    }
-    if (user) {
-      return {
-        workExperiences: user.workExperiences,
-        education: user.education,
-        certifications: user.certifications,
-        projects: user.projects,
-      };
-    }
-    return null;
-  }, [pendingCvExtracted, user]);
-
-  const handleMissingFieldsCompleteItem = useCallback(
-    async (
-      section: CompleteItemDialogSection,
-      index: number,
-      newValues: Record<string, string>
-    ) => {
-      const bumpHints = () =>
-        setIncompleteItemHints((prev) => filterIncompleteHintsAfterIndex(prev, section, index));
-
-      if (
-        pendingCvExtracted &&
-        Array.isArray(pendingCvExtracted[section]) &&
-        (pendingCvExtracted[section] as unknown[])[index]
-      ) {
-        const arr = [...(pendingCvExtracted[section] as Array<Record<string, unknown>>)];
-        arr[index] = { ...arr[index], ...newValues };
-        setPendingCvExtracted({ ...pendingCvExtracted, [section]: arr });
-        bumpHints();
-        toast.success('Fields added. Complete all items to enable Save.');
-        return;
-      }
-      if (!user) return;
-      const arr = (user[section] ?? []) as Array<Record<string, unknown>>;
-      const updated = [...arr];
-      if (!updated[index]) return;
-      updated[index] = { ...updated[index], ...newValues };
-      await updateProfile({ [section]: updated } as Parameters<typeof updateProfile>[0], {
-        section: COMPLETE_ITEM_PROFILE_SECTION[section],
-      });
-      bumpHints();
-      toast.success('Fields saved.');
-    },
-    [pendingCvExtracted, updateProfile, user]
-  );
-
-  const handleEditIncompleteInSettings = useCallback(
-    async (section: CompleteItemDialogSection, index: number) => {
-      if (incompleteHintsBlockingCount(incompleteItemHints) > 0) {
-        toast.error(
-          'Complete all required fields first (use Add fields above) before opening Settings.'
-        );
-        return;
-      }
-      if (!pendingCvExtracted) return;
-      await updateProfile(pendingCvExtracted);
-      setPendingCvExtracted(null);
-      setMissingFieldsDialogOpen(false);
-      setMissingFieldsList([]);
-      setIncompleteItemHints(null);
-      const sectionId = completeItemSectionToSettingsId(section);
-      if (typeof window !== 'undefined') {
-        try {
-          window.sessionStorage.setItem('settingsTargetSection', sectionId);
-          window.sessionStorage.setItem('settingsTargetEditIndex', String(index));
-        } catch {
-          // ignore storage errors
-        }
-      }
-      router.push('/settings');
-    },
-    [incompleteItemHints, pendingCvExtracted, router, updateProfile]
-  );
 
   if (!isHydrated || shouldBlock) {
     return <ProfilePageSkeletonInner />;
@@ -481,40 +374,19 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  {user?.bio?.trim() ? (
-                    <div className="relative border-2 border-primary bg-muted/5 p-6 pt-8 group">
-                      <div className="absolute -top-3 left-6 inline-flex items-center bg-background px-2">
-                        <div className="flex items-center bg-primary px-2 py-1">
-                          <Terminal className="size-3 text-primary-foreground" />
-                          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
-                            Summary_Report
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="absolute top-2 right-4 text-[8px] font-mono text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
-                        REF_NO:{' '}
-                        {String((user as any)?.id ?? (user as any)?._id ?? '').slice(-8) ||
-                          '0000X-SYS'}
-                      </div>
-
-                      <div
-                        className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
-                        dangerouslySetInnerHTML={{ __html: markdownBioToHtml(user.bio) }}
-                      />
-
-                      <div className="absolute bottom-1 right-1 size-3 border-r-2 border-b-2 border-border/50" />
-                    </div>
+                  {user?.bio?.trim() && !isPlaceholderProfileBio(user.bio) ? (
+                    <div
+                      className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
+                      dangerouslySetInnerHTML={{ __html: markdownBioToHtml(user.bio) }}
+                    />
                   ) : (
-                    <div className="border-2 border-dashed border-border p-10 flex flex-col items-center justify-center text-center bg-muted/5">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">
-                        &gt; Biography_Data_Missing
-                      </p>
+                    <div className="py-6 text-center">
+                      <p className="text-sm text-muted-foreground italic mb-4">No bio yet.</p>
                       <Link
                         href="/settings"
                         className="px-4 py-2 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
                       >
-                        Initialize Summary
+                        Add bio
                       </Link>
                     </div>
                   )}
@@ -527,13 +399,6 @@ export default function ProfilePage() {
                     <span className="font-black text-sm uppercase">10</span>
                     <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
                       Respect
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <WalletLottie play size={24} />
-                    <span className="font-black text-sm uppercase">0</span>
-                    <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
-                      Wallet
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -587,129 +452,24 @@ export default function ProfilePage() {
                   >
                     <PenSquare className="size-3.5" /> Add post
                   </Link>
+                  {user?.username ? <ProfileActivitySwiperNav swiperRef={activitySwiperRef} /> : null}
                 </div>
               </div>
-              <div className="flex gap-1 border-b-4 border-border pb-3">
-                {(['posts', 'replies', 'repost'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActivityTab(tab)}
-                    className={cn(
-                      'flex-1 px-3 py-2 font-black text-[10px] uppercase tracking-widest border-2 border-border transition-all duration-200 ease-out',
-                      activityTab === tab
-                        ? 'bg-primary text-primary-foreground border-primary shadow'
-                        : 'bg-card hover:bg-muted/70 text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {activityTabLabel(tab)}
-                  </button>
-                ))}
-              </div>
-              {activityTab === 'posts' && user?.username ? (
-                <ProfileActivityBlogList username={user.username} />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {activityTab === 'replies'
-                      ? 'No replies yet.'
-                      : activityTab === 'repost'
-                        ? 'No reposts yet.'
-                        : 'Nothing here yet.'}
-                  </p>
-                </div>
-              )}
-            </section>
-
-            {/* AUTOFILL (owner-only) */}
-            <div className="border-4 border-border bg-primary p-6 flex flex-col md:flex-row items-center gap-6 shadow">
-              <input
-                ref={pdfInputRef}
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = '';
-                  if (!file || !token) return;
-                  setPdfUploading(true);
-                  try {
-                    const {
-                      extracted,
-                      missingFields,
-                      incompleteItemHints: hints,
-                      achievements,
-                    } = await authApi.parseCv(token, file);
-                    handleAchievementsResponse({ achievements });
-                    setIncompleteItemHints(hints ?? null);
-                    setMissingFieldsList(missingFields);
-                    if (Object.keys(extracted).length > 0) {
-                      setPendingCvExtracted(extracted);
-                      setMissingFieldsDialogOpen(true);
-                    } else {
-                      toast.info('No profile data could be extracted from this PDF.');
-                    }
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : 'Failed to parse PDF');
-                  } finally {
-                    setPdfUploading(false);
-                  }
-                }}
+              <ProfileActivityTabs
+                tabs={['posts', 'replies', 'repost']}
+                value={activityTab}
+                onChange={setActivityTab}
               />
-              <div className="size-16 bg-white border-4 border-border flex items-center justify-center shrink-0 -rotate-3">
-                <FileText className="size-8 text-primary" />
-              </div>
-              <div className="flex-1 space-y-1 text-center md:text-left">
-                <h3 className="text-lg font-black uppercase tracking-tight text-primary-foreground">
-                  Autofill your profile!
-                </h3>
-                <p className="text-xs font-bold text-primary-foreground/80 uppercase">
-                  Import details directly from your CV in seconds.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={pdfUploading}
-                onClick={() => pdfInputRef.current?.click()}
-                className="px-6 py-3 bg-white text-black border-4 border-border font-black text-xs uppercase tracking-widest shadow hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-60 disabled:pointer-events-none"
-              >
-                {pdfUploading ? 'Parsing…' : 'Upload PDF'}
-              </button>
-            </div>
-
-            <MissingFieldsDialog
-              open={missingFieldsDialogOpen}
-              onClose={() => {
-                setMissingFieldsDialogOpen(false);
-                setMissingFieldsList([]);
-                setIncompleteItemHints(null);
-                setPendingCvExtracted(null);
-              }}
-              missingFields={missingFieldsList}
-              incompleteItemHints={incompleteItemHints}
-              currentProfile={missingFieldsDialogCurrentProfile}
-              settingsHref="/settings"
-              onSave={async (values) => {
-                const scalar: Parameters<typeof updateProfile>[0] = {};
-                if (typeof values.bio === 'string' && values.bio.trim())
-                  scalar.bio = values.bio.trim();
-                if (typeof values.linkedin === 'string' && values.linkedin.trim())
-                  scalar.linkedin = values.linkedin.trim();
-                if (typeof values.github === 'string' && values.github.trim())
-                  scalar.github = values.github.trim();
-                if (Array.isArray(values.stackAndTools) && values.stackAndTools.length > 0) {
-                  scalar.stackAndTools = values.stackAndTools.slice(0, STACK_AND_TOOLS_MAX);
-                }
-                const payload = pendingCvExtracted ? { ...pendingCvExtracted, ...scalar } : scalar;
-                if (Object.keys(payload).length > 0) await updateProfile(payload);
-                setPendingCvExtracted(null);
-                setMissingFieldsDialogOpen(false);
-                setMissingFieldsList([]);
-                setIncompleteItemHints(null);
-                toast.success('Profile updated from your CV. Add the rest in Settings when ready.');
-              }}
-              onCompleteItem={handleMissingFieldsCompleteItem}
-              onEditInSettings={pendingCvExtracted ? handleEditIncompleteInSettings : undefined}
-            />
+              {user?.username ? (
+                <ProfileActivityBlogList
+                  key={activityTab}
+                  ref={activitySwiperRef}
+                  username={user.username}
+                  kind={activityTab}
+                  accessToken={token}
+                />
+              ) : null}
+            </section>
 
             <MediaFullViewDialog
               open={!!mySetupPreview}
@@ -724,8 +484,7 @@ export default function ProfilePage() {
                 <ProfileSectionHeader
                   icon={Monitor}
                   title="Stack & Tools"
-                  settingsSection="stack-tools"
-                  settingsUrl={() => '/settings'}
+                  onAddClick={() => goToSettingsSection('stack-tools')}
                 />
                 {user?.stackAndTools?.length ? (
                   <div className="relative">
@@ -754,8 +513,7 @@ export default function ProfilePage() {
                 <ProfileSectionHeader
                   icon={Wrench}
                   title="My Setup"
-                  settingsSection="my-setup"
-                  settingsUrl={() => '/settings'}
+                  onAddClick={() => goToSettingsSection('my-setup')}
                 />
                 {(user as any)?.mySetup?.length ? (
                   <div className="relative">
@@ -835,166 +593,6 @@ export default function ProfilePage() {
             </div>
 
             <div ref={accordionsRootRef} className="space-y-6">
-              <ProfileSectionAccordion
-                variant="workExperience"
-                open={openSectionId === 'workExperience'}
-                onOpenChange={(open) => setSectionOpen('workExperience', open)}
-                subtitle={entriesCountSubtitle(user?.workExperiences?.length ?? 0)}
-                headerAction={
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow active:shadow-none active:translate-x-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      goToSettingsSection('work-experiences');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        goToSettingsSection('work-experiences');
-                      }
-                    }}
-                  >
-                    <Plus className="size-3" /> Add
-                  </div>
-                }
-              >
-                {user?.workExperiences?.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.workExperience ? (
-                      <ProfileCardSkeleton lines={4} />
-                    ) : (
-                      user.workExperiences
-                        .slice(0, visibleCounts.workExperience)
-                        .map((e, i) => (
-                          <WorkExperienceCard
-                            key={workExperienceListKey(e as Record<string, unknown>)}
-                            experience={e}
-                            index={i}
-                            saving={false}
-                            onEdit={() => goToSettingsSection('work-experiences', { editIndex: i })}
-                            onRemove={() => {}}
-                            onPreviewMedia={() => {}}
-                            formatMonthYear={formatMonthYear}
-                            locationWithoutType={locationWithoutType}
-                            normalizeDomain={normalizeDomain}
-                            isImageUrl={isImageUrl}
-                            hideActions
-                          />
-                        ))
-                    )}
-
-                    {user.workExperiences.length > visibleCounts.workExperience ? (
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          disabled={sectionLoading.workExperience}
-                          onClick={() => viewMore('workExperience', 1)}
-                          className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                        >
-                          {sectionLoading.workExperience
-                            ? 'LOADING…'
-                            : `View more (${visibleCounts.workExperience}/${user.workExperiences.length})`}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Add work experience
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => goToSettingsSection('work-experiences')}
-                      className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                    >
-                      <Plus className="size-3" /> Add
-                    </button>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
-              <ProfileSectionAccordion
-                variant="education"
-                open={openSectionId === 'education'}
-                onOpenChange={(open) => setSectionOpen('education', open)}
-                subtitle={entriesCountSubtitle(user?.education?.length ?? 0)}
-                headerAction={
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className="text-[10px] font-black uppercase flex items-center gap-1 hover:text-primary transition-colors border-2 border-border px-2 py-1 bg-card shadow active:shadow-none active:translate-x-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      goToSettingsSection('education');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        goToSettingsSection('education');
-                      }
-                    }}
-                  >
-                    <Plus className="size-3" /> Add
-                  </div>
-                }
-              >
-                {user?.education?.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.education ? (
-                      <ProfileCardSkeleton lines={3} />
-                    ) : (
-                      user.education
-                        .slice(0, visibleCounts.education)
-                        .map((e, i) => (
-                          <EducationCard
-                            key={educationListKey(e as Record<string, unknown>)}
-                            education={e}
-                            index={i}
-                            saving={false}
-                            onEdit={() => goToSettingsSection('education', { editIndex: i })}
-                            onRemove={() => {}}
-                            formatMonthYear={formatMonthYear}
-                            hideActions
-                          />
-                        ))
-                    )}
-
-                    {user.education.length > visibleCounts.education ? (
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          disabled={sectionLoading.education}
-                          onClick={() => viewMore('education', 1)}
-                          className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                        >
-                          {sectionLoading.education
-                            ? 'LOADING…'
-                            : `View more (${visibleCounts.education}/${user.education.length})`}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Add education
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => goToSettingsSection('education')}
-                      className="inline-flex items-center gap-1 mt-2 text-[10px] font-black text-primary uppercase hover:underline"
-                    >
-                      <Plus className="size-3" /> Add
-                    </button>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
               <ProfileSectionAccordion
                 variant="certification"
                 open={openSectionId === 'certification'}
@@ -1246,11 +844,16 @@ export default function ProfilePage() {
           {/* ================= RIGHT COLUMN ================= */}
           <div className="lg:col-span-4 space-y-6">
             {/* 1. FOLLOWERS / FOLLOWING CARD */}
-            <div className="border-4 border-border bg-card p-4 shadow">
+            <button
+              type="button"
+              onClick={() => setFollowersDialogOpen(true)}
+              aria-label="Open followers and following"
+              className="w-full border-4 border-border bg-card p-4 shadow text-left transition-transform active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center">
-                    <Users className="size-4 text-primary" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center shrink-0">
+                    <Users className="size-4 text-primary" aria-hidden />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-black uppercase">Followers & Following</p>
@@ -1266,16 +869,11 @@ export default function ProfilePage() {
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setFollowersDialogOpen(true)}
-                  aria-label="Open followers and following"
-                  className="p-2 border-2 border-border bg-card hover:bg-muted shadow active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all shrink-0"
-                >
+                <span className="p-2 border-2 border-border bg-card shrink-0" aria-hidden>
                   <ChevronRight className="size-4 text-foreground" />
-                </button>
+                </span>
               </div>
-            </div>
+            </button>
 
             <ProfileSquadsCategoriesCard
               username={user?.username ?? null}
@@ -1430,9 +1028,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-1 gap-3">
                 {/* Views this week: chart only when we have at least 2 days of real week data */}
                 <div className="flex flex-row items-stretch min-h-0 p-3 border-2 border-border bg-muted/5 shadow">
-                  <div
-                    className={`flex flex-col justify-center shrink-0 text-left ${showWeekChart ? 'pr-4' : ''}`}
-                  >
+                  <div className="flex flex-col justify-center shrink-0 pr-4 text-left">
                     <p className="text-lg font-black italic leading-none">
                       {overviewMetrics ? (overviewMetrics.views7Days ?? 0) : 0}
                     </p>
@@ -1445,8 +1041,11 @@ export default function ProfilePage() {
                         : '—'}
                     </p>
                   </div>
-                  {showWeekChart ? (
-                    <div className="flex-1 min-w-0 h-14 overflow-hidden flex items-center">
+                  <div
+                    className="flex-1 min-w-0 h-14 overflow-hidden flex items-center"
+                    aria-label={showWeekChart ? undefined : 'No activity data yet'}
+                  >
+                    {showWeekChart ? (
                       <AreaChart
                         data={weekChartData}
                         index="name"
@@ -1454,23 +1053,14 @@ export default function ProfilePage() {
                         height={56}
                         sparkline
                       />
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-w-0 h-14 flex items-center justify-center border-2 border-dashed border-border bg-muted/5">
-                      <Link
-                        href="/profile/analytics"
-                        className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest hover:text-primary transition-colors"
-                      >
-                        View detailed analysis
-                      </Link>
-                    </div>
-                  )}
+                    ) : (
+                      <ProfileActivitySparklinePlaceholder />
+                    )}
+                  </div>
                 </div>
                 {/* Views this month: chart only when we have at least 7 days of data */}
                 <div className="flex flex-row items-stretch min-h-0 p-3 border-2 border-border bg-muted/5 shadow">
-                  <div
-                    className={`flex flex-col justify-center shrink-0 text-left ${showMonthChart ? 'pr-4' : ''}`}
-                  >
+                  <div className="flex flex-col justify-center shrink-0 pr-4 text-left">
                     <p className="text-lg font-black italic leading-none">
                       {overviewMetrics ? (overviewMetrics.views30Days ?? 0) : 0}
                     </p>
@@ -1481,8 +1071,11 @@ export default function ProfilePage() {
                       {overviewMetrics ? `${overviewMetrics.repeatVisitors7Days ?? 0} repeat` : '—'}
                     </p>
                   </div>
-                  {showMonthChart ? (
-                    <div className="flex-1 min-w-0 h-14 overflow-hidden flex items-center">
+                  <div
+                    className="flex-1 min-w-0 h-14 overflow-hidden flex items-center"
+                    aria-label={showMonthChart ? undefined : 'No activity data yet'}
+                  >
+                    {showMonthChart ? (
                       <AreaChart
                         data={monthChartData}
                         index="name"
@@ -1490,23 +1083,14 @@ export default function ProfilePage() {
                         height={56}
                         sparkline
                       />
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-w-0 h-14 flex items-center justify-center border-2 border-dashed border-border bg-muted/5">
-                      <Link
-                        href="/profile/analytics"
-                        className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest hover:text-primary transition-colors"
-                      >
-                        View detailed analysis
-                      </Link>
-                    </div>
-                  )}
+                    ) : (
+                      <ProfileActivitySparklinePlaceholder />
+                    )}
+                  </div>
                 </div>
                 {/* Total profile views: chart only when we have at least 7 days (same 30d trend) */}
                 <div className="flex flex-row items-stretch min-h-0 p-3 border-2 border-border bg-muted/5 shadow">
-                  <div
-                    className={`flex flex-col justify-center shrink-0 text-left ${showTotalChart ? 'pr-4' : ''}`}
-                  >
+                  <div className="flex flex-col justify-center shrink-0 pr-4 text-left">
                     <p className="text-lg font-black italic leading-none">
                       {overviewMetrics ? (overviewMetrics.totalViews ?? 0) : 0}
                     </p>
@@ -1517,8 +1101,11 @@ export default function ProfilePage() {
                       Lifetime (last 30 days window)
                     </p>
                   </div>
-                  {showTotalChart ? (
-                    <div className="flex-1 min-w-0 h-14 overflow-hidden flex items-center">
+                  <div
+                    className="flex-1 min-w-0 h-14 overflow-hidden flex items-center"
+                    aria-label={showTotalChart ? undefined : 'No activity data yet'}
+                  >
+                    {showTotalChart ? (
                       <AreaChart
                         data={monthChartData}
                         index="name"
@@ -1526,17 +1113,10 @@ export default function ProfilePage() {
                         height={56}
                         sparkline
                       />
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-w-0 h-14 flex items-center justify-center border-2 border-dashed border-border bg-muted/5">
-                      <Link
-                        href="/profile/analytics"
-                        className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest hover:text-primary transition-colors"
-                      >
-                        View detailed analysis
-                      </Link>
-                    </div>
-                  )}
+                    ) : (
+                      <ProfileActivitySparklinePlaceholder />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1566,25 +1146,6 @@ export default function ProfilePage() {
                     Total reading days
                   </p>
                 </div>
-              </div>
-
-              {/* Tags bars */}
-              <div className="space-y-3">
-                <p className="text-[9px] font-black uppercase text-muted-foreground">Top tags</p>
-                {[
-                  { tag: 'AI', pct: '80%', val: '+50%' },
-                  { tag: 'React', pct: '45%', val: '+20%' },
-                ].map((item) => (
-                  <div key={item.tag} className="space-y-1">
-                    <div className="flex justify-between text-[8px] font-black uppercase">
-                      <span>{item.tag}</span>
-                      <span>{item.val}</span>
-                    </div>
-                    <div className="h-2.5 bg-muted border-2 border-border">
-                      <div className="h-full bg-primary" style={{ width: item.pct }} />
-                    </div>
-                  </div>
-                ))}
               </div>
 
               {/* Activity Grid: Posts, Replies, Upvoted counts Restored */}
@@ -1642,32 +1203,7 @@ export default function ProfilePage() {
                   }}
                 />
               </div>
-            </div>
-
-            {/* 6. BADGES & AWARDS restored */}
-            <div className="border-4 border-border bg-card p-5 shadow space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[10px] font-black uppercase tracking-widest">
-                  Badges & Awards
-                </h3>
-                <span className="text-[9px] font-black text-primary uppercase cursor-pointer hover:underline">
-                  Learn more
-                </span>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between py-2 border-b-2 border-border border-dashed">
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground">
-                    Top reader badge
-                  </span>
-                  <span className="text-xs font-black">x0</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground">
-                    Total Awards
-                  </span>
-                  <span className="text-xs font-black">x0</span>
-                </div>
-              </div>
+              <RecentAchievementsPreview items={achievementItems} className="mt-4" />
             </div>
           </div>
         </div>

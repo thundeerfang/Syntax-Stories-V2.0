@@ -14,9 +14,10 @@ import { enqueueAuthEmailBullmq } from '../queues/authEmailBullmq.js';
 import { redisKeys } from '../../shared/redis/keys.js';
 import { UserModel } from '../../models/User.js';
 import { AdminUserModel } from '../rbac/models/AdminUser.js';
-
-const INVITE_OTP_TTL_SEC = 600;
-const VERIFIED_TOKEN_TTL_SEC = 15 * 60;
+import {
+  ADMIN_INVITE_OTP_TTL_SEC,
+  ADMIN_INVITE_VERIFIED_TOKEN_TTL_SEC,
+} from '../../variable/constants.js';
 
 export function isAdminOperatorPasswordValid(password: string): boolean {
   return password.length > 10 && /[a-z]/.test(password) && /[A-Z]/.test(password);
@@ -60,11 +61,11 @@ export async function sendAdminInviteOtp(emailNorm: string): Promise<
   const payload = { h: hashEmailOtp(emailNorm, code), v: otpVersion };
   await redis.setEx(
     redisKeys.adminInvite.otp(emailNorm),
-    INVITE_OTP_TTL_SEC,
+    ADMIN_INVITE_OTP_TTL_SEC,
     JSON.stringify(payload)
   );
 
-  const ttlMin = Math.ceil(INVITE_OTP_TTL_SEC / 60);
+  const ttlMin = Math.ceil(ADMIN_INVITE_OTP_TTL_SEC / 60);
   const queued = await enqueueAuthEmailBullmq({
     type: 'admin_invite_otp',
     email: emailNorm,
@@ -98,7 +99,7 @@ export async function sendAdminInviteOtp(emailNorm: string): Promise<
   return {
     ok: true,
     otpVersion,
-    expiresInSeconds: INVITE_OTP_TTL_SEC,
+    expiresInSeconds: ADMIN_INVITE_OTP_TTL_SEC,
   };
 }
 
@@ -145,14 +146,14 @@ export async function verifyAdminInviteOtp(
   const emailVerificationToken = crypto.randomBytes(24).toString('hex');
   await redis.setEx(
     redisKeys.adminInvite.verified(emailVerificationToken),
-    VERIFIED_TOKEN_TTL_SEC,
+    ADMIN_INVITE_VERIFIED_TOKEN_TTL_SEC,
     emailNorm
   );
 
   return {
     ok: true,
     emailVerificationToken,
-    expiresInSeconds: VERIFIED_TOKEN_TTL_SEC,
+    expiresInSeconds: ADMIN_INVITE_VERIFIED_TOKEN_TTL_SEC,
   };
 }
 

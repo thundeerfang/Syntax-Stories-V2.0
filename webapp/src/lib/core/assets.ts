@@ -1,6 +1,6 @@
 /**
- * Static public asset paths (developer portraits live under /public/developers).
- * Team roster is served from CMS: GET /api/marketing/about
+ * Static public asset paths (developer portraits under /public/developers).
+ * About page team roster references these via `aboutPage.seed.ts`.
  */
 
 const DEVELOPERS_BASE = '/developers';

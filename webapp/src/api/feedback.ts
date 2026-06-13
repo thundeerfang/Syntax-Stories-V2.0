@@ -1,3 +1,4 @@
+import { blogAuthFetch } from '@/lib/api/blogAuthFetch';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { getOrCreateDeviceFingerprint } from '@/lib/auth/deviceFingerprint';
 
@@ -5,6 +6,8 @@ export {
   FEEDBACK_MAX_IMAGE_BYTES,
   type FeedbackClientMeta,
   type FeedbackCategoryDto,
+  type FeedbackQuotaResponse,
+  type FeedbackWeeklyQuota,
   type SubmitFeedbackResponse,
   type SubmitFeedbackMultipartParams,
 } from '@contracts/feedbackApi';
@@ -12,6 +15,8 @@ export {
 import type {
   FeedbackCategoryDto,
   FeedbackClientMeta,
+  FeedbackQuotaResponse,
+  FeedbackWeeklyQuota,
   SubmitFeedbackMultipartParams,
   SubmitFeedbackResponse,
 } from '@contracts/feedbackApi';
@@ -73,10 +78,34 @@ export async function fetchFeedbackCategories(): Promise<FeedbackCategoryDto[]> 
   return Array.isArray(data.categories) ? data.categories : [];
 }
 
+function quotaUrl(): string {
+  const b = apiBase();
+  const path = '/api/feedback/quota';
+  return b ? `${b}${path}` : path;
+}
+
+export async function fetchFeedbackQuota(accessToken: string): Promise<FeedbackWeeklyQuota> {
+  const res = await blogAuthFetch(quotaUrl(), { method: 'GET' }, accessToken);
+  const data = (await res.json().catch(() => ({}))) as FeedbackQuotaResponse & {
+    message?: string;
+  };
+  if (!res.ok || !data.quota) {
+    throw new Error(data.message ?? res.statusText ?? 'Could not load feedback quota.');
+  }
+  return data.quota;
+}
+
 export async function submitFeedbackMultipart(
   params: SubmitFeedbackMultipartParams,
-  token?: string | null
+  token: string
 ): Promise<SubmitFeedbackResponse> {
+  if (!token?.trim()) {
+    throw new Error('Sign in required to send feedback.');
+  }
+  if (!params.attachment || params.attachment.size <= 0) {
+    throw new Error('An image attachment is required.');
+  }
+
   const fd = new FormData();
   fd.set('categoryId', params.categoryId);
   fd.set('subject', params.subject);
@@ -84,19 +113,14 @@ export async function submitFeedbackMultipart(
   if (params.clientMeta && Object.keys(params.clientMeta).length > 0) {
     fd.set('clientMeta', JSON.stringify(params.clientMeta));
   }
-  if (params.firstName != null) fd.set('firstName', params.firstName);
-  if (params.lastName != null) fd.set('lastName', params.lastName);
-  if (params.email != null) fd.set('email', params.email);
-  if (params.altcha) fd.set('altcha', params.altcha);
-  if (params.attachment && params.attachment.size > 0) {
-    fd.set('attachment', params.attachment, params.attachment.name);
-  }
+  fd.set('attachment', params.attachment, params.attachment.name);
   if (params.attachmentTitle != null && params.attachmentTitle.trim() !== '') {
     fd.set('attachmentTitle', params.attachmentTitle.trim().slice(0, 120));
   }
 
-  const headers: Record<string, string> = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+  };
   const fp = getOrCreateDeviceFingerprint();
   if (fp) headers['X-Device-Fingerprint'] = fp;
 

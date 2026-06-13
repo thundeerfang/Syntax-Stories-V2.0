@@ -10,8 +10,8 @@ import { computeLegalContentHash } from './legalContentHash.js';
 import { getLegalDbNow } from './legalDbTime.js';
 import { slugForKind, type LegalKind } from './legalKinds.js';
 import { legalJobQueue } from './legalJobQueue.js';
+import { LEGAL_PUBLISH_LOCK_TTL_SEC } from '../../../variable/constants.js';
 
-const LOCK_TTL_SEC = 30;
 const lockKey = (policyId: string) => `legal:publish:${policyId}`;
 
 export async function acquirePublishLock(
@@ -20,7 +20,7 @@ export async function acquirePublishLock(
   const token = crypto.randomBytes(16).toString('hex');
   const redis = getRedis();
   if (redis) {
-    const ok = await redis.set(lockKey(policyId), token, { NX: true, EX: LOCK_TTL_SEC });
+    const ok = await redis.set(lockKey(policyId), token, { NX: true, EX: LEGAL_PUBLISH_LOCK_TTL_SEC });
     if (ok !== 'OK') return null;
     return {
       release: async () => {

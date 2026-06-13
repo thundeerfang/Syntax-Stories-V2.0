@@ -8,8 +8,6 @@ function layoutFromRoot(root: string): UploadDirectoryLayout {
     avatars: path.join(root, 'avatars'),
     covers: path.join(root, 'covers'),
     media: path.join(root, 'media'),
-    logos: path.join(root, 'logos'),
-    schoolLogos: path.join(root, 'school-logos'),
     orgLogos: path.join(root, 'org-logos'),
     feedback: path.join(root, 'feedback'),
   };

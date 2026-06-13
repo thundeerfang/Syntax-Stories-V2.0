@@ -2,8 +2,6 @@
  * Profile section shapes used when diffing for audit and loading current state before update.
  */
 export type ProfileSections = {
-  education?: unknown[];
-  workExperiences?: unknown[];
   projects?: unknown[];
   certifications?: unknown[];
   openSourceContributions?: unknown[];
@@ -16,8 +14,6 @@ export type ProfileUpdateSection =
   | 'basic'
   | 'social'
   | 'stack'
-  | 'work'
-  | 'education'
   | 'certifications'
   | 'projects'
   | 'setup'
@@ -27,8 +23,6 @@ export const PROFILE_UPDATE_SECTIONS = [
   'basic',
   'social',
   'stack',
-  'work',
-  'education',
   'certifications',
   'projects',
   'setup',
@@ -61,8 +55,6 @@ export const PROFILE_SECTION_KEYS: Record<ProfileUpdateSection, readonly string[
   ],
   social: ['linkedin', 'instagram', 'github', 'youtube'],
   stack: ['stackAndTools'],
-  work: ['workExperiences'],
-  education: ['education'],
   certifications: ['certifications'],
   projects: ['projects', 'openSourceContributions', 'isGitAccount'],
   setup: ['mySetup'],

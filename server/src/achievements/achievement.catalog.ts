@@ -1,15 +1,15 @@
 import type { AchievementDef } from './achievement.types.js';
+import { ACHIEVEMENT_CELEBRATE_DIALOG } from './achievement.types.js';
 
 /** Static defaults synced into MongoDB on server start. */
-export const ACHIEVEMENT_CATALOG_VERSION = 5;
-
-const dialog = 'dialog' as const;
+export const ACHIEVEMENT_CATALOG_VERSION = 6;
 
 /** Keys removed from the active catalog (kept in DB as hidden). */
 export const RETIRED_ACHIEVEMENT_KEYS = [
   'profile-location',
   'profile-cv',
   'profile-education',
+  'profile-work',
 ] as const;
 
 export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
@@ -23,7 +23,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 5,
     metric: 'respect.given.total',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 1,
   },
   {
@@ -36,7 +36,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'respect.given.total',
     target: 3,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 2,
   },
   {
@@ -49,7 +49,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 15,
     metric: 'read.brief.total',
     target: 4,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 3,
   },
   {
@@ -62,7 +62,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 15,
     metric: 'posts.authored.count',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 4,
   },
   {
@@ -75,7 +75,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'profile.has_avatar',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 5,
   },
   {
@@ -88,7 +88,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'profile.has_cover',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 6,
   },
   {
@@ -101,7 +101,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'profile.has_bio',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 7,
   },
   {
@@ -114,21 +114,8 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'profile.has_github',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 8,
-  },
-  {
-    id: 'profile-work',
-    slug: 'work-experience',
-    title: 'Work Experience',
-    description: 'Add work experience to your profile.',
-    category: 'profile',
-    module: 'profile',
-    points: 10,
-    metric: 'profile.has_work',
-    target: 1,
-    celebrateAs: dialog,
-    sortOrder: 9,
   },
   {
     id: 'stack-1',
@@ -140,7 +127,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'stack.tools.count',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 10,
   },
   {
@@ -153,7 +140,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'profile.setup.count',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 11,
   },
   {
@@ -166,7 +153,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 15,
     metric: 'social.following.count',
     target: 3,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 12,
   },
   {
@@ -179,7 +166,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 15,
     metric: 'blog.categories.followed.count',
     target: 3,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 13,
   },
   {
@@ -192,7 +179,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 15,
     metric: 'squads.joined.count',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 14,
   },
   {
@@ -205,7 +192,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 10,
     metric: 'feedback.submitted.count',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 15,
   },
   {
@@ -218,7 +205,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 25,
     metric: 'referral.converted.total',
     target: 1,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 16,
   },
   {
@@ -231,7 +218,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 75,
     metric: 'referral.converted.total',
     target: 5,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 17,
   },
   {
@@ -244,7 +231,7 @@ export const ACHIEVEMENT_CATALOG: readonly AchievementDef[] = [
     points: 150,
     metric: 'referral.converted.total',
     target: 10,
-    celebrateAs: dialog,
+    celebrateAs: ACHIEVEMENT_CELEBRATE_DIALOG,
     sortOrder: 18,
   },
 ] as const;

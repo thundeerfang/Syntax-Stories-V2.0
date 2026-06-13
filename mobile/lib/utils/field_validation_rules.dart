@@ -11,7 +11,7 @@ abstract final class FieldLimits {
   static const usernameMin = 2;
   static const usernameMax = 30;
 
-  static const bioMax = 500;
+  static const bioMax = 100;
 
   static const emailMax = 254;
 

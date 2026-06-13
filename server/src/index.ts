@@ -28,9 +28,12 @@ async function start(): Promise<void> {
       await import('./services/gamification/gamificationWorker.service.js');
     const { startAchievementOutboxProcessor } =
       await import('./services/achievements/achievementOutboxProcessor.service.js');
+    const { startAchievementUnlockOutboxConsumer } =
+      await import('./services/achievements/achievementUnlockOutbox.service.js');
     await startGamificationOutboxProcessor();
     await startGamificationWorker();
     await startAchievementOutboxProcessor();
+    await startAchievementUnlockOutboxConsumer();
   } catch (e) {
     console.warn('[Gamification] Background workers failed to start (API continues):', String(e));
   }
@@ -45,6 +48,9 @@ async function start(): Promise<void> {
   const { startLegalBackgroundJobs } =
     await import('./admin-platform/cms/legal/legalBackground.js');
   startLegalBackgroundJobs();
+  const { startStorageGuardProbe } =
+    await import('./services/platform/storageGuard.service.js');
+  startStorageGuardProbe();
   const { default: app } = await import('./app.js');
   app.listen(env.PORT, () => {
     console.log(`[Server] Listening on port ${env.PORT}`);

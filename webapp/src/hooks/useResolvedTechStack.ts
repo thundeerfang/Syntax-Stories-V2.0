@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { TechStackItem } from '@contracts/referenceApi';
-import { resolveTechStack } from '@/lib/blog/referenceSearch';
+import { searchApi } from '@/api/search';
 
 /** Resolve display names to catalog rows with iconUrl from the backend. */
 export function useResolvedTechStack(names: readonly string[]): TechStackItem[] {
@@ -22,7 +22,7 @@ export function useResolvedTechStack(names: readonly string[]): TechStackItem[] 
       };
     }
 
-    void resolveTechStack([...list]).then((resolved) => {
+    void searchApi.resolveTechStack([...list]).then((resolved) => {
       if (!cancelled) setItems(resolved);
     });
 

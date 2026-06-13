@@ -9,13 +9,8 @@ import { writeAuditLog } from '../../../shared/audit/auditLog.js';
 import { AuditAction } from '../../../shared/audit/events.js';
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { logSecurityEvent } from '../securityEventLog.js';
-
-const LINK_TTL_SEC = 300; // 5 min
-const LINK_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord', 'twitch'] as const;
-type LinkProvider = (typeof LINK_PROVIDERS)[number];
-
-const DISCONNECT_PROVIDERS = ['google', 'github', 'facebook', 'x', 'discord', 'twitch'] as const;
-type DisconnectProvider = (typeof DISCONNECT_PROVIDERS)[number];
+import { isOAuthLinkRouteKey, getOAuthLinkRouteKeys } from '../../../oauth/oauth.providers.js';
+import { AUTH_TTL } from '../../../config/auth.ttls.js';
 
 export async function linkRequest(req: Request, res: Response): Promise<void> {
   try {
@@ -25,9 +20,9 @@ export async function linkRequest(req: Request, res: Response): Promise<void> {
       return;
     }
     const provider = (req.body?.provider as string)?.toLowerCase();
-    if (!provider || !LINK_PROVIDERS.includes(provider as LinkProvider)) {
+    if (!provider || !isOAuthLinkRouteKey(provider)) {
       res.status(400).json({
-        message: 'Invalid provider. Use: google, github, facebook, x, discord, twitch',
+        message: `Invalid provider. Use: ${getOAuthLinkRouteKeys().join(', ')}`,
         success: false,
       });
       return;
@@ -41,7 +36,7 @@ export async function linkRequest(req: Request, res: Response): Promise<void> {
     }
     const linkKey = crypto.randomBytes(16).toString('hex');
     const key = redisKeys.oauth.link(linkKey);
-    await redis.setEx(key, LINK_TTL_SEC, String(user._id));
+    await redis.setEx(key, AUTH_TTL.oauthLinkSec, String(user._id));
     const base = (env.BACKEND_URL || '').replace(/\/$/, '');
     if (!base) {
       res.status(500).json({ message: 'Server misconfiguration', success: false });
@@ -65,11 +60,11 @@ export async function disconnectProvider(req: Request, res: Response): Promise<v
       return;
     }
     const provider = (req.params.provider as string)?.toLowerCase();
-    if (!provider || !DISCONNECT_PROVIDERS.includes(provider as DisconnectProvider)) {
+    if (!provider || !isOAuthLinkRouteKey(provider)) {
       res
         .status(400)
         .json({
-          message: 'Invalid provider. Use: google, github, facebook, x, discord, twitch',
+          message: `Invalid provider. Use: ${getOAuthLinkRouteKeys().join(', ')}`,
           success: false,
         });
       return;

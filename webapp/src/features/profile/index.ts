@@ -4,20 +4,20 @@ export {
   type ProfileHeatmapProps,
 } from './components/ProfileHeatmap';
 export { ProfileSectionHeader } from './components/ProfileSectionHeader';
+export { ProfileActivityTabs } from './components/ProfileActivityTabs';
 export { StackToolsBadgeList } from './components/StackToolsBadgeList';
 export { ProfileSquadsCategoriesCard } from './components/ProfileSquadsCategoriesCard';
 export type { ProfileSquadsCategoriesCardProps } from './components/ProfileSquadsCategoriesCard';
+export { ProfileBlogsStatusTabs } from './components/ProfileBlogsStatusTabs';
+export type { ProfileBlogsStatusTab } from './components/ProfileBlogsStatusTabs';
 export { UserProfileBlogsContent } from './components/UserProfileBlogsContent';
 export { default as ProfilePage } from './pages/ProfilePage';
 export {
   FollowersFollowingDialog,
   MediaFullViewDialog,
-  MissingFieldsDialog,
   ShareProfileDialog,
-  SyntaxCardDialog,
+  SyntaxCardPanel,
   UploadLogoDialog,
-  type CompleteItemDialogSection,
-  type MissingFieldsDialogProps,
   type SettingsLogoUploadKind,
-  type SyntaxCardDialogProps,
+  type SyntaxCardPanelProps,
 } from './components/dialog';

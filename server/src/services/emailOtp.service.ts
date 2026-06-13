@@ -4,13 +4,14 @@ import { authConfig } from '../config/auth.config.js';
 import { env } from '../config/env.js';
 import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';
+import {
+  OTP_SEND_COOLDOWN_SEC,
+  OTP_SEND_MAX_IN_WINDOW,
+  OTP_SEND_STRIKE_TTL_SEC,
+  OTP_SEND_WINDOW_SEC,
+} from '../variable/constants.js';
 
 export type EmailOtpPurpose = 'login' | 'signup';
-
-const OTP_SEND_MAX_IN_WINDOW = 10;
-const OTP_SEND_WINDOW_SEC = 10 * 60;
-const OTP_SEND_COOLDOWN_SEC = [10 * 60, 20 * 60, 30 * 60, 60 * 60] as const;
-const OTP_SEND_STRIKE_TTL_SEC = 90 * 24 * 3600;
 
 function ttlForPurpose(purpose: EmailOtpPurpose): number {
   const sec =

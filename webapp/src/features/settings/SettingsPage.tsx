@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { ChevronDown, LogOut } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { useRouteRestore } from '@/hooks/useRouteRestore';
 import { useAuthStore } from '@/store/auth';
 import {
   SettingsContentSkeleton,
@@ -28,8 +29,6 @@ import { SecurityEmailContent } from './sections/SecurityEmailSection';
 import { ConnectedAccountsContent } from './sections/ConnectedAccountsSection';
 import { StackAndToolsContent } from './sections/StackAndToolsSection';
 import { MySetupContent } from './sections/MySetupSection';
-import { WorkExperiencesContent } from './sections/WorkExperiencesSection';
-import { EducationContent } from './sections/EducationSection';
 import { CertificationsContent } from './sections/CertificationsSection';
 import { ProjectsContent } from './sections/ProjectsSection';
 import { OpenSourceContent } from './sections/OpenSourceSection';
@@ -37,10 +36,15 @@ import { NotificationsSettingsContent } from './sections/NotificationsSection';
 
 export default function SettingsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, token, isHydrated, shouldBlock } = useRequireAuth();
   const refreshUser = useAuthStore((s) => s.refreshUser);
   const logout = useAuthStore((s) => s.logout);
+
+  useRouteRestore(() => {
+    if (token) void refreshUser();
+  });
   const [activeSection, setActiveSection] = useState<string>('edit-profile');
   const [contentLoading, setContentLoading] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -86,20 +90,23 @@ export default function SettingsPage() {
   }, [searchParams, router, refreshUser, validSectionIds]);
 
   // Support section targeting from profile without exposing ?section= in the URL:
-  // profile page stores `settingsTargetSection` (and optional `settingsTargetEditIndex`) in sessionStorage,
-  // then navigates to `/settings`. On first load we read and clear that hint.
+  // profile stores `settingsTargetSection` in sessionStorage, then navigates to `/settings`.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || pathname !== '/settings') return;
     try {
       const target = window.sessionStorage.getItem('settingsTargetSection');
       if (target && validSectionIds.includes(target)) {
         setActiveSection(target);
+        const group = SETTINGS_NAV_GROUPS.find((g) => g.items.some((i) => i.id === target));
+        if (group) {
+          setOpenGroups((prev) => ({ ...prev, [group.heading]: true }));
+        }
         window.sessionStorage.removeItem('settingsTargetSection');
       }
     } catch {
       // ignore storage errors
     }
-  }, [validSectionIds]);
+  }, [pathname, validSectionIds]);
 
   const handleSectionChange = (id: string) => {
     if (id === activeSection) return;
@@ -270,8 +277,6 @@ export default function SettingsPage() {
                     {activeSection === 'edit-profile' && <EditProfileContent />}
                     {activeSection === 'stack-tools' && <StackAndToolsContent />}
                     {activeSection === 'my-setup' && <MySetupContent />}
-                    {activeSection === 'work-experiences' && <WorkExperiencesContent />}
-                    {activeSection === 'education' && <EducationContent />}
                     {activeSection === 'certifications' && <CertificationsContent />}
                     {activeSection === 'projects' && <ProjectsContent />}
                     {activeSection === 'open-source' && <OpenSourceContent />}

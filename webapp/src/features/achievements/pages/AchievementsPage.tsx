@@ -17,6 +17,7 @@ import { AchievementCard } from '@/features/achievements/components/AchievementC
 import { cn } from '@/lib/core/utils';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { useAuthStore } from '@/store/auth';
+import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
 
 type Filter = 'all' | 'unlocked' | 'in_progress';
 
@@ -61,6 +62,7 @@ function StatCard({
 export function AchievementsPage() {
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const routeRestoreNonce = useRouteRestoreNonce();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -120,7 +122,7 @@ export function AchievementsPage() {
       return;
     }
     void load();
-  }, [isHydrated, token, load]);
+  }, [isHydrated, token, load, routeRestoreNonce]);
 
   const filtered = useMemo(() => {
     if (filter === 'unlocked') return items.filter((i) => i.unlocked);

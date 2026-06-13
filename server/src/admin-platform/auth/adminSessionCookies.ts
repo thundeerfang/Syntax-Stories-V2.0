@@ -1,10 +1,12 @@
 import type { Response } from 'express';
 import { env } from '../../config/env.js';
+import { SEVEN_DAYS_MS } from '../../constants/durations.js';
+import {
+  ADMIN_ACCESS_COOKIE,
+  ADMIN_REFRESH_COOKIE,
+} from '../../variable/constants.js';
 
-export const ADMIN_ACCESS_COOKIE = 'ss_admin_at';
-export const ADMIN_REFRESH_COOKIE = 'ss_admin_rt';
-
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+export { ADMIN_ACCESS_COOKIE, ADMIN_REFRESH_COOKIE };
 
 function cookieBaseOptions(): {
   httpOnly: boolean;

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import type { BookmarkGroupRow } from '@/api/bookmarks';
+import { useDropdown } from '@/components/ui/dropdown';
 import { cn } from '@/lib/core/utils';
 
 type BookmarkFolderChipProps = Readonly<{
@@ -24,19 +24,7 @@ export function BookmarkFolderChip({
   onEdit,
   onDelete,
 }: BookmarkFolderChipProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onPointerDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [menuOpen]);
+  const { open: menuOpen, setOpen: setMenuOpen, close: closeMenu, rootRef: menuRef } = useDropdown();
 
   return (
     <div
@@ -111,7 +99,7 @@ export function BookmarkFolderChip({
                 role="menuitem"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setMenuOpen(false);
+                  closeMenu();
                   onEdit();
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wide hover:bg-muted/60"
@@ -127,7 +115,7 @@ export function BookmarkFolderChip({
                 disabled={group.isDefault}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setMenuOpen(false);
+                  closeMenu();
                   if (!group.isDefault) onDelete();
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left font-mono text-[10px] font-bold uppercase tracking-wide text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"

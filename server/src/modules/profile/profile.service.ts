@@ -3,14 +3,12 @@ import { emitAppEvent } from '../../shared/events/appEvents.js';
 import type { AuthUser } from '../../middlewares/auth/index.js';
 import { applyBasicProfileRules } from './profile-basic.service.js';
 import { normalizeCertifications } from './profile-certifications.service.js';
-import { normalizeEducation } from './profile-education.service.js';
 import { toAccountUser } from './profile.mapper.js';
 import { attachStackAndToolsDisplay } from './profile.enrich.js';
 import { normalizeProjectsPrjLog } from './profile-projects.service.js';
 import { profileRepository } from './profile.repository.js';
 import type { ProfileSections, ProfileUpdateSection } from './profile.types.js';
 import { ProfileErrorCode, PROFILE_SECTION_KEYS } from './profile.types.js';
-import { normalizeWorkExperiences } from './profile-work.service.js';
 
 const UPDATE_PROFILE_KEYS = [
   'fullName',
@@ -28,8 +26,6 @@ const UPDATE_PROFILE_KEYS = [
   'github',
   'youtube',
   'stackAndTools',
-  'workExperiences',
-  'education',
   'certifications',
   'projects',
   'openSourceContributions',
@@ -44,8 +40,6 @@ const UPDATE_PROFILE_KEYS = [
 ] as const;
 
 const profileSectionKeys = [
-  'education',
-  'workExperiences',
   'projects',
   'certifications',
   'openSourceContributions',
@@ -105,12 +99,6 @@ async function applyProfileUpdate(
     if (doc) currentProfile = doc as ProfileSections;
   }
 
-  if (updates.workExperiences !== undefined) {
-    await normalizeWorkExperiences(userId, updates);
-  }
-  if (updates.education !== undefined) {
-    await normalizeEducation(userId, updates);
-  }
   if (updates.certifications !== undefined) {
     await normalizeCertifications(userId, updates);
   }
@@ -185,23 +173,5 @@ export const profileService = {
   ): Promise<ProfileUpdateResult> {
     const keys = PROFILE_SECTION_KEYS[section];
     return applyProfileUpdate(req, user, body, keys, section);
-  },
-
-  async parseCvFromPdfBuffer(buffer: Buffer): Promise<{
-    extracted: Record<string, unknown>;
-    missingFields: string[];
-    incompleteItemHints: Record<string, unknown>;
-  }> {
-    const pdfParse = (await import('pdf-parse')).default as (
-      buf: Buffer
-    ) => Promise<{ text: string }>;
-    const { text } = await pdfParse(buffer);
-    const { parseCvFromText } = await import('../../utils/parseCvFromPdf.js');
-    const { extracted, missingFields, incompleteItemHints } = parseCvFromText(text ?? '');
-    return {
-      extracted: extracted as Record<string, unknown>,
-      missingFields,
-      incompleteItemHints: (incompleteItemHints ?? {}) as Record<string, unknown>,
-    };
   },
 };

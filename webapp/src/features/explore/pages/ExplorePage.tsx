@@ -29,7 +29,7 @@ import {
 import { HashtagBadgeLink } from '@/features/tags';
 import { Button } from '@/components/ui/button';
 import { PanelSectionHeader } from '@/features/explore';
-import { RailSectionSubheader, RailFeedEmptyState, ShellPageIntroHeader } from '@/components/layout';
+import { RailSectionSubheader, RailFeedEmptyState, ShellPageIntroHeader, RailCountPill, RailCountPillLoading } from '@/components/layout';
 import { RocketLottie } from '@/components/ui/lottie';
 import { RankCountPill } from '@/features/topics';
 import { SquadDirectoryCard } from '@/features/squads';
@@ -44,7 +44,6 @@ import {
   FOLLOWED_CATEGORIES_CHANGED_EVENT,
   isCategoryFollowedForViewer,
   shouldHandleFollowedCategoriesEvent,
-  refreshFollowedCategoriesFromServer,
   toggleCategoryFollowWithSync,
 } from '@/lib/feeds/categoryFollowActions';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
@@ -57,7 +56,7 @@ import type { BlogTaxonomyRow } from '@/types/blog';
 import type { Post } from '@/types';
 import { useAuthStore } from '@/store/auth';
 import { useAuthDialogStore } from '@/store/authDialog';
-import { triggerFollowConfetti } from '@/store/engagementEffects';
+import { triggerFollowConfetti, followConfettiRectFromClick } from '@/store/engagementEffects';
 import { toast } from 'sonner';
 
 const MAX_FACE_SLOTS = 4;
@@ -222,13 +221,14 @@ function CategoryFollowCornerButton({ slug, name }: Readonly<{ slug: string; nam
       return;
     }
     if (busy) return;
+    const confettiRect = followConfettiRectFromClick(e.currentTarget);
     setBusy(true);
     void (async () => {
       try {
         const nowFollowing = await toggleCategoryFollowWithSync(slug, userId, token);
         setFollowing(nowFollowing);
         if (nowFollowing) {
-          triggerFollowConfetti(e.currentTarget);
+          triggerFollowConfetti(confettiRect);
         }
         toast.success(nowFollowing ? `Following ${name}` : `Unfollowed ${name}`);
       } catch (err) {
@@ -403,6 +403,81 @@ const laneSwiperNavBtn = cn(
   'hover:!bg-white hover:!text-primary hover:!opacity-90 active:translate-x-0 active:translate-y-0 active:shadow-none'
 );
 
+type SectorPreviewRow = Readonly<{
+  slug: string;
+  name: string;
+  blurb: string;
+  postCount: number;
+}>;
+
+type ExploreSectorCategoriesBlockProps = Readonly<{
+  sectors: SectorPreviewRow[];
+  loading: boolean;
+  categoryMembersBySlug: Record<string, CategoryMembersSnapshot>;
+  categoryMembersLoading: boolean;
+}>;
+
+function ExploreSectorCategoriesBlock({
+  sectors,
+  loading,
+  categoryMembersBySlug,
+  categoryMembersLoading,
+}: ExploreSectorCategoriesBlockProps) {
+  const n = sectors.length;
+
+  return (
+    <section className="space-y-4">
+      <RailSectionSubheader
+        label="Sector categories"
+        text={
+          loading ? (
+            <RailCountPillLoading />
+          ) : (
+            <RailCountPill count={n} aria-label={`${n} sectors`} />
+          )
+        }
+        buttons={[
+          {
+            label: 'View all',
+            href: '/topics',
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      {loading ? (
+        <ExploreSectorGridSkeleton />
+      ) : n === 0 ? (
+        <RailFeedEmptyState
+          icon={Layers}
+          title="No taxonomy sectors loaded yet"
+          description="When categories are published in the taxonomy, sector previews will appear here."
+          actions={[{ label: 'Browse topics', href: '/topics', variant: 'primary' }]}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {sectors.map((cat, idx) => (
+            <TaxonomyCategoryCard
+              key={cat.slug}
+              slug={cat.slug}
+              name={cat.name}
+              blurb={cat.blurb}
+              postCount={cat.postCount}
+              href={`/topics/category/${encodeURIComponent(cat.slug)}`}
+              variant={idx === 0 ? 'sector-hero' : 'sector-card'}
+              index={idx + 1}
+              membersSnapshot={
+                categoryMembersBySlug[cat.slug.toLowerCase()] ?? { members: [], totalCount: 0 }
+              }
+              membersLoading={categoryMembersLoading}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 type ExploreTopSquadsBlockProps = Readonly<{
   squads: SquadSummary[];
   loading: boolean;
@@ -432,12 +507,13 @@ function ExploreTopSquadsBlock({
   return (
     <section className="space-y-4">
       <RailSectionSubheader
+        label="Top squads"
         text={
-          loading
-            ? 'Top squads'
-            : n > 0
-              ? `Top squads · ${n} ${n === 1 ? 'squad' : 'squads'}`
-              : 'Top squads'
+          loading ? (
+            <RailCountPillLoading />
+          ) : (
+            <RailCountPill count={n} aria-label={`${n} squads`} />
+          )
         }
         buttons={[
           {
@@ -530,9 +606,12 @@ const RETRO_BORDER = 'border-2 border-[var(--border)]';
 
 /** White title with primary glow + offset (readable on all spotlight backdrops). */
 const SPOTLIGHT_TITLE_CLASS = cn(
-  'mt-5 font-mono text-3xl font-black uppercase leading-none tracking-tighter text-white sm:text-5xl md:text-6xl',
+  'mt-5 line-clamp-2 font-mono text-3xl font-black uppercase leading-none tracking-tighter text-white sm:text-5xl md:text-6xl',
   '[text-shadow:0_0_32px_color-mix(in_srgb,var(--primary)_80%,transparent),0_0_12px_color-mix(in_srgb,var(--primary)_55%,transparent),2px_2px_0_var(--primary),1px_1px_0_rgba(0,0,0,0.9)]'
 );
+
+/** Fixed slot so squad / tag / category slides keep the same carousel height. */
+const SPOTLIGHT_BODY_SLOT_CLASS = 'mt-4 min-h-[2.75rem] max-w-xl';
 
 function SpotlightImageBackdrop({ src }: Readonly<{ src: string }>) {
   return (
@@ -871,7 +950,7 @@ function ExploreFeaturedTrail({
     >
       <div
         className={cn(
-          'relative flex min-h-[min(48vh,380px)] w-full flex-col justify-end overflow-hidden bg-[var(--background)] p-6 md:min-h-[360px] md:p-10',
+          'relative flex h-[min(40vh,320px)] w-full flex-col justify-end overflow-hidden bg-[var(--background)] p-6 md:h-[300px] md:p-10',
           RETRO_BORDER,
           'shadow'
         )}
@@ -921,19 +1000,19 @@ function ExploreFeaturedTrail({
               )}
             </h3>
 
-            <p className="mt-4 max-w-xl font-mono text-sm uppercase leading-relaxed text-[var(--muted-foreground)]">
-              {item.kind === 'squad'
-                ? item.squad.description
-                : item.kind === 'tag'
-                  ? `${item.tag.postCount.toLocaleString()} posts indexed under this tag.`
-                  : item.category.blurb}
-            </p>
-
-            {item.kind === 'squad' ? (
-              <p className="mt-3 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]">
-                {item.squad.memberCount.toLocaleString()} members · {item.squad.visibility} node
-              </p>
-            ) : null}
+            <div className={SPOTLIGHT_BODY_SLOT_CLASS}>
+              {item.kind === 'squad' ? (
+                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-foreground/75">
+                  {item.squad.memberCount.toLocaleString()} members · {item.squad.visibility} node
+                </p>
+              ) : (
+                <p className="line-clamp-2 font-mono text-sm uppercase leading-snug text-foreground">
+                  {item.kind === 'tag'
+                    ? `${item.tag.postCount.toLocaleString()} posts indexed under this tag.`
+                    : item.category.blurb}
+                </p>
+              )}
+            </div>
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Button
@@ -1113,39 +1192,26 @@ export function ExplorePage() {
     setCategoryMembersLoading(true);
 
     void (async () => {
-      const activeToken = useAuthStore.getState().token;
-      const activeUserId =
-        useAuthStore.getState().user?.id ?? useAuthStore.getState().user?._id ?? null;
+      try {
+        const next = await fetchCategoryFollowersForExplorer(slugs, async (categorySlugs) => {
+          const { categories } = await blogApi.getCategoryMembersPreview(categorySlugs);
+          return categories;
+        });
 
-      if (activeToken && activeUserId) {
-        try {
-          await refreshFollowedCategoriesFromServer(activeUserId, activeToken);
-        } catch {
-          /* keep local list */
+        if (!cancelled) {
+          setCategoryMembersBySlug(next);
         }
-      }
-
-      const next = await fetchCategoryFollowersForExplorer(slugs, async (categorySlugs) => {
-        const { categories } = await blogApi.getCategoryMembersPreview(categorySlugs);
-        return categories;
-      });
-
-      if (!cancelled) {
-        setCategoryMembersBySlug(next);
-        setCategoryMembersLoading(false);
+      } finally {
+        if (!cancelled) {
+          setCategoryMembersLoading(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [sectorPreview, sectorPreviewSlugsKey, userId, categoryMembersRevision]);
-
-  useEffect(() => {
-    const bump = () => setCategoryMembersRevision((n) => n + 1);
-    window.addEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, bump);
-    return () => window.removeEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, bump);
-  }, []);
+  }, [sectorPreviewSlugsKey, userId, categoryMembersRevision]);
 
   const loadFeed = useCallback(async () => {
     setFeedLoading(true);
@@ -1298,53 +1364,12 @@ export function ExplorePage() {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <RailSectionSubheader
-          text={
-            spotlightLoading
-              ? 'Sector categories'
-              : sectorPreview.length > 0
-                ? `Sector categories · ${sectorPreview.length} ${sectorPreview.length === 1 ? 'sector' : 'sectors'}`
-                : 'Sector categories'
-          }
-          buttons={[
-            {
-              label: 'View all',
-              href: '/topics',
-              variant: 'primary',
-            },
-          ]}
-        />
-        {spotlightLoading ? (
-          <ExploreSectorGridSkeleton />
-        ) : sectorPreview.length === 0 ? (
-          <RailFeedEmptyState
-            icon={Layers}
-            title="No taxonomy sectors loaded yet"
-            description="When categories are published in the taxonomy, sector previews will appear here."
-            actions={[{ label: 'Browse topics', href: '/topics', variant: 'primary' }]}
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {sectorPreview.map((cat, idx: number) => (
-              <TaxonomyCategoryCard
-                key={cat.slug}
-                slug={cat.slug}
-                name={cat.name}
-                blurb={cat.blurb}
-                postCount={cat.postCount}
-                href={`/topics/category/${encodeURIComponent(cat.slug)}`}
-                variant={idx === 0 ? 'sector-hero' : 'sector-card'}
-                index={idx + 1}
-                membersSnapshot={
-                  categoryMembersBySlug[cat.slug.toLowerCase()] ?? { members: [], totalCount: 0 }
-                }
-                membersLoading={categoryMembersLoading}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      <ExploreSectorCategoriesBlock
+        sectors={sectorPreview}
+        loading={spotlightLoading}
+        categoryMembersBySlug={categoryMembersBySlug}
+        categoryMembersLoading={categoryMembersLoading}
+      />
     </div>
   );
 }

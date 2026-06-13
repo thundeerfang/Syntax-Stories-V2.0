@@ -34,7 +34,7 @@ export function GithubNotConnectedDialog({
         <GithubConnectLottie size={132} />
       </div>
       <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-        Go to <span className="font-black text-foreground">Security → Connected accounts</span>,
+        Go to <span className="font-black text-foreground">Security → Connected Accounts</span>,
         link GitHub, then return here and open{' '}
         <span className="font-black text-foreground">Add open source</span> again.
       </p>

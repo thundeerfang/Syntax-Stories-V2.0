@@ -26,12 +26,6 @@ export const AuditAction = {
   /** Profile PATCH diff events (granular, same collection as other audit rows). */
   STACK_TOOL_ADDED: 'stack_tool_added',
   STACK_TOOL_REMOVED: 'stack_tool_removed',
-  EDUCATION_ADDED: 'education_added',
-  EDUCATION_UPDATED: 'education_updated',
-  EDUCATION_REMOVED: 'education_removed',
-  WORK_ADDED: 'work_added',
-  WORK_UPDATED: 'work_updated',
-  WORK_REMOVED: 'work_removed',
   CERTIFICATION_ADDED: 'certification_added',
   CERTIFICATION_UPDATED: 'certification_updated',
   CERTIFICATION_REMOVED: 'certification_removed',

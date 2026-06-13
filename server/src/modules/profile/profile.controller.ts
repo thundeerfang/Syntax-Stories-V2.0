@@ -145,34 +145,3 @@ export async function updateProfileSection(req: Request, res: Response): Promise
   }
 }
 
-export async function parseCv(req: Request, res: Response): Promise<void> {
-  try {
-    const file = (req as Request & { file?: Express.Multer.File & { buffer?: Buffer } }).file;
-    const buffer = file?.buffer ?? (file as unknown as { buffer?: Buffer })?.buffer;
-    if (!buffer) {
-      res.status(400).json({ success: false, code: 'NO_FILE', message: 'No PDF file uploaded' });
-      return;
-    }
-    const { extracted, missingFields, incompleteItemHints } =
-      await profileService.parseCvFromPdfBuffer(buffer);
-    const user = (req as Request & { user?: { _id?: unknown } }).user;
-    const userId = user?._id ? String(user._id) : null;
-    const newlyUnlocked =
-      userId != null ? await dispatchAchievementEvents(userId, [{ type: 'profile_sync' }]) : [];
-    res.status(200).json({
-      success: true,
-      data: { extracted, missingFields, incompleteItemHints },
-      extracted,
-      missingFields,
-      incompleteItemHints,
-      ...(newlyUnlocked.length > 0 ? { achievements: { newlyUnlocked } } : {}),
-    });
-  } catch (err) {
-    console.error('parseCv error:', err);
-    res.status(500).json({
-      success: false,
-      code: ProfileErrorCode.INTERNAL_ERROR,
-      message: (err as Error).message || 'Failed to parse PDF',
-    });
-  }
-}

@@ -1,22 +1,20 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
-  BookMarked,
   Tags,
   PlusSquare,
   ChevronRight,
   Settings,
-  Users,
+  UserPlus,
   ChevronDown,
-  Rss,
   Bookmark,
   Repeat2,
-  UsersRound,
+  Shield,
 } from 'lucide-react';
 
 import { bookmarksApi, type BookmarkGroupRow } from '@/api/bookmarks';
@@ -27,8 +25,6 @@ import { cn } from '@/lib/core/utils';
 import { blockShadowButtonClassNames } from '@/components/ui';
 import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
 import { useAuthStore } from '@/store/auth';
-import { useAuthDialogStore } from '@/store/authDialog';
-import { getDefaultFeedId, useCustomFeedsStore } from '@/store/customFeeds';
 
 const WRITE_NEW_POST_HREF = '/blogs/write';
 
@@ -38,23 +34,17 @@ const WRITE_NEW_POST_HREF = '/blogs/write';
 
 const MAIN_NAV = [
   { href: '/', label: 'HOME FEED', icon: Home },
-  { href: '/following', label: 'FOLLOWING', icon: Users },
-  { href: '/bookmarks', label: 'BOOKMARKS', icon: BookMarked },
+  { href: '/following', label: 'FOLLOWING', icon: UserPlus },
+  { href: '/squads', label: 'SQUADS', icon: Shield },
   { href: '/topics', label: 'BROWSE TOPICS', icon: Tags },
   { href: '/reposts', label: 'REPOSTS', icon: Repeat2 },
 ];
 
 const RAIL_UTILITY_LINKS = [{ href: '/settings', label: 'Settings', icon: Settings }];
 
-const SQUADS_LINKS = [{ href: '/squads', label: 'Browse squads' }] as const;
+type SidebarAccordionId = 'saved';
 
-type SidebarAccordionId = 'feeds' | 'saved' | 'squads';
-
-const SIDEBAR_ACCORDIONS = [
-  { id: 'feeds' as const, title: 'Feeds', icon: Rss },
-  { id: 'saved' as const, title: 'Saved blogs', icon: Bookmark },
-  { id: 'squads' as const, title: 'Squads', icon: UsersRound },
-];
+const SIDEBAR_ACCORDIONS = [{ id: 'saved' as const, title: 'Saved blogs', icon: Bookmark }];
 
 /** Accordion panels slide up from below (not top-down height expand). */
 const accordionContentMotion = {
@@ -173,84 +163,6 @@ function AccordionLink({
         aria-hidden
       />
     </Link>
-  );
-}
-
-function FeedsAccordionNav({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const feedParam = searchParams.get('feed');
-  const feeds = useCustomFeedsStore((s) => s.feeds);
-  const openNewFeedDialog = useCustomFeedsStore((s) => s.openNewFeedDialog);
-  const token = useAuthStore((s) => s.token);
-  const user = useAuthStore((s) => s.user);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
-  const openAuth = useAuthDialogStore((s) => s.open);
-  const defaultId = useMemo(() => getDefaultFeedId(feeds), [feeds]);
-
-  const rowClass = (active: boolean) =>
-    cn(
-      'flex w-full min-w-0 items-center justify-between gap-2  py-2 pl-1 pr-0 text-[10px] font-black uppercase tracking-widest transition-colors',
-      active ? 'text-primary' : 'text-foreground/75 hover:text-foreground'
-    );
-
-  return (
-    <>
-      {feeds.map((f) => {
-        const active =
-          pathname === '/' && (feedParam === f.id || (feedParam == null && defaultId === f.id));
-        const href = `/?feed=${encodeURIComponent(f.id)}`;
-        return (
-          <Link key={f.id} href={href} onClick={onNavigate} className={rowClass(active)}>
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              {f.isDefault ? (
-                <span
-                  className="size-2 shrink-0 border-2 border-background bg-purple-600 shadow"
-                  title="Default feed"
-                  aria-label="Default feed"
-                />
-              ) : (
-                <span className="size-2 shrink-0" aria-hidden />
-              )}
-              {f.iconEmoji ? (
-                <span className="shrink-0 text-sm normal-case font-normal" aria-hidden>
-                  {f.iconEmoji}
-                </span>
-              ) : null}
-              <span className="min-w-0 truncate normal-case tracking-normal">{f.name}</span>
-            </span>
-            <ChevronRight
-              className={cn(
-                'size-3 shrink-0',
-                active ? 'text-primary' : 'text-muted-foreground/35'
-              )}
-              strokeWidth={3}
-              aria-hidden
-            />
-          </Link>
-        );
-      })}
-      <button
-        type="button"
-        onClick={() => {
-          onNavigate();
-          if (!isHydrated) return;
-          if (!token || !user) {
-            openAuth('login');
-            return;
-          }
-          openNewFeedDialog();
-        }}
-        className={rowClass(false)}
-      >
-        <span className="min-w-0 flex-1 truncate text-left">New feed</span>
-        <ChevronRight
-          className="size-3 shrink-0 text-muted-foreground/35"
-          strokeWidth={3}
-          aria-hidden
-        />
-      </button>
-    </>
   );
 }
 
@@ -474,7 +386,7 @@ export function SidebarDrawer({
   const pathname = usePathname();
   const token = useAuthStore((s) => s.token);
   const [mounted, setMounted] = useState(false);
-  const [openAccordion, setOpenAccordion] = useState<SidebarAccordionId | null>('feeds');
+  const [openAccordion, setOpenAccordion] = useState<SidebarAccordionId | null>('saved');
   const [bookmarkGroups, setBookmarkGroups] = useState<BookmarkGroupRow[]>([]);
   const desktop = useDesktopShell();
 
@@ -612,57 +524,23 @@ export function SidebarDrawer({
               </section>
 
               <section className="space-y-2">
-                {SIDEBAR_ACCORDIONS.map((acc) =>
-                  acc.id === 'saved' ? (
-                    <SidebarAccordion
-                      key="saved"
-                      id="saved"
-                      title={acc.title}
-                      icon={acc.icon}
-                      open={openAccordion === 'saved'}
-                      onToggle={toggleAccordion}
-                    >
-                      <Suspense fallback={null}>
-                        {bookmarkGroups.map((g) => (
-                          <BookmarkFolderAccordionLink key={g._id} group={g} onNavigate={close} />
-                        ))}
-                        <AllBookmarksAccordionLink onNavigate={close} />
-                      </Suspense>
-                    </SidebarAccordion>
-                  ) : acc.id === 'feeds' ? (
-                    <SidebarAccordion
-                      key="feeds"
-                      id="feeds"
-                      title={acc.title}
-                      icon={acc.icon}
-                      open={openAccordion === 'feeds'}
-                      onToggle={toggleAccordion}
-                    >
-                      <Suspense fallback={null}>
-                        <FeedsAccordionNav onNavigate={close} />
-                      </Suspense>
-                    </SidebarAccordion>
-                  ) : (
-                    <SidebarAccordion
-                      key={acc.id}
-                      id={acc.id}
-                      title={acc.title}
-                      icon={acc.icon}
-                      open={openAccordion === acc.id}
-                      onToggle={toggleAccordion}
-                    >
-                      {SQUADS_LINKS.map(({ href, label }) => (
-                        <AccordionLink
-                          key={href + label}
-                          href={href}
-                          label={label}
-                          pathname={pathname}
-                          onNavigate={close}
-                        />
+                {SIDEBAR_ACCORDIONS.map((acc) => (
+                  <SidebarAccordion
+                    key={acc.id}
+                    id={acc.id}
+                    title={acc.title}
+                    icon={acc.icon}
+                    open={openAccordion === acc.id}
+                    onToggle={toggleAccordion}
+                  >
+                    <Suspense fallback={null}>
+                      {bookmarkGroups.map((g) => (
+                        <BookmarkFolderAccordionLink key={g._id} group={g} onNavigate={close} />
                       ))}
-                    </SidebarAccordion>
-                  )
-                )}
+                      <AllBookmarksAccordionLink onNavigate={close} />
+                    </Suspense>
+                  </SidebarAccordion>
+                ))}
               </section>
             </div>
 

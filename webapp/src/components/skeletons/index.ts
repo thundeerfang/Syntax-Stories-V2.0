@@ -39,6 +39,7 @@ export {
   AchievementsPageSkeletonInner,
 } from './PageSkeletons';
 export {
+  SquadDetailPageSkeleton,
   SquadsPageBrowseSkeleton,
   SquadsPageContentSkeleton,
 } from './SquadsPageSkeleton';

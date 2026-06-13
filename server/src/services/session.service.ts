@@ -2,9 +2,9 @@ import crypto from 'node:crypto';
 import type { Request } from 'express';
 import { SessionModel } from '../models/Session.js';
 import { signAccessToken } from '../config/jwt.js';
+import { SESSION_DURATION_MS } from '../variable/constants.js';
 
-/** Session duration and sliding window (matches prior auth.controller / authLogin behavior). */
-export const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+export { SESSION_DURATION_MS };
 
 function getClientMeta(req: Request): { ip: string; userAgent: string } {
   const ip =

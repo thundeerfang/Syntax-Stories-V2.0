@@ -10,7 +10,6 @@ import {
   Underline,
   List,
   ListOrdered,
-  Sigma,
   LinkedinIcon,
   Github,
   Instagram,
@@ -21,23 +20,24 @@ import {
 } from 'lucide-react';
 import { OptimizedRemoteImage } from '@/components/ui/media';
 import { cn } from '@/lib/core/utils';
+import { BIO_MAX_LENGTH } from '@syntax-stories/shared';
 import {
   PROFILE_INSTAGRAM_MAX,
   PROFILE_PORTFOLIO_URL_MAX,
-  PROFILE_PORTFOLIO_URL_MIN,
   PROFILE_SOCIAL_URL_MAX,
-  PROFILE_SOCIAL_URL_MIN,
 } from '@/lib/profile/profileLinkLimits';
 import { settingsBtnBlockPrimaryMd, settingsBtnIconFab } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { ImageUploadCropDialog } from '@/components/upload';
 import { uploadAvatar, uploadCover } from '@/api/upload';
+import { uploadResponseAlt } from '@/lib/media/uploadImageMeta';
 import { GhostOutlineButton } from '@/components/ui';
 import { ToggleGroup, ToggleGroupItem } from '@/components/retroui';
 import {
   SettingsTabPanel,
   SettingsTabRoot,
 } from '@/app/settings/settings-list/SettingsSectionHeading';
+import { normalizeBioForEdit } from '@/lib/profile/profileDisplay';
 import { PresenceIndicatorSettingsCard } from '../components/PresenceIndicatorSettingsCard';
 
 export function EditProfileContent() {
@@ -49,7 +49,9 @@ export function EditProfileContent() {
   const [profilePicDialogOpen, setProfilePicDialogOpen] = useState(false);
   const [fullName, setFullName] = useState(user?.fullName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
-  const [bio, setBio] = useState(user?.bio ?? '');
+  const [bio, setBio] = useState(() =>
+    normalizeBioForEdit(user?.bio).slice(0, BIO_MAX_LENGTH)
+  );
   const [profileImg, setProfileImg] = useState(user?.profileImg ?? '');
   const [profileImgBlurDataUrl, setProfileImgBlurDataUrl] = useState<string | null>(null);
   const [coverBanner, setCoverBanner] = useState(user?.coverBanner ?? '');
@@ -68,8 +70,6 @@ export function EditProfileContent() {
   const [github, setGithub] = useState(user?.github ?? '');
   const [instagram, setInstagram] = useState(user?.instagram ?? '');
   const [youtube, setYoutube] = useState(user?.youtube ?? '');
-  const [symbolsOpen, setSymbolsOpen] = useState(false);
-  const symbolsRef = useRef<HTMLDivElement>(null);
   const [formatActive, setFormatActive] = useState({
     bold: false,
     italic: false,
@@ -139,7 +139,7 @@ export function EditProfileContent() {
   useEffect(() => {
     setFullName(user?.fullName ?? '');
     setUsername(user?.username ?? '');
-    setBio(user?.bio ?? '');
+    setBio(normalizeBioForEdit(user?.bio).slice(0, BIO_MAX_LENGTH));
     setProfileImg(user?.profileImg ?? '');
     setProfileImgBlurDataUrl(null);
     setCoverBanner(user?.coverBanner ?? '');
@@ -155,16 +155,6 @@ export function EditProfileContent() {
   }, [user]);
 
   useEffect(() => {
-    if (!symbolsOpen) return;
-    const close = (e: MouseEvent) => {
-      if (symbolsRef.current && !symbolsRef.current.contains(e.target as Node))
-        setSymbolsOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [symbolsOpen]);
-
-  useEffect(() => {
     const doc = typeof document !== 'undefined' ? document : null;
     if (!doc) return;
     const onSelectionChange = () => updateFormatState();
@@ -172,13 +162,15 @@ export function EditProfileContent() {
     return () => doc.removeEventListener('selectionchange', onSelectionChange);
   }, [updateFormatState]);
 
-  const handleCoverUploadSuccess = async (
-    result: { url: string; blurDataUrl?: string },
-    imageTitle?: string
-  ) => {
+  const handleCoverUploadSuccess = async (result: {
+    url: string;
+    blurDataUrl?: string;
+    alt?: string;
+    title?: string;
+  }) => {
     setCoverBanner(result.url);
     setCoverBannerBlurDataUrl(result.blurDataUrl ?? null);
-    const alt = imageTitle?.trim();
+    const alt = uploadResponseAlt(result);
     if (alt) setCoverBannerAlt(alt);
     try {
       await updateProfile(
@@ -190,13 +182,15 @@ export function EditProfileContent() {
     }
   };
 
-  const handleProfilePicUploadSuccess = async (
-    result: { url: string; blurDataUrl?: string },
-    imageTitle?: string
-  ) => {
+  const handleProfilePicUploadSuccess = async (result: {
+    url: string;
+    blurDataUrl?: string;
+    alt?: string;
+    title?: string;
+  }) => {
     setProfileImg(result.url);
     setProfileImgBlurDataUrl(result.blurDataUrl ?? null);
-    const alt = imageTitle?.trim();
+    const alt = uploadResponseAlt(result);
     if (alt) setProfileImgAlt(alt);
     try {
       await updateProfile(
@@ -265,8 +259,6 @@ export function EditProfileContent() {
     return out.replace(/\n{2,}/g, '\n').trim();
   };
 
-  const BIO_MAX_LENGTH = 500;
-
   const applyBioFormat = (command: 'bold' | 'italic' | 'underline') => {
     const el = bioEditorRef.current;
     if (!el) return;
@@ -286,39 +278,6 @@ export function EditProfileContent() {
     const newMarkdown = htmlToMarkdown(el);
     setBio(newMarkdown);
     bioUpdateFromEditorRef.current = true;
-  };
-
-  const BIO_SYMBOLS = [
-    '•',
-    '◦',
-    '▪',
-    '–',
-    '—',
-    '·',
-    '…',
-    '©',
-    '®',
-    '™',
-    '✓',
-    '✔',
-    '→',
-    '←',
-    '§',
-    '¶',
-    '°',
-    '±',
-    '×',
-    '÷',
-  ];
-
-  const insertBioSymbol = (symbol: string) => {
-    const el = bioEditorRef.current;
-    if (!el) return;
-    el.focus();
-    document.execCommand('insertText', false, symbol);
-    setBio(htmlToMarkdown(el));
-    bioUpdateFromEditorRef.current = true;
-    setSymbolsOpen(false);
   };
 
   useEffect(() => {
@@ -369,7 +328,7 @@ export function EditProfileContent() {
     const same =
       t(fullName) === t(user.fullName) &&
       t(username) === t(user.username) &&
-      t(bio) === t(user.bio) &&
+      t(bio) === t(normalizeBioForEdit(user.bio)) &&
       t(profileImg) === t(user.profileImg) &&
       t(profileImgAlt) === t((user as { profileImgAlt?: string }).profileImgAlt) &&
       t(coverBanner) === t(user.coverBanner) &&
@@ -491,18 +450,17 @@ export function EditProfileContent() {
           maxSizeBytes={10 * 1024 * 1024}
           aspect={4}
           cropMinHeightClass="min-h-[20rem] h-80"
-          imageTitleField
-          imageTitleLabel="Cover title (optional)"
-          imageTitlePlaceholder="e.g. Team offsite banner"
           confirmLabel="Save & upload"
-          onConfirm={async (file, meta) => {
+          onConfirm={async (file) => {
             if (!token) throw new Error('Not signed in.');
             const data = await uploadCover(token, file);
             if (!data.url) throw new Error(data.message ?? 'Upload failed');
-            void handleCoverUploadSuccess(
-              { url: data.url, blurDataUrl: data.blurDataUrl },
-              meta?.imageTitle
-            );
+            void handleCoverUploadSuccess({
+              url: data.url,
+              blurDataUrl: data.blurDataUrl,
+              alt: data.alt,
+              title: data.title,
+            });
             toast.success('Cover image updated.');
           }}
         />
@@ -516,18 +474,17 @@ export function EditProfileContent() {
           subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
           maxSizeBytes={5 * 1024 * 1024}
           aspect={1}
-          imageTitleField
-          imageTitleLabel="Photo title (optional)"
-          imageTitlePlaceholder="e.g. Headshot, 2025"
           confirmLabel="Save & upload"
-          onConfirm={async (file, meta) => {
+          onConfirm={async (file) => {
             if (!token) throw new Error('Not signed in.');
             const data = await uploadAvatar(token, file);
             if (!data.url) throw new Error(data.message ?? 'Upload failed');
-            void handleProfilePicUploadSuccess(
-              { url: data.url, blurDataUrl: data.blurDataUrl },
-              meta?.imageTitle
-            );
+            void handleProfilePicUploadSuccess({
+              url: data.url,
+              blurDataUrl: data.blurDataUrl,
+              alt: data.alt,
+              title: data.title,
+            });
             toast.success('Profile photo updated.');
           }}
         />
@@ -639,38 +596,6 @@ export function EditProfileContent() {
                 >
                   <ListOrdered className="h-4 w-4" />
                 </ToggleGroupItem>
-                <div className="relative inline-flex" ref={symbolsRef}>
-                  <ToggleGroupItem
-                    value="symbols"
-                    aria-label="Insert symbol"
-                    aria-expanded={symbolsOpen}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setSymbolsOpen((o) => !o)}
-                    className={symbolsOpen ? 'bg-primary text-white' : ''}
-                  >
-                    <Sigma className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  {symbolsOpen && (
-                    <div className="absolute left-0 top-full z-50 mt-1 min-w-[12rem] border-2 border-border bg-card p-2 shadow">
-                      <p className="mb-2 text-[9px] font-bold uppercase text-muted-foreground">
-                        Insert symbol
-                      </p>
-                      <div className="grid grid-cols-5 gap-1">
-                        {BIO_SYMBOLS.map((sym, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => insertBioSymbol(sym)}
-                            className="flex h-8 w-8 items-center justify-center border-2 border-border bg-muted/30 text-sm font-medium hover:bg-muted hover:border-primary transition-colors"
-                            title={sym}
-                          >
-                            {sym}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
               </ToggleGroup>
               <div
                 ref={bioEditorRef}
@@ -724,7 +649,6 @@ export function EditProfileContent() {
                 'placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20'
               )}
               aria-label="Portfolio URL"
-              aria-describedby="portfolio-url-hint"
             />
             {portfolioUrl.trim() && (
               <a
@@ -742,10 +666,6 @@ export function EditProfileContent() {
               </a>
             )}
           </div>
-          <p id="portfolio-url-hint" className="mt-1.5 text-[9px] text-muted-foreground">
-            {PROFILE_PORTFOLIO_URL_MIN}–{PROFILE_PORTFOLIO_URL_MAX} characters (leave blank if
-            none).
-          </p>
         </section>
 
         {/* Social links — card */}
@@ -854,10 +774,6 @@ export function EditProfileContent() {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[9px] text-muted-foreground">
-            LinkedIn, GitHub, YouTube: {PROFILE_SOCIAL_URL_MIN}–{PROFILE_SOCIAL_URL_MAX} characters
-            per URL when non-empty. Instagram: up to {PROFILE_INSTAGRAM_MAX} characters.
-          </p>
         </section>
 
         <PresenceIndicatorSettingsCard profileImg={user?.profileImg} username={user?.username} />

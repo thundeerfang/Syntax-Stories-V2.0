@@ -1,7 +1,7 @@
 import { utcMidnightFromDayBucket } from '../streak/calendarUtc.js';
+import { READ_DAYS_ZSET_RETAIN_DAYS } from '../variable/constants.js';
 
-/** Hot-window policy: keep about this many UTC calendar days in `user:{id}:readDays` (BLOG_READ_STREAK.md F.4). */
-export const READ_DAYS_ZSET_RETAIN_DAYS = 400;
+export { READ_DAYS_ZSET_RETAIN_DAYS };
 
 /** UTC midnight epoch **ms** for the oldest calendar day we retain (inclusive). */
 export function readDaysTrimMinRetainMsUtc(now: Date): number {

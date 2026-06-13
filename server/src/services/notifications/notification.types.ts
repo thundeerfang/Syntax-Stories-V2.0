@@ -65,3 +65,23 @@ export type NotificationPayload = {
   };
   ts: number;
 };
+
+/** Redis outbox payload consumed by the dedicated notification webhook worker. */
+export type NotificationWebhookOutboxMessage = {
+  v: 1;
+  kind: 'webhook_delivery';
+  userId: string;
+  notificationId: string;
+  payload: {
+    id: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    href: string;
+    icon: NotificationIcon;
+    time: string;
+    userId: string;
+    metadata?: Record<string, unknown>;
+  };
+  ts: number;
+};

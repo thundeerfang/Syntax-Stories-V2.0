@@ -1,8 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import mongoose from 'mongoose';
 import { env } from '../../config/env.js';
-
-const PREFIX = 'ssur1:';
+import { ADMIN_USER_REF_PREFIX } from '../../variable/constants.js';
 
 function deriveKey(raw: string): Buffer {
   const t = raw.trim();
@@ -34,15 +33,15 @@ export function encodeAdminUserRef(objectId: string): string {
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const enc = Buffer.concat([cipher.update(objectId, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return PREFIX + Buffer.concat([iv, tag, enc]).toString('base64url');
+  return ADMIN_USER_REF_PREFIX + Buffer.concat([iv, tag, enc]).toString('base64url');
 }
 
 export function decodeAdminUserRef(ref: string): string | null {
   const trimmed = ref.trim();
-  if (!trimmed.startsWith(PREFIX)) return null;
+  if (!trimmed.startsWith(ADMIN_USER_REF_PREFIX)) return null;
   try {
     const key = getKey();
-    const raw = Buffer.from(trimmed.slice(PREFIX.length), 'base64url');
+    const raw = Buffer.from(trimmed.slice(ADMIN_USER_REF_PREFIX.length), 'base64url');
     const iv = raw.subarray(0, 12);
     const tag = raw.subarray(12, 28);
     const data = raw.subarray(28);

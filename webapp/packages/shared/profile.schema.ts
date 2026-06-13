@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BIO_MAX_LENGTH, STACK_AND_TOOLS_MAX, STACK_TOOL_NAME_MAX } from './profileLimits.js';
 
 /**
  * Shared request-shape contracts for profile PATCH bodies.
@@ -11,7 +12,7 @@ export const profileBasicPatchSchema = z
   .object({
     fullName: z.string().min(1).max(100).optional(),
     username: z.string().min(2).max(30).regex(/^\w+$/).optional(),
-    bio: z.string().max(500).optional(),
+    bio: z.string().max(BIO_MAX_LENGTH).optional(),
     /** Server may store DiceBear SVG data URIs (~15k+). */
     profileImg: z.string().max(131072).optional(),
     profileImgAlt: z.string().max(120).optional(),
@@ -31,7 +32,7 @@ export const profileBasicPatchSchema = z
 /** `PATCH /auth/profile/stack` — `stackAndTools` is not part of `basic` on the server. */
 export const profileStackPatchSchema = z
   .object({
-    stackAndTools: z.array(z.string().max(80)).max(10),
+    stackAndTools: z.array(z.string().max(STACK_TOOL_NAME_MAX)).max(STACK_AND_TOOLS_MAX),
   })
   .strict();
 
@@ -41,19 +42,6 @@ export const profileSocialPatchSchema = z
     instagram: z.string().max(200).optional(),
     github: optionalUriOrEmpty,
     youtube: optionalUriOrEmpty,
-  })
-  .strict();
-
-/** Deep array rules are stricter on the server (Zod); this bounds shape for shared typing. */
-export const profileWorkPatchSchema = z
-  .object({
-    workExperiences: z.array(z.record(z.unknown())).max(5),
-  })
-  .strict();
-
-export const profileEducationPatchSchema = z
-  .object({
-    education: z.array(z.record(z.unknown())).max(15),
   })
   .strict();
 
@@ -96,8 +84,6 @@ export const profileUpdateSectionSchema = z.enum([
   'basic',
   'social',
   'stack',
-  'work',
-  'education',
   'certifications',
   'projects',
   'setup',
@@ -109,8 +95,6 @@ export type ProfileUpdateSection = z.infer<typeof profileUpdateSectionSchema>;
 export type ProfileBasicPatch = z.infer<typeof profileBasicPatchSchema>;
 export type ProfileStackPatch = z.infer<typeof profileStackPatchSchema>;
 export type ProfileSocialPatch = z.infer<typeof profileSocialPatchSchema>;
-export type ProfileWorkPatch = z.infer<typeof profileWorkPatchSchema>;
-export type ProfileEducationPatch = z.infer<typeof profileEducationPatchSchema>;
 export type ProfileCertificationsPatch = z.infer<typeof profileCertificationsPatchSchema>;
 export type ProfileProjectsPatch = z.infer<typeof profileProjectsPatchSchema>;
 export type ProfileSetupPatch = z.infer<typeof profileSetupPatchSchema>;

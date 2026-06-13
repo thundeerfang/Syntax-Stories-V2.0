@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { AUDIT_DOMAINS, ACHIEVEMENT_EVENT_LOG_TTL_SEC, type AuditDomain } from '../shared/audit/domains.js';
 
 export const AUDIT_ACTIONS = [
   /** @deprecated Historical rows only — query both old and `auth.*` when aggregating sign-in. */
@@ -37,12 +38,6 @@ export const AUDIT_ACTIONS = [
   'unfollow',
   'profile_updated',
   'profile_view',
-  'education_added',
-  'education_updated',
-  'education_removed',
-  'work_added',
-  'work_updated',
-  'work_removed',
   'project_added',
   'project_updated',
   'project_removed',
@@ -68,6 +63,7 @@ export const AUDIT_ACTIONS = [
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 export interface IAuditLog extends Document {
+  domain: AuditDomain;
   action: string;
   actorId?: mongoose.Types.ObjectId;
   targetType?: string;
@@ -80,6 +76,13 @@ export interface IAuditLog extends Document {
 
 const AuditLogSchema = new Schema<IAuditLog>(
   {
+    domain: {
+      type: String,
+      enum: AUDIT_DOMAINS,
+      default: 'core',
+      required: true,
+      index: true,
+    },
     action: { type: String, required: true, index: true, maxlength: 80 },
     actorId: { type: Schema.Types.ObjectId, ref: 'users', index: true },
     targetType: { type: String, index: true, maxlength: 64 },
@@ -92,9 +95,19 @@ const AuditLogSchema = new Schema<IAuditLog>(
   { timestamps: false }
 );
 
+AuditLogSchema.index({ domain: 1, timestamp: -1 });
+AuditLogSchema.index({ domain: 1, action: 1, timestamp: -1 });
 AuditLogSchema.index({ actorId: 1, timestamp: -1 });
 AuditLogSchema.index({ action: 1, timestamp: -1 });
 AuditLogSchema.index({ targetType: 1, targetId: 1, timestamp: -1 });
+AuditLogSchema.index({ 'metadata._migratedFrom': 1, 'metadata._legacyId': 1 });
+AuditLogSchema.index(
+  { timestamp: 1 },
+  {
+    expireAfterSeconds: ACHIEVEMENT_EVENT_LOG_TTL_SEC,
+    partialFilterExpression: { 'metadata.ingest': true },
+  }
+);
 
 export const AuditLogModel: Model<IAuditLog> =
   mongoose.models?.audit_logs ?? mongoose.model<IAuditLog>('audit_logs', AuditLogSchema);

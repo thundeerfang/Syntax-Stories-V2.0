@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Request, Response } from 'express';
 import { UserModel, normalizeProfileImg } from '../models/User.js';
 import { FollowModel } from '../models/Follow.js';
+import { BlogRepostModel } from '../models/BlogRepost.js';
 import type { AuthUser } from '../middlewares/auth/index.js';
 import { getRedis } from '../config/redis.js';
 import { AnalyticsEventModel } from '../models/index.js';
@@ -19,10 +20,11 @@ import {
   dispatchAchievementEvents,
 } from '../achievements/achievement.service.js';
 import { attachStackAndToolsDisplay } from '../modules/profile/profile.enrich.js';
+import { PAGINATION, parseLimit } from '../shared/http/pagination.js';
 
 const FOLLOWED_FIELDS = 'username fullName profileImg';
 const PUBLIC_PROFILE_FIELDS =
-  'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools workExperiences education certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest blogRespectReceivedCount';
+  'username fullName profileImg coverBanner bio portfolioUrl linkedin github instagram youtube stackAndTools certifications projects openSourceContributions mySetup createdAt followersCount followingCount blogStreakMode readStreakLongest blogRespectReceivedCount';
 
 const DAILY_FOLLOW_LIMIT = 500;
 
@@ -84,7 +86,7 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
     const profileImg = normalizeProfileImg(u.profileImg);
     const modeRaw = (user as { blogStreakMode?: string }).blogStreakMode;
     const now = new Date();
-    const [readStreak, readHeatmapDays] = await Promise.all([
+    const [readStreak, readHeatmapDays, blogRepostCount] = await Promise.all([
       computeReadStreakPayload(
         u._id,
         modeRaw === 'weekly' || modeRaw === 'monthly' ? modeRaw : 'daily',
@@ -92,6 +94,7 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
         getRedis()
       ),
       loadReadDayBucketsForHeatmap(u._id, now),
+      BlogRepostModel.countDocuments({ userId: u._id }),
     ]);
     const durableLongest = (user as { readStreakLongest?: number }).readStreakLongest;
     if (durableLongest != null && durableLongest > 0) {
@@ -118,6 +121,7 @@ export async function getPublicProfile(req: Request, res: Response): Promise<voi
       followersCount: counts.followersCount,
       followingCount: counts.followingCount,
       blogRespectReceivedCount,
+      blogRepostCount: Math.max(0, blogRepostCount),
       readStreak,
       readHeatmapDays,
     });
@@ -159,9 +163,6 @@ export async function getFollowCounts(req: Request, res: Response): Promise<void
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
-
-const DEFAULT_PAGE_LIMIT = 20;
-const MAX_PAGE_LIMIT = 50;
 
 function dayBucketUTC(d = new Date()): string {
   const y = d.getUTCFullYear();
@@ -291,7 +292,7 @@ function parseFollowListQuery(
   sortDir: 1 | -1;
   shuffle: boolean;
 } | null {
-  const limit = Math.min(Number(req.query?.limit) || DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  const limit = parseLimit(req.query?.limit, PAGINATION.follow);
   const orderRaw = (req.query?.order as string)?.trim()?.toLowerCase();
   const sortDir: 1 | -1 = orderRaw === 'asc' ? 1 : -1;
   const shuffle = req.query?.shuffle === '1' || req.query?.shuffle === 'true';
@@ -614,39 +615,6 @@ export async function unfollowUser(req: Request, res: Response): Promise<void> {
       });
     }
     res.status(200).json({ success: true, message: 'Unfollowed' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-}
-
-const SEARCH_USER_LIMIT = 10;
-
-/** GET /api/follow/search?q=... - search users by username for mentions (public) */
-export async function searchUsers(req: Request, res: Response): Promise<void> {
-  try {
-    const q = (req.query?.q as string)?.trim();
-    if (!q || q.length < 1) {
-      res.status(200).json({ success: true, list: [] });
-      return;
-    }
-    const RE_ESCAPE = /[.*+?^${}()|[\]\\]/g;
-    const safe = q.replaceAll(RE_ESCAPE, (c) => `\\${c}`);
-    const regex = new RegExp(safe, 'i');
-    const users = await UserModel.find({
-      isActive: true,
-      $or: [{ username: regex }, { fullName: regex }],
-    })
-      .select(FOLLOWED_FIELDS)
-      .limit(SEARCH_USER_LIMIT)
-      .lean();
-    const list = users.map((u) => ({
-      id: String(u._id),
-      username: u.username,
-      fullName: u.fullName,
-      profileImg: normalizeProfileImg(u.profileImg),
-    }));
-    res.status(200).json({ success: true, list });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error' });

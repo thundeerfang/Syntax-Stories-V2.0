@@ -8,9 +8,10 @@ import { sendAdminError, sendAdminOk } from '../rbac/adminResponse.js';
 import type { StaffManagementRequest } from '../rbac/middleware/staffManagementContext.js';
 import { invalidateAllStaffAdminPermissionCaches } from '../rbac/services/rbac.service.js';
 import { reserveUniqueSlug } from '../../shared/slug/slugifyDisplayName.js';
-
-const SLUG_RE = /^[a-z][a-z0-9_]{0,79}$/;
-const CATALOG_SLUG_MAX = 80;
+import {
+  ADMIN_ACCESS_CATALOG_SLUG_MAX,
+  ADMIN_ACCESS_CATALOG_SLUG_RE,
+} from '../../variable/constants.js';
 
 async function resolveCatalogSlug(
   displayName: string,
@@ -19,10 +20,10 @@ async function resolveCatalogSlug(
 ): Promise<string | null> {
   const manual = provided?.trim().toLowerCase();
   if (manual) {
-    if (!SLUG_RE.test(manual)) return null;
+    if (!ADMIN_ACCESS_CATALOG_SLUG_RE.test(manual)) return null;
     return manual;
   }
-  return reserveUniqueSlug(displayName, exists, { maxLen: CATALOG_SLUG_MAX, style: 'underscore' });
+  return reserveUniqueSlug(displayName, exists, { maxLen: ADMIN_ACCESS_CATALOG_SLUG_MAX, style: 'underscore' });
 }
 
 function includeDeleted(req: Request): boolean {
@@ -426,7 +427,7 @@ export async function postAccessPermission(req: Request, res: Response): Promise
   const resource = body.resource?.trim().toLowerCase();
   const action = body.action?.trim().toLowerCase();
   const typeSlug = (body.type ?? 'management').trim().toLowerCase();
-  if (!resource || !SLUG_RE.test(resource) || !action || !SLUG_RE.test(action)) {
+  if (!resource || !ADMIN_ACCESS_CATALOG_SLUG_RE.test(resource) || !action || !ADMIN_ACCESS_CATALOG_SLUG_RE.test(action)) {
     sendAdminError(res, 400, 'VALIDATION_ERROR', 'Valid resource and action slugs are required');
     return;
   }

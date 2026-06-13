@@ -3,8 +3,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Briefcase,
-  GraduationCap,
   Award,
   FolderGit2,
   Code2,
@@ -14,8 +12,6 @@ import {
 import { cn } from '@/lib/core/utils';
 
 export type ProfileSectionVariant =
-  | 'workExperience'
-  | 'education'
   | 'certification'
   | 'project'
   | 'openSource'
@@ -25,16 +21,6 @@ const VARIANT_CONFIG: Record<
   ProfileSectionVariant,
   { icon: React.ComponentType<{ className?: string }>; title: string; borderColor?: string }
 > = {
-  workExperience: {
-    icon: Briefcase,
-    title: 'Work Experiences',
-    borderColor: 'border-l-primary',
-  },
-  education: {
-    icon: GraduationCap,
-    title: 'Education',
-    borderColor: 'border-l-emerald-500',
-  },
   certification: {
     icon: Award,
     title: 'Certifications',

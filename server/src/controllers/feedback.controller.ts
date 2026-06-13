@@ -4,7 +4,7 @@ import path from 'node:path';
 import mongoose from 'mongoose';
 import { env } from '../config/env.js';
 import { sendAuthEmail, getEmailSendErrorMessage } from '../infrastructure/mail/sendAuthEmail.js';
-import type { RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
+import type { AuthUser } from '../middlewares/auth/verifyToken.js';
 import { parseMultipartFeedback } from '../middlewares/feedback/feedbackMultipart.validation.js';
 import {
   attachAchievementsToResponse,
@@ -19,6 +19,16 @@ import {
   processUploadedImageBuffer,
   ImageMasterError,
 } from '../services/image/imageMasterHandler.js';
+import { sendImageMasterError } from '../services/image/imageMasterDelivery.js';
+import { buildUploadImageMeta } from '../utils/uploadImageMeta.js';
+import {
+  assertFeedbackWeeklyQuota,
+  getFeedbackWeeklyQuota,
+} from '../services/feedback/feedbackQuota.service.js';
+
+function authUserFromRequest(req: Request): AuthUser | undefined {
+  return (req as Request & { user?: AuthUser }).user;
+}
 
 function escapeHtml(s: string): string {
   return s
@@ -158,18 +168,51 @@ export async function listFeedbackCategories(_req: Request, res: Response): Prom
   }
 }
 
+/** GET /api/feedback/quota — weekly submission allowance for signed-in users. */
+export async function getFeedbackQuota(req: Request, res: Response): Promise<void> {
+  try {
+    const auth = authUserFromRequest(req);
+    if (!auth?._id) {
+      res.status(401).json({ success: false, message: 'Sign in required.' });
+      return;
+    }
+    const quota = await getFeedbackWeeklyQuota(auth._id);
+    res.status(200).json({ success: true, quota });
+  } catch (err) {
+    console.error('[feedback] getFeedbackQuota', err);
+    res.status(500).json({ success: false, message: 'Could not load feedback quota.' });
+  }
+}
+
 type MulterRequest = Request & { file?: Express.Multer.File };
 
-/** POST /api/feedback (multipart: fields + optional attachment) */
+/** POST /api/feedback (multipart: fields + required attachment; signed-in only) */
 export async function submitFeedback(req: Request, res: Response): Promise<void> {
   try {
-    const r = req as RequestWithOptionalAuth;
-    const auth = r.authUser;
-    const isAuthed = Boolean(auth?._id);
+    const auth = authUserFromRequest(req);
+    if (!auth?._id) {
+      res.status(401).json({ success: false, message: 'Sign in required to send feedback.' });
+      return;
+    }
 
-    const parsed = parseMultipartFeedback(req.body as Record<string, unknown>, isAuthed);
+    const parsed = parseMultipartFeedback(req.body as Record<string, unknown>);
     if (!parsed.ok) {
       res.status(400).json({ success: false, message: parsed.message });
+      return;
+    }
+
+    const quotaErr = await assertFeedbackWeeklyQuota(auth._id);
+    if (quotaErr) {
+      res.status(429).json({ success: false, message: quotaErr, code: 'FEEDBACK_WEEKLY_LIMIT' });
+      return;
+    }
+
+    const mReq = req as MulterRequest;
+    if (!mReq.file?.buffer?.length) {
+      res.status(400).json({
+        success: false,
+        message: 'An image attachment is required (screen capture or upload).',
+      });
       return;
     }
 
@@ -193,41 +236,34 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
     let firstName: string;
     let lastName: string;
     let email: string;
-    let subject = parsed.data.subject;
-    let description = parsed.data.description;
-    let clientMeta = parsed.data.clientMeta;
+    const subject = parsed.data.subject;
+    const description = parsed.data.description;
+    const clientMeta = parsed.data.clientMeta;
     let username: string | undefined;
-    let userId: mongoose.Types.ObjectId | undefined;
+    let userId: mongoose.Types.ObjectId;
 
-    if (isAuthed) {
-      const u = await UserModel.findById(auth!._id).select('fullName email username').lean();
-      if (!u) {
-        res.status(401).json({ success: false, message: 'Session invalid. Please sign in again.' });
-        return;
-      }
-      const split = splitFullName(typeof u.fullName === 'string' ? u.fullName : '');
-      firstName = split.firstName;
-      lastName = split.lastName;
-      email = typeof u.email === 'string' ? u.email : '';
-      if (!email) {
-        res.status(400).json({ success: false, message: 'Account email missing.' });
-        return;
-      }
-      username = typeof u.username === 'string' ? u.username : undefined;
-      userId = new mongoose.Types.ObjectId(auth!._id);
-    } else {
-      firstName = parsed.data.firstName!;
-      lastName = parsed.data.lastName!;
-      email = parsed.data.email!.toLowerCase();
+    const u = await UserModel.findById(auth._id).select('fullName email username').lean();
+    if (!u) {
+      res.status(401).json({ success: false, message: 'Session invalid. Please sign in again.' });
+      return;
     }
+    const split = splitFullName(typeof u.fullName === 'string' ? u.fullName : '');
+    firstName = split.firstName;
+    lastName = split.lastName;
+    email = typeof u.email === 'string' ? u.email : '';
+    if (!email) {
+      res.status(400).json({ success: false, message: 'Account email missing.' });
+      return;
+    }
+    username = typeof u.username === 'string' ? u.username : undefined;
+    userId = new mongoose.Types.ObjectId(auth._id);
 
     const attachmentTitleRaw = parsed.data.attachmentTitle?.trim();
-    const attachmentTitle =
+    let attachmentTitle =
       attachmentTitleRaw && attachmentTitleRaw.length > 0
         ? attachmentTitleRaw.slice(0, 120)
         : undefined;
 
-    const mReq = req as MulterRequest;
     let attachmentUrl: string | undefined;
     let attachmentMeta:
       | {
@@ -240,35 +276,38 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
         }
       | undefined;
 
-    if (mReq.file?.buffer?.length) {
-      try {
-        const processed = await processUploadedImageBuffer(
-          mReq.file.buffer,
-          mReq.file.mimetype,
-          'feedback'
-        );
-        const dir = getDefaultUploadStorage().dirs.feedback;
-        await fs.mkdir(dir, { recursive: true });
-        const base = `feedback-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.webp`;
-        const diskPath = path.join(dir, base);
-        await fs.writeFile(diskPath, processed.buffer);
-        attachmentUrl = `/uploads/feedback/${base}`;
-        attachmentMeta = {
-          mime: processed.mime,
-          width: processed.width,
-          height: processed.height,
-          bytesIn: processed.bytesIn,
-          bytesOut: processed.bytesOut,
-          originalName: mReq.file.originalname?.slice(0, 255),
-        };
-      } catch (e) {
-        if (e instanceof ImageMasterError) {
-          const status = e.code === 'virus' ? 422 : e.code === 'clamav_config' ? 503 : 400;
-          res.status(status).json({ success: false, message: e.message });
-          return;
-        }
-        throw e;
+    try {
+      const processed = await processUploadedImageBuffer(
+        mReq.file.buffer,
+        mReq.file.mimetype,
+        'feedback'
+      );
+      const dir = getDefaultUploadStorage().dirs.feedback;
+      await fs.mkdir(dir, { recursive: true });
+      const base = `feedback-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.webp`;
+      const diskPath = path.join(dir, base);
+      await fs.writeFile(diskPath, processed.buffer);
+      attachmentUrl = `/uploads/feedback/${base}`;
+      attachmentMeta = {
+        mime: processed.mime,
+        width: processed.width,
+        height: processed.height,
+        bytesIn: processed.bytesIn,
+        bytesOut: processed.bytesOut,
+        originalName: mReq.file.originalname?.slice(0, 255),
+      };
+      if (!attachmentTitle) {
+        attachmentTitle = buildUploadImageMeta(
+          mReq.file.originalname ?? 'image',
+          username ?? 'user'
+        ).title;
       }
+    } catch (e) {
+      if (e instanceof ImageMasterError) {
+        sendImageMasterError(res, e);
+        return;
+      }
+      throw e;
     }
 
     const serverMeta = {
@@ -294,7 +333,7 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
       serverMeta,
       emailDelivered: false,
       attachmentUrl,
-      attachmentTitle: attachmentUrl ? attachmentTitle : undefined,
+      attachmentTitle,
       attachmentMeta,
     });
 
@@ -311,7 +350,7 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
         description,
         categoryLabel: category.label,
         attachmentUrl,
-        attachmentTitle: attachmentUrl ? attachmentTitle : undefined,
+        attachmentTitle,
         username,
         userId: userId ? String(userId) : undefined,
         submittedAtIst,

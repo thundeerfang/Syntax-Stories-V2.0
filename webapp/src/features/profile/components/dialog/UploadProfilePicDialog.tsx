@@ -9,12 +9,13 @@ import { ImageDropzone } from '@/components/ui/form';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { uploadAvatar, type CropArea } from '@/api/upload';
+import { uploadResponseAlt } from '@/lib/media/uploadImageMeta';
 
 export interface UploadProfilePicDialogProps {
   open: boolean;
   onClose: () => void;
   token: string;
-  onSuccess: (result: { url: string; blurDataUrl?: string }) => void;
+  onSuccess: (result: { url: string; blurDataUrl?: string; alt?: string; title?: string }) => void;
 }
 
 const MAX_MB = 5;
@@ -80,7 +81,12 @@ export function UploadProfilePicDialog({
     try {
       const data = await uploadAvatar(token, selectedFile, cropArea, (p) => setProgress(p));
       if (data.url) {
-        onSuccess({ url: data.url, blurDataUrl: data.blurDataUrl });
+        onSuccess({
+          url: data.url,
+          blurDataUrl: data.blurDataUrl,
+          alt: uploadResponseAlt(data),
+          title: data.title,
+        });
         toast.success('Profile photo updated.');
         resetState();
         onClose();

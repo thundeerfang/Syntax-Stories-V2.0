@@ -15,11 +15,16 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { blogApi } from '@/api/blog';
+import { fetchCategoriesList } from '@/api/tagsExplore';
 import { CompactBlogPostsSwiper, type CompactBlogPostsSwiperHandle } from '@/features/blog';
+import { Button } from '@/components/ui/button';
 import {
   RailFeedEmptyState,
   RailFeedErrorState,
   RailSectionSubheader,
+  RailCountPill,
+  RailCountPillLoading,
+  RailCountPillPair,
   ShellPageIntroHeader,
   type RailSectionSubheaderSortProps,
 } from '@/components/layout';
@@ -515,8 +520,9 @@ function TrendingStackedHero({
 }
 
 const GLOBAL_HERO_LIMIT = 14;
-const CATEGORY_SECTIONS = 6;
-const PER_CATEGORY_LIMIT = 10;
+const CATEGORY_PAGE_SIZE = 3;
+const LANE_INITIAL_POSTS = 5;
+const LANE_POSTS_PAGE = 5;
 
 /** Sort keys for category lane rails — `value` is stored in state; label is shown in the dropdown. */
 const LANE_SORT_OPTIONS: RailSectionSubheaderSortProps['options'] = [
@@ -526,6 +532,11 @@ const LANE_SORT_OPTIONS: RailSectionSubheaderSortProps['options'] = [
   { value: 'title-asc', label: 'Title A–Z' },
   { value: 'title-desc', label: 'Title Z–A' },
 ];
+
+const laneSwiperNavBtn = cn(
+  '!size-10 !min-h-10 !min-w-10 !p-0 !bg-white !text-primary !border-border',
+  'hover:!bg-white hover:!text-primary hover:!opacity-90 active:translate-x-0 active:translate-y-0 active:shadow-none'
+);
 
 type LaneSortValue = (typeof LANE_SORT_OPTIONS)[number]['value'];
 
@@ -553,20 +564,94 @@ function sortLanePosts(list: Post[], sort: LaneSortValue): Post[] {
   }
 }
 
+function TrendingLaneBlogLoader() {
+  return (
+    <div
+      className="flex h-full min-h-[18rem] w-full animate-pulse flex-col border-2 border-border bg-card p-4"
+      aria-busy="true"
+      aria-label="Loading more stories"
+    >
+      <div className="mb-3 h-36 w-full bg-muted/60" />
+      <div className="mb-2 h-4 w-3/4 bg-muted/50" />
+      <div className="h-3 w-1/2 bg-muted/40" />
+    </div>
+  );
+}
+
 function TrendingCategoryLane({
   category,
-  posts,
-  error,
-  onRetry,
+  token,
 }: Readonly<{
   category: BlogTaxonomyRow;
-  posts: Post[];
-  error: unknown | null;
-  onRetry: () => void;
+  token: string | null;
 }>) {
   const swiperRef = useRef<CompactBlogPostsSwiperHandle>(null);
+  const postsRequestIdRef = useRef(0);
+  const postsOffsetRef = useRef(0);
+  const postsLoadingMoreRef = useRef(false);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+  const [postsHasMore, setPostsHasMore] = useState(false);
+  const [postsError, setPostsError] = useState<unknown | null>(null);
   const [laneQuery, setLaneQuery] = useState('');
   const [sortValue, setSortValue] = useState<LaneSortValue>('feed');
+
+  const loadPosts = useCallback(
+    async (reset: boolean) => {
+      const requestId = ++postsRequestIdRef.current;
+      const offset = reset ? 0 : postsOffsetRef.current;
+      const limit = reset ? LANE_INITIAL_POSTS : LANE_POSTS_PAGE;
+
+      if (reset) {
+        setPostsLoading(true);
+        setPostsError(null);
+      } else {
+        postsLoadingMoreRef.current = true;
+        setPostsLoadingMore(true);
+      }
+
+      try {
+        const { posts: raw, hasMore } = await blogApi.getPublishedFeed(
+          limit,
+          { category: category.slug, offset },
+          token
+        );
+        if (requestId !== postsRequestIdRef.current) return;
+
+        const mapped = raw.map(mapPublicFeedPostToPost);
+        postsOffsetRef.current = offset + mapped.length;
+        setPosts((prev) => (reset ? mapped : [...prev, ...mapped]));
+        setPostsHasMore(hasMore);
+        setPostsError(null);
+      } catch (e) {
+        if (requestId !== postsRequestIdRef.current) return;
+        setPostsError(e);
+        if (reset) {
+          postsOffsetRef.current = 0;
+          setPosts([]);
+          setPostsHasMore(false);
+        }
+      } finally {
+        if (requestId === postsRequestIdRef.current) {
+          setPostsLoading(false);
+          setPostsLoadingMore(false);
+          postsLoadingMoreRef.current = false;
+        }
+      }
+    },
+    [category.slug, token]
+  );
+
+  useEffect(() => {
+    postsOffsetRef.current = 0;
+    void loadPosts(true);
+  }, [loadPosts]);
+
+  const handleLoadMorePosts = useCallback(() => {
+    if (postsLoading || postsLoadingMore || !postsHasMore || postsLoadingMoreRef.current) return;
+    void loadPosts(false);
+  }, [loadPosts, postsHasMore, postsLoading, postsLoadingMore]);
 
   const filteredPosts = useMemo(() => {
     let list = posts;
@@ -582,20 +667,41 @@ function TrendingCategoryLane({
     return sortLanePosts(list, sortValue);
   }, [posts, laneQuery, sortValue]);
 
-  const laneToolbarBtn =
-    'inline-flex h-[42px] shrink-0 items-center justify-center border-2 border-border bg-background font-mono text-[10px] font-black uppercase tracking-widest text-foreground transition-colors hover:bg-muted/50';
+  const laneHeaderCount = useMemo(() => {
+    if (postsLoading) return <RailCountPillLoading />;
+    const q = laneQuery.trim();
+    if (q || filteredPosts.length !== posts.length) {
+      return (
+        <RailCountPillPair
+          primary={filteredPosts.length}
+          secondary={posts.length}
+          primaryLabel={`${filteredPosts.length} matching`}
+          secondaryLabel={`${posts.length} loaded`}
+        />
+      );
+    }
+    return (
+      <RailCountPill
+        count={category.postCount}
+        aria-label={`${category.postCount.toLocaleString()} posts`}
+      />
+    );
+  }, [
+    category.postCount,
+    filteredPosts.length,
+    laneQuery,
+    posts.length,
+    postsLoading,
+  ]);
+
+  const showLaneArrows =
+    filteredPosts.length > 1 && postsError == null && !postsLoading;
 
   return (
     <div className="min-w-0 space-y-3">
       <RailSectionSubheader
         label={category.name}
-        text={
-          <span className="text-muted-foreground">
-            {filteredPosts.length === posts.length
-              ? `${posts.length} ${posts.length === 1 ? 'post' : 'posts'}`
-              : `${filteredPosts.length} of ${posts.length} posts`}
-          </span>
-        }
+        text={laneHeaderCount}
         search={{
           value: laneQuery,
           onChange: setLaneQuery,
@@ -610,24 +716,28 @@ function TrendingCategoryLane({
           placeholder: 'Sort',
         }}
         swiperButtons={
-          filteredPosts.length > 1 && error == null ? (
+          showLaneArrows ? (
             <>
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 aria-label={`Scroll ${category.name} stories left`}
                 onClick={() => swiperRef.current?.scrollPrev()}
-                className={cn(laneToolbarBtn, 'w-10 p-0')}
+                className={laneSwiperNavBtn}
               >
                 <ChevronLeft className="size-4" aria-hidden />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 aria-label={`Scroll ${category.name} stories right`}
                 onClick={() => swiperRef.current?.scrollNext()}
-                className={cn(laneToolbarBtn, 'w-10 p-0')}
+                className={laneSwiperNavBtn}
               >
                 <ChevronRight className="size-4" aria-hidden />
-              </button>
+              </Button>
             </>
           ) : null
         }
@@ -644,15 +754,18 @@ function TrendingCategoryLane({
         ref={swiperRef}
         mode="rail"
         posts={filteredPosts}
-        loading={false}
-        error={error}
-        onRetry={onRetry}
+        loading={postsLoading}
+        error={postsError}
+        onRetry={() => void loadPosts(true)}
         aria-label={`Posts in ${category.name}`}
         emptyHeadline="No posts in this lane yet"
         emptySub="Publish a story under this category to fill the row."
         showToolbarArrows={false}
         showPagination={false}
         snapSlides={false}
+        onNearEnd={handleLoadMorePosts}
+        nearEndDisabled={postsLoading || postsLoadingMore || !postsHasMore || laneQuery.trim() !== ''}
+        endContent={postsLoadingMore ? <TrendingLaneBlogLoader /> : null}
       />
     </div>
   );
@@ -661,67 +774,99 @@ function TrendingCategoryLane({
 export function TrendingPage() {
   const token = useAuthStore((s) => s.token);
   const [heroPosts, setHeroPosts] = useState<Post[]>([]);
-  const [categoryRows, setCategoryRows] = useState<
-    { category: BlogTaxonomyRow; posts: Post[]; error: unknown | null }[]
-  >([]);
+  const [categories, setCategories] = useState<BlogTaxonomyRow[]>([]);
+  const [categoriesHasMore, setCategoriesHasMore] = useState(false);
   const [heroLoading, setHeroLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesLoadingMore, setCategoriesLoadingMore] = useState(false);
   const [heroError, setHeroError] = useState<unknown | null>(null);
+  const categoriesOffsetRef = useRef(0);
+  const categoriesRequestIdRef = useRef(0);
+  const categoriesLoadingMoreRef = useRef(false);
+  const categoriesSentinelRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  const loadHero = useCallback(async () => {
     setHeroLoading(true);
-    setCategoriesLoading(true);
     setHeroError(null);
     try {
-      const [tax, globalFeed] = await Promise.all([
-        blogApi.getTaxonomy(),
-        blogApi.getPublishedFeed(GLOBAL_HERO_LIMIT, undefined, token),
-      ]);
+      const globalFeed = await blogApi.getPublishedFeed(GLOBAL_HERO_LIMIT, undefined, token);
       setHeroPosts(globalFeed.posts.map(mapPublicFeedPostToPost));
-      setHeroLoading(false);
-
-      const categories = [...(tax.categories ?? [])]
-        .filter((c) => c.postCount > 0)
-        .sort((a, b) => b.postCount - a.postCount)
-        .slice(0, CATEGORY_SECTIONS);
-
-      const rows = await Promise.all(
-        categories.map(async (row) => {
-          try {
-            const { posts } = await blogApi.getPublishedFeed(
-              PER_CATEGORY_LIMIT,
-              { category: row.slug },
-              token
-            );
-            return {
-              category: row,
-              posts: posts.map(mapPublicFeedPostToPost),
-              error: null as unknown | null,
-            };
-          } catch (e) {
-            return { category: row, posts: [] as Post[], error: e };
-          }
-        })
-      );
-      setCategoryRows(rows);
     } catch (e) {
       setHeroError(e);
       setHeroPosts([]);
-      setCategoryRows([]);
-      setHeroLoading(false);
     } finally {
-      setCategoriesLoading(false);
+      setHeroLoading(false);
     }
   }, [token]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const loadCategoriesPage = useCallback(async (reset: boolean) => {
+    const requestId = ++categoriesRequestIdRef.current;
+    const offset = reset ? 0 : categoriesOffsetRef.current;
 
-  const sectionsToShow = useMemo(
-    () => categoryRows.filter((r) => r.posts.length > 0 || r.error != null),
-    [categoryRows]
-  );
+    if (reset) {
+      setCategoriesLoading(true);
+    } else {
+      categoriesLoadingMoreRef.current = true;
+      setCategoriesLoadingMore(true);
+    }
+
+    try {
+      const page = await fetchCategoriesList({
+        offset,
+        limit: CATEGORY_PAGE_SIZE,
+        sort: 'posts-desc',
+      });
+      if (requestId !== categoriesRequestIdRef.current) return;
+
+      const rows = page.list
+        .filter((c) => c.postCount > 0)
+        .map((c) => ({
+          slug: c.slug,
+          name: c.name,
+          postCount: c.postCount,
+          description: c.description,
+        }));
+
+      categoriesOffsetRef.current = offset + page.list.length;
+      setCategories((prev) => (reset ? rows : [...prev, ...rows]));
+      setCategoriesHasMore(page.hasMore);
+    } catch {
+      if (requestId !== categoriesRequestIdRef.current) return;
+      if (reset) {
+        categoriesOffsetRef.current = 0;
+        setCategories([]);
+        setCategoriesHasMore(false);
+      }
+    } finally {
+      if (requestId === categoriesRequestIdRef.current) {
+        setCategoriesLoading(false);
+        setCategoriesLoadingMore(false);
+        categoriesLoadingMoreRef.current = false;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadHero();
+    void loadCategoriesPage(true);
+  }, [loadHero, loadCategoriesPage]);
+
+  useEffect(() => {
+    const el = categoriesSentinelRef.current;
+    if (!el || categoriesLoading || categoriesLoadingMore || !categoriesHasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.some((entry) => entry.isIntersecting);
+        if (!hit || categoriesLoadingMoreRef.current) return;
+        void loadCategoriesPage(false);
+      },
+      { rootMargin: '240px 0px' }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [categoriesLoading, categoriesLoadingMore, categoriesHasMore, loadCategoriesPage]);
 
   return (
     <div
@@ -747,18 +892,14 @@ export function TrendingPage() {
           posts={heroPosts}
           loading={heroLoading}
           error={heroError}
-          onRetry={() => void load()}
+          onRetry={() => void loadHero()}
         />
       </div>
 
       <section className="min-w-0 space-y-10" aria-label="Trending by category">
         {categoriesLoading ? (
-          <div className="space-y-10">
-            {['tr-lane-0', 'tr-lane-1', 'tr-lane-2'].map((id) => (
-              <TrendingCategoryLaneSkeleton key={id} />
-            ))}
-          </div>
-        ) : sectionsToShow.length === 0 ? (
+          <TrendingCategoryLaneSkeleton />
+        ) : categories.length === 0 ? (
           <RailFeedEmptyState
             icon={Sparkles}
             title="Great things coming soon"
@@ -779,15 +920,13 @@ export function TrendingPage() {
             ]}
           />
         ) : (
-          sectionsToShow.map(({ category, posts, error }) => (
-            <TrendingCategoryLane
-              key={category.slug}
-              category={category}
-              posts={posts}
-              error={error}
-              onRetry={() => void load()}
-            />
-          ))
+          <>
+            {categories.map((category) => (
+              <TrendingCategoryLane key={category.slug} category={category} token={token} />
+            ))}
+            {categoriesLoadingMore ? <TrendingCategoryLaneSkeleton /> : null}
+            <div ref={categoriesSentinelRef} className="h-px w-full" aria-hidden />
+          </>
         )}
       </section>
     </div>

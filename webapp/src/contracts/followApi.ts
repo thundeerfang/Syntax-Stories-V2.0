@@ -33,8 +33,6 @@ export interface PublicProfileUser {
   stackAndTools?: string[];
   stackAndToolsDisplay?: TechStackItem[];
   mySetup?: Array<{ label: string; imageUrl: string; productUrl?: string }>;
-  workExperiences?: unknown[];
-  education?: unknown[];
   certifications?: unknown[];
   projects?: unknown[];
   openSourceContributions?: unknown[];
@@ -58,6 +56,7 @@ export interface PublicProfileResponse {
   followersCount: number;
   followingCount: number;
   blogRespectReceivedCount?: number;
+  blogRepostCount?: number;
   readStreak?: ReadStreakPayload;
   readHeatmapDays?: string[];
 }

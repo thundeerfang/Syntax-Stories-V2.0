@@ -8,11 +8,13 @@ import { SearchDialogWrapper } from '@/components/search';
 import { SonnerToaster } from '@/components/retroui';
 import { UiProcessingShield } from '@/components/ui/feedback';
 import { Providers } from './providers';
-import { AppwritePing } from '@/components/appwrite/AppwritePing';
 import { ConnectivityGate } from '@/features/connectivity';
+import { StorageGate } from '@/features/platform';
 import { NotificationRealtimeBridge } from '@/components/notifications/NotificationRealtimeBridge';
 import { GlobalEngagementEffects } from '@/components/effects/GlobalEngagementEffects';
 import { AchievementCelebrationHost } from '@/features/achievements/components/AchievementCelebrationHost';
+import { AchievementRealtimeBridge } from '@/features/achievements/components/AchievementRealtimeBridge';
+import { NavigationRecovery } from '@/components/shell/NavigationRecovery';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -49,7 +51,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} antialiased`}>
         <Providers>
-          <AppwritePing />
+          <NavigationRecovery />
           <UiProcessingShield />
           <StoreHydration />
           <AuthDialogWrapper />
@@ -58,8 +60,10 @@ export default function RootLayout({
           <NotificationRealtimeBridge />
           <LayoutShell>{children}</LayoutShell>
           <AchievementCelebrationHost />
+          <AchievementRealtimeBridge />
           <GlobalEngagementEffects />
           <ConnectivityGate />
+          <StorageGate />
         </Providers>
       </body>
     </html>

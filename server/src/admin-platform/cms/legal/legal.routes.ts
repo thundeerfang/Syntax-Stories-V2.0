@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import { RATE_LIMITS } from '../../../config/rateLimits.js';
 import { verifyToken } from '../../../middlewares/auth/index.js';
 import { cmsAdminGate } from '../../rbac/middleware/cmsAdminGate.js';
 import {
@@ -19,23 +20,20 @@ import {
 } from './legal.handlers.js';
 
 const publicRead = rateLimit({
-  windowMs: 60_000,
-  max: 120,
+  ...RATE_LIMITS.legalPublicRead,
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 const userWrite = rateLimit({
-  windowMs: 60_000,
-  max: 60,
+  ...RATE_LIMITS.legalUserWrite,
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 /** Admin CMS — editors poll list/revision endpoints frequently. */
 const adminWrite = rateLimit({
-  windowMs: 60_000,
-  max: 200,
+  ...RATE_LIMITS.legalAdminWrite,
   standardHeaders: true,
   legacyHeaders: false,
 });

@@ -4,8 +4,9 @@ import { SYNTAX_ADMIN_EMAIL } from '../../seeds/bootstrap.constants.js';
 import { LegalPolicyModel } from './models/legal.models.js';
 import { slugForKind, type LegalKind } from './legalKinds.js';
 import { recordBootstrapLegalAcceptances } from './recordLegalAcceptances.js';
+import { ACCEPT_POLICY_KINDS, LEGAL_POLICY_KINDS } from '../../../variable/constants.js';
 
-const SEED_KINDS: LegalKind[] = ['terms', 'privacy', 'udd'];
+const SEED_KINDS: LegalKind[] = [...LEGAL_POLICY_KINDS];
 
 const SEED_BODIES: Record<LegalKind, { title: string; summary: string; body: string }> = {
   terms: {
@@ -74,7 +75,7 @@ export async function ensureLegalPoliciesSeed(): Promise<void> {
 
 export async function assertLegalBootstrapHealth(): Promise<{ ok: boolean; missing: string[] }> {
   const missing: string[] = [];
-  for (const kind of ['terms', 'privacy'] as const) {
+  for (const kind of ACCEPT_POLICY_KINDS) {
     const p = await LegalPolicyModel.findOne({
       kind,
       region: 'global',

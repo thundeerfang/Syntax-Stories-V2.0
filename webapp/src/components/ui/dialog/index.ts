@@ -16,3 +16,4 @@ export {
   type InfoSwiperSlide,
 } from './InfoSwiperDialog';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
+export { InfoHintDialog, type InfoHintDialogProps } from './InfoHintDialog';

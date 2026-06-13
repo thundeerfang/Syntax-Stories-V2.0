@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Flame, Loader2 } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { followApi, type ReadStreakPayload } from '@/api/follow';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
@@ -90,17 +90,6 @@ export function BlogStreakSettingsContent() {
       setSaving(false);
     }
   };
-
-  if (loading && !payload) {
-    return (
-      <div className="flex items-center gap-2 py-16 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
-        <span className="font-mono text-[10px] uppercase tracking-widest">
-          Loading read streaks…
-        </span>
-      </div>
-    );
-  }
 
   const modes: Mode[] = ['daily', 'weekly', 'monthly'];
 

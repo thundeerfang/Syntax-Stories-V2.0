@@ -11,11 +11,7 @@ export function getStripe(): Stripe | null {
   return client;
 }
 
+/** Checkout + portal available when the secret key is set (prices resolve via env or catalog sync). */
 export function isStripeConfigured(): boolean {
-  return (
-    !!env.STRIPE_SECRET_KEY &&
-    !!env.STRIPE_PRICE_PRO &&
-    !!env.STRIPE_PRICE_PROPLUS &&
-    !!env.STRIPE_PRICE_ULTRA
-  );
+  return !!env.STRIPE_SECRET_KEY;
 }

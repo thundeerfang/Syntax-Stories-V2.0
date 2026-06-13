@@ -8,8 +8,8 @@ import { writeAuditLog } from '../../../shared/audit/auditLog.js';
 import { AuditAction } from '../../../shared/audit/events.js';
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { logSecurityEvent } from '../securityEventLog.js';
+import { AUTH_TTL } from '../../../config/auth.ttls.js';
 
-const INTENT_TTL_SECONDS = 5 * 60;
 const ALLOWED_INTENT_ACTIONS = ['delete_account'] as const;
 type IntentAction = (typeof ALLOWED_INTENT_ACTIONS)[number];
 
@@ -29,8 +29,8 @@ async function storeIntent(
   const tokenHash = hashToken(rawToken);
   const key = redisKeys.auth.intent(tokenHash);
   const payload = JSON.stringify({ userId, action });
-  await redis.setEx(key, INTENT_TTL_SECONDS, payload);
-  return { token: rawToken, expiresIn: INTENT_TTL_SECONDS };
+  await redis.setEx(key, AUTH_TTL.intentSec, payload);
+  return { token: rawToken, expiresIn: AUTH_TTL.intentSec };
 }
 
 export async function createIntent(req: Request, res: Response): Promise<void> {

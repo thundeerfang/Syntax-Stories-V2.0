@@ -2,8 +2,9 @@
  * Legal JSON API shapes shared with the webapp (`webapp/src/contracts/legalApi.ts`).
  */
 
-export type LegalPolicyKind = 'terms' | 'privacy' | 'udd';
-export type AcceptPolicyKind = 'terms' | 'privacy';
+import type { AcceptPolicyKind, LegalPolicyKind } from '../../variable/constants.js';
+
+export type { AcceptPolicyKind, LegalPolicyKind };
 
 export interface PublishedPolicyResponse {
   ok: true;

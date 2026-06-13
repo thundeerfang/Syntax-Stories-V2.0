@@ -3,9 +3,11 @@
  * Keep in sync with `webapp/src/contracts/billingApi.ts`.
  */
 
-export type BillingPlanKey = 'free' | 'pro' | 'proplus' | 'ultra' | 'premium';
+import type { PaidPlanKey, SubscriptionPlan } from '../../variable/constants.js';
 
-export type BillingPaidPlanKey = 'pro' | 'proplus' | 'ultra';
+export type BillingPlanKey = SubscriptionPlan;
+
+export type BillingPaidPlanKey = PaidPlanKey;
 
 export type BillingPlanCatalogItem = {
   key: BillingPaidPlanKey;

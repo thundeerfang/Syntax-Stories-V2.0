@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { setPostAuthRedirect } from '@/lib/auth/postAuthRedirect';
 import { cn } from '@/lib/core/utils';
@@ -134,6 +135,7 @@ export default function InviteDashboardPage() {
   const router = useRouter();
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
+  const routeRestoreNonce = useRouteRestoreNonce();
 
   const [me, setMe] = useState<InviteMeResponse | null>(null);
   const [stats, setStats] = useState<InviteStatsResponse | null>(null);
@@ -212,7 +214,7 @@ export default function InviteDashboardPage() {
       return;
     }
     void load();
-  }, [isHydrated, token, load, router]);
+  }, [isHydrated, token, load, router, routeRestoreNonce]);
 
   const copyText = async (text: string, kind: CopyKind, toastLabel: string) => {
     if (!text) return;

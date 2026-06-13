@@ -9,6 +9,9 @@ import {
   RailFeedEmptyState,
   RailFeedErrorState,
   RailSectionSubheader,
+  RailCountPill,
+  RailCountPillLoading,
+  RailCountPillPair,
   ShellPageIntroHeader,
   type RailSectionSubheaderSortProps,
 } from '@/components/layout';
@@ -172,13 +175,21 @@ export default function TopicsCategoryFeedPage() {
             <RailSectionSubheader
               label="Total posts"
               text={
-                <span className="text-muted-foreground">
-                  {loading
-                    ? '—'
-                    : searchDebounced
-                      ? `${filteredSortedPosts.length} of ${posts.length} posts`
-                      : `${totalIndexed > 999 ? '999+' : totalIndexed.toLocaleString()} ${totalIndexed === 1 ? 'post' : 'posts'}`}
-                </span>
+                loading ? (
+                  <RailCountPillLoading />
+                ) : searchDebounced ? (
+                  <RailCountPillPair
+                    primary={filteredSortedPosts.length}
+                    secondary={posts.length}
+                    primaryLabel={`${filteredSortedPosts.length} matching`}
+                    secondaryLabel={`${posts.length} total`}
+                  />
+                ) : (
+                  <RailCountPill
+                    count={totalIndexed}
+                    aria-label={`${totalIndexed.toLocaleString()} total`}
+                  />
+                )
               }
               search={{
                 value: searchInput,

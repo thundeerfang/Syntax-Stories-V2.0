@@ -7,7 +7,6 @@ export * from '../extractBlogHeadingToc';
 export * from './mapBlogPostResponseToPost';
 export * from './mapFeedPostToPost';
 export * from './mermaidValidate';
-export * from './referenceSearch';
 export * from './summaryPlain';
 export * from './tableBlockLimits';
 export * from './tablePaste';

@@ -11,11 +11,15 @@ import { blogApi, type BlogPostResponse } from '@/api/blog';
 import { BlogCard, type BlogCardOwnerActions } from '@/features/blog';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import {
+  RailCountPill,
+  RailCountPillLoading,
+  RailCountPillPair,
   RailFeedEmptyState,
-  RailSectionSubheader,
   RectangleAppBreadcrumb,
-  type RailSectionSubheaderSortProps,
 } from '@/components/layout';
+import { SearchableSelect } from '@/components/retroui';
+import { SearchField } from '@/components/ui/form';
+import { ProfileBlogsStatusTabs, type ProfileBlogsStatusTab } from './ProfileBlogsStatusTabs';
 import { blockShadowButtonClassNames } from '@/components/ui/button';
 import { mapBlogPostResponseToPost } from '@/lib/blog/mapBlogPostResponseToPost';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
@@ -31,7 +35,7 @@ import type { Post } from '@/types';
 
 const TRASH_MS = 7 * 24 * 60 * 60 * 1000;
 
-type BlogStatusTab = 'published' | 'drafts' | 'deleted';
+type BlogStatusTab = ProfileBlogsStatusTab;
 
 function formatBlogDate(iso: string): string {
   try {
@@ -57,6 +61,12 @@ function trashExpiresLabel(deletedAt?: string): string {
 function filterByCategory<T extends { category?: string }>(items: T[], categorySlug: string): T[] {
   if (!categorySlug) return items;
   return items.filter((p) => (p.category ?? '').toLowerCase() === categorySlug.toLowerCase());
+}
+
+function filterBySearch<T>(items: T[], query: string, haystack: (item: T) => string): T[] {
+  if (!query) return items;
+  const q = query.toLowerCase();
+  return items.filter((item) => haystack(item).toLowerCase().includes(q));
 }
 
 function profileAvatarUrl(profile: PublicProfileUser): string {
@@ -184,6 +194,8 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<BlogStatusTab>('published');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchDebounced, setSearchDebounced] = useState('');
   const [categories, setCategories] = useState<BlogTaxonomyRow[]>([]);
   const [published, setPublished] = useState<BlogPostResponse[]>([]);
   const [publishedPublic, setPublishedPublic] = useState<Post[]>([]);
@@ -273,6 +285,11 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearchDebounced(searchInput.trim().toLowerCase()), 280);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
   const confirmDelete = useCallback(
     async (p: BlogPostResponse) => {
       if (!token) return;
@@ -341,40 +358,13 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
   const publicHref = (slug: string) =>
     `/blogs/${encodeURIComponent(normalizedUsername)}/${encodeURIComponent(slug)}`;
 
-  const categoryOptions: RailSectionSubheaderSortProps['options'] = useMemo(
+  const categoryOptions = useMemo(
     () => [
       { value: '', label: 'All categories' },
       ...categories.map((c) => ({ value: c.slug, label: c.name })),
     ],
     [categories]
   );
-
-  const statusButtons = useMemo(() => {
-    const base = [
-      {
-        label: 'Published',
-        onClick: () => setTab('published'),
-        variant: tab === 'published' ? ('primary' as const) : ('default' as const),
-        ariaLabel: 'Published posts',
-      },
-    ];
-    if (!isOwner) return base;
-    return [
-      ...base,
-      {
-        label: 'Drafts',
-        onClick: () => setTab('drafts'),
-        variant: tab === 'drafts' ? ('primary' as const) : ('default' as const),
-        ariaLabel: 'Draft posts',
-      },
-      {
-        label: 'Deleted',
-        onClick: () => setTab('deleted'),
-        variant: tab === 'deleted' ? ('primary' as const) : ('default' as const),
-        ariaLabel: 'Deleted posts',
-      },
-    ];
-  }, [isOwner, tab]);
 
   const filteredPublished = useMemo(
     () => filterByCategory(published, categoryFilter),
@@ -395,15 +385,68 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
     );
   }, [publishedPublic, categoryFilter]);
 
+  const blogPostHaystack = useCallback(
+    (p: BlogPostResponse) => `${p.title} ${p.summary ?? ''}`,
+    []
+  );
+  const publicPostHaystack = useCallback((p: Post) => `${p.title} ${p.excerpt ?? ''}`, []);
+
+  const displayedPublished = useMemo(
+    () => filterBySearch(filteredPublished, searchDebounced, blogPostHaystack),
+    [filteredPublished, searchDebounced, blogPostHaystack]
+  );
+  const displayedDrafts = useMemo(
+    () => filterBySearch(filteredDrafts, searchDebounced, blogPostHaystack),
+    [filteredDrafts, searchDebounced, blogPostHaystack]
+  );
+  const displayedDeleted = useMemo(
+    () => filterBySearch(filteredDeleted, searchDebounced, blogPostHaystack),
+    [filteredDeleted, searchDebounced, blogPostHaystack]
+  );
+  const displayedPublic = useMemo(
+    () => filterBySearch(filteredPublic, searchDebounced, publicPostHaystack),
+    [filteredPublic, searchDebounced, publicPostHaystack]
+  );
+
+  const tabCategoryTotal = useMemo(() => {
+    if (tab === 'drafts') return filteredDrafts.length;
+    if (tab === 'deleted') return filteredDeleted.length;
+    if (isOwner) return filteredPublished.length;
+    return filteredPublic.length;
+  }, [tab, filteredDrafts, filteredDeleted, filteredPublished, filteredPublic, isOwner]);
+
+  const tabDisplayedTotal = useMemo(() => {
+    if (tab === 'drafts') return displayedDrafts.length;
+    if (tab === 'deleted') return displayedDeleted.length;
+    if (isOwner) return displayedPublished.length;
+    return displayedPublic.length;
+  }, [
+    tab,
+    displayedDrafts,
+    displayedDeleted,
+    displayedPublished,
+    displayedPublic,
+    isOwner,
+  ]);
+
+  const countAriaLabel = useMemo(() => {
+    const noun =
+      tab === 'drafts' ? 'drafts' : tab === 'deleted' ? 'deleted posts' : 'published posts';
+    if (searchDebounced) {
+      return `${tabDisplayedTotal} matching ${noun} of ${tabCategoryTotal} total`;
+    }
+    return `${tabCategoryTotal} ${noun}`;
+  }, [tab, tabDisplayedTotal, tabCategoryTotal, searchDebounced]);
+
   const renderOwnerPublished = () => {
-    if (filteredPublished.length === 0) {
+    if (displayedPublished.length === 0) {
       return (
         <RailFeedEmptyState
           icon={FileText}
           title="No published posts"
           description={
-            categoryFilter
-              ? 'Try another category or clear the filter.'
+            searchDebounced || categoryFilter
+              ? 'Try another search or clear your filters.'
               : 'Publish from the write workspace.'
           }
           actions={[
@@ -419,7 +462,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
     }
     return (
       <ul className={BLOG_FEED_GRID_CLASS}>
-        {filteredPublished.map((p) => (
+        {displayedPublished.map((p) => (
           <ProfileBlogGridItem
             key={p._id}
             post={mapBlogPostResponseToPost(p, author)}
@@ -436,20 +479,22 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
   };
 
   const renderPublicPublished = () => {
-    if (filteredPublic.length === 0) {
+    if (displayedPublic.length === 0) {
       return (
         <RailFeedEmptyState
           icon={FileText}
           title="No published posts"
           description={
-            categoryFilter ? 'Try another category.' : 'This author has not published yet.'
+            searchDebounced || categoryFilter
+              ? 'Try another search or clear your filters.'
+              : 'This author has not published yet.'
           }
         />
       );
     }
     return (
       <ul className={BLOG_FEED_GRID_CLASS}>
-        {filteredPublic.map((p) => (
+        {displayedPublic.map((p) => (
           <ProfileBlogGridItem key={p.id} post={p} />
         ))}
       </ul>
@@ -457,12 +502,16 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
   };
 
   const renderDrafts = () => {
-    if (filteredDrafts.length === 0) {
+    if (displayedDrafts.length === 0) {
       return (
         <RailFeedEmptyState
           icon={NotebookPen}
           title="No drafts"
-          description="Autosave keeps drafts while you write."
+          description={
+            searchDebounced || categoryFilter
+              ? 'Try another search or clear your filters.'
+              : 'Autosave keeps drafts while you write.'
+          }
           actions={[
             {
               label: 'Write',
@@ -476,7 +525,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
     }
     return (
       <ul className={BLOG_FEED_GRID_CLASS}>
-        {filteredDrafts.map((p) => (
+        {displayedDrafts.map((p) => (
           <ProfileBlogGridItem
             key={p._id}
             post={mapBlogPostResponseToPost(p, author)}
@@ -492,18 +541,22 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
   };
 
   const renderDeleted = () => {
-    if (filteredDeleted.length === 0) {
+    if (displayedDeleted.length === 0) {
       return (
         <RailFeedEmptyState
           icon={Trash2}
           title="Trash is empty"
-          description="Deleted posts stay here for 7 days before they expire from restore."
+          description={
+            searchDebounced || categoryFilter
+              ? 'Try another search or clear your filters.'
+              : 'Deleted posts stay here for 7 days before they expire from restore.'
+          }
         />
       );
     }
     return (
       <ul className={BLOG_FEED_GRID_CLASS}>
-        {filteredDeleted.map((p) => {
+        {displayedDeleted.map((p) => {
           const post = mapBlogPostResponseToPost(
             { ...p, status: 'draft', updatedAt: p.deletedAt ?? p.updatedAt },
             author
@@ -552,17 +605,54 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
           profileLoading={profileLoading}
         />
 
-        <RailSectionSubheader
-          buttons={statusButtons}
-          sort={{
-            id: 'user-blogs-category',
-            value: categoryFilter,
-            onChange: setCategoryFilter,
-            options: categoryOptions,
-            placeholder: 'Category',
-            widthClass: 'w-[10.5rem] sm:w-[11.5rem]',
-          }}
-        />
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-2 border-border bg-white px-3 py-2 shadow sm:gap-x-4 sm:px-4 sm:py-2.5 dark:bg-card">
+          <div className="flex min-h-[42px] min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden">
+            <ProfileBlogsStatusTabs
+              tab={tab}
+              onTabChange={setTab}
+              isOwner={isOwner}
+              showRepostsLink={Boolean(token)}
+            />
+            <div className="shrink-0">
+              {loading ? (
+                <RailCountPillLoading />
+              ) : searchDebounced ? (
+                <RailCountPillPair
+                  primary={tabDisplayedTotal}
+                  secondary={tabCategoryTotal}
+                  primaryLabel={`${tabDisplayedTotal} matching`}
+                  secondaryLabel={`${tabCategoryTotal} total`}
+                />
+              ) : (
+                <RailCountPill count={tabCategoryTotal} aria-label={countAriaLabel} />
+              )}
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <SearchField
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search posts"
+              aria-label="Search posts"
+              disabled={loading}
+              wrapperClassName="h-[42px] w-[12.5rem] max-w-none sm:w-[16.5rem] sm:max-w-none"
+            />
+            <SearchableSelect
+              id="user-blogs-category"
+              label=""
+              placeholder="Category"
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={categoryOptions}
+              searchable={false}
+              listMaxHeight={220}
+              widthClass="w-[10.5rem] sm:w-[11.5rem]"
+              className="gap-0 [&>label]:hidden"
+              triggerClassName="h-[42px] py-0 font-mono text-[10px] font-black uppercase tracking-widest"
+              listboxClassName="shadow-none"
+            />
+          </div>
+        </div>
 
         <section aria-label="Blog posts" className="min-w-0">
           {listBody}

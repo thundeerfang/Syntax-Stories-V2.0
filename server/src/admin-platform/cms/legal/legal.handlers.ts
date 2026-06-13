@@ -18,9 +18,10 @@ import { completeWithIdempotency } from './legalIdempotency.service.js';
 import { publishPolicyRevision, assertSlugMatchesKind } from './legalPublish.service.js';
 import { env } from '../../../config/env.js';
 import { legalJobQueue } from './legalJobQueue.js';
+import { ACCEPT_POLICY_KINDS } from '../../../variable/constants.js';
 
 const acceptBodySchema = z.object({
-  policyKind: z.enum(['terms', 'privacy']),
+  policyKind: z.enum(ACCEPT_POLICY_KINDS),
   version: z.number().int().positive(),
   revisionId: z.string().uuid(),
   nonce: z.string().min(16),
@@ -72,7 +73,7 @@ export async function postAcceptIntent(req: Request, res: Response): Promise<voi
   const uid = userId(req);
   const body = z
     .object({
-      policyKind: z.enum(['terms', 'privacy']),
+      policyKind: z.enum(ACCEPT_POLICY_KINDS),
       revisionId: z.string().uuid(),
     })
     .safeParse(req.body);

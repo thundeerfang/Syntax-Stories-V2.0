@@ -2,6 +2,8 @@
  * UTC calendar helpers for read-streak `YYYY-MM-DD` buckets (Single Source Streak Engine foundation).
  */
 
+import { DAY_BUCKET_RE } from '../variable/constants.js';
+
 /** UTC calendar date `YYYY-MM-DD` for read-streak day buckets. */
 export function streakUtcDayBucket(d: Date): string {
   const y = d.getUTCFullYear();
@@ -17,9 +19,6 @@ export function utcMidnightFromDayBucket(dayBucket: string): Date {
   const d = Number(ds);
   return new Date(Date.UTC(y, mo, d));
 }
-
-const DAY_BUCKET_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 export function isValidUtcDayBucket(s: string): boolean {
   if (!DAY_BUCKET_RE.test(s)) return false;
   const d = utcMidnightFromDayBucket(s);

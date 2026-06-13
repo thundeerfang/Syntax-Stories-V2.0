@@ -10,6 +10,5 @@ export const PROFILE_SOCIAL_URL_MIN = 4;
 /** Instagram stored as plain handle or URL — server max 200 */
 export const PROFILE_INSTAGRAM_MAX = 200;
 
-/** `stackAndTools` item length — Joi `string().max(80)` */
-export const STACK_TOOL_NAME_MAX = 80;
-export const STACK_TOOL_NAME_MIN = 1;
+/** `stackAndTools` item length — shared with server Zod */
+export { STACK_TOOL_NAME_MAX, STACK_TOOL_NAME_MIN } from '@syntax-stories/shared';

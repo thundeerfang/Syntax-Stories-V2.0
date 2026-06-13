@@ -50,15 +50,21 @@ export function readFollowedCategorySlugs(userId: string | null | undefined): st
 
 export function writeFollowedCategorySlugs(
   slugs: string[],
-  userId: string | null | undefined
+  userId: string | null | undefined,
+  opts?: Readonly<{ notify?: boolean }>
 ): void {
   if (typeof window === 'undefined') return;
   if (!userId?.trim()) return;
   const storageKey = storageKeyForUser(userId);
   if (!storageKey) return;
   const next = [...new Set(slugs.map((s) => s.trim().toLowerCase()).filter(Boolean))];
+  const prev = parseList(window.localStorage.getItem(storageKey));
+  const unchanged =
+    prev.length === next.length && prev.every((slug, i) => slug === next[i]);
   window.localStorage.setItem(storageKey, JSON.stringify(next));
-  notifyChanged(userId);
+  if (!unchanged && opts?.notify !== false) {
+    notifyChanged(userId);
+  }
 }
 
 /** Returns new following state (true = now following). Signed-in users only. */

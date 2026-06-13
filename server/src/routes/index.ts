@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import healthRoutes from './health.routes.js';
 import followRoutes from './follow.routes.js';
-import companiesRoutes from './companies.routes.js';
 import referenceRoutes from './reference.routes.js';
-import marketingRoutes from './marketing.routes.js';
 import notificationsRoutes from './notifications.routes.js';
 import githubRoutes from './github.routes.js';
 import analyticsRoutes from './analytics.routes.js';
@@ -20,6 +18,7 @@ import billingRoutes from './billing.routes.js';
 import achievementsRoutes from './achievements.routes.js';
 import searchRoutes from './search.routes.js';
 import mediaRoutes from './media.routes.js';
+import platformRoutes from './platform.routes.js';
 import {
   adminManagementRouter,
   legalAdminRouter,
@@ -33,9 +32,7 @@ import { scimAdminRouter } from '../admin-platform/federation/scim.routes.js';
 const router = Router();
 router.use('/health', healthRoutes);
 router.use('/follow', followRoutes);
-router.use('/companies', companiesRoutes);
 router.use('/reference', referenceRoutes);
-router.use('/marketing', marketingRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/github', githubRoutes);
 router.use('/analytics', analyticsRoutes);
@@ -50,6 +47,7 @@ router.use('/billing', billingRoutes);
 router.use('/achievements', achievementsRoutes);
 router.use('/search', searchRoutes);
 router.use('/media', mediaRoutes);
+router.use('/platform', platformRoutes);
 router.use('/v1/admin/trash', trashAdminRouter);
 router.use('/v1/admin/management', adminManagementRouter);
 router.use('/v1/admin/saml', samlAdminRouter);

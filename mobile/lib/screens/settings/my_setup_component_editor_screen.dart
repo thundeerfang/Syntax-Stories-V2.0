@@ -39,6 +39,7 @@ class _MySetupComponentEditorScreenState extends State<MySetupComponentEditorScr
   final _labelController = TextEditingController();
   final _productUrlController = TextEditingController();
   String _imageUrl = '';
+  String? _imageAlt;
 
   @override
   void initState() {
@@ -48,6 +49,7 @@ class _MySetupComponentEditorScreenState extends State<MySetupComponentEditorScr
       _labelController.text = initial.label;
       _productUrlController.text = initial.productUrl ?? '';
       _imageUrl = initial.imageUrl;
+      _imageAlt = initial.imageAlt;
     }
   }
 
@@ -77,7 +79,7 @@ class _MySetupComponentEditorScreenState extends State<MySetupComponentEditorScr
       label: label.length > setupLabelMax ? label.substring(0, setupLabelMax) : label,
       imageUrl: imageUrl.length > setupUrlMax ? imageUrl.substring(0, setupUrlMax) : imageUrl,
       productUrl: productUrl,
-      imageAlt: widget.initialItem?.imageAlt,
+      imageAlt: _imageAlt?.trim().isNotEmpty == true ? _imageAlt!.trim() : null,
     );
   }
 
@@ -137,7 +139,10 @@ class _MySetupComponentEditorScreenState extends State<MySetupComponentEditorScr
             productUrlController: _productUrlController,
             imageUrl: _imageUrl,
             disabled: false,
-            onPickImage: (url) => setState(() => _imageUrl = url),
+            onPickImage: (result) => setState(() {
+              _imageUrl = result.url;
+              _imageAlt = result.imageAlt;
+            }),
             onChanged: () => setState(() {}),
           ),
           const SizedBox(height: 28),

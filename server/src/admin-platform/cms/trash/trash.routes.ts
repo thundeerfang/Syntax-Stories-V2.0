@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import { RATE_LIMITS } from '../../../config/rateLimits.js';
 import { cmsAdminGate } from '../../rbac/middleware/cmsAdminGate.js';
 import { getTrash, postRestore } from './trash.controller.js';
 
 const trashRead = rateLimit({
-  windowMs: 60_000,
-  max: 120,
+  ...RATE_LIMITS.trashRead,
   standardHeaders: true,
   legacyHeaders: false,
 });

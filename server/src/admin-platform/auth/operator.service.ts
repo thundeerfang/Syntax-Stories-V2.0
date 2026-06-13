@@ -12,8 +12,7 @@ import {
   consumeEmailVerificationToken,
   isAdminOperatorPasswordValid,
 } from './adminInviteOtp.service.js';
-
-const BCRYPT_ROUNDS = 10;
+import { BCRYPT_ROUNDS } from '../../variable/constants.js';
 
 export type CreateOperatorInput = {
   email: string;

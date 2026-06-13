@@ -3,9 +3,20 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const parsedPort = Number.parseInt(process.env.PORT ?? '5000', 10);
+const parsedNotificationWebhookPort = Number.parseInt(
+  process.env.NOTIFICATION_WEBHOOK_PORT ?? '7380',
+  10
+);
 
 export const env = {
   PORT: Number.isNaN(parsedPort) ? 5000 : parsedPort,
+  /** Dedicated notification webhook worker HTTP port (ingest + health). */
+  NOTIFICATION_WEBHOOK_PORT: Number.isNaN(parsedNotificationWebhookPort)
+    ? 7380
+    : parsedNotificationWebhookPort,
+  /** Shared secret for POST /webhooks/notifications/ingest on the webhook worker. */
+  NOTIFICATION_WEBHOOK_INGEST_SECRET:
+    process.env.NOTIFICATION_WEBHOOK_INGEST_SECRET?.trim() || '',
   NODE_ENV: process.env.NODE_ENV,
   MONGODB_URI: process.env.MONGO_CONN,
   REDIS_URL: process.env.REDIS_URL,
@@ -270,4 +281,35 @@ export const env = {
 
   /** Unsplash photo search proxy (`GET /api/media/unsplash/search`). Access key only; secret stays optional. */
   UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY?.trim() || '',
+
+  /**
+   * Storage catastrophe guard — `force_on` blocks public writes; `force_off` ignores detection;
+   * `auto` reacts to Mongo quota / uploads disk errors and probes.
+   */
+  STORAGE_FULL_MODE: (() => {
+    const v = (process.env.STORAGE_FULL_MODE ?? 'auto').toLowerCase();
+    if (v === 'force_on' || v === 'force_off') return v;
+    return 'auto' as const;
+  })(),
+  /** Alert recipient when storage block activates (defaults to bootstrap admin email). */
+  STORAGE_ALERT_EMAIL: (
+    process.env.STORAGE_ALERT_EMAIL?.trim() ||
+    process.env.ADMIN_BOOTSTRAP_EMAIL ||
+    'admin@syntax.com'
+  )
+    .trim()
+    .toLowerCase(),
+  UPLOADS_ROOT: process.env.UPLOADS_ROOT?.trim() || '',
+  UPLOADS_DISK_WARN_PCT: Math.min(
+    99,
+    Math.max(50, Number.parseInt(process.env.UPLOADS_DISK_WARN_PCT ?? '90', 10) || 90)
+  ),
+  UPLOADS_DISK_BLOCK_PCT: Math.min(
+    100,
+    Math.max(80, Number.parseInt(process.env.UPLOADS_DISK_BLOCK_PCT ?? '98', 10) || 98)
+  ),
+  STORAGE_PROBE_INTERVAL_MS: Math.max(
+    30_000,
+    Number.parseInt(process.env.STORAGE_PROBE_INTERVAL_MS ?? '300000', 10) || 300_000
+  ),
 } as const;

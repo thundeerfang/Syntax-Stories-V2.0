@@ -83,15 +83,14 @@ export const platformAccountsColumns: ColumnDef<AdminUserListItem, unknown>[] = 
     ),
   },
   {
-    id: 'joined',
-    header: 'Joined',
+    id: 'createdAt',
+    header: 'Created at',
     accessorFn: (row) => row.createdAt,
     cell: ({ row }) => (
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" color="text.secondary" noWrap>
         {formatUserDetailDate(row.original.createdAt)}
       </Typography>
     ),
-    meta: { hideMd: true },
   },
   {
     id: 'actions',

@@ -19,9 +19,5 @@ export async function buildMetricSnapshot(
 }
 
 export function isProfileCoreComplete(snapshot: MetricSnapshot): boolean {
-  return (
-    snapshot['profile.has_avatar'] >= 1 &&
-    snapshot['profile.has_work'] >= 1 &&
-    snapshot['profile.has_bio'] >= 1
-  );
+  return snapshot['profile.has_avatar'] >= 1 && snapshot['profile.has_bio'] >= 1;
 }

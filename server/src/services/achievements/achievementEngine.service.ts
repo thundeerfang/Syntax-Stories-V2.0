@@ -6,7 +6,7 @@ import type {
   AchievementUnlockDto,
 } from '../../achievements/achievement.types.js';
 import type { MetricSnapshot } from '../../achievements/achievement.types.js';
-import { AchievementAuditModel } from '../../models/AchievementAudit.js';
+import { writeAchievementAudit } from '../../shared/audit/auditLog.js';
 import { AchievementProgressModel } from '../../models/AchievementProgress.js';
 import { AchievementUnlockModel } from '../../models/AchievementUnlock.js';
 import { UserAchievementProgressModel } from '../../models/UserAchievementProgress.js';
@@ -26,6 +26,7 @@ import {
 } from './userStats.service.js';
 import { addLeaderboardScore } from './leaderboard.service.js';
 import { notifyAchievementUnlocks } from './achievementNotifications.service.js';
+import { publishAchievementUnlockRealtime } from './achievementUnlockRealtime.service.js';
 
 function toUnlockDto(def: AchievementDef, snapshot: MetricSnapshot): AchievementUnlockDto {
   const current = snapshot[def.metric] ?? 0;
@@ -128,10 +129,10 @@ async function recordUnlock(
   await addXpAndPoints(userId, def.points, xp);
   void addLeaderboardScore(userId, def.points);
 
-  await AchievementAuditModel.create({
+  await writeAchievementAudit({
     userId: oid,
-    achievementId: def.id,
     action: 'unlocked',
+    achievementId: def.id,
     sourceEvent,
     metadata: { points: def.points, xp },
   });
@@ -152,7 +153,6 @@ async function recordUnlock(
         { achievementId: def.id, unlockedAt: new Date(), pointsAwarded: def.points },
       ],
       counters: { respectGiven: 0, briefsRead: 0, hotTakeSwipes: 0 },
-      flags: { cvImported: false },
       totalPoints: def.points,
       catalogVersion: 1,
     });
@@ -247,8 +247,11 @@ export async function evaluateAchievementsForUser(
 
   await persistProgressRows(userId, catalog, snapshot, unlockedIds);
 
-  if (newlyUnlocked.length > 0 && !options.skipNotifications) {
-    void notifyAchievementUnlocks(userId, newlyUnlocked);
+  if (newlyUnlocked.length > 0) {
+    void publishAchievementUnlockRealtime(userId, newlyUnlocked);
+    if (!options.skipNotifications) {
+      void notifyAchievementUnlocks(userId, newlyUnlocked);
+    }
   }
 
   return newlyUnlocked;

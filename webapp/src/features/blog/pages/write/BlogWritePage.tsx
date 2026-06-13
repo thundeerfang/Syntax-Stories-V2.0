@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
 import { useSidebar } from '@/hooks/useSidebar';
 import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
 import { squadsApi, type SquadSummary } from '@/api/squads';
@@ -77,6 +78,7 @@ import {
 
 export default function WriteBlogPage() {
   const { user, token, shouldBlock } = useRequireAuth();
+  const routeRestoreNonce = useRouteRestoreNonce();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isOpen } = useSidebar();
@@ -454,7 +456,7 @@ export default function WriteBlogPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, routeRestoreNonce]);
 
   useEffect(() => {
     if (!token || !workspaceReady) return;

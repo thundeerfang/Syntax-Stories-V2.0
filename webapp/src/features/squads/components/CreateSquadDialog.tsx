@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { Image as ImageIcon, ImagePlus, Lock, UsersRound } from 'lucide-react';
+import { Image as ImageIcon, ImagePlus, Trash2, UsersRound } from 'lucide-react';
 import type { Accept } from 'react-dropzone';
-import { FormDialog } from '@/components/ui/dialog';
+import { FormDialog, InfoHintDialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ImageUploadCropDialog } from '@/components/upload/ImageUploadCropDialog';
 import { Switch } from '@/components/retroui/Switch';
@@ -21,7 +21,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 
 const NAME_MAX = 100;
-const HANDLE_MAX = 40;
 const DESC_MAX = 500;
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const BANNER_MAX_BYTES = 10 * 1024 * 1024;
@@ -68,7 +67,6 @@ export function CreateSquadDialog({
   const isEdit = mode === 'edit' && initialSquad != null;
 
   const [name, setName] = useState('');
-  const [handle, setHandle] = useState('');
   const [description, setDescription] = useState('');
   const [descOpen, setDescOpen] = useState(false);
   const [iconUrl, setIconUrl] = useState<string | undefined>();
@@ -95,7 +93,6 @@ export function CreateSquadDialog({
 
     if (isEdit && initialSquad) {
       setName(initialSquad.name);
-      setHandle(initialSquad.handle ?? initialSquad.slug);
       setDescription(initialSquad.description ?? '');
       setDescOpen(Boolean(initialSquad.description?.trim()));
       setIconUrl(initialSquad.iconUrl);
@@ -112,7 +109,6 @@ export function CreateSquadDialog({
       return;
     }
     setName('');
-    setHandle('');
     setDescription('');
     setDescOpen(false);
     setIconUrl(undefined);
@@ -130,7 +126,6 @@ export function CreateSquadDialog({
 
   const reset = () => {
     setName('');
-    setHandle('');
     setDescription('');
     setDescOpen(false);
     setIconUrl(undefined);
@@ -232,6 +227,19 @@ export function CreateSquadDialog({
   };
 
   const bannerPreviewSrc = resolveSquadMediaSrc(bannerUrl);
+  const iconPreviewSrc = resolveSquadMediaSrc(iconUrl);
+
+  const mediaIconBtn =
+    'inline-flex size-8 shrink-0 items-center justify-center border-2 border-white/50 bg-black/60 text-white backdrop-blur-sm transition-colors hover:border-primary';
+
+  const mediaDeleteBtn =
+    'inline-flex size-8 shrink-0 items-center justify-center border-2 border-red-400/70 bg-red-950/80 text-red-300 backdrop-blur-sm transition-colors hover:border-red-400 hover:bg-red-900/90 hover:text-red-200';
+
+  const bannerOverlayClass =
+    'pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 bg-black/40 opacity-0 transition-opacity duration-150 group-hover/banner:pointer-events-auto group-hover/banner:opacity-100 group-focus-within/banner:pointer-events-auto group-focus-within/banner:opacity-100';
+
+  const iconOverlayClass =
+    'pointer-events-none absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 transition-opacity duration-150 group-hover/icon:pointer-events-auto group-hover/icon:opacity-100 group-focus-within/icon:pointer-events-auto group-focus-within/icon:opacity-100';
 
   return (
     <>
@@ -243,10 +251,10 @@ export function CreateSquadDialog({
         titleIcon={<UsersRound className="h-5 w-5 text-primary" strokeWidth={2.5} aria-hidden />}
         subtitle={
           isEdit
-            ? 'Update how this squad looks and how members can participate. Your handle and public/private type stay fixed.'
-            : 'Create a group where you can learn and interact privately with other developers around topics that matter to you.'
+            ? 'Update look and rules. Visibility stays fixed.'
+            : 'Create a group where you can learn and interact with other developers around topics that matter to you.'
         }
-        subtitleClassName={isEdit ? undefined : 'line-clamp-1 min-w-0'}
+        subtitleClassName="line-clamp-1 min-w-0 truncate whitespace-nowrap"
         interactionLock={busy}
         footer={
           <div className="flex w-full flex-wrap justify-end gap-2">
@@ -260,18 +268,122 @@ export function CreateSquadDialog({
         }
       >
         <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <UsersRound className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
-            <p className="text-[11px] font-medium leading-snug">
-              Squad members appear together in feeds and shared spaces—your group has its own
-              identity and rules.
-            </p>
-          </div>
+          <section className="relative -mx-6 -mt-5">
+            <div className="relative pb-12">
+              <div className="group/banner relative h-28 w-full overflow-hidden border-b-2 border-border sm:h-32">
+                {bannerPreviewSrc ? (
+                  <>
+                    <img src={bannerPreviewSrc} alt="" className="h-full w-full object-cover" />
+                    <div className={bannerOverlayClass}>
+                      <button
+                        type="button"
+                        className={mediaIconBtn}
+                        aria-label="Change banner"
+                        onClick={() => setBannerCropOpen(true)}
+                      >
+                        <ImageIcon className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        className={mediaDeleteBtn}
+                        aria-label="Delete banner"
+                        onClick={() => setBannerUrl(null)}
+                      >
+                        <Trash2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setBannerCropOpen(true)}
+                    className="relative flex h-full w-full items-center justify-center bg-muted/25 transition-colors hover:bg-muted/35"
+                    aria-label="Upload squad banner"
+                  >
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      No image selected
+                    </span>
+                    <div className={bannerOverlayClass}>
+                      <span className={mediaIconBtn} aria-hidden>
+                        <ImagePlus className="size-4 shrink-0" strokeWidth={2} />
+                      </span>
+                    </div>
+                  </button>
+                )}
+              </div>
+
+              <div className="absolute left-1/2 top-28 z-30 size-20 -translate-x-1/2 -translate-y-1/2 sm:top-32">
+                <div
+                  className={cn(
+                    'group/icon relative size-20 overflow-hidden border-2 border-border bg-muted',
+                    !iconPreviewSrc && 'cursor-pointer'
+                  )}
+                  role={iconPreviewSrc ? undefined : 'button'}
+                  tabIndex={iconPreviewSrc ? undefined : 0}
+                  onClick={() => {
+                    if (!iconPreviewSrc) setLogoCropOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!iconPreviewSrc && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      setLogoCropOpen(true);
+                    }
+                  }}
+                >
+                  {iconPreviewSrc ? (
+                    <img
+                      src={iconPreviewSrc}
+                      alt=""
+                      className="absolute inset-0 block size-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="flex size-full items-center justify-center bg-muted/50"
+                      aria-hidden
+                    >
+                      <UsersRound
+                        className="size-9 text-muted-foreground/45"
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                  )}
+                  <div className={iconOverlayClass}>
+                    {iconPreviewSrc ? (
+                      <>
+                        <button
+                          type="button"
+                          className={mediaIconBtn}
+                          aria-label="Change squad icon"
+                          onClick={() => setLogoCropOpen(true)}
+                        >
+                          <ImageIcon className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          className={mediaDeleteBtn}
+                          aria-label="Delete squad icon"
+                          onClick={() => setIconUrl(undefined)}
+                        >
+                          <Trash2 className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className={mediaIconBtn}
+                        aria-label="Upload squad icon"
+                        onClick={() => setLogoCropOpen(true)}
+                      >
+                        <ImagePlus className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Squad details
-            </h3>
             <label className="grid gap-1.5">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
@@ -289,35 +401,6 @@ export function CreateSquadDialog({
                 placeholder="e.g. Node.js developers"
               />
             </label>
-            {isEdit ? (
-              <label className="grid gap-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                    Squad handle
-                  </span>
-                  <span className="font-mono text-[10px] font-bold text-muted-foreground">
-                    {handle.replace(/^@+/, '').length}/{HANDLE_MAX}
-                  </span>
-                </div>
-                <input
-                  value={handle}
-                  readOnly
-                  maxLength={HANDLE_MAX}
-                  className="cursor-not-allowed border-2 border-border bg-background px-3 py-2 text-sm font-medium opacity-80 outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Handle is permanent for this squad.
-                </p>
-              </label>
-            ) : (
-              <p className="text-[10px] leading-snug text-muted-foreground">
-                Your squad URL slug is assigned automatically from the name when you create it—you
-                cannot choose it here.
-              </p>
-            )}
             {!descOpen ? (
               <button
                 type="button"
@@ -349,100 +432,37 @@ export function CreateSquadDialog({
           </section>
 
           <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Group icon
-            </h3>
-            <button
-              type="button"
-              onClick={() => setLogoCropOpen(true)}
-              className={cn(
-                'flex w-full flex-col items-stretch gap-3 border-2 border-dashed border-border bg-muted/15 px-4 py-4 text-left transition-colors hover:border-primary hover:bg-muted/25',
-                iconUrl && 'border-solid'
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden border-2 border-border bg-background">
-                  {iconUrl ? (
-                    <img
-                      src={resolveSquadMediaSrc(iconUrl)}
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <ImagePlus
-                      className="size-7 text-muted-foreground"
-                      strokeWidth={2}
-                      aria-hidden
-                    />
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-foreground">
-                    Choose logo for the group icon
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Square crop · JPEG, PNG, WebP, or GIF · max 2 MB. Optional.
-                  </p>
-                </div>
-              </div>
-            </button>
-            {iconUrl ? (
-              <button
-                type="button"
-                className="w-fit text-[10px] font-bold uppercase tracking-wide text-destructive underline"
-                onClick={() => setIconUrl(undefined)}
-              >
-                Remove logo
-              </button>
-            ) : null}
-          </section>
-
-          <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Squad banner
-            </h3>
-            <p className="text-[11px] text-muted-foreground">
-              Wide cover behind the squad header. Optional — uses the gradient when empty.
-            </p>
-            {bannerPreviewSrc ? (
-              <div className="overflow-hidden border-2 border-border">
-                <img src={bannerPreviewSrc} alt="" className="max-h-36 w-full object-cover" />
-              </div>
-            ) : (
-              <div
-                className="h-24 w-full border-2 border-dashed border-border bg-muted/20"
-                aria-hidden
-              />
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="font-mono text-[10px] font-black uppercase tracking-widest"
-                onClick={() => setBannerCropOpen(true)}
-              >
-                <ImageIcon className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-                Upload banner
-              </Button>
-              {bannerUrl ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="font-mono text-[10px] font-black uppercase tracking-widest"
-                  onClick={() => setBannerUrl(null)}
-                >
-                  Remove banner
-                </Button>
-              ) : null}
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Squad type
+              </h3>
+              <InfoHintDialog title={isEdit ? 'Squad visibility' : 'Squad type'}>
+                {isEdit ? (
+                  <>
+                    <p>
+                      Visibility cannot be changed after creation. Your squad stays public or
+                      private for its lifetime.
+                    </p>
+                    <p>
+                      Public squads appear in the directory and are open for anyone to join. Private
+                      squads are invite-only and hidden from browse lists.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Public squads are searchable, listed in the squad directory, and open for
+                      everyone to join — best for communities and creators.
+                    </p>
+                    <p>
+                      Private squads are invite-only and hidden from the directory — best for teams
+                      and smaller groups.
+                    </p>
+                    <p>Visibility is permanent once the squad is created.</p>
+                  </>
+                )}
+              </InfoHintDialog>
             </div>
-          </section>
-
-          <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Squad type
-            </h3>
             <div
               className={cn(
                 'grid gap-2 sm:grid-cols-2',
@@ -483,11 +503,6 @@ export function CreateSquadDialog({
                 </p>
               </button>
             </div>
-            {isEdit ? (
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                Visibility cannot be changed after creation.
-              </p>
-            ) : null}
             {visibility === 'public' ? (
               <div className="grid gap-2">
                 <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
@@ -517,21 +532,26 @@ export function CreateSquadDialog({
             ) : null}
           </section>
 
-          <section className="grid gap-3 border-t border-border pt-4">
-            <div className="flex items-center gap-2 text-foreground">
-              <Lock className="size-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                Moderation settings
-              </h3>
-            </div>
-
+          <section className="grid gap-3">
             <div className="grid gap-2">
-              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                Post content
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Choose who may publish new posts or share into this squad.
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                  Post content
+                </p>
+                <InfoHintDialog title="Post content">
+                  <p>
+                    Choose who may publish new posts or share existing posts into this squad feed.
+                  </p>
+                  <p>
+                    <span className="font-bold text-foreground">All members</span> — anyone in the
+                    squad can author new posts or share into the feed.
+                  </p>
+                  <p>
+                    <span className="font-bold text-foreground">Staff only</span> — only admins and
+                    moderators can post or share; other members can still read and engage.
+                  </p>
+                </InfoHintDialog>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -584,12 +604,22 @@ export function CreateSquadDialog({
             </div>
 
             <div className="grid gap-2">
-              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                Invitation permissions
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Who may add other people to this squad by username.
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                  Invitation permissions
+                </p>
+                <InfoHintDialog title="Invitation permissions">
+                  <p>Choose who may add other people to this squad by username.</p>
+                  <p>
+                    <span className="font-bold text-foreground">All members</span> — any member can
+                    invite others by username.
+                  </p>
+                  <p>
+                    <span className="font-bold text-foreground">Staff only</span> — only admins and
+                    moderators can add members; regular members cannot send invites.
+                  </p>
+                </InfoHintDialog>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"

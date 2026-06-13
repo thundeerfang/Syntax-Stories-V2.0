@@ -8,8 +8,7 @@ import { SquadMemberModel } from '../../models/SquadMember.js';
 import { DEFAULT_AVATAR_URL, normalizeProfileImg, UserModel } from '../../models/User.js';
 import { UserStatsModel, type IUserStats } from '../../models/UserStats.js';
 import type { AchievementEvent, MetricSnapshot } from '../../achievements/achievement.types.js';
-
-const DEFAULT_BIO = 'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀';
+import { isPlaceholderProfileBio } from '../../utils/profileBio.js';
 
 export async function getOrCreateUserStats(userId: string): Promise<IUserStats> {
   const oid = new mongoose.Types.ObjectId(userId);
@@ -43,7 +42,7 @@ export async function syncUserStatsFromSources(
   const oid = new mongoose.Types.ObjectId(userId);
   const user = await UserModel.findById(oid)
     .select(
-      'profileImg bio coverBanner profileLocation stackAndTools mySetup github workExperiences education followersCount blogRespectReceivedCount readStreakLongest'
+      'profileImg bio coverBanner profileLocation stackAndTools mySetup github followersCount blogRespectReceivedCount readStreakLongest'
     )
     .lean();
 
@@ -66,7 +65,7 @@ export async function syncUserStatsFromSources(
   const profileImg = user ? normalizeProfileImg(user.profileImg) : DEFAULT_AVATAR_URL;
   const hasCustomAvatar = profileImg !== DEFAULT_AVATAR_URL && !profileImg.includes('dicebear');
   const bio = (user?.bio ?? '').trim();
-  const hasBio = bio.length >= 20 && bio !== DEFAULT_BIO;
+  const hasBio = bio.length >= 20 && !isPlaceholderProfileBio(bio);
 
   const patch = {
     postsCount: postsAuthoredCount,
@@ -84,9 +83,7 @@ export async function syncUserStatsFromSources(
     hasBio: hasBio ? 1 : 0,
     hasCover: user?.coverBanner?.trim() ? 1 : 0,
     hasGithub: (user as { github?: string } | null)?.github?.trim() ? 1 : 0,
-    hasWork: (user?.workExperiences?.length ?? 0) > 0 ? 1 : 0,
     hasLocation: (user as { profileLocation?: string } | null)?.profileLocation?.trim() ? 1 : 0,
-    hasEducation: (user?.education?.length ?? 0) > 0 ? 1 : 0,
     readStreakLongest: Math.max(0, user?.readStreakLongest ?? 0),
   };
 
@@ -146,8 +143,6 @@ export function userStatsToMetricSnapshot(stats: IUserStats): MetricSnapshot {
     'read.streak.longest': stats.readStreakLongest ?? 0,
     'profile.has_avatar': stats.hasAvatar ?? 0,
     'profile.has_location': stats.hasLocation ?? 0,
-    'profile.has_work': stats.hasWork ?? 0,
-    'profile.has_education': stats.hasEducation ?? 0,
     'profile.has_cv': stats.hasCv ?? 0,
     'profile.has_bio': stats.hasBio ?? 0,
     'profile.has_cover': stats.hasCover ?? 0,

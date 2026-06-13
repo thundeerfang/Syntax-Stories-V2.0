@@ -1,2 +1,5 @@
-/** Max languages / frameworks / tools in Stack & Tools (matches server validation). */
-export const STACK_AND_TOOLS_MAX = 10;
+export {
+  STACK_AND_TOOLS_MAX,
+  STACK_TOOL_NAME_MAX,
+  STACK_TOOL_NAME_MIN,
+} from '@syntax-stories/shared';

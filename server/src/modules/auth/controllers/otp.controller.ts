@@ -40,9 +40,7 @@ import {
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { logSecurityEvent } from '../securityEventLog.js';
 import { recordSignupLegalAcceptances } from '../../../admin-platform/cms/legal/recordLegalAcceptances.js';
-
-const OTP_ATTEMPT_LIMIT = 10;
-const OTP_ATTEMPT_BLOCK_SECONDS = 5 * 60;
+import { AUTH_TTL } from '../../../config/auth.ttls.js';
 
 function otpEmailSendFailureMessage(err: unknown, redisUnavailableMessage: string): string {
   if (err instanceof Error && err.message === 'Redis required for OTP') {
@@ -253,12 +251,12 @@ async function failOtpVerification(
   const attemptKey = redisKeys.auth.otpAttempts(normalizedEmail);
   const count = await redis.incr(attemptKey);
   if (count === 1) {
-    await redis.expire(attemptKey, OTP_ATTEMPT_BLOCK_SECONDS);
+    await redis.expire(attemptKey, AUTH_TTL.otpAttemptBlockSec);
   }
-  const attemptsLeft = Math.max(0, OTP_ATTEMPT_LIMIT - count);
-  if (count >= OTP_ATTEMPT_LIMIT) {
+  const attemptsLeft = Math.max(0, AUTH_TTL.otpAttemptLimit - count);
+  if (count >= AUTH_TTL.otpAttemptLimit) {
     const ttl = await redis.ttl(attemptKey);
-    const retrySec = ttl > 0 ? ttl : OTP_ATTEMPT_BLOCK_SECONDS;
+    const retrySec = ttl > 0 ? ttl : AUTH_TTL.otpAttemptBlockSec;
     res.setHeader('Retry-After', String(retrySec));
     res.status(429).json({
       message: `Too many invalid codes for this email. Please wait ${Math.ceil(retrySec / 60)} minute(s) before trying again.`,
@@ -329,14 +327,14 @@ async function rejectVerifyIfOtpRateLimited(
   const attemptKey = redisKeys.auth.otpAttempts(normalizedEmail);
   const attemptRaw = await redis.get(attemptKey);
   const attempts = attemptRaw ? Number.parseInt(attemptRaw, 10) || 0 : 0;
-  if (attempts < OTP_ATTEMPT_LIMIT) return false;
+  if (attempts < AUTH_TTL.otpAttemptLimit) return false;
   const blockTtl = await redis.ttl(attemptKey);
   const waitMin =
-    blockTtl > 0 ? Math.ceil(blockTtl / 60) : Math.ceil(OTP_ATTEMPT_BLOCK_SECONDS / 60);
+    blockTtl > 0 ? Math.ceil(blockTtl / 60) : Math.ceil(AUTH_TTL.otpAttemptBlockSec / 60);
   res.status(429).json({
     message: `Too many invalid codes for this email. Please wait ${waitMin} minute(s) before trying again.`,
     success: false,
-    retryAfter: blockTtl > 0 ? blockTtl : OTP_ATTEMPT_BLOCK_SECONDS,
+    retryAfter: blockTtl > 0 ? blockTtl : AUTH_TTL.otpAttemptBlockSec,
     attemptsLeft: 0,
   });
   return true;

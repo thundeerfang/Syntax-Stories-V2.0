@@ -3,8 +3,7 @@ import type { Request } from 'express';
 import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';
 import { normalizeReferralCode } from '../services/referral.service.js';
-
-const OAUTH_SIGNUP_NONCE_TTL_SEC = 600;
+import { OAUTH_SIGNUP_NONCE_TTL_SEC } from '../variable/constants.js';
 
 /**
  * Build Passport `state` for OAuth signup. Optional `?ref=` stores code in Redis under nonce (fail-open).

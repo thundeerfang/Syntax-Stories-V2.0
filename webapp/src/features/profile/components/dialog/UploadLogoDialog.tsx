@@ -6,8 +6,9 @@ import { Building2 } from 'lucide-react';
 import { ImageUploadCropDialog } from '@/components/upload/ImageUploadCropDialog';
 import { toast } from 'sonner';
 import { uploadSettingsLogo } from '@/api/upload';
+import { uploadResponseAlt } from '@/lib/media/uploadImageMeta';
 
-export type SettingsLogoUploadKind = 'company-logo' | 'school-logo' | 'org-logo';
+export type SettingsLogoUploadKind = 'org-logo';
 
 export interface UploadLogoDialogProps {
   open: boolean;
@@ -29,8 +30,6 @@ const LOGO_ACCEPT: Accept = {
 };
 
 const TITLES: Record<SettingsLogoUploadKind, string> = {
-  'company-logo': 'Upload company logo',
-  'school-logo': 'Upload school logo',
   'org-logo': 'Upload issuer logo',
 };
 
@@ -57,16 +56,13 @@ export function UploadLogoDialog({
       cropMinHeightClass="min-h-[12rem] h-48"
       accept={LOGO_ACCEPT}
       secondaryDropzoneHint="Square crop · iPhone photos supported"
-      imageTitleField
-      imageTitleLabel="Title (optional)"
-      imageTitlePlaceholder="e.g. Acme Corp wordmark"
       confirmLabel="Save & upload"
       chooseAnotherLabel="Choose another"
       panelClassName="max-w-md sm:max-w-lg"
-      onConfirm={async (file, meta) => {
+      onConfirm={async (file) => {
         const data = await uploadSettingsLogo(token, file, kind, undefined);
         if (!data.url) throw new Error(data.message ?? 'Upload failed');
-        onSuccess({ url: data.url, imageTitle: meta?.imageTitle });
+        onSuccess({ url: data.url, imageTitle: uploadResponseAlt(data) });
         toast.success('Logo uploaded.');
       }}
     />

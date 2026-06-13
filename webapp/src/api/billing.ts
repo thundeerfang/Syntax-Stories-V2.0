@@ -117,9 +117,11 @@ export async function createPortalSession(token: string): Promise<string> {
 
 export async function fetchBillingTransactions(
   token: string,
-  page = 1
+  page = 1,
+  opts?: { sync?: boolean }
 ): Promise<{ transactions: BillingTransactionRow[]; total: number }> {
-  const res = await fetch(`${base()}/api/billing/transactions?page=${page}&limit=20`, {
+  const syncQ = opts?.sync ? '&sync=true' : '';
+  const res = await fetch(`${base()}/api/billing/transactions?page=${page}&limit=20${syncQ}`, {
     headers: authHeaders(token),
     credentials: 'include',
   });

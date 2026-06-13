@@ -1,11 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SquadFeedPinChrome } from '@/features/blog';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import type { LucideIcon } from 'lucide-react';
 import {
   BookOpen,
   Link2,
@@ -14,15 +12,12 @@ import {
   MoreHorizontal,
   Pencil,
   Pin,
-  Shield,
   Trash2,
   UserPlus,
   UsersRound,
   MessageSquare,
-  LayoutGrid,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/layout';
 import { CreateSquadDialog } from '@/features/squads';
 import { BlogCard } from '@/features/blog';
 import { InfoSwiperDialog } from '@/components/ui/dialog';
@@ -33,6 +28,7 @@ import {
   type SquadMembersDialogRow,
 } from '../components/SquadSlugSections';
 import { SQUADS_INTRO_SLIDES } from '@/features/squads';
+import { SquadDetailPageSkeleton } from '@/components/skeletons/SquadsPageSkeleton';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { isSquadCategory, squadCategoryLabel } from '@/lib/squads/squadCategory';
 import { cn } from '@/lib/core/utils';
@@ -104,55 +100,6 @@ function roleLabelPublic(role: SquadMemberRole): string {
   return 'Member';
 }
 
-function SectionHeading({
-  children,
-  icon: Icon,
-}: Readonly<{ children: ReactNode; icon?: LucideIcon }>) {
-  return (
-    <h3 className="mb-4 flex items-center gap-2 border-b-2 border-border pb-2 font-mono text-xs font-black uppercase tracking-widest text-foreground">
-      {Icon ? <Icon className="size-4 shrink-0" strokeWidth={2} aria-hidden /> : null}
-      {children}
-    </h3>
-  );
-}
-
-function SquadProtocolRules({ squad }: Readonly<{ squad: SquadSummary }>) {
-  return (
-    <ul className="space-y-3">
-      <li className="flex gap-3 text-xs font-bold">
-        <span className="font-mono text-primary">01.</span>
-        <span>Respect the build. No toxic behavior.</span>
-      </li>
-      <li className="flex gap-3 text-xs font-bold">
-        <span className="font-mono text-primary">02.</span>
-        <span>Share insights, not just links.</span>
-      </li>
-      <li className="flex gap-3 text-xs font-bold">
-        <span className="font-mono text-primary">03.</span>
-        <span>Keep it relevant to {squad.name}.</span>
-      </li>
-      {squad.postPolicy === 'staff_only' ? (
-        <li className="flex gap-3 text-xs font-bold">
-          <span className="font-mono text-primary">04.</span>
-          <span>Only admins and moderators can post or share here.</span>
-        </li>
-      ) : null}
-      {squad.requirePostApproval ? (
-        <li className="flex gap-3 text-xs font-bold">
-          <span className="font-mono text-primary">05.</span>
-          <span>New posts may require moderator approval.</span>
-        </li>
-      ) : null}
-      {squad.invitePermission === 'staff_only' ? (
-        <li className="flex gap-3 text-xs font-bold">
-          <span className="font-mono text-primary">06.</span>
-          <span>Only staff can invite new members.</span>
-        </li>
-      ) : null}
-    </ul>
-  );
-}
-
 export default function SquadDetailPage() {
   const params = useParams();
   const slug = typeof params?.slug === 'string' ? params.slug : '';
@@ -161,7 +108,6 @@ export default function SquadDetailPage() {
   const myUser = useAuthStore((s) => s.user);
   const openAuth = useAuthDialogStore((s) => s.open);
 
-  const [tab, setTab] = useState('feed');
   const [squad, setSquad] = useState<SquadSummary | null>(null);
   const [feed, setFeed] = useState<SquadFeedRow[]>([]);
   const [pinnedCount, setPinnedCount] = useState(0);
@@ -281,6 +227,32 @@ export default function SquadDetailPage() {
 
   const openMembersDialog = useCallback(() => setMembersDialogOpen(true), []);
 
+  const reloadMembers = useCallback(async () => {
+    if (!slug || !squad) return;
+    const gated =
+      squad.viewerNeedsInvite === true ||
+      (squad.visibility === 'private' && squad.viewerRole == null);
+    if (gated) return;
+    try {
+      const r = await squadsApi.listMembers(slug, token);
+      setMembers(r.members);
+      const d = await squadsApi.getBySlug(slug, token);
+      setSquad((prev) =>
+        prev
+          ? {
+              ...d.squad,
+              viewerRole: prev.viewerRole,
+              viewerIsStaff: prev.viewerIsStaff,
+              viewerNeedsInvite: prev.viewerNeedsInvite,
+              inviteToken: prev.inviteToken,
+            }
+          : d.squad
+      );
+    } catch {
+      /* keep current list on refresh failure */
+    }
+  }, [slug, squad, token]);
+
   const join = async () => {
     if (!token) {
       openAuth('login');
@@ -392,6 +364,7 @@ export default function SquadDetailPage() {
 
   const createdLabel = formatSquadCreated(squad?.createdAt);
   const bannerSrc = squad ? resolveSquadBannerSrc(squad.coverBannerUrl) : undefined;
+  const squadDescription = squad?.description?.trim() ?? '';
 
   const gridPattern =
     "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L30 60M0 30L60 30' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E\")";
@@ -405,6 +378,10 @@ export default function SquadDetailPage() {
     );
   }
 
+  if (!squad) {
+    return <SquadDetailPageSkeleton />;
+  }
+
   return (
     <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'relative min-h-0 flex-1')}>
       <div
@@ -414,124 +391,132 @@ export default function SquadDetailPage() {
       />
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-6 pb-10">
-        {!squad ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : (
-          <>
-            <header className="relative z-20 mt-2 overflow-visible border-4 border-border bg-card shadow">
-              <div className="relative h-56 w-full overflow-hidden border-b-4 border-border sm:h-72">
+        <header className="relative z-20 mt-2 border-4 border-border shadow">
+              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
                 {bannerSrc ? (
                   <img src={bannerSrc} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="h-full w-full gradient-auto" aria-hidden />
+                  <div className="h-full w-full gradient-auto" />
                 )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/55 to-black/15" />
               </div>
-              <div className="relative px-4 pb-6 pt-5 sm:px-6 sm:pt-6">
-                <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                    <div className="relative -mt-14 shrink-0 sm:-mt-16">
-                      {squad.iconUrl ? (
-                        <img
-                          src={squad.iconUrl}
-                          alt=""
-                          className="size-24 border-4 border-border bg-card object-cover shadow sm:size-32"
-                        />
-                      ) : (
-                        <div className="flex size-24 items-center justify-center border-4 border-border bg-primary text-3xl font-black text-primary-foreground shadow sm:size-32 sm:text-4xl">
-                          {squad.name.charAt(0).toUpperCase()}
+              <div className="relative z-10 flex min-h-[min(40vw,13rem)] flex-col justify-end px-4 pb-3.5 pt-5 sm:min-h-52 sm:px-5 sm:pb-4">
+                {createdLabel ? (
+                  <p className="absolute right-4 top-4 z-20 font-mono text-[10px] font-bold text-white/75 sm:right-5 sm:top-5 sm:text-[11px]">
+                    Created {createdLabel}
+                  </p>
+                ) : null}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:max-w-2xl lg:max-w-[40rem]">
+                    <div className="flex items-start gap-3 sm:gap-3.5">
+                      <div className="relative shrink-0">
+                        {squad.iconUrl ? (
+                          <img
+                            src={squad.iconUrl}
+                            alt=""
+                            className="size-14 border-[3px] border-border bg-card object-cover shadow sm:size-16"
+                          />
+                        ) : (
+                          <div className="flex size-14 items-center justify-center border-[3px] border-border bg-primary text-xl font-black text-primary-foreground shadow sm:size-16 sm:text-2xl">
+                            {squad.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {squad.visibility === 'private' ? (
+                          <div
+                            className="absolute -right-1.5 -top-1.5 border-2 border-border bg-yellow-400 p-1 text-black shadow"
+                            aria-hidden
+                          >
+                            <Lock className="size-3" strokeWidth={2.5} />
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <h1 className="line-clamp-2 text-lg font-black uppercase italic leading-tight tracking-tighter text-white sm:text-xl">
+                            {squad.name}
+                          </h1>
+                          {squad.visibility === 'public' && squad.category ? (
+                            <span className="shrink-0 border-2 border-primary bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-primary-foreground">
+                              {squadCategoryLabel(squad.category)}
+                            </span>
+                          ) : null}
                         </div>
-                      )}
-                      {squad.visibility === 'private' ? (
-                        <div
-                          className="absolute -right-2 -top-2 border-2 border-border bg-yellow-400 p-1.5 text-black shadow"
-                          aria-hidden
-                        >
-                          <Lock className="size-4" strokeWidth={2.5} />
-                        </div>
-                      ) : null}
+                        {squadDescription ? (
+                          <p className="line-clamp-3 text-[11px] leading-snug text-white/80 sm:text-xs">
+                            {squadDescription}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
 
-                    <div className="min-w-0 flex-1 pb-1">
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                        <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-                          {squad.name}
-                        </h1>
-                        {squad.visibility === 'public' && squad.category ? (
-                          <span className="border-2 border-primary bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-primary">
-                            {squadCategoryLabel(squad.category)}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 font-mono text-sm font-bold text-muted-foreground">
-                        @{squad.handle ?? squad.slug}
-                        {createdLabel ? (
-                          <>
-                            <span className="text-border"> · </span>
-                            <span>Created {createdLabel}</span>
-                          </>
-                        ) : null}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2">
-                        <div className="flex items-center gap-2">
-                          {facepile.length > 0 ? (
-                            <div className="flex -space-x-2">
-                              {facepile.map((m) => (
-                                <img
-                                  key={m.userId}
-                                  src={memberAvatarSrc(m.profileImg, m.username)}
-                                  alt=""
-                                  className="size-9 border-2 border-border bg-muted object-cover"
-                                  title={m.username}
-                                />
-                              ))}
-                            </div>
-                          ) : null}
-                          <span className="text-[10px] font-black uppercase tracking-widest text-primary tabular-nums">
-                            {squad.memberCount.toLocaleString()} members
-                          </span>
-                        </div>
-
-                        {feedVisible && staffSorted.length > 0
-                          ? modShown.map((m) => (
-                              <Link
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 sm:pl-[4.25rem]">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-white/90 tabular-nums">
+                        {(squad.postCount ?? 0).toLocaleString()}{' '}
+                        {(squad.postCount ?? 0) === 1 ? 'post' : 'posts'}
+                      </span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-white/90 tabular-nums">
+                        {(squad.viewCount ?? 0).toLocaleString()} views
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {facepile.length > 0 ? (
+                          <div className="flex -space-x-1.5">
+                            {facepile.map((m) => (
+                              <img
                                 key={m.userId}
-                                href={`/u/${encodeURIComponent(m.username)}`}
-                                className="inline-flex items-center gap-1.5 border-2 border-primary/45 bg-primary/5 px-2 py-1 transition-colors hover:border-primary"
-                              >
-                                <img
-                                  src={memberAvatarSrc(m.profileImg, m.username)}
-                                  alt=""
-                                  className="size-6 border border-primary/30 object-cover"
-                                />
-                                <span className="max-w-[6.5rem] truncate text-[11px] font-bold text-foreground">
-                                  {m.fullName?.trim() || m.username}
-                                </span>
-                                <span className="font-mono text-[8px] font-black uppercase text-primary">
-                                  {roleLabelPublic(m.role)}
-                                </span>
-                              </Link>
-                            ))
-                          : null}
-                        {feedVisible && staffSorted.length > 0 && modMore > 0 ? (
-                          <button
-                            type="button"
-                            onClick={openMembersDialog}
-                            className="inline-flex items-center border-2 border-dashed border-primary/50 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-wide text-primary transition-colors hover:border-primary"
-                          >
-                            +{modMore} more
-                          </button>
+                                src={memberAvatarSrc(m.profileImg, m.username)}
+                                alt=""
+                                className="size-7 border-2 border-border bg-muted object-cover"
+                                title={m.username}
+                              />
+                            ))}
+                          </div>
                         ) : null}
-                        {feedVisible && staffSorted.length === 0 ? (
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                            No staff listed
-                          </span>
-                        ) : null}
-                        {!feedVisible ? (
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                            · Join to see staff
-                          </span>
-                        ) : null}
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white/90 tabular-nums">
+                          {squad.memberCount.toLocaleString()} members
+                        </span>
                       </div>
+
+                      {feedVisible && staffSorted.length > 0
+                        ? modShown.map((m) => (
+                            <Link
+                              key={m.userId}
+                              href={`/u/${encodeURIComponent(m.username)}`}
+                              className="inline-flex items-center gap-1 border-2 border-white/35 bg-black/35 px-1.5 py-0.5 backdrop-blur-[2px] transition-colors hover:border-primary"
+                            >
+                              <img
+                                src={memberAvatarSrc(m.profileImg, m.username)}
+                                alt=""
+                                className="size-5 border border-white/40 object-cover"
+                              />
+                              <span className="max-w-[5.5rem] truncate text-[10px] font-bold text-white">
+                                {m.fullName?.trim() || m.username}
+                              </span>
+                              <span className="font-mono text-[7px] font-black uppercase text-primary">
+                                {roleLabelPublic(m.role)}
+                              </span>
+                            </Link>
+                          ))
+                        : null}
+                      {feedVisible && staffSorted.length > 0 && modMore > 0 ? (
+                        <button
+                          type="button"
+                          onClick={openMembersDialog}
+                          className="inline-flex items-center border-2 border-dashed border-primary/50 px-1.5 py-0.5 font-mono text-[8px] font-black uppercase tracking-wide text-primary transition-colors hover:border-primary"
+                        >
+                          +{modMore} more
+                        </button>
+                      ) : null}
+                      {feedVisible && staffSorted.length === 0 ? (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-white/60">
+                          No staff listed
+                        </span>
+                      ) : null}
+                      {!feedVisible ? (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-white/60">
+                          · Join to see staff
+                        </span>
+                      ) : null}
                     </div>
                   </div>
 
@@ -542,11 +527,11 @@ export default function SquadDetailPage() {
                           type="button"
                           variant="primary"
                           disabled={busy}
-                          className="h-12 border-b-4 border-r-4 border-primary font-black uppercase italic tracking-widest"
+                          className="h-10 border-b-4 border-r-4 border-primary font-black uppercase italic tracking-widest text-xs"
                           onClick={() => void join()}
                         >
                           <UserPlus
-                            className="mr-2 size-5 shrink-0"
+                            className="mr-1.5 size-4 shrink-0"
                             strokeWidth={2.5}
                             aria-hidden
                           />
@@ -557,7 +542,7 @@ export default function SquadDetailPage() {
                             value={inviteField}
                             onChange={(e) => setInviteField(e.target.value)}
                             placeholder="Invite code"
-                            className="h-12 min-w-[9rem] border-2 border-border bg-background px-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            className="h-10 min-w-[8rem] border-2 border-border bg-background px-2.5 font-mono text-[11px] outline-none focus-visible:ring-2 focus-visible:ring-primary"
                           />
                         ) : null}
                       </>
@@ -566,11 +551,36 @@ export default function SquadDetailPage() {
                       type="button"
                       variant="outline"
                       onClick={openMembersDialog}
-                      className="h-12 border-b-4 border-r-4 font-mono text-[10px] font-black uppercase tracking-widest"
+                      className="h-10 border-2 border-white/70 border-b-4 border-r-4 bg-black/50 font-mono text-[9px] font-black uppercase tracking-widest text-white backdrop-blur-[2px] hover:border-primary hover:bg-black/65 hover:text-white"
                     >
-                      <UsersRound className="size-5 shrink-0" strokeWidth={2} aria-hidden />
+                      <UsersRound className="size-4 shrink-0" strokeWidth={2} aria-hidden />
                       Members
                     </Button>
+                    {feedVisible ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={pinnedCount === 0 && !showPinnedOnly}
+                        onClick={() => setShowPinnedOnly((v) => !v)}
+                        title={
+                          showPinnedOnly
+                            ? 'Show full squad feed'
+                            : pinnedCount === 0
+                              ? 'No pinned posts yet'
+                              : 'Show only pinned posts'
+                        }
+                        className={cn(
+                          'h-10 border-2 border-white/70 border-b-4 border-r-4 bg-black/50 font-mono text-[9px] font-black uppercase tracking-widest text-white backdrop-blur-[2px] hover:border-primary hover:bg-black/65 hover:text-white disabled:pointer-events-none disabled:opacity-40',
+                          showPinnedOnly && 'border-primary bg-primary/25 text-primary'
+                        )}
+                      >
+                        <Pin className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                        Pinned
+                        <span className="flex size-5 items-center justify-center border border-white/40 bg-black/50 text-[9px] font-black tabular-nums">
+                          {pinnedCount}
+                        </span>
+                      </Button>
+                    ) : null}
                     <div ref={menuRef} className="relative z-40">
                       <Button
                         type="button"
@@ -578,7 +588,7 @@ export default function SquadDetailPage() {
                         aria-expanded={menuOpen}
                         aria-haspopup="menu"
                         aria-label="Squad menu"
-                        className="size-12 border-b-4 border-r-4 p-0"
+                        className="size-10 border-2 border-white/70 border-b-4 border-r-4 bg-black/50 p-0 text-white backdrop-blur-[2px] hover:border-primary hover:bg-black/65 hover:text-white"
                         onClick={() => setMenuOpen((o) => !o)}
                       >
                         <MoreHorizontal className="size-6 shrink-0" strokeWidth={2} aria-hidden />
@@ -586,7 +596,7 @@ export default function SquadDetailPage() {
                       {menuOpen ? (
                         <ul
                           role="menu"
-                          className="absolute right-0 top-[calc(100%+8px)] z-[100] min-w-[14rem] border-2 border-border bg-card py-1 shadow"
+                          className="absolute right-0 top-[calc(100%+8px)] z-[200] min-w-[14rem] border-2 border-border bg-card py-1 shadow-lg"
                         >
                           {isAdmin && token ? (
                             <li role="none">
@@ -685,46 +695,8 @@ export default function SquadDetailPage() {
               </div>
             </header>
 
-            <Tabs value={tab} onValueChange={setTab} className="w-full min-w-0">
-              <div className="mb-6 flex min-w-0 flex-wrap items-end gap-2 border-b-4 border-border pb-px">
-                <TabsList variant="retro" className="mb-0 min-h-0 min-w-0 flex-1 border-0">
-                  <TabsTrigger value="feed" variant="retro">
-                    <LayoutGrid className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-                    Squad feed
-                  </TabsTrigger>
-                  <TabsTrigger value="resources" variant="retro">
-                    <BookOpen className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-                    Resources
-                  </TabsTrigger>
-                </TabsList>
-                {feedVisible && tab === 'feed' ? (
-                  <button
-                    type="button"
-                    disabled={pinnedCount === 0 && !showPinnedOnly}
-                    onClick={() => setShowPinnedOnly((v) => !v)}
-                    title={
-                      showPinnedOnly
-                        ? 'Show full squad feed'
-                        : pinnedCount === 0
-                          ? 'No pinned posts yet'
-                          : 'Show only pinned posts'
-                    }
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-2 border-2 border-border bg-card px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest shadow transition-colors',
-                      'hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40',
-                      showPinnedOnly && 'border-primary bg-primary/10 text-primary'
-                    )}
-                  >
-                    <Pin className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
-                    <span>Pinned</span>
-                    <span className="flex size-6 items-center justify-center border-2 border-border bg-muted text-[10px] font-black tabular-nums text-foreground">
-                      {pinnedCount}
-                    </span>
-                  </button>
-                ) : null}
-              </div>
-
-              <TabsContent value="feed" className="min-h-0 overflow-x-hidden overflow-y-visible">
+            <div className="w-full min-w-0">
+              <div className="min-h-0 overflow-x-hidden overflow-y-visible">
                 {!feedVisible ? (
                   <p className="text-sm text-muted-foreground">Join this squad to see the feed.</p>
                 ) : feed.length === 0 ? (
@@ -754,74 +726,33 @@ export default function SquadDetailPage() {
                               onUnpin: () => setPinConfirm({ postId: row.item._id, mode: 'unpin' }),
                             }
                           : undefined;
+                      const shareChrome =
+                        row.kind === 'shared'
+                          ? {
+                              sharedBy: {
+                                username: row.sharedBy?.username?.trim() || 'member',
+                                fullName: row.sharedBy?.fullName,
+                                profileImg: row.sharedBy?.profileImg,
+                              },
+                            }
+                          : undefined;
                       return (
                         <li
                           key={`${row.kind}-${row.item._id}-${i}`}
-                          className="flex min-h-0 flex-col gap-2"
+                          className="flex min-h-0 flex-col"
                         >
-                          {row.kind === 'shared' ? (
-                            <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-                              Shared to squad
-                            </p>
-                          ) : null}
                           <BlogCard
                             post={mapPublicFeedPostToPost(row.item)}
                             squadFeedPin={pinChrome}
+                            squadFeedShare={shareChrome}
                           />
                         </li>
                       );
                     })}
                   </ul>
                 )}
-              </TabsContent>
-
-              <TabsContent
-                value="resources"
-                className="min-h-0 space-y-6 overflow-x-hidden overflow-y-visible border-2 border-border bg-card p-5 shadow"
-              >
-                <div>
-                  <SectionHeading icon={BookOpen}>About this squad</SectionHeading>
-                  <p className="text-sm leading-relaxed text-foreground/85">
-                    {squad.description?.trim() ||
-                      'No description has been set yet. Admins can add context so new members know what this squad is for.'}
-                  </p>
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    Handle{' '}
-                    <span className="font-mono font-bold text-foreground">
-                      @{squad.handle ?? squad.slug}
-                    </span>
-                    {createdLabel ? <> · Created {createdLabel}</> : null} ·{' '}
-                    {squad.visibility === 'public' ? 'Public squad' : 'Private squad'}
-                  </p>
-                </div>
-                <div>
-                  <SectionHeading icon={Shield}>Squad rules</SectionHeading>
-                  <SquadProtocolRules squad={squad} />
-                </div>
-                <div className="flex flex-wrap gap-2 border-t-2 border-border pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="font-mono text-[10px] font-black uppercase tracking-widest"
-                    onClick={() => setIntroOpen(true)}
-                  >
-                    How squads work
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="font-mono text-[10px] font-black uppercase tracking-widest"
-                    onClick={() => router.push('/squads')}
-                  >
-                    All squads
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </>
-        )}
+              </div>
+            </div>
       </div>
 
       {token && squad && isAdmin ? (
@@ -850,9 +781,14 @@ export default function SquadDetailPage() {
       <SquadMembersDialog
         open={membersDialogOpen}
         onClose={() => setMembersDialogOpen(false)}
+        squadSlug={slug}
+        squadName={squad?.name ?? 'Squad'}
         members={members}
         accessToken={token}
         myUsername={myUser?.username}
+        viewerRole={squad?.viewerRole}
+        creatorUserId={squad?.creatorUserId}
+        onMembersChange={reloadMembers}
       />
 
       <InfoSwiperDialog

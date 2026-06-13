@@ -2,10 +2,8 @@ import { BlogPostModel } from '../models/BlogPost.js';
 import { BlogCategoryModel } from '../models/BlogCategory.js';
 import { BlogTagModel } from '../models/BlogTag.js';
 import { ensureBlogTaxonomySeeds } from '../modules/blog/ensureBlogTaxonomySeeds.js';
-
-const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
+import { BLOG_TAXONOMY_CACHE_TTL_MS } from '../variable/constants.js';
 
 export type TaxonomyCategoryRow = {
   slug: string;
@@ -31,8 +29,6 @@ export type PaginatedList<T> = {
   limit: number;
   hasMore: boolean;
 };
-
-const CACHE_TTL_MS = 60_000;
 
 let categoriesCache: { at: number; rows: TaxonomyCategoryRow[] } | null = null;
 let tagsCache: { at: number; rows: TaxonomyTagRow[] } | null = null;
@@ -110,12 +106,12 @@ function paginate<T>(rows: T[], offset: number, limit: number): PaginatedList<T>
 
 export async function loadCategoryRows(): Promise<TaxonomyCategoryRow[]> {
   const now = Date.now();
-  if (categoriesCache && now - categoriesCache.at < CACHE_TTL_MS) {
+  if (categoriesCache && now - categoriesCache.at < BLOG_TAXONOMY_CACHE_TTL_MS) {
     return categoriesCache.rows;
   }
 
   await ensureBlogTaxonomySeeds();
-  const publishedMatch = { status: 'published' as const, ...NOT_DELETED };
+  const publishedMatch = { status: 'published' as const, ...NOT_DELETED_FILTER };
 
   const [curatedCats, catAgg] = await Promise.all([
     BlogCategoryModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
@@ -159,12 +155,12 @@ export async function loadCategoryRows(): Promise<TaxonomyCategoryRow[]> {
 
 export async function loadTagRows(): Promise<TaxonomyTagRow[]> {
   const now = Date.now();
-  if (tagsCache && now - tagsCache.at < CACHE_TTL_MS) {
+  if (tagsCache && now - tagsCache.at < BLOG_TAXONOMY_CACHE_TTL_MS) {
     return tagsCache.rows;
   }
 
   await ensureBlogTaxonomySeeds();
-  const publishedMatch = { status: 'published' as const, ...NOT_DELETED };
+  const publishedMatch = { status: 'published' as const, ...NOT_DELETED_FILTER };
 
   const [curatedTags, tagAgg, recentAgg] = await Promise.all([
     BlogTagModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
@@ -288,7 +284,7 @@ export async function loadExploreTagRankings(): Promise<{
   recentAgg: Array<{ _id: string; postCount: number; lastUsedAt: Date }>;
 }> {
   await ensureBlogTaxonomySeeds();
-  const publishedMatch = { status: 'published' as const, ...NOT_DELETED };
+  const publishedMatch = { status: 'published' as const, ...NOT_DELETED_FILTER };
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
   const tagWindowMatch = {

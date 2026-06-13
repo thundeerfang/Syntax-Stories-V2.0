@@ -15,4 +15,3 @@ export { RocketLottie } from './RocketLottie';
 export { SparkLottie, type SparkLottieProps } from './SparkLottie';
 export { StreakFireLottie } from './StreakFireLottie';
 export { TestAccountLottie, type TestAccountLottieProps } from './TestAccountLottie';
-export { WalletLottie } from './WalletLottie';

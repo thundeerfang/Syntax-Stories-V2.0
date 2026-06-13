@@ -16,8 +16,7 @@ import { securityZonesForPermissions } from './securityZones.config.js';
 import { getActorMaxRoleLevel } from '../rbac/services/rbac.service.js';
 import { resolveSessionTier } from './sessionTier.config.js';
 import { SessionModel } from '../../models/Session.js';
-
-const SNAPSHOT_TTL_SEC = 7 * 24 * 60 * 60;
+import { ADMIN_PERMISSION_SNAPSHOT_TTL_SEC } from '../../variable/constants.js';
 
 export type PermissionSnapshot = {
   userId: string;
@@ -108,7 +107,7 @@ export async function createStaffPermissionSnapshot(
     try {
       await redis.setEx(
         redisKeys.iam.permissionSnapshot(sessionId),
-        SNAPSHOT_TTL_SEC,
+        ADMIN_PERMISSION_SNAPSHOT_TTL_SEC,
         JSON.stringify(snapshot)
       );
     } catch {

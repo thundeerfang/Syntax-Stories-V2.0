@@ -41,3 +41,9 @@ export const achievementsApi = {
     return data;
   },
 };
+
+export function achievementsStreamUrl(): string {
+  const base = resolvePublicApiBase().replace(/\/$/, '');
+  const path = '/api/achievements/stream';
+  return base ? `${base}${path}` : path;
+}

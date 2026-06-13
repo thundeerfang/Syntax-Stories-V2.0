@@ -322,6 +322,18 @@ export function XIcon({ className }: Readonly<IconProps>) {
   );
 }
 
+/** Google Play mark */
+export function GooglePlayIcon({ className }: Readonly<IconProps>) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden>
+      <path fill="#00D2FF" d="M3.6 1.8v20.4c0 .7.8 1.1 1.4.7l11.2-6.5v-9L5 1.1c-.6-.4-1.4 0-1.4.7z" />
+      <path fill="#00F076" d="M15.2 12 20.6 8.9c.8-.5.8-1.6 0-2.1l-5.4-3.1v8.3z" />
+      <path fill="#FF3A44" d="M15.2 12v8.3l5.4-3.1c.8-.5.8-1.6 0-2.1L15.2 12z" />
+      <path fill="#FFB300" d="M3.6 1.8 15.2 12 3.6 22.2V1.8z" />
+    </svg>
+  );
+}
+
 /** @deprecated Use `SOCIAL_ICON_DISCORD` from `@/lib/icons`. */
 export const ICON_DISCORD = SOCIAL_ICON_DISCORD;
 

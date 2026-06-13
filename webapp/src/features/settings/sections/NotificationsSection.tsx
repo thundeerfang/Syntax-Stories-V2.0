@@ -7,7 +7,6 @@ import {
   Bell,
   Flame,
   Heart,
-  Loader2,
   Settings,
   Tag,
   UserPlus,
@@ -92,6 +91,19 @@ const CATEGORY_PREFS: PrefItem[] = [
     icon: <Settings className="size-4" strokeWidth={2.5} />,
   },
 ];
+
+const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
+  inAppEnabled: true,
+  milestonesEnabled: true,
+  followingEnabled: true,
+  trendingEnabled: true,
+  settingsEnabled: true,
+  referralsEnabled: true,
+  squadsEnabled: true,
+  categoriesEnabled: true,
+  tagsEnabled: true,
+  achievementsEnabled: true,
+};
 
 function NotificationPrefCard({
   item,
@@ -187,16 +199,9 @@ export function NotificationsSettingsContent() {
     }
   };
 
-  if (loading || !prefs) {
-    return (
-      <div className="flex items-center gap-2 py-16 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" aria-hidden />
-        <span className="font-mono text-[10px] uppercase tracking-widest">Loading preferences…</span>
-      </div>
-    );
-  }
-
-  const inAppOn = prefs.inAppEnabled;
+  const effectivePrefs = prefs ?? DEFAULT_NOTIFICATION_PREFS;
+  const inAppOn = effectivePrefs.inAppEnabled;
+  const prefsReady = prefs !== null && !loading;
 
   return (
     <SettingsTabRoot className="w-full min-w-0 -mr-6 pr-0 md:-mr-10">
@@ -239,7 +244,7 @@ export function NotificationsSettingsContent() {
               </span>
               <Switch
                 checked={inAppOn}
-                disabled={savingKey !== null}
+                disabled={!prefsReady || savingKey !== null}
                 onCheckedChange={(v) => void patch('inAppEnabled', v)}
                 aria-label="In-app alerts"
               />
@@ -264,8 +269,8 @@ export function NotificationsSettingsContent() {
               <NotificationPrefCard
                 key={item.key}
                 item={item}
-                checked={prefs[item.key]}
-                disabled={!inAppOn || savingKey !== null}
+                checked={effectivePrefs[item.key]}
+                disabled={!prefsReady || !inAppOn || savingKey !== null}
                 onChange={(v) => void patch(item.key, v)}
               />
             ))}

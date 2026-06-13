@@ -85,7 +85,6 @@ function newUserBaseDoc(
     username,
     email,
     profileImg: n.profileImg?.startsWith('http') ? n.profileImg : newRandomDiceBearAvatarSvgUrl(),
-    bio: 'Welcome to Syntax Stories 🧑🏻‍💻',
     isGoogleAccount: false,
     isGitAccount: false,
     isFacebookAccount: false,

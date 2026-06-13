@@ -1,50 +1,10 @@
 /**
- * Profile & account JSON API shapes — `/auth/me`, `/auth/profile`, `/auth/parse-cv`.
+ * Profile & account JSON API shapes — `/auth/me`, `/auth/profile`.
  * Runtime client: `webapp/src/api/auth.ts`. Keep in sync with server auth module.
  */
 
 import type { AchievementsPayload } from './achievementsApi';
 import type { TechStackItem } from './referenceApi';
-
-export interface WorkExperience {
-  workId?: string;
-  jobTitle?: string;
-  employmentType?: string;
-  company?: string;
-  companyDomain?: string;
-  companyLogo?: string;
-  companyLogoAlt?: string;
-  currentPosition?: boolean;
-  startDate?: string;
-  endDate?: string;
-  location?: string;
-  locationType?: string;
-  description?: string;
-  skills?: string[];
-  mediaUrls?: string[];
-  media?: { url: string; title?: string }[];
-  role?: string;
-}
-
-export interface EducationItem {
-  eduId?: string;
-  school?: string;
-  schoolDomain?: string;
-  schoolLogo?: string;
-  schoolLogoAlt?: string;
-  degree?: string;
-  fieldOfStudy?: string;
-  field?: string;
-  currentEducation?: boolean;
-  startDate?: string;
-  endDate?: string;
-  startYear?: number;
-  endYear?: number;
-  grade?: string;
-  description?: string;
-  activity?: string;
-  refCode?: string;
-}
 
 export interface CertificationItem {
   certId?: string;
@@ -121,8 +81,6 @@ export interface AuthUser {
   youtube?: string;
   stackAndTools?: string[];
   stackAndToolsDisplay?: TechStackItem[];
-  workExperiences?: WorkExperience[];
-  education?: EducationItem[];
   certifications?: CertificationItem[];
   projects?: ProjectItem[];
   openSourceContributions?: OpenSourceContribution[];
@@ -158,8 +116,6 @@ export type AccountUser = {
   youtube?: string;
   stackAndTools?: string[];
   stackAndToolsDisplay?: TechStackItem[];
-  workExperiences?: WorkExperience[];
-  education?: EducationItem[];
   certifications?: CertificationItem[];
   projects?: ProjectItem[];
   openSourceContributions?: OpenSourceContribution[];
@@ -206,8 +162,6 @@ export type UpdateProfilePayload = Partial<{
   github: string;
   youtube: string;
   stackAndTools: string[];
-  workExperiences: WorkExperience[];
-  education: EducationItem[];
   certifications: CertificationItem[];
   projects: ProjectItem[];
   openSourceContributions: OpenSourceContribution[];
@@ -221,28 +175,3 @@ export type UpdateProfilePayload = Partial<{
   blogStreakMode: 'daily' | 'weekly' | 'monthly';
   expectedProfileVersion: number;
 }>;
-
-export type ParseCvMissingFieldKey =
-  | 'bio'
-  | 'linkedin'
-  | 'github'
-  | 'stackAndTools'
-  | 'workExperiences'
-  | 'education'
-  | 'certifications';
-
-export type IncompleteItemHint = { index: number; title?: string; missing: string[] };
-
-export type IncompleteItemHints = {
-  workExperiences?: IncompleteItemHint[];
-  education?: IncompleteItemHint[];
-  certifications?: IncompleteItemHint[];
-  projects?: IncompleteItemHint[];
-};
-
-export interface ParseCvResponse {
-  success: boolean;
-  extracted: Partial<UpdateProfilePayload>;
-  missingFields: ParseCvMissingFieldKey[];
-  incompleteItemHints?: IncompleteItemHints;
-}

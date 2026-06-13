@@ -13,6 +13,7 @@ import { UserModel, normalizeProfileImg } from '../models/User.js';
 import { normalizeTaxonomyInput } from '../modules/blog/postTaxonomy.js';
 import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
 import {
   assertTodayIsNextUtcDayAfterYesterday,
   previousUtcCalendarDay,
@@ -52,6 +53,8 @@ import {
   dispatchAchievementEvents,
 } from '../achievements/achievement.service.js';
 import { estimateReadMinutesFromBlogFields } from '../modules/blog/readTimeEstimate.js';
+import { SOFT_DELETE_RETENTION_MS } from '../variable/constants.js';
+import { BLOG_LIMITS } from '@syntax-stories/shared';
 
 async function respondReadCommit(
   res: Response,
@@ -84,13 +87,8 @@ function normalizeBlogCounter(raw: unknown): number {
   return 0;
 }
 
-const SLUG_MAX_LEN = 320;
-const SUMMARY_MAX_LEN = 12000;
-
-/** Active rows are not soft-deleted (`deletedAt` unset or null). */
-const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
+const SLUG_MAX_LEN = BLOG_LIMITS.slugMaxLen;
+const SUMMARY_MAX_LEN = BLOG_LIMITS.summaryMaxLen;
 
 function isEligibleForPublicRespect(doc: { status?: string; deletedAt?: Date | null }): boolean {
   return doc.status === 'published' && (doc.deletedAt == null || doc.deletedAt === undefined);
@@ -510,7 +508,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
     const post = await BlogPostModel.findOne({
       authorId: user._id,
       status: 'draft',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .sort({ updatedAt: -1 })
       .limit(1)
@@ -632,7 +630,7 @@ export async function getDraft(req: Request, res: Response): Promise<void> {
     const draft = await BlogPostModel.findOne({
       authorId: user._id,
       status: 'draft',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .sort({ updatedAt: -1 })
       .limit(1)
@@ -667,12 +665,14 @@ export async function listPublishedFeed(req: Request, res: Response): Promise<vo
   try {
     const raw = Number.parseInt(String(req.query.limit ?? ''), 10);
     const limit = Number.isFinite(raw) ? Math.min(50, Math.max(1, raw)) : 20;
+    const offsetRaw = Number.parseInt(String(req.query.offset ?? ''), 10);
+    const offset = Number.isFinite(offsetRaw) ? Math.max(0, offsetRaw) : 0;
     const tagRaw = typeof req.query.tag === 'string' ? req.query.tag.trim().toLowerCase() : '';
     const categoryRaw =
       typeof req.query.category === 'string' ? req.query.category.trim().toLowerCase() : '';
     const sortRaw = typeof req.query.sort === 'string' ? req.query.sort.trim().toLowerCase() : '';
     const monthRaw = typeof req.query.month === 'string' ? req.query.month.trim() : '';
-    const filter: Record<string, unknown> = { status: 'published', ...NOT_DELETED };
+    const filter: Record<string, unknown> = { status: 'published', ...NOT_DELETED_FILTER };
     if (tagRaw) filter.tags = tagRaw;
     if (categoryRaw) filter.category = categoryRaw;
 
@@ -702,7 +702,8 @@ export async function listPublishedFeed(req: Request, res: Response): Promise<vo
 
     const posts = await BlogPostModel.find(filter)
       .sort(sort)
-      .limit(limit)
+      .skip(offset)
+      .limit(limit + 1)
       .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
       .populate({
@@ -712,10 +713,12 @@ export async function listPublishedFeed(req: Request, res: Response): Promise<vo
       })
       .lean();
 
-    const items = posts.map(mapLeanPostToFeedListItem).filter((x): x is FeedListItem => x !== null);
+    const hasMore = posts.length > limit;
+    const page = hasMore ? posts.slice(0, limit) : posts;
+    const items = page.map(mapLeanPostToFeedListItem).filter((x): x is FeedListItem => x !== null);
     const postsOut = await applyViewerStateToFeedItems(req, items);
 
-    res.status(200).json({ success: true, posts: postsOut });
+    res.status(200).json({ success: true, posts: postsOut, hasMore });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Failed to load feed' });
@@ -744,7 +747,7 @@ export async function listUserPublishedPosts(req: Request, res: Response): Promi
     const posts = await BlogPostModel.find({
       authorId: user._id,
       status: 'published',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .sort({ updatedAt: -1 })
       .limit(limit)
@@ -791,7 +794,7 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
       authorId: user._id,
       slug,
       status: 'published',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
@@ -807,7 +810,7 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
         authorId: user._id,
         slug,
         status: 'suspended',
-        ...NOT_DELETED,
+        ...NOT_DELETED_FILTER,
       })
         .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
         .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
@@ -926,7 +929,7 @@ export async function recordBlogReadDay(req: Request, res: Response): Promise<vo
       authorId,
       slug,
       status: 'published',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .select('_id')
       .lean();
@@ -1006,7 +1009,7 @@ export async function startBlogReadView(req: Request, res: Response): Promise<vo
       authorId,
       slug,
       status: 'published',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .select('_id')
       .lean();
@@ -1130,7 +1133,7 @@ export async function commitBlogReadView(req: Request, res: Response): Promise<v
       authorId,
       slug,
       status: 'published',
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     })
       .select('_id')
       .lean();
@@ -1231,8 +1234,6 @@ export async function commitBlogReadView(req: Request, res: Response): Promise<v
   }
 }
 
-const SOFT_DELETE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-
 /** GET /api/blog - list current user's posts (for now: my posts only) */
 export async function listMyPosts(req: Request, res: Response): Promise<void> {
   try {
@@ -1287,7 +1288,7 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const filter: Record<string, unknown> = { authorId: user._id, ...NOT_DELETED };
+    const filter: Record<string, unknown> = { authorId: user._id, ...NOT_DELETED_FILTER };
     if (status === 'draft' || status === 'published' || status === 'suspended') {
       filter.status = status;
     }
@@ -1361,7 +1362,7 @@ export async function getMyPostById(req: Request, res: Response): Promise<void> 
     const post = await BlogPostModel.findOne({
       _id: postId,
       authorId: user._id,
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
     }).lean();
     if (!post) {
       res.status(404).json({ success: false, message: 'Post not found' });
@@ -1512,13 +1513,32 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
 
     if ('squadId' in rawBody) {
       const v = rawBody.squadId;
+      let nextSquadId: mongoose.Types.ObjectId | null;
       if (v === null || v === '') {
-        existing.set('squadId', null);
+        nextSquadId = null;
       } else if (typeof v === 'string' && mongoose.Types.ObjectId.isValid(v)) {
-        existing.set('squadId', new mongoose.Types.ObjectId(v));
+        nextSquadId = new mongoose.Types.ObjectId(v);
       } else {
         res.status(400).json({ success: false, message: 'Invalid squadId' });
         return;
+      }
+
+      const prevSquad = (existing as { squadId?: mongoose.Types.ObjectId | null }).squadId ?? null;
+      const unchanged =
+        (prevSquad == null && nextSquadId == null) ||
+        (prevSquad != null &&
+          nextSquadId != null &&
+          String(prevSquad) === String(nextSquadId));
+
+      if (!unchanged) {
+        if (wasPublishedBefore && prevSquad) {
+          res.status(409).json({
+            success: false,
+            message: 'Squad assignment cannot be changed on a published post',
+          });
+          return;
+        }
+        existing.set('squadId', nextSquadId);
       }
     }
 
@@ -1689,7 +1709,7 @@ export async function restoreMyPost(req: Request, res: Response): Promise<void> 
     const clash = await BlogPostModel.findOne({
       authorId: user._id,
       slug: doc.slug,
-      ...NOT_DELETED,
+      ...NOT_DELETED_FILTER,
       _id: { $ne: doc._id },
     })
       .select('_id')
@@ -1698,7 +1718,7 @@ export async function restoreMyPost(req: Request, res: Response): Promise<void> 
       const base = slugify(doc.title);
       for (let attempt = 0; attempt < 12; attempt++) {
         const cand = slugWithCollisionSuffix(base, attempt);
-        const c2 = await BlogPostModel.findOne({ authorId: user._id, slug: cand, ...NOT_DELETED })
+        const c2 = await BlogPostModel.findOne({ authorId: user._id, slug: cand, ...NOT_DELETED_FILTER })
           .select('_id')
           .lean();
         if (!c2) {
@@ -1791,7 +1811,7 @@ export async function deleteMyPost(req: Request, res: Response): Promise<void> {
       return;
     }
     const updated = await BlogPostModel.findOneAndUpdate(
-      { _id: postId, authorId: user._id, ...NOT_DELETED },
+      { _id: postId, authorId: user._id, ...NOT_DELETED_FILTER },
       {
         deletedAt: new Date(),
         deletedById: user._id as unknown as mongoose.Types.ObjectId,

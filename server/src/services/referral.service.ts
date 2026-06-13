@@ -10,14 +10,15 @@ import { enqueueReferralGamificationOutbox } from './gamification/gamificationOu
 import { processReferralAttribution } from './gamification/referralProcessor.service.js';
 import { createReferralConversion } from './referral/referralConversion.service.js';
 import { emitAppEvent } from '../shared/events/appEvents.js';
-
-const REFERRAL_CODE_REGEX = /^[0-9A-HJKMNP-TV-Z]{8,16}$/;
-const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-const NEGATIVE_CACHE_SENTINEL = '__NONE__';
-const COOKIE_NAME = 'ss_ref';
-const COOKIE_MAX_MS = 30 * 24 * 60 * 60 * 1000;
-const POSITIVE_CACHE_TTL_SEC = 24 * 60 * 60;
-const NEGATIVE_CACHE_TTL_SEC = 600;
+import {
+  REFERRAL_CODE_REGEX,
+  REFERRAL_COOKIE_MAX_MS,
+  REFERRAL_COOKIE_NAME,
+  REFERRAL_CROCKFORD_ALPHABET,
+  REFERRAL_NEGATIVE_CACHE_SENTINEL,
+  REFERRAL_NEGATIVE_CACHE_TTL_SEC,
+  REFERRAL_POSITIVE_CACHE_TTL_SEC,
+} from '../variable/constants.js';
 
 function referralSigningSecret(): string {
   return env.REFERRAL_SIGNING_SECRET || '';
@@ -27,7 +28,7 @@ function generateReferralCodeChars(length: number): string {
   const bytes = crypto.randomBytes(length);
   let s = '';
   for (let i = 0; i < length; i++) {
-    s += CROCKFORD[bytes[i]! % 32];
+    s += REFERRAL_CROCKFORD_ALPHABET[bytes[i]! % 32];
   }
   return s;
 }
@@ -45,7 +46,7 @@ export function normalizeReferralCode(raw: unknown): string | null {
 function signReferralCookiePayload(code: string): string | null {
   const secret = referralSigningSecret();
   if (!secret) return null;
-  const exp = Date.now() + COOKIE_MAX_MS;
+  const exp = Date.now() + REFERRAL_COOKIE_MAX_MS;
   const payload = JSON.stringify({ c: code, exp });
   const b64 = Buffer.from(payload, 'utf8').toString('base64url');
   const sig = crypto.createHmac('sha256', secret).update(b64).digest('base64url');
@@ -109,7 +110,7 @@ export async function resolveReferralInput(req: Request): Promise<string | null>
 
   let fromCookie: string | null = null;
   try {
-    fromCookie = readSignedReferralCookie(req.cookies?.[COOKIE_NAME]);
+    fromCookie = readSignedReferralCookie(req.cookies?.[REFERRAL_COOKIE_NAME]);
   } catch {
     fromCookie = null;
   }
@@ -156,7 +157,7 @@ export async function lookupReferrerIdByCode(code: string): Promise<string | nul
   if (redis) {
     try {
       const cached = await redis.get(redisKeys.invite.codeCache(norm));
-      if (cached === NEGATIVE_CACHE_SENTINEL) return null;
+      if (cached === REFERRAL_NEGATIVE_CACHE_SENTINEL) return null;
       if (cached && mongoose.isValidObjectId(cached)) return cached;
     } catch (err) {
       console.warn(JSON.stringify({ event: 'referral_redis_degraded', err: String(err) }));
@@ -168,7 +169,7 @@ export async function lookupReferrerIdByCode(code: string): Promise<string | nul
 
   if (redis && id) {
     try {
-      await redis.setEx(redisKeys.invite.codeCache(norm), POSITIVE_CACHE_TTL_SEC, id);
+      await redis.setEx(redisKeys.invite.codeCache(norm), REFERRAL_POSITIVE_CACHE_TTL_SEC, id);
     } catch {
       /* ignore */
     }
@@ -176,8 +177,8 @@ export async function lookupReferrerIdByCode(code: string): Promise<string | nul
     try {
       await redis.setEx(
         redisKeys.invite.codeCache(norm),
-        NEGATIVE_CACHE_TTL_SEC,
-        NEGATIVE_CACHE_SENTINEL
+        REFERRAL_NEGATIVE_CACHE_TTL_SEC,
+        REFERRAL_NEGATIVE_CACHE_SENTINEL
       );
     } catch {
       /* ignore */
@@ -318,7 +319,7 @@ export async function applyReferralOnNewUser(args: ApplyReferralArgs): Promise<v
   }
 }
 
-export const REFERRAL_COOKIE = { name: COOKIE_NAME, maxMs: COOKIE_MAX_MS } as const;
+export const REFERRAL_COOKIE = { name: REFERRAL_COOKIE_NAME, maxMs: REFERRAL_COOKIE_MAX_MS } as const;
 
 export function buildSignedReferralCookieValue(code: string): string | null {
   return signReferralCookiePayload(code);

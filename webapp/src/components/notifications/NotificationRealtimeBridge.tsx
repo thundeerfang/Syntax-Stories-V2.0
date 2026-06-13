@@ -5,43 +5,18 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth';
 import { useNotificationStore } from '@/store/notifications';
-import { celebrateAchievements } from '@/store/achievementCelebration';
 import { notificationsStreamUrl } from '@/api/notifications';
 import { consumeNotificationStream } from '@/lib/notifications/notificationStream';
 import { notificationIconComponent } from '@/lib/notifications/notificationIcons';
 import { NOTIFICATION_TYPE_LABELS } from '@contracts/notificationsApi';
 import type { AppNotification } from '@contracts/notificationsApi';
-import type { AchievementUnlockDto } from '@/contracts/achievementsApi';
 
 const NOTIFICATION_TOASTER_ID = 'notifications';
-
-function unlocksFromNotificationMetadata(
-  metadata: Record<string, unknown> | undefined
-): AchievementUnlockDto[] | undefined {
-  if (!metadata) return undefined;
-  const raw = metadata.unlocks;
-  if (!Array.isArray(raw) || raw.length === 0) return undefined;
-  return raw.map((u) => {
-    const row = u as Record<string, unknown>;
-    return {
-      id: String(row.id ?? ''),
-      slug: String(row.slug ?? ''),
-      title: String(row.title ?? 'Achievement'),
-      description: String(row.description ?? ''),
-      category: (row.category as AchievementUnlockDto['category']) ?? 'meta',
-      points: Number(row.points ?? 0),
-      celebrateAs: 'dialog',
-      metric: String(row.metric ?? ''),
-      target: Number(row.target ?? 1),
-      current: Number(row.current ?? 1),
-    };
-  });
-}
 
 function showNotificationToast(n: AppNotification): void {
   const Icon = notificationIconComponent(n.icon);
   const typeLabel = NOTIFICATION_TYPE_LABELS[n.type] ?? 'Alert';
-  toast(n.title, {
+  toast('', {
     id: `notif-${n.id}`,
     toasterId: NOTIFICATION_TOASTER_ID,
     description: (
@@ -55,7 +30,7 @@ function showNotificationToast(n: AppNotification): void {
       </div>
     ),
     icon: (
-      <span className="flex h-8 w-8 items-center justify-center border-2 border-border bg-primary/10 text-primary">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-border/25 bg-primary/10 text-primary">
         <Icon className="size-4 shrink-0" aria-hidden />
       </span>
     ),
@@ -106,11 +81,6 @@ export function NotificationRealtimeBridge() {
             };
             pushNotification(n);
             showNotificationToast(n);
-            if (n.type === 'achievement_unlocked') {
-              const meta = (raw as { metadata?: Record<string, unknown> }).metadata;
-              const unlocks = unlocksFromNotificationMetadata(meta);
-              if (unlocks?.length) celebrateAchievements(unlocks);
-            }
           }
         },
         ac.signal

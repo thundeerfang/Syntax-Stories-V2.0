@@ -13,7 +13,10 @@ import {
   InvitePageSkeletonInner,
   AchievementsPageSkeletonInner,
 } from '@/components/skeletons';
-import { SquadsPageContentSkeleton } from '@/components/skeletons/SquadsPageSkeleton';
+import {
+  SquadDetailPageSkeleton,
+  SquadsPageContentSkeleton,
+} from '@/components/skeletons/SquadsPageSkeleton';
 
 /**
  * Picks the route-transition skeleton for a pathname.
@@ -31,8 +34,11 @@ export function pickRouteSkeleton(pathname: string): ReactNode {
   if (path === '/trending') {
     return <TrendingPageSkeletonInner />;
   }
-  if (path === '/squads' || path.startsWith('/squads/')) {
+  if (path === '/squads' || path === '/squads/featured') {
     return <SquadsPageContentSkeleton />;
+  }
+  if (path.startsWith('/squads/')) {
+    return <SquadDetailPageSkeleton />;
   }
   if (path === '/topics' || path.startsWith('/topics/')) {
     return <FollowingPageContentSkeleton showIntro={false} />;

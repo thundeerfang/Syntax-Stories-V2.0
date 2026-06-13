@@ -1,6 +1,8 @@
 import { privateKey, publicKey } from './keys.js';
 import { env } from './env.js';
 
+import { RATE_LIMITS } from './rateLimits.js';
+
 export const authConfig = {
   JWT_ACCESS_PRIVATE_KEY: privateKey,
   JWT_ACCESS_PUBLIC_KEY: publicKey,
@@ -13,12 +15,12 @@ export const authConfig = {
   OTP_LOGIN_TTL_SECONDS: env.OTP_LOGIN_TTL_SECONDS,
   OTP_SIGNUP_TTL_SECONDS: env.OTP_SIGNUP_TTL_SECONDS,
   OTP_MIN_RESEND_SECONDS: env.OTP_MIN_RESEND_SECONDS,
-  RATE_LIMIT_SEND_OTP: { windowMs: 15 * 60 * 1000, max: 5 },
-  RATE_LIMIT_VERIFY_OTP: { windowMs: 15 * 60 * 1000, max: 10 },
-  RATE_LIMIT_REFRESH: { windowMs: 60 * 1000, max: 30 },
-  RATE_LIMIT_SIGNUP: { windowMs: 60 * 60 * 1000, max: 5 },
+  RATE_LIMIT_SEND_OTP: RATE_LIMITS.sendOtp,
+  RATE_LIMIT_VERIFY_OTP: RATE_LIMITS.verifyOtp,
+  RATE_LIMIT_REFRESH: RATE_LIMITS.refresh,
+  RATE_LIMIT_SIGNUP: RATE_LIMITS.signup,
   /** Profile PATCH (legacy + section routes): per-IP, limits spam rewrites and audit noise. */
-  RATE_LIMIT_UPDATE_PROFILE: { windowMs: 15 * 60 * 1000, max: 120 },
+  RATE_LIMIT_UPDATE_PROFILE: RATE_LIMITS.updateProfile,
   /** GET /api/invites/resolve — per IP. */
-  RATE_LIMIT_INVITE_RESOLVE: { windowMs: 60 * 1000, max: 60 },
+  RATE_LIMIT_INVITE_RESOLVE: RATE_LIMITS.inviteResolve,
 };

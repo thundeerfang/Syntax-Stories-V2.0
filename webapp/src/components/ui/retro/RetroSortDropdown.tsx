@@ -3,7 +3,7 @@
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { retroDropdownPanel, retroSortTrigger } from '@/lib/core/retroUi';
-import { useDismissiblePanel } from '@/hooks/useDismissiblePanel';
+import { useDropdown } from '@/components/ui/dropdown';
 
 export type RetroSortOption<T extends string> = Readonly<{
   value: T;
@@ -27,7 +27,7 @@ export function RetroSortDropdown<T extends string>({
   ariaLabelPrefix,
   triggerClassName,
 }: RetroSortDropdownProps<T>) {
-  const { ref, open, toggle, close } = useDismissiblePanel<HTMLDivElement>();
+  const { rootRef: ref, open, toggle, close } = useDropdown<HTMLDivElement>();
 
   const selected = options.find((o) => o.value === value) ?? options[0];
   const label = selected?.label ?? '';

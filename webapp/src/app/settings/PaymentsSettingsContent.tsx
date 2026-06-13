@@ -47,24 +47,25 @@ export function PaymentsSettingsContent() {
   const router = useRouter();
   const [sub, setSub] = useState<BillingSubscriptionDto | null>(null);
   const [tx, setTx] = useState<BillingTransactionRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [verifyDone, setVerifyDone] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     try {
       const [s, t] = await Promise.all([
         fetchBillingSubscription(token),
         fetchBillingTransactions(token, 1),
       ]);
       setSub(s);
-      setTx(t.transactions);
+      let transactions = t.transactions;
+      if (transactions.length === 0 && s.planKey !== 'free') {
+        const synced = await fetchBillingTransactions(token, 1, { sync: true });
+        transactions = synced.transactions;
+      }
+      setTx(transactions);
     } catch (e) {
       toast.error((e as Error).message || 'Could not load billing');
-    } finally {
-      setLoading(false);
     }
   }, [token]);
 
@@ -104,15 +105,6 @@ export function PaymentsSettingsContent() {
       setPortalLoading(false);
     }
   };
-
-  if (loading && !sub) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        <span className="text-sm">Loading billing…</span>
-      </div>
-    );
-  }
 
   return (
     <SettingsTabRoot>

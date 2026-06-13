@@ -14,6 +14,7 @@ import { SquadPinnedPostModel } from '../models/SquadPinnedPost.js';
 import { BlogPostModel } from '../models/BlogPost.js';
 import { UserModel } from '../models/User.js';
 import { sanitizeThumbnailUrl } from '../modules/blog/blogContentValidation.js';
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
 
 export function squadSlugify(text: string): string {
   return (
@@ -43,7 +44,7 @@ function slugWithCollisionSuffix(base: string, attempt: number): string {
   return `${head}${suf}`;
 }
 
-/** Allocate a unique squad URL slug from a user-provided handle (normalized). */
+/** Allocate a unique squad URL slug from a normalized name seed. */
 export async function allocateUniqueSquadSlug(handleBase: string): Promise<string> {
   const base = squadSlugify(handleBase);
   for (let attempt = 0; attempt < 24; attempt++) {
@@ -105,7 +106,6 @@ export async function assertViewerCanSeeSquadFeed(params: {
 }
 
 export type CreateSquadInput = {
-  handle: string;
   name: string;
   description: string;
   iconUrl?: string;
@@ -122,7 +122,7 @@ export type CreateSquadInput = {
 export async function createSquadWithAdmin(
   input: CreateSquadInput
 ): Promise<{ squad: ISquad; inviteToken?: string }> {
-  const slug = await allocateUniqueSquadSlug(input.handle);
+  const slug = await allocateUniqueSquadSlug(squadHandleSeedFromName(input.name));
   const creatorOid = new mongoose.Types.ObjectId(input.creatorUserId);
   const inviteToken = input.visibility === 'private' ? randomBytes(18).toString('hex') : undefined;
   const icon = sanitizeThumbnailUrl(input.iconUrl);
@@ -279,9 +279,18 @@ export async function sharePostToSquad(params: {
     status: 'published',
     $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
   })
-    .select('_id')
+    .select('_id squadId')
     .lean();
   if (!post) return { ok: false, message: 'Post not found or not shareable', status: 404 };
+
+  const homeSquadId = (post as { squadId?: mongoose.Types.ObjectId | null }).squadId;
+  if (homeSquadId) {
+    return {
+      ok: false,
+      message: 'Squad-authored posts cannot be shared to other squads',
+      status: 409,
+    };
+  }
 
   try {
     await SquadSharedPostModel.create([
@@ -509,5 +518,135 @@ export async function deleteSquadAsAdmin(params: {
     return { ok: false, message: 'Only squad admins can delete this squad', status: 403 };
   }
   await deleteSquadCascade(params.squadId);
+  return { ok: true };
+}
+
+/** Published feed posts (authored + shared) and summed view counts for a squad. */
+export async function getSquadFeedStats(
+  squadId: mongoose.Types.ObjectId
+): Promise<{ postCount: number; viewCount: number }> {
+  const [authoredIds, sharedRows] = await Promise.all([
+    BlogPostModel.find({
+      squadId,
+      status: 'published',
+      ...NOT_DELETED_FILTER,
+    })
+      .select('_id')
+      .lean(),
+    SquadSharedPostModel.find({ squadId }).select('postId').lean(),
+  ]);
+
+  const idSet = new Set<string>();
+  for (const p of authoredIds) idSet.add(String(p._id));
+  for (const s of sharedRows) {
+    if (s.postId) idSet.add(String(s.postId));
+  }
+  if (!idSet.size) return { postCount: 0, viewCount: 0 };
+
+  const oids = [...idSet].map((id) => new mongoose.Types.ObjectId(id));
+  const agg = await BlogPostModel.aggregate<{ postCount: number; viewCount: number }>([
+    {
+      $match: {
+        _id: { $in: oids },
+        status: 'published',
+        ...NOT_DELETED_FILTER,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        postCount: { $sum: 1 },
+        viewCount: { $sum: { $ifNull: ['$viewCount', 0] } },
+      },
+    },
+  ]);
+
+  return {
+    postCount: Math.max(0, agg[0]?.postCount ?? 0),
+    viewCount: Math.max(0, agg[0]?.viewCount ?? 0),
+  };
+}
+
+export type SquadMemberContribution = {
+  joinedAt: string;
+  postsAuthored: number;
+  postsShared: number;
+};
+
+export async function getSquadMemberContribution(params: {
+  squadId: mongoose.Types.ObjectId;
+  username: string;
+}): Promise<
+  { ok: true; stats: SquadMemberContribution } | { ok: false; message: string; status: number }
+> {
+  const uname = params.username.trim().toLowerCase();
+  const user = await UserModel.findOne({ username: new RegExp(`^${escapeRegex(uname)}$`, 'i') })
+    .select('_id')
+    .lean();
+  if (!user?._id) return { ok: false, message: 'User not found', status: 404 };
+
+  const memberRow = await SquadMemberModel.findOne({
+    squadId: params.squadId,
+    userId: user._id,
+  }).lean();
+  if (!memberRow) return { ok: false, message: 'Not a member of this squad', status: 404 };
+
+  const uid = user._id as mongoose.Types.ObjectId;
+  const [postsAuthored, postsShared] = await Promise.all([
+    BlogPostModel.countDocuments({
+      squadId: params.squadId,
+      authorId: uid,
+      status: 'published',
+      ...NOT_DELETED_FILTER,
+    }),
+    SquadSharedPostModel.countDocuments({
+      squadId: params.squadId,
+      sharedById: uid,
+    }),
+  ]);
+
+  return {
+    ok: true,
+    stats: {
+      joinedAt: memberRow.createdAt?.toISOString?.() ?? new Date().toISOString(),
+      postsAuthored: Math.max(0, postsAuthored),
+      postsShared: Math.max(0, postsShared),
+    },
+  };
+}
+
+export async function removeSquadMemberAsAdmin(params: {
+  squadId: mongoose.Types.ObjectId;
+  actorUserId: string;
+  targetUsername: string;
+}): Promise<{ ok: true } | { ok: false; message: string; status: number }> {
+  const actorRole = await getSquadMemberRole(params.squadId, params.actorUserId);
+  if (actorRole !== 'admin') {
+    return { ok: false, message: 'Only squad admins can remove members', status: 403 };
+  }
+
+  const uname = params.targetUsername.trim().toLowerCase();
+  const user = await UserModel.findOne({ username: new RegExp(`^${escapeRegex(uname)}$`, 'i') })
+    .select('_id')
+    .lean();
+  if (!user?._id) return { ok: false, message: 'User not found', status: 404 };
+
+  if (String(user._id) === String(params.actorUserId)) {
+    return { ok: false, message: 'Use leave squad to remove yourself', status: 400 };
+  }
+
+  const squad = await SquadModel.findById(params.squadId).select('createdById').lean();
+  if (String(squad?.createdById) === String(user._id)) {
+    return { ok: false, message: 'Cannot remove the squad creator', status: 400 };
+  }
+
+  const row = await SquadMemberModel.findOne({ squadId: params.squadId, userId: user._id }).lean();
+  if (!row) return { ok: false, message: 'Member not found', status: 404 };
+  if (row.role === 'admin') {
+    return { ok: false, message: 'Cannot remove an admin', status: 400 };
+  }
+
+  await SquadMemberModel.deleteOne({ squadId: params.squadId, userId: user._id });
+  await SquadModel.updateOne({ _id: params.squadId }, { $inc: { memberCount: -1 } });
   return { ok: true };
 }

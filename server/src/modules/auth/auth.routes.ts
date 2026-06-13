@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import multer from 'multer';
 import { isRedisAvailable } from '../../config/redis.js';
 import {
   getAltchaChallenge,
@@ -14,7 +13,7 @@ import {
   cancelEmailChange,
 } from './controllers/emailChange.controller.js';
 import { linkRequest, disconnectProvider } from './controllers/oauthLink.controller.js';
-import { me, updateProfile, updateProfileSection, parseCv } from '../profile/profile.controller.js';
+import { me, updateProfile, updateProfileSection } from '../profile/profile.controller.js';
 import { initQrLogin, approveQrLogin, pollQrLogin } from './controllers/qrLogin.controller.js';
 import {
   setupTwoFactor,
@@ -93,15 +92,6 @@ router.patch(
   updateProfileSection
 );
 
-const cvUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'application/pdf') cb(null, true);
-    else cb(new Error('Only PDF files are allowed'));
-  },
-});
-router.post('/parse-cv', verifyToken, cvUpload.single('pdf'), parseCv);
 router.post('/link-request', verifyToken, linkRequest);
 router.post('/email-change/init', verifyToken, initEmailChange);
 router.post('/email-change/verify', verifyToken, verifyEmailChange);

@@ -11,6 +11,7 @@ import {
   Clock,
   ExternalLink,
   Hash,
+  Layers,
   Terminal,
 } from 'lucide-react';
 import { blogApi } from '@/api/blog';
@@ -55,6 +56,7 @@ import {
   SHELL_CONTENT_RAIL_CLASS,
 } from '@/lib/shell/shellContentRail';
 import { BlogPostPageSkeletonInner } from '@/components/skeletons';
+import { useSidebar } from '@/hooks/useSidebar';
 
 /** Cancels article body horizontal padding (`px-3 sm:px-4 lg:px-5`) so full-width media meets the article edges. */
 const BLOG_ARTICLE_FULL_BLEED_CLASS =
@@ -69,11 +71,11 @@ const BLOG_LANDSCAPE_EMBED_MAX_CLASS = 'w-full max-w-2xl shrink-0';
 /** Layout-only; transform/transition live in `globals.css` (`.ss-blog-raster-hover*`) for reliable easing. */
 const BLOG_RASTER_IMG_COVER_CLASS =
   'ss-blog-raster-hover absolute inset-0 h-full w-full object-cover object-center';
-const BLOG_RASTER_IMG_CONTAIN_CLASS =
-  'ss-blog-raster-hover absolute inset-0 h-full w-full object-contain object-center';
+const BLOG_RASTER_IMG_FULL_BLEED_CLASS =
+  'ss-blog-raster-hover block h-auto w-full max-w-none object-cover object-center';
 
 function blogRasterImgClass(layout: ImageBlockLayout): string {
-  return layout === 'fullWidth' ? BLOG_RASTER_IMG_CONTAIN_CLASS : BLOG_RASTER_IMG_COVER_CLASS;
+  return layout === 'fullWidth' ? BLOG_RASTER_IMG_FULL_BLEED_CLASS : BLOG_RASTER_IMG_COVER_CLASS;
 }
 const BLOG_RASTER_HOVER_GROUP_CLASS = 'ss-blog-raster-hover-group';
 
@@ -105,6 +107,28 @@ function BlogHeroThumbnailPreview({
 }
 
 // --- HELPERS ---
+function slugToTagChips(slug: string, maxTags = 1): string[] {
+  const parts = slug.split('-').filter((p) => p.length > 1);
+  return parts.slice(0, maxTags).map((p) => (p.length > 14 ? `${p.slice(0, 12)}…` : p));
+}
+
+function titleCaseFromSlug(token: string): string {
+  return token
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function blogDetailCategoryLabel(post: PublicBlogPostDetail): string {
+  if (post.category?.trim()) return titleCaseFromSlug(post.category.trim());
+  const t = post.tags?.find((x) => typeof x === 'string' && x.trim());
+  if (t) return t.trim().charAt(0).toUpperCase() + t.trim().slice(1).toLowerCase();
+  const fromSlug = slugToTagChips(post.slug, 1)[0];
+  if (fromSlug) return titleCaseFromSlug(fromSlug);
+  return 'Blog';
+}
+
 function parseBlocks(content: string): Block[] {
   try {
     const p = JSON.parse(content) as unknown;
@@ -210,7 +234,7 @@ function embeddedFigureInnerClass(
       }
       return 'mx-auto aspect-square w-full min-h-0 min-w-0 max-w-xl ';
     case 'fullWidth':
-      return 'relative aspect-video w-full min-h-0';
+      return 'relative w-full min-h-0 overflow-hidden';
     case 'landscape':
     default:
       return 'aspect-video w-full ';
@@ -347,7 +371,8 @@ function ImageBlock({ payload }: Readonly<{ payload?: Record<string, unknown> }>
   const inner = (
     <div
       className={cn(
-        'relative overflow-hidden bg-muted',
+        'relative overflow-hidden',
+        fullBleed ? 'bg-transparent' : 'bg-muted',
         embeddedFigureInnerClass(layout, { squareInNarrowEmbed: squareCard }),
         BLOG_RASTER_HOVER_GROUP_CLASS
       )}
@@ -430,7 +455,8 @@ function UnsplashPublicImageBlock({ payload }: Readonly<{ payload?: Record<strin
   const inner = (
     <div
       className={cn(
-        'relative overflow-hidden bg-muted',
+        'relative overflow-hidden',
+        fullBleed ? 'bg-transparent' : 'bg-muted',
         embeddedFigureInnerClass(layout, { squareInNarrowEmbed: squareCard }),
         BLOG_RASTER_HOVER_GROUP_CLASS
       )}
@@ -752,6 +778,7 @@ export default function PublicBlogPostPage() {
   const params = useParams();
   const username = typeof params.username === 'string' ? params.username : '';
   const slug = typeof params.slug === 'string' ? params.slug : '';
+  const { isOpen: sidebarExpanded } = useSidebar();
   const viewerUsername = useAuthStore((s) => s.user?.username ?? null);
   const token = useAuthStore((s) => s.token);
   const [post, setPost] = useState<PublicBlogPostDetail | null>(null);
@@ -1010,6 +1037,7 @@ export default function PublicBlogPostPage() {
   );
 
   const heroThumbnail = post.thumbnailUrl?.trim() ?? '';
+  const categoryLabel = blogDetailCategoryLabel(post);
 
   return (
     <BlogImagePreviewProvider>
@@ -1022,10 +1050,16 @@ export default function PublicBlogPostPage() {
 
         <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'relative flex-1 !overflow-visible')}>
           <div className="flex flex-col gap-6 !overflow-visible bg-transparent xl:flex-row xl:items-start xl:gap-6">
-            <aside className="sticky top-24 z-20 hidden w-[11.5rem] max-w-[11.5rem] shrink-0 self-start xl:block">
+            <aside
+              className={cn(
+                'sticky top-24 z-20 hidden shrink-0 self-start xl:block',
+                sidebarExpanded ? 'w-auto max-w-[5.5rem]' : 'w-[11.5rem] max-w-[11.5rem]'
+              )}
+            >
               <div className="flex max-h-[calc(100vh-8rem)] min-h-0 flex-col gap-4 pr-2">
                 <div className="shrink-0">
                   <BlogPostSidebarStats
+                    compact={sidebarExpanded}
                     respectCount={dockEngagement.respectCount}
                     repostCount={dockEngagement.repostCount}
                     bookmarkCount={dockEngagement.bookmarkCount}
@@ -1050,7 +1084,7 @@ export default function PublicBlogPostPage() {
                   </div>
 
                   <div className={cn(SHELL_CONTENT_MEASURE_CLASS, 'min-w-0')}>
-                    <div className="mb-8 flex flex-wrap items-center gap-4">
+                    <div className="mb-8 flex flex-wrap items-center gap-3 sm:gap-4">
                       <time
                         dateTime={dateRaw || undefined}
                         className="flex items-center gap-2 border-2 border-border bg-muted/50 px-3 py-1 font-mono text-xs font-bold uppercase"
@@ -1062,6 +1096,10 @@ export default function PublicBlogPostPage() {
                         />
                         {dateStrLong}
                       </time>
+                      <span className="inline-flex items-center gap-2 border-2 border-primary bg-primary px-3 py-1 font-mono text-xs font-bold uppercase text-primary-foreground">
+                        <Layers className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                        {categoryLabel}
+                      </span>
                       {showEditedForAuthorOnly ? (
                         <div className="flex items-center gap-2 border-2 border-amber-500/30 bg-amber-500/5 px-3 py-1 font-mono text-xs font-bold uppercase text-amber-600 dark:text-amber-400">
                           <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -1169,7 +1207,7 @@ export default function PublicBlogPostPage() {
             </main>
 
             <aside className="sticky top-24 z-20 hidden w-[17.5rem] max-w-[17.5rem] shrink-0 self-start xl:block">
-              <div className="max-h-[calc(100vh-8rem)] overflow-y-auto pl-1 pr-2 ss-scrollbar-hide">
+              <div className="pl-1 pr-2">
                 <BlogPostDetailSideRail
                   username={username}
                   slug={slug}

@@ -294,6 +294,7 @@ export const squadsApi = {
       fullName: string;
       profileImg: string;
       role: SquadMemberRole;
+      joinedAt?: string;
     }>;
   }> => {
     const s = encodeURIComponent(slug);
@@ -310,10 +311,64 @@ export const squadsApi = {
         fullName: string;
         profileImg: string;
         role: SquadMemberRole;
+        joinedAt?: string;
       }>;
       message?: string;
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return { success: true, members: data.members ?? [] };
+  },
+
+  setMemberRole: async (
+    slug: string,
+    username: string,
+    role: Extract<SquadMemberRole, 'member' | 'moderator'>,
+    accessToken: string
+  ): Promise<void> => {
+    const s = encodeURIComponent(slug);
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/squads/s/${s}/members/role`,
+      { method: 'PATCH', body: JSON.stringify({ username: username.trim(), role }) },
+      accessToken
+    );
+    const data = (await readJson(r)) as { success?: boolean; message?: string };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+  },
+
+  removeMember: async (slug: string, username: string, accessToken: string): Promise<void> => {
+    const s = encodeURIComponent(slug);
+    const u = encodeURIComponent(username.trim());
+    const r = await blogAuthFetch(
+      `${getApiBase()}/api/squads/s/${s}/members/${u}`,
+      { method: 'DELETE' },
+      accessToken
+    );
+    const data = (await readJson(r)) as { success?: boolean; message?: string };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+  },
+
+  getMemberStats: async (
+    slug: string,
+    username: string,
+    accessToken: string | null
+  ): Promise<{
+    success: boolean;
+    stats: import('@contracts/squadsApi').SquadMemberContribution;
+  }> => {
+    const s = encodeURIComponent(slug);
+    const u = encodeURIComponent(username.trim());
+    const r = await optionalAuthFetch(
+      `${getApiBase()}/api/squads/s/${s}/members/${u}/stats`,
+      { method: 'GET' },
+      accessToken
+    );
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      stats?: import('@contracts/squadsApi').SquadMemberContribution;
+      message?: string;
+    };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    if (!data.stats) throw new Error('Invalid response');
+    return { success: true, stats: data.stats };
   },
 };

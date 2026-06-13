@@ -1,4 +1,4 @@
-import { STACK_AND_TOOLS_MAX } from '../../constants/profileLimits.js';
+import { STACK_AND_TOOLS_MAX } from '../../variable/constants.js';
 import { ProfileErrorCode } from './profile.types.js';
 import { profileRepository } from './profile.repository.js';
 

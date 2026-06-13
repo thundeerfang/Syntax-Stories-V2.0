@@ -49,11 +49,18 @@ export const blogApi = {
 
   getPublishedFeed: async (
     limit = 24,
-    opts?: { tag?: string; category?: string; sort?: 'recent' | 'views'; month?: string },
+    opts?: {
+      tag?: string;
+      category?: string;
+      sort?: 'recent' | 'views';
+      month?: string;
+      offset?: number;
+    },
     accessToken?: string | null
-  ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
+  ): Promise<{ success: boolean; posts: PublicFeedPost[]; hasMore: boolean }> => {
     const sp = new URLSearchParams();
     sp.set('limit', String(limit));
+    if (opts?.offset != null && opts.offset > 0) sp.set('offset', String(opts.offset));
     if (opts?.tag?.trim()) sp.set('tag', opts.tag.trim().toLowerCase());
     if (opts?.category?.trim()) sp.set('category', opts.category.trim().toLowerCase());
     if (opts?.sort === 'views') sp.set('sort', 'views');
@@ -68,9 +75,10 @@ export const blogApi = {
       success?: boolean;
       message?: string;
       posts?: PublicFeedPost[];
+      hasMore?: boolean;
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
-    return { success: true, posts: data.posts ?? [] };
+    return { success: true, posts: data.posts ?? [], hasMore: data.hasMore ?? false };
   },
 
   getUserPublishedPosts: async (
@@ -80,6 +88,46 @@ export const blogApi = {
   ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
     const u = encodeURIComponent(username);
     const url = `${getApiBase()}/api/blog/u/${u}/posts?limit=${encodeURIComponent(String(limit))}`;
+    const r =
+      accessToken != null && accessToken !== ''
+        ? await blogAuthFetch(url, { method: 'GET' }, accessToken)
+        : await blogPublicFetch(url);
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      posts?: PublicFeedPost[];
+    };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return { success: true, posts: data.posts ?? [] };
+  },
+
+  getUserRepostedPosts: async (
+    username: string,
+    limit = 24,
+    accessToken?: string | null
+  ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
+    const u = encodeURIComponent(username);
+    const url = `${getApiBase()}/api/blog/u/${u}/reposts?limit=${encodeURIComponent(String(limit))}`;
+    const r =
+      accessToken != null && accessToken !== ''
+        ? await blogAuthFetch(url, { method: 'GET' }, accessToken)
+        : await blogPublicFetch(url);
+    const data = (await readJson(r)) as {
+      success?: boolean;
+      message?: string;
+      posts?: PublicFeedPost[];
+    };
+    if (!r.ok) throw new Error(data.message ?? r.statusText);
+    return { success: true, posts: data.posts ?? [] };
+  },
+
+  getUserRepliedPosts: async (
+    username: string,
+    limit = 24,
+    accessToken?: string | null
+  ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
+    const u = encodeURIComponent(username);
+    const url = `${getApiBase()}/api/blog/u/${u}/replies?limit=${encodeURIComponent(String(limit))}`;
     const r =
       accessToken != null && accessToken !== ''
         ? await blogAuthFetch(url, { method: 'GET' }, accessToken)

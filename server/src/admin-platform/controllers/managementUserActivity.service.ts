@@ -6,12 +6,9 @@ import { BlogRespectModel } from '../../models/BlogRespect.js';
 import { BlogBookmarkModel } from '../../models/BlogBookmark.js';
 import type { IUser } from '../../models/User.js';
 import { toUserOAuthDto } from './managementUsers.mapper.js';
+import { NOT_DELETED_FILTER } from '../../shared/db/notDeleted.js';
 
 const RECENT_LIMIT = 48;
-
-function notDeletedPostFilter(): Record<string, unknown> {
-  return { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
-}
 
 function iso(d: Date | undefined | null): string | null {
   if (!d) return null;
@@ -118,7 +115,7 @@ export function resolveEmailVerificationForAdmin(user: IUser): {
 export async function loadAdminUserActivity(userId: mongoose.Types.ObjectId) {
   const authorFilter = {
     authorId: userId,
-    ...notDeletedPostFilter(),
+    ...NOT_DELETED_FILTER,
   };
 
   const [

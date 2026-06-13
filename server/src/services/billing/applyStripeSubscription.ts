@@ -7,9 +7,9 @@ import {
   type ISubscription,
   type SubscriptionPlan,
 } from '../../models/Subscription.js';
-import { BillingAuditLogModel } from '../../models/BillingAuditLog.js';
+import { writeBillingAudit } from '../../shared/audit/auditLog.js';
 import { getStripe } from '../stripe/stripeClient.js';
-import { priceIdToPlanKey } from './planConfig.js';
+import { resolvePlanKeyFromStripePriceId } from '../stripe/stripePriceResolver.js';
 import { withBillingLock } from './billingLock.js';
 import { invalidateSubscriptionSummary } from './billingSummaryCache.js';
 
@@ -47,11 +47,11 @@ function mapStripeStatus(s: Stripe.Subscription.Status): ISubscription['status']
   return 'canceled';
 }
 
-function planFromPriceId(
+async function planFromPriceId(
   priceId: string | undefined,
   fallback: SubscriptionPlan
-): SubscriptionPlan {
-  const pk = priceIdToPlanKey(priceId);
+): Promise<SubscriptionPlan> {
+  const pk = await resolvePlanKeyFromStripePriceId(priceId);
   if (!pk) return fallback;
   return pk;
 }
@@ -91,18 +91,16 @@ async function applyInSession(
   await SubscriptionModel.findByIdAndUpdate(subDocId, { $set: patch }, { ...opts });
   await UserModel.findByIdAndUpdate(userId, { $set: userPatch }, { ...opts });
   if (audit) {
-    await BillingAuditLogModel.create(
-      [
-        {
-          userId,
-          action: audit.action,
-          source: audit.source,
-          stripeSubscriptionId: audit.stripeSubscriptionId,
-          before: audit.before as Record<string, unknown>,
-          after: audit.after as Record<string, unknown>,
-        },
-      ],
-      opts
+    await writeBillingAudit(
+      {
+        userId,
+        action: audit.action,
+        source: audit.source,
+        stripeSubscriptionId: audit.stripeSubscriptionId,
+        before: audit.before as Record<string, unknown>,
+        after: audit.after as Record<string, unknown>,
+      },
+      session
     );
   }
 }
@@ -152,7 +150,7 @@ export async function applyStripeSubscription(
     }
 
     const priceId = fresh.items.data[0]?.price?.id;
-    const nextPlan = planFromPriceId(priceId, subDoc.plan);
+    const nextPlan = await planFromPriceId(priceId, subDoc.plan);
     const nextStatus = mapStripeStatus(fresh.status);
     const cps = fresh.current_period_start
       ? new Date(fresh.current_period_start * 1000)

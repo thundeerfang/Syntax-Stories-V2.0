@@ -1,10 +1,11 @@
-import type { PaidPlanKey } from '../../models/CheckoutIntent.js';
+import type { PaidPlanKey } from '../../variable/constants.js';
+import { ALL_PAID_PLAN_KEYS, subscriptionPlanMatchKeys } from '../../variable/constants.js';
 import { BillingPlanCatalogModel } from '../../models/BillingPlanCatalog.js';
 import { SubscriptionModel } from '../../models/Subscription.js';
-import { planKeyToPriceId } from './planConfig.js';
+import { isStripeConfigured } from '../stripe/stripeClient.js';
 import type { BillingPlanCatalogItem } from './planCatalog.js';
 
-export const ALL_PAID_PLAN_KEYS: PaidPlanKey[] = ['pro', 'proplus', 'ultra'];
+export { ALL_PAID_PLAN_KEYS };
 
 const DEFAULT_PLANS: Array<{
   key: PaidPlanKey;
@@ -88,7 +89,7 @@ function mapPublic(row: PlanRow): BillingPlanCatalogItem {
     features: row.features ?? [],
     featured: row.featured || undefined,
     badge: row.badge ?? undefined,
-    checkoutEnabled: Boolean(planKeyToPriceId(row.key)),
+    checkoutEnabled: isStripeConfigured(),
   };
 }
 
@@ -249,7 +250,7 @@ export async function deleteBillingPlanFromStore(id: string) {
   if (!doc) throw new PlanCatalogStoreError(404, 'Plan not found', 'NOT_FOUND');
 
   const subs = await SubscriptionModel.countDocuments({
-    plan: { $in: [doc.key, doc.key === 'ultra' ? 'premium' : doc.key] },
+    plan: { $in: subscriptionPlanMatchKeys(doc.key) },
     status: { $in: ['active', 'trialing', 'past_due'] },
   });
 

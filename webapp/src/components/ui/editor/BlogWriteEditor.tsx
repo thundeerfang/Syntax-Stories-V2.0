@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 import { coerceImageLayout } from '@/lib/blog/blogImageLayout';
 import { uploadMedia } from '@/api/upload';
+import { uploadResponseAlt } from '@/lib/media/uploadImageMeta';
 import { searchUnsplashPhotos, type UnsplashPhoto } from '@/api/unsplash';
 import { Skeleton } from '@/components/ui/feedback/Skeleton';
 import {
@@ -330,7 +331,13 @@ function UnsplashImageWithOverlays({
   const creditId = `${fieldId}-unsplash-credit`;
   const imgAlt = caption.trim() || photographer.trim() || 'Blog image';
   return (
-    <div className={cn('group relative isolate h-full w-full overflow-hidden', frameClassName)}>
+    <div
+      className={cn(
+        'group relative isolate overflow-hidden',
+        layout === 'fullWidth' ? 'w-full' : 'h-full w-full',
+        frameClassName
+      )}
+    >
       <img src={url} alt={imgAlt} className={imgClassName} />
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-linear-to-t from-black/85 via-black/35 to-transparent"
@@ -450,7 +457,13 @@ function UploadedImageWithOverlays({
   const captionId = `${fieldId}-upload-caption`;
   const imgAlt = caption.trim() || 'Blog image';
   return (
-    <div className={cn('group relative isolate h-full w-full overflow-hidden', frameClassName)}>
+    <div
+      className={cn(
+        'group relative isolate overflow-hidden',
+        layout === 'fullWidth' ? 'w-full' : 'h-full w-full',
+        frameClassName
+      )}
+    >
       <img src={url} alt={imgAlt} className={imgClassName} />
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-linear-to-t from-black/85 via-black/35 to-transparent"
@@ -575,7 +588,10 @@ function ImageBlockEditor({
       setUploading(true);
       try {
         const data = await uploadMedia(token, file, undefined, () => {});
-        if (data.url) onUpdate(patchImagePayload(p, { url: data.url }));
+        if (data.url) {
+          const alt = uploadResponseAlt(data);
+          onUpdate(patchImagePayload(p, { url: data.url, ...(alt ? { title: alt } : {}) }));
+        }
       } catch {
         toast.error('Upload failed.');
       } finally {
@@ -598,7 +614,7 @@ function ImageBlockEditor({
         fieldId={fieldId}
         imgClassName={
           layout === 'fullWidth'
-            ? 'h-full w-full object-contain object-center'
+            ? 'block h-auto w-full object-cover object-center'
             : 'h-full w-full object-cover object-center'
         }
       />
@@ -614,8 +630,8 @@ function ImageBlockEditor({
     }
     if (layout === 'fullWidth') {
       return (
-        <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow">
-          <div className="relative aspect-video w-full min-w-0 bg-background">{overlays}</div>
+        <div className="min-w-0 w-full overflow-hidden border-2 border-border shadow">
+          <div className="relative w-full min-w-0 overflow-hidden">{overlays}</div>
         </div>
       );
     }
@@ -1385,7 +1401,7 @@ function UnsplashBlockEditor({
         fieldId={blockId}
         imgClassName={
           layout === 'fullWidth'
-            ? 'h-full w-full object-contain object-center'
+            ? 'block h-auto w-full object-cover object-center'
             : 'h-full w-full object-cover object-center'
         }
       />
@@ -1401,8 +1417,8 @@ function UnsplashBlockEditor({
     }
     if (layout === 'fullWidth') {
       return (
-        <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow">
-          <div className="relative aspect-video w-full min-w-0 bg-background">{overlays}</div>
+        <div className="min-w-0 w-full overflow-hidden border-2 border-border shadow">
+          <div className="relative w-full min-w-0 overflow-hidden">{overlays}</div>
         </div>
       );
     }

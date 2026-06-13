@@ -48,7 +48,8 @@ import { MentionPopoverCard } from '../popover/MentionPopoverCard';
 import { resolveMemberAvatarUrl } from '@/lib/profile/categoryMembers';
 import { GifPopoverCard } from '../popover/GifPopoverCard';
 import { searchGifs, type GiphyGif } from '@/api/giphy';
-import { followApi, type FollowUser } from '@/api/follow';
+import { searchApi } from '@/api/search';
+import type { FollowUser } from '@/api/follow';
 
 /** Default Link sets `inclusive` from `autolink`, so with autolink on new typing stays inside the link. Force non-inclusive so Space/new text after a link exits the mark (matches user expectation). */
 const LinkMark = Link.extend({
@@ -1858,10 +1859,10 @@ export function RichParagraphEditor({
     }
     setMentionLoading(true);
     const t = setTimeout(() => {
-      followApi
+      searchApi
         .searchUsers(q)
-        .then((res) => {
-          setMentionResults(res.list ?? []);
+        .then((list) => {
+          setMentionResults(list);
         })
         .catch(() => setMentionResults([]))
         .finally(() => setMentionLoading(false));

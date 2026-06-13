@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Briefcase, FolderGit2, Github, GraduationCap, Plus, RefreshCw, Award } from 'lucide-react';
+import { FolderGit2, Github, Plus, RefreshCw, Award } from 'lucide-react';
 import { BlockShadowButton } from '@/components/ui';
 import { cn } from '@/lib/core/utils';
 import { SettingsSectionHeading } from './SettingsSectionHeading';
 
-type HeaderVariant = 'work' | 'education' | 'certifications' | 'projects' | 'openSource';
+type HeaderVariant = 'certifications' | 'projects' | 'openSource';
 
 type SettingsSectionHeaderProps = Readonly<{
   variant: HeaderVariant;
@@ -62,42 +62,6 @@ export function SettingsSectionHeader({
   onPrimaryAction,
   disabled,
 }: SettingsSectionHeaderProps) {
-  if (variant === 'work') {
-    return (
-      <HeaderWrapper>
-        <SettingsSectionHeading
-          icon={<Briefcase />}
-          title="Work Experience"
-          description="Professional history and career milestones."
-        />
-        <HeaderActionButton
-          onClick={onPrimaryAction}
-          disabled={disabled}
-          icon={Plus}
-          label="Add Experience"
-        />
-      </HeaderWrapper>
-    );
-  }
-
-  if (variant === 'education') {
-    return (
-      <HeaderWrapper>
-        <SettingsSectionHeading
-          icon={<GraduationCap />}
-          title="Education"
-          description="Academic background and qualifications."
-        />
-        <HeaderActionButton
-          onClick={onPrimaryAction}
-          disabled={disabled}
-          icon={Plus}
-          label="Add Education"
-        />
-      </HeaderWrapper>
-    );
-  }
-
   if (variant === 'certifications') {
     return (
       <HeaderWrapper>

@@ -2,8 +2,7 @@ import { getRedis } from '../../config/redis.js';
 import { redisKeys } from '../../shared/redis/keys.js';
 import { SessionModel } from '../../models/Session.js';
 import type { SessionTier } from './sessionTier.config.js';
-
-const IMPERSONATION_TTL_SEC = 30 * 60;
+import { IMPERSONATION_TTL_SEC } from '../../variable/constants.js';
 
 export type ImpersonationState = {
   impersonatorId: string;

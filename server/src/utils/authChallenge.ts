@@ -1,8 +1,7 @@
 import crypto from 'node:crypto';
 import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';
-
-const AUTH_CHALLENGE_TTL_SECONDS = 10 * 60;
+import { AUTH_CHALLENGE_TTL_SEC } from '../variable/constants.js';
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -15,8 +14,8 @@ export async function createAuthChallenge(
   if (!redis) throw new Error('Redis required for 2FA challenges');
   const raw = crypto.randomBytes(32).toString('hex');
   const key = redisKeys.challenge(hashToken(raw));
-  await redis.setEx(key, AUTH_CHALLENGE_TTL_SECONDS, JSON.stringify({ userId }));
-  return { challengeToken: raw, expiresIn: AUTH_CHALLENGE_TTL_SECONDS };
+  await redis.setEx(key, AUTH_CHALLENGE_TTL_SEC, JSON.stringify({ userId }));
+  return { challengeToken: raw, expiresIn: AUTH_CHALLENGE_TTL_SEC };
 }
 
 export async function consumeAuthChallenge(

@@ -2,12 +2,10 @@ import type { ElementType } from 'react';
 import {
   Award,
   Bell,
-  Briefcase,
   CreditCard,
   Flame,
   FolderGit2,
   Github,
-  GraduationCap,
   Mail,
   Monitor,
   Plug,
@@ -34,8 +32,6 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
       { id: 'edit-profile', label: 'Edit Profile', icon: User },
       { id: 'stack-tools', label: 'Stack & Tools', icon: Monitor },
       { id: 'my-setup', label: 'My Setup', icon: Wrench },
-      { id: 'work-experiences', label: 'Work Experiences', icon: Briefcase },
-      { id: 'education', label: 'Education', icon: GraduationCap },
       { id: 'certifications', label: 'License & Certifications', icon: Award },
       { id: 'projects', label: 'Projects & Publications', icon: FolderGit2 },
       { id: 'open-source', label: 'Open Source', icon: Github },
@@ -45,14 +41,14 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
   {
     heading: 'Security',
     items: [
-      { id: 'security-email', label: 'Update email', icon: Mail },
-      { id: 'connected-accounts', label: 'Connected accounts', icon: Plug },
+      { id: 'security-email', label: 'Update Email', icon: Mail },
+      { id: 'connected-accounts', label: 'Connected Accounts', icon: Plug },
     ],
   },
   {
     heading: 'Other',
     items: [
-      { id: 'syntax-card', label: 'Syntax card', icon: CreditCard },
+      { id: 'syntax-card', label: 'Syntax Card', icon: CreditCard },
       { id: 'payments', label: 'Payments', icon: Wallet },
       { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
@@ -64,8 +60,6 @@ export const SETTINGS_IMPLEMENTED_SECTION_IDS = [
   'edit-profile',
   'stack-tools',
   'my-setup',
-  'work-experiences',
-  'education',
   'certifications',
   'projects',
   'open-source',

@@ -36,6 +36,21 @@ export type SubmitFeedbackResponse = {
   success: boolean;
   message?: string;
   emailSent?: boolean;
+  code?: string;
+};
+
+export type FeedbackWeeklyQuota = {
+  limit: number;
+  used: number;
+  remaining: number;
+  windowMs: number;
+  resetsAt: string | null;
+};
+
+export type FeedbackQuotaResponse = {
+  success: boolean;
+  quota?: FeedbackWeeklyQuota;
+  message?: string;
 };
 
 export type SubmitFeedbackMultipartParams = {

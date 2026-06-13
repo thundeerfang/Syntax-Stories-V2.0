@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
 import { errorHandler } from './middlewares/index.js';
+import { storageFullGate } from './middlewares/storageFullGate.middleware.js';
 import { requestContextMiddleware } from './middlewares/requestContext.js';
 import { registerAppListeners } from './bootstrap/registerAppListeners.js';
 import passport from './passport/index.js';
@@ -97,6 +98,8 @@ if (redis) {
 app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());
+
+app.use(storageFullGate);
 
 registerStaticUploads(app);
 registerApiRoutes(app);

@@ -5,6 +5,11 @@ import type {
   AchievementMetric,
   AchievementModule,
 } from '../../achievements/achievement.types.js';
+import {
+  ACHIEVEMENT_CATEGORIES,
+  ACHIEVEMENT_METRICS,
+  ACHIEVEMENT_MODULES,
+} from '../../achievements/achievement.types.js';
 import { sendAdminError, sendAdminOk, type AdminErrorCode } from '../rbac/adminResponse.js';
 import {
   AchievementCatalogStoreError,
@@ -14,45 +19,20 @@ import {
   updateAchievementInStore,
 } from '../../services/achievements/achievementCatalogStore.js';
 
-const CATEGORIES: AchievementCategory[] = ['engagement', 'profile', 'reading', 'social', 'meta'];
-const MODULES: AchievementModule[] = ['profile', 'blog', 'reading', 'social', 'engagement', 'meta'];
-const METRICS: AchievementMetric[] = [
-  'respect.given.total',
-  'respect.received.total',
-  'read.brief.total',
-  'stack.tools.count',
-  'followers.count',
-  'read.streak.longest',
-  'profile.has_avatar',
-  'profile.has_location',
-  'profile.has_work',
-  'profile.has_education',
-  'profile.has_cv',
-  'profile.has_bio',
-  'profile.has_cover',
-  'profile.has_github',
-  'profile.setup.count',
-  'social.following.count',
-  'blog.categories.followed.count',
-  'squads.joined.count',
-  'feedback.submitted.count',
-  'posts.authored.count',
-];
-
 function parseCategory(raw: unknown): AchievementCategory | null {
-  return typeof raw === 'string' && CATEGORIES.includes(raw as AchievementCategory)
+  return typeof raw === 'string' && ACHIEVEMENT_CATEGORIES.includes(raw as AchievementCategory)
     ? (raw as AchievementCategory)
     : null;
 }
 
 function parseModule(raw: unknown): AchievementModule | null {
-  return typeof raw === 'string' && MODULES.includes(raw as AchievementModule)
+  return typeof raw === 'string' && ACHIEVEMENT_MODULES.includes(raw as AchievementModule)
     ? (raw as AchievementModule)
     : null;
 }
 
 function parseMetric(raw: unknown): AchievementMetric | null {
-  return typeof raw === 'string' && METRICS.includes(raw as AchievementMetric)
+  return typeof raw === 'string' && ACHIEVEMENT_METRICS.includes(raw as AchievementMetric)
     ? (raw as AchievementMetric)
     : null;
 }
@@ -306,8 +286,8 @@ export async function deleteAchievement(req: Request, res: Response): Promise<vo
 
 export async function getAchievementCatalogOptions(_req: Request, res: Response): Promise<void> {
   sendAdminOk(res, {
-    categories: CATEGORIES,
-    modules: MODULES,
-    metrics: METRICS,
+    categories: [...ACHIEVEMENT_CATEGORIES],
+    modules: [...ACHIEVEMENT_MODULES],
+    metrics: [...ACHIEVEMENT_METRICS],
   });
 }

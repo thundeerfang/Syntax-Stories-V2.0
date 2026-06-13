@@ -54,11 +54,20 @@ export function ProfileSquadsCategoriesCard({
 
   return (
     <>
-      <div className="border-4 border-border bg-card p-4 shadow">
+      <button
+        type="button"
+        onClick={() => setDialogOpen(true)}
+        aria-label={showCategories ? 'Open squads and categories' : 'Open squads'}
+        className="w-full border-4 border-border bg-card p-4 shadow text-left transition-transform active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center shrink-0">
-              <UsersRound className="size-4 text-primary" />
+              {showCategories ? (
+                <Layers className="size-4 text-primary" aria-hidden />
+              ) : (
+                <UsersRound className="size-4 text-primary" aria-hidden />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-black uppercase">
@@ -67,24 +76,16 @@ export function ProfileSquadsCategoriesCard({
               <p className="text-[9px] font-bold text-muted-foreground uppercase mt-0.5 truncate">
                 {subtitle}
               </p>
-              {showCategories ? (
-                <p className="text-[8px] font-bold text-muted-foreground/80 uppercase mt-1 flex items-center gap-1">
-                  <Layers className="size-3 shrink-0" aria-hidden />
-                  Categories are private to you
-                </p>
-              ) : null}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setDialogOpen(true)}
-            aria-label="Open squads and categories"
-            className="p-2 border-2 border-border bg-card hover:bg-muted shadow active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all shrink-0"
+          <span
+            className="p-2 border-2 border-border bg-card shrink-0"
+            aria-hidden
           >
             <ChevronRight className="size-4 text-foreground" />
-          </button>
+          </span>
         </div>
-      </div>
+      </button>
 
       <SquadsCategoriesFollowDialog
         open={dialogOpen}

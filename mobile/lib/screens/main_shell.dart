@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../state/auth_state.dart';
 import '../theme/app_color_tokens.dart';
 import '../widgets/navigation/main_app_bar.dart';
 import '../widgets/navigation/main_dashboard_scaffold.dart';
@@ -10,6 +12,8 @@ import 'blog/blog_create_screen.dart';
 import 'search_screen.dart';
 import 'settings/settings_screen.dart';
 import 'tabs/placeholder_tab.dart';
+import 'squads/create_squad_screen.dart';
+import 'tabs/squads_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -19,6 +23,8 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
+  final _squadsKey = GlobalKey<SquadsScreenState>();
+
   /// Stack index (not [MainTab]) so hot reload survives enum moves.
   int _stackIndex = 0;
 
@@ -64,6 +70,22 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  Future<void> _openCreateSquad() async {
+    final token = context.read<AuthState>().accessToken;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to create a squad.')),
+      );
+      return;
+    }
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const CreateSquadScreen()),
+    );
+    if (created == true) {
+      await _squadsKey.currentState?.reload();
+    }
+  }
+
   Widget _bodyFor(MainTab tab) {
     return switch (tab) {
       MainTab.home => _staticTab(
@@ -80,13 +102,7 @@ class _MainShellState extends State<MainShell> {
             icon: Icons.local_fire_department_rounded,
           ),
         ),
-      MainTab.squads => _staticTab(
-          const PlaceholderTab(
-            title: 'Squads',
-            subtitle: 'Your squads and group reading lists will live here.',
-            icon: Icons.groups_rounded,
-          ),
-        ),
+      MainTab.squads => SquadsScreen(key: _squadsKey),
       MainTab.account => const AccountProfileScreen(),
     };
   }
@@ -111,7 +127,8 @@ class _MainShellState extends State<MainShell> {
       onSearch: _openSearch,
       onNotifications: _openNotifications,
       onSettings: _openSettings,
-      showNotifications: _tab != MainTab.account,
+      onCreate: _tab == MainTab.squads ? _openCreateSquad : null,
+      showNotifications: _tab != MainTab.account && _tab != MainTab.squads,
       body: IndexedStack(
         index: _stackIndex,
         sizing: StackFit.expand,

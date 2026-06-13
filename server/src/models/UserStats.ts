@@ -19,9 +19,7 @@ export interface IUserStats extends Document {
   hasBio: number;
   hasCover: number;
   hasGithub: number;
-  hasWork: number;
   hasLocation: number;
-  hasEducation: number;
   hasCv: number;
   readStreakLongest: number;
   referralsConverted: number;
@@ -53,9 +51,7 @@ const UserStatsSchema = new Schema<IUserStats>(
     hasBio: { type: Number, default: 0, min: 0, max: 1 },
     hasCover: { type: Number, default: 0, min: 0, max: 1 },
     hasGithub: { type: Number, default: 0, min: 0, max: 1 },
-    hasWork: { type: Number, default: 0, min: 0, max: 1 },
     hasLocation: { type: Number, default: 0, min: 0, max: 1 },
-    hasEducation: { type: Number, default: 0, min: 0, max: 1 },
     hasCv: { type: Number, default: 0, min: 0, max: 1 },
     readStreakLongest: { type: Number, default: 0, min: 0 },
     referralsConverted: { type: Number, default: 0, min: 0 },

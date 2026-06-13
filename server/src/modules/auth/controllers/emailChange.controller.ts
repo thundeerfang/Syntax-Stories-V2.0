@@ -12,8 +12,7 @@ import { redisKeys } from '../../../shared/redis/keys.js';
 import { generateEmailOtpDigits } from '../../../services/emailOtp.service.js';
 import { logSecurityEvent } from '../securityEventLog.js';
 import { notifyEmailChange } from '../../../services/notifications/notification.listener.js';
-
-const EMAIL_CHANGE_TTL_SEC = 600; // 10 min
+import { AUTH_TTL } from '../../../config/auth.ttls.js';
 
 export async function initEmailChange(req: Request, res: Response): Promise<void> {
   try {
@@ -62,7 +61,7 @@ export async function initEmailChange(req: Request, res: Response): Promise<void
     const key = redisKeys.auth.emailChange(String(user._id));
     await redis.setEx(
       key,
-      EMAIL_CHANGE_TTL_SEC,
+      AUTH_TTL.emailChangeSec,
       JSON.stringify({ codeCurrent, codeNew, newEmail })
     );
 

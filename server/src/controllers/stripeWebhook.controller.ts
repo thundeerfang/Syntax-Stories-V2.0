@@ -5,13 +5,14 @@ import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';
 import { StripeWebhookEventModel } from '../models/StripeWebhookEvent.js';
 import { dispatchStripeWebhookEvent } from '../services/stripe/webhook.service.js';
-
-const WEBHOOK_DEDUP_SEC = 86400;
+import {
+  STRIPE_WEBHOOK_DEDUP_SEC,
+  STRIPE_WEBHOOK_RETRY_BACKOFF_MS,
+} from '../variable/constants.js';
 
 function backoffMs(retry: number): number {
-  const steps = [60_000, 300_000, 900_000, 3_600_000];
-  const i = Math.min(retry, steps.length - 1);
-  return steps[i] ?? 3_600_000;
+  const i = Math.min(retry, STRIPE_WEBHOOK_RETRY_BACKOFF_MS.length - 1);
+  return STRIPE_WEBHOOK_RETRY_BACKOFF_MS[i] ?? STRIPE_WEBHOOK_RETRY_BACKOFF_MS.at(-1)!;
 }
 
 export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
@@ -35,7 +36,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
   if (redis) {
     try {
       const rKey = redisKeys.billing.webhookDedup(event.id);
-      const nx = await redis.set(rKey, '1', { NX: true, EX: WEBHOOK_DEDUP_SEC });
+      const nx = await redis.set(rKey, '1', { NX: true, EX: STRIPE_WEBHOOK_DEDUP_SEC });
       if (nx !== 'OK') {
         res.json({ received: true, duplicate: true });
         return;

@@ -106,12 +106,12 @@ export function Navbar() {
         isPastViewport ? 'border-primary' : 'border-border'
       )}
     >
-      {/* Membership Banner */}
+      {/* Top banner */}
       {!bannerDismissed && (
         <div className="relative flex items-center justify-center bg-primary px-10 py-2 text-primary-foreground group overflow-hidden">
           <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 italic pointer-events-none" />
           <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em]">
-            Become a member — unlimited access for less than $1/week.
+            A collaborative project, crafted with ❤️ by our team.
           </p>
           <button
             onClick={dismissBanner}

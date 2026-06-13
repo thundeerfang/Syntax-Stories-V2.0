@@ -19,7 +19,7 @@ export class ImageMasterError extends Error {
 
 export type ProcessedImageResult = {
   buffer: Buffer;
-  mime: 'image/webp' | 'image/jpeg';
+  mime: 'image/webp' | 'image/jpeg' | 'image/png';
   width: number;
   height: number;
   bytesIn: number;
@@ -111,6 +111,9 @@ export async function processUploadedImageBuffer(
         .webp({ quality: cfg.webpQuality, effort: 5, smartSubsample: true })
         .toBuffer();
       outMime = 'image/webp';
+    } else if (cfg.outputFormat === 'png') {
+      out = await pipeline.png({ quality: cfg.jpegQuality }).toBuffer();
+      outMime = 'image/png';
     } else {
       out = await pipeline.jpeg({ quality: cfg.jpegQuality, mozjpeg: true }).toBuffer();
       outMime = 'image/jpeg';

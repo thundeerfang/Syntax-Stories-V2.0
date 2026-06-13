@@ -1,4 +1,3 @@
-export * from './appwrite';
 export * from './assets';
 export * from './confettiBurst';
 export * from './diceBearAvatarUrl';

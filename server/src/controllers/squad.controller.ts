@@ -12,6 +12,7 @@ import { UserModel } from '../models/User.js';
 import { SquadSharedPostModel } from '../models/SquadSharedPost.js';
 import { BlogPostModel } from '../models/BlogPost.js';
 import { buildFeedListItemsForPosts } from './blog.controller.js';
+import { NOT_DELETED_FILTER } from '../shared/db/notDeleted.js';
 import {
   addSquadMemberByUsername,
   assertViewerCanSeeSquadFeed,
@@ -25,10 +26,12 @@ import {
   setSquadMemberRole,
   sharePostToSquad,
   isStaffRole,
-  squadHandleSeedFromName,
   listPinnedPostIdsForSquad,
   pinSquadFeedPost,
   unpinSquadFeedPost,
+  getSquadMemberContribution,
+  removeSquadMemberAsAdmin,
+  getSquadFeedStats,
 } from '../services/squad.service.js';
 import type { SquadMemberRole } from '../models/SquadMember.js';
 import {
@@ -285,9 +288,7 @@ export async function createSquad(req: Request, res: Response): Promise<void> {
     const coverBannerUrl =
       typeof body.coverBannerUrl === 'string' ? body.coverBannerUrl : undefined;
 
-    const handleSeed = squadHandleSeedFromName(name);
     const { squad, inviteToken } = await createSquadWithAdmin({
-      handle: handleSeed,
       name,
       description,
       iconUrl,
@@ -328,6 +329,9 @@ export async function getSquadBySlug(req: Request, res: Response): Promise<void>
       return;
     }
 
+    const squadOid = squad._id as mongoose.Types.ObjectId;
+    const feedStats = await getSquadFeedStats(squadOid);
+
     const view = await assertViewerCanSeeSquadFeed({
       squad,
       userId: viewerId,
@@ -338,6 +342,8 @@ export async function getSquadBySlug(req: Request, res: Response): Promise<void>
           success: true,
           squad: {
             ...mapSquadSummary(squad),
+            postCount: feedStats.postCount,
+            viewCount: feedStats.viewCount,
             viewerRole: null,
             viewerIsStaff: false,
             /** Client: show join UI; omit feed until member. */
@@ -350,11 +356,7 @@ export async function getSquadBySlug(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const viewerRole = viewerId
-      ? await getSquadMemberRole(squad._id as mongoose.Types.ObjectId, viewerId)
-      : null;
-
-    const squadOid = squad._id as mongoose.Types.ObjectId;
+    const viewerRole = viewerId ? await getSquadMemberRole(squadOid, viewerId) : null;
     let inviteTokenForAdmin: string | undefined;
     if (viewerRole === 'admin' && squad.visibility === 'private' && viewerId) {
       const t = await SquadModel.findById(squadOid).select('+inviteToken').lean();
@@ -369,6 +371,8 @@ export async function getSquadBySlug(req: Request, res: Response): Promise<void>
       success: true,
       squad: {
         ...mapSquadSummary(squad),
+        postCount: feedStats.postCount,
+        viewCount: feedStats.viewCount,
         viewerRole,
         viewerIsStaff: viewerRole ? isStaffRole(viewerRole) : false,
         viewerNeedsInvite: false,
@@ -716,6 +720,79 @@ export async function patchSquadMemberRole(req: Request, res: Response): Promise
   }
 }
 
+/** GET /api/squads/s/:slug/members/:username/stats — squad contribution for a member. */
+export async function getSquadMemberStats(req: Request, res: Response): Promise<void> {
+  try {
+    const slug = paramString(req.params.slug)?.trim().toLowerCase();
+    const username = paramString(req.params.username)?.trim();
+    if (!slug || !username) {
+      res.status(400).json({ success: false, message: 'Invalid slug or username' });
+      return;
+    }
+    const r = req as RequestWithOptionalAuth;
+    const viewerId = r.authUser?._id;
+
+    const squad = await SquadModel.findOne({ slug }).lean();
+    if (!squad) {
+      res.status(404).json({ success: false, message: 'Squad not found' });
+      return;
+    }
+    const view = await assertViewerCanSeeSquadFeed({ squad, userId: viewerId });
+    if (!view.ok) {
+      res.status(view.status).json({ success: false, message: view.message });
+      return;
+    }
+
+    const result = await getSquadMemberContribution({
+      squadId: squad._id as mongoose.Types.ObjectId,
+      username,
+    });
+    if (!result.ok) {
+      res.status(result.status).json({ success: false, message: result.message });
+      return;
+    }
+    res.status(200).json({ success: true, stats: result.stats });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to load member stats' });
+  }
+}
+
+/** DELETE /api/squads/s/:slug/members/:username — admin removes a member. */
+export async function deleteSquadMember(req: Request, res: Response): Promise<void> {
+  try {
+    const user = (req as Request & { user: AuthUser }).user;
+    if (!user?._id) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+    const slug = paramString(req.params.slug)?.trim().toLowerCase();
+    const username = paramString(req.params.username)?.trim();
+    if (!slug || !username) {
+      res.status(400).json({ success: false, message: 'Invalid slug or username' });
+      return;
+    }
+    const squad = await SquadModel.findOne({ slug }).lean();
+    if (!squad) {
+      res.status(404).json({ success: false, message: 'Squad not found' });
+      return;
+    }
+    const r = await removeSquadMemberAsAdmin({
+      squadId: squad._id as mongoose.Types.ObjectId,
+      actorUserId: user._id,
+      targetUsername: username,
+    });
+    if (!r.ok) {
+      res.status(r.status).json({ success: false, message: r.message });
+      return;
+    }
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to remove member' });
+  }
+}
+
 /** GET /api/squads/s/:slug/members */
 export async function listSquadMembers(req: Request, res: Response): Promise<void> {
   try {
@@ -761,6 +838,7 @@ export async function listSquadMembers(req: Request, res: Response): Promise<voi
           fullName: typeof populated?.fullName === 'string' ? populated.fullName : '',
           profileImg: typeof populated?.profileImg === 'string' ? populated.profileImg : '',
           role: row.role as SquadMemberRole,
+          joinedAt: row.createdAt?.toISOString?.() ?? undefined,
         };
       })
       .sort((a, b) => order[a.role] - order[b.role]);
@@ -887,10 +965,6 @@ export async function deleteSquadPin(req: Request, res: Response): Promise<void>
   }
 }
 
-const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: boolean } }> } = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
-
 /** GET /api/squads/s/:slug/feed */
 export async function getSquadFeed(req: Request, res: Response): Promise<void> {
   try {
@@ -920,7 +994,7 @@ export async function getSquadFeed(req: Request, res: Response): Promise<void> {
       BlogPostModel.find({
         squadId: squadOid,
         status: 'published',
-        ...NOT_DELETED,
+        ...NOT_DELETED_FILTER,
       })
         .sort({ publishedAt: -1, createdAt: -1 })
         .limit(limit)
@@ -948,8 +1022,20 @@ export async function getSquadFeed(req: Request, res: Response): Promise<void> {
             },
           ],
         })
+        .populate({
+          path: 'sharedById',
+          select: 'username fullName profileImg',
+          model: 'users',
+        })
         .lean(),
     ]);
+
+    type FeedSharedBy = {
+      userId: string;
+      username: string;
+      fullName?: string;
+      profileImg?: string;
+    };
 
     type FeedRow = {
       kind: 'authored' | 'shared';
@@ -957,6 +1043,7 @@ export async function getSquadFeed(req: Request, res: Response): Promise<void> {
       post: unknown;
       sharedAt?: string;
       sharedById?: string;
+      sharedBy?: FeedSharedBy;
     };
 
     const rows: FeedRow[] = [];
@@ -972,12 +1059,38 @@ export async function getSquadFeed(req: Request, res: Response): Promise<void> {
       const sp = s.postId as unknown;
       if (!sp || typeof sp !== 'object') continue;
       const created = s.createdAt instanceof Date ? s.createdAt.getTime() : 0;
+      const sharerRaw = s.sharedById as
+        | { _id?: unknown; username?: string; fullName?: string; profileImg?: string }
+        | null
+        | undefined;
+      const sharerId =
+        sharerRaw && typeof sharerRaw === 'object' && sharerRaw._id != null
+          ? String(sharerRaw._id)
+          : String(s.sharedById);
+      const username =
+        sharerRaw && typeof sharerRaw === 'object' && typeof sharerRaw.username === 'string'
+          ? sharerRaw.username.trim()
+          : '';
       rows.push({
         kind: 'shared',
         sortAt: created,
         post: sp,
         sharedAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : undefined,
-        sharedById: String(s.sharedById),
+        sharedById: sharerId,
+        ...(username
+          ? {
+              sharedBy: {
+                userId: sharerId,
+                username,
+                ...(typeof sharerRaw?.fullName === 'string' && sharerRaw.fullName.trim()
+                  ? { fullName: sharerRaw.fullName.trim() }
+                  : {}),
+                ...(typeof sharerRaw?.profileImg === 'string' && sharerRaw.profileImg.trim()
+                  ? { profileImg: sharerRaw.profileImg.trim() }
+                  : {}),
+              } satisfies FeedSharedBy,
+            }
+          : {}),
       });
     }
 
@@ -994,6 +1107,7 @@ export async function getSquadFeed(req: Request, res: Response): Promise<void> {
       item: items[i],
       sharedAt: row.sharedAt,
       sharedById: row.sharedById,
+      sharedBy: row.sharedBy,
       pinned: pinnedIds.has(String(items[i]._id)),
     }));
 

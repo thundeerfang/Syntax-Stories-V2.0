@@ -8,10 +8,7 @@ import { featuresToIndexDocs } from './searchFeatures.service.js';
 import { categoriesToIndexDocs, tagsToIndexDocs } from './searchTaxonomy.service.js';
 import type { SearchIndexDoc } from './search.types.js';
 import { invalidateFlexSearchBundles } from './flexIndex.js';
-
-const NOT_DELETED = {
-  $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-};
+import { NOT_DELETED_FILTER } from '../../shared/db/notDeleted.js';
 
 async function writeIndex(key: string, docs: SearchIndexDoc[]): Promise<void> {
   const redis = getRedis();
@@ -54,7 +51,7 @@ async function buildSquadsIndexDocs(): Promise<SearchIndexDoc[]> {
 async function buildBlogsRecentIndexDocs(): Promise<SearchIndexDoc[]> {
   const posts = await BlogPostModel.find({
     status: 'published',
-    ...NOT_DELETED,
+    ...NOT_DELETED_FILTER,
   })
     .sort({ publishedAt: -1 })
     .limit(500)

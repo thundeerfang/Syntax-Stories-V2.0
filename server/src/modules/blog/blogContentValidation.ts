@@ -3,18 +3,26 @@
  * Strips legacy `gif` blocks; normalizes payloads to JSON-safe plain objects.
  */
 
-const MAX_CONTENT_CHARS = 2_500_000;
-const MAX_BLOCKS = 300;
-const MAX_BLOCK_ID_LEN = 128;
-const MAX_SECTION_ID_LEN = 80;
-const MAX_PARAGRAPH_TEXT = 400_000;
-const MAX_RICH_DOC_JSON_CHARS = 900_000;
-const MAX_HEADING_TEXT = 8_000;
-const MAX_URL_LEN = 2_000;
-const MAX_CAPTION = 4_000;
-const MAX_GITHUB_DESC = 12_000;
-const MAX_GENERIC_PAYLOAD_JSON = 120_000;
-const MAX_CODE_BODY_CHARS = 200_000;
+import { BLOG_LIMITS } from '@syntax-stories/shared';
+
+const {
+  maxContentChars: MAX_CONTENT_CHARS,
+  maxBlocks: MAX_BLOCKS,
+  maxBlockIdLen: MAX_BLOCK_ID_LEN,
+  maxSectionIdLen: MAX_SECTION_ID_LEN,
+  maxParagraphText: MAX_PARAGRAPH_TEXT,
+  maxRichDocJsonChars: MAX_RICH_DOC_JSON_CHARS,
+  maxHeadingText: MAX_HEADING_TEXT,
+  maxUrlLen: MAX_URL_LEN,
+  maxCaption: MAX_CAPTION,
+  maxGithubDesc: MAX_GITHUB_DESC,
+  maxGenericPayloadJson: MAX_GENERIC_PAYLOAD_JSON,
+  maxCodeBodyChars: MAX_CODE_BODY_CHARS,
+  maxTableRows: MAX_TABLE_ROWS,
+  maxTableCols: MAX_TABLE_COLS,
+  maxTableCellChars: MAX_TABLE_CELL_CHARS,
+  maxMermaidSourceChars: MAX_MERMAID_SOURCE_CHARS,
+} = BLOG_LIMITS;
 
 const ALLOWED_TYPES = new Set([
   'paragraph',
@@ -29,11 +37,6 @@ const ALLOWED_TYPES = new Set([
   'table',
   'mermaidDiagram',
 ]);
-
-const MAX_TABLE_ROWS = 20;
-const MAX_TABLE_COLS = 5;
-const MAX_TABLE_CELL_CHARS = 4_000;
-const MAX_MERMAID_SOURCE_CHARS = 120_000;
 
 export type BlogContentValidationResult =
   | { ok: true; normalizedJson: string }

@@ -14,13 +14,11 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { BLOG_FEED_GRID_CLASS, BLOG_FEED_GRID_ITEM_CLASS } from '@/lib/blog/blogFeedGrid';
 import { RailFeedEmptyState, RailFeedErrorState } from '@/components/layout';
-import { applyCustomFeedRules } from '@/lib/feeds/applyCustomFeedRules';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { PrimaryCoverFallback } from '@/lib/shell/primaryCoverFallback';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 import type { BlogTaxonomyRow } from '@/types/blog';
-import { defaultRules, useCustomFeedsStore, type CustomFeedRow } from '@/store/customFeeds';
 
 const CATALOG_LIMIT = 50;
 const HERO_FETCH_LIMIT = 12;
@@ -130,7 +128,6 @@ function RailPill({
 // --- Main Component ---
 
 function HomePageContent() {
-  const customFeeds = useCustomFeedsStore((s) => s.feeds);
   const reduceMotion = useReducedMotion();
   const token = useAuthStore((s) => s.token);
   const [taxonomy, setTaxonomy] = useState<BlogTaxonomyRow[]>([]);
@@ -253,11 +250,10 @@ function HomePageContent() {
 
   const gridPosts = useMemo(() => {
     if (selection.kind === 'category') return categoryFetch;
-    if (selection.kind === 'custom') return applyCustomFeedRules(catalog, selection.feed.rules);
     if (selection.kind === 'categorized') {
       return catalog.filter((p) => norm(p.category ?? '') !== '');
     }
-    return applyCustomFeedRules(catalog, defaultRules());
+    return catalog;
   }, [catalog, categoryFetch, selection]);
 
   const noCatalogSource =
@@ -433,7 +429,7 @@ function HomePageContent() {
             </h2>
           </div>
 
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
+          <div className="ss-scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-webkit-overflow-scrolling:touch]">
             <RailPill
               active={selection.kind === 'all'}
               onClick={() => setSelection({ kind: 'all' })}
@@ -453,20 +449,6 @@ function HomePageContent() {
                 onClick={() => setSelection({ kind: 'category', slug: c.slug, name: c.name })}
               >
                 <span className="max-w-[9rem] truncate">{c.name}</span>
-              </RailPill>
-            ))}
-            {customFeeds.map((f) => (
-              <RailPill
-                key={f.id}
-                active={selection.kind === 'custom' && selection.feed.id === f.id}
-                onClick={() => setSelection({ kind: 'custom', feed: f })}
-              >
-                {f.iconEmoji ? (
-                  <span className="text-sm leading-none normal-case" aria-hidden>
-                    {f.iconEmoji}
-                  </span>
-                ) : null}
-                <span className="max-w-[8rem] truncate normal-case tracking-normal">{f.name}</span>
               </RailPill>
             ))}
           </div>
@@ -499,11 +481,7 @@ function HomePageContent() {
                 icon={FileStack}
                 variant="filter"
                 title="No posts match this view"
-                description={
-                  selection.kind === 'custom'
-                    ? 'Adjust this feed’s rules in the sidebar, or pick another pill above.'
-                    : 'Try another category or switch to All blogs.'
-                }
+                description="Try another category or switch to All blogs."
                 actions={[
                   {
                     label: 'All blogs',
@@ -547,8 +525,7 @@ function heroExcerptPlain(post: Post, max = 180): string {
 type RailSelection =
   | { kind: 'all' }
   | { kind: 'categorized' }
-  | { kind: 'category'; slug: string; name: string }
-  | { kind: 'custom'; feed: CustomFeedRow };
+  | { kind: 'category'; slug: string; name: string };
 
 export default function HomePage() {
   return (

@@ -1,20 +1,15 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import {
+  SUBSCRIPTION_PLAN_FREE,
+  SUBSCRIPTION_PLAN_KEYS,
+  SUBSCRIPTION_STATUS_KEYS,
+  SUBSCRIPTION_WRITE_SOURCE_KEYS,
+  type SubscriptionPlan,
+  type SubscriptionStatus,
+  type SubscriptionWriteSource,
+} from '../variable/constants.js';
 
-/** App plan keys; `premium` is legacy — treat as `ultra` in app logic. */
-export type SubscriptionPlan = 'free' | 'pro' | 'proplus' | 'ultra' | 'premium';
-
-/** Stripe subscription statuses we persist (subset + common values). */
-export type SubscriptionStatus =
-  | 'active'
-  | 'canceled'
-  | 'past_due'
-  | 'trialing'
-  | 'unpaid'
-  | 'incomplete'
-  | 'incomplete_expired'
-  | 'paused';
-
-export type SubscriptionWriteSource = 'stripe' | 'manual';
+export type { SubscriptionPlan, SubscriptionStatus, SubscriptionWriteSource };
 
 export interface ISubscription extends Document {
   userId: mongoose.Types.ObjectId;
@@ -49,21 +44,12 @@ const SubscriptionSchema = new Schema<ISubscription>(
     },
     plan: {
       type: String,
-      enum: ['free', 'pro', 'proplus', 'ultra', 'premium'],
-      default: 'free',
+      enum: [...SUBSCRIPTION_PLAN_KEYS],
+      default: SUBSCRIPTION_PLAN_FREE,
     },
     status: {
       type: String,
-      enum: [
-        'active',
-        'canceled',
-        'past_due',
-        'trialing',
-        'unpaid',
-        'incomplete',
-        'incomplete_expired',
-        'paused',
-      ],
+      enum: [...SUBSCRIPTION_STATUS_KEYS],
       default: 'active',
     },
     currentPeriodStart: { type: Date },
@@ -75,7 +61,11 @@ const SubscriptionSchema = new Schema<ISubscription>(
     version: { type: Number, default: 1 },
     lastSyncedAt: { type: Date },
     lastAppliedStripeEventCreated: { type: Number, default: null },
-    source: { type: String, enum: ['stripe', 'manual'], default: 'stripe' },
+    source: {
+      type: String,
+      enum: [...SUBSCRIPTION_WRITE_SOURCE_KEYS],
+      default: 'stripe',
+    },
     graceUntil: { type: Date, default: null },
     lastReconciledAt: { type: Date, default: null },
     metadata: { type: Schema.Types.Mixed },

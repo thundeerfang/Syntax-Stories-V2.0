@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { BIO_MAX_LENGTH, DEFAULT_AVATAR_SEED } from '../variable/constants.js';
 import { diceBearAvatarSvgUrl } from '../utils/diceBearAvatarUrl.js';
 import { ensureOpaqueDiceBearDataUri } from '../utils/diceBearSvgBackground.js';
 
 /** Fallback when `profileImg` is empty or invalid (DiceBear Adventurer SVG data URI, deterministic). */
-export const DEFAULT_AVATAR_URL = diceBearAvatarSvgUrl('syntax-stories-default');
+export const DEFAULT_AVATAR_URL = diceBearAvatarSvgUrl(DEFAULT_AVATAR_SEED);
 
 /** Returns DEFAULT_AVATAR_URL when profileImg is missing or a relative/broken path (e.g. old OAuth placeholder). */
 export function normalizeProfileImg(profileImg: string | undefined): string {
@@ -14,62 +15,6 @@ export function normalizeProfileImg(profileImg: string | undefined): string {
   }
   if (profileImg.startsWith('data:image/')) return profileImg;
   return DEFAULT_AVATAR_URL;
-}
-
-export interface IWorkExperience {
-  /** Auto-generated when added; used for WORK_ID display (e.g. "1", "2"). */
-  workId?: string;
-  jobTitle: string;
-  employmentType?: string;
-  company: string;
-  companyDomain?: string;
-  companyLogo?: string;
-  /** Optional HTML title + img alt for company logo. */
-  companyLogoAlt?: string;
-  currentPosition?: boolean;
-  startDate?: string;
-  endDate?: string;
-  location?: string;
-  locationType?: string;
-  description?: string;
-  skills?: string[];
-  /** Promoted-to roles at the same company (timeline: initial role then promotion 1, 2, 3...). */
-  promotions?: Array<{
-    jobTitle: string;
-    startDate?: string;
-    endDate?: string;
-    currentPosition?: boolean;
-    media?: IWorkExperienceMediaItem[];
-  }>;
-  /** @deprecated use media */
-  mediaUrls?: string[];
-  /** Media items: links or uploaded images (url, title) */
-  media?: IWorkExperienceMediaItem[];
-}
-
-export interface IWorkExperienceMediaItem {
-  url: string;
-  title?: string;
-}
-
-export interface IEducation {
-  /** Auto-generated per education entry, used for EDU_ID display (e.g. "1", "2"). */
-  eduId?: string;
-  school: string;
-  schoolDomain?: string;
-  schoolLogo?: string;
-  /** Optional HTML title + img alt for school logo. */
-  schoolLogoAlt?: string;
-  degree: string;
-  fieldOfStudy?: string;
-  currentEducation?: boolean;
-  startDate?: string;
-  endDate?: string;
-  grade?: string;
-  description?: string;
-  activity?: string;
-  /** Ref code like "2024_EDU_DOC", based on last update year. */
-  refCode?: string;
 }
 
 export interface ICertificationMediaItem {
@@ -164,8 +109,6 @@ export interface IUser extends Document {
   github?: string;
   youtube?: string;
   stackAndTools?: string[];
-  workExperiences?: IWorkExperience[];
-  education?: IEducation[];
   certifications?: ICertification[];
   projects?: IProject[];
   openSourceContributions?: IOpenSourceContribution[];
@@ -238,99 +181,6 @@ export interface IUser extends Document {
   createdAt?: Date;
   updatedAt?: Date;
 }
-
-const WorkExperienceSchema = new Schema(
-  {
-    workId: { type: String, trim: true, maxlength: 20 },
-    jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
-    employmentType: { type: String, trim: true, maxlength: 50 },
-    company: { type: String, required: true, trim: true, maxlength: 200 },
-    companyDomain: { type: String, trim: true, maxlength: 120 },
-    companyLogo: { type: String, trim: true, maxlength: 500 },
-    companyLogoAlt: { type: String, trim: true, maxlength: 120 },
-    currentPosition: { type: Boolean, default: false },
-    startDate: { type: String, trim: true, maxlength: 20 },
-    endDate: { type: String, trim: true, maxlength: 20 },
-    location: { type: String, trim: true, maxlength: 180 },
-    locationType: { type: String, trim: true, maxlength: 20 },
-    description: { type: String, trim: true, maxlength: 5000 },
-    skills: { type: [String], default: [], maxlength: 10 },
-    /** @deprecated use promotions array */
-    promotion: {
-      type: new Schema(
-        {
-          jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
-          startDate: { type: String, trim: true, maxlength: 20 },
-          endDate: { type: String, trim: true, maxlength: 20 },
-          currentPosition: { type: Boolean, default: false },
-        },
-        { _id: false }
-      ),
-      default: undefined,
-    },
-    promotions: {
-      type: [
-        new Schema(
-          {
-            jobTitle: { type: String, required: true, trim: true, maxlength: 120 },
-            startDate: { type: String, trim: true, maxlength: 20 },
-            endDate: { type: String, trim: true, maxlength: 20 },
-            currentPosition: { type: Boolean, default: false },
-            media: {
-              type: [
-                new Schema(
-                  {
-                    url: { type: String, required: true, trim: true, maxlength: 500 },
-                    title: { type: String, trim: true, maxlength: 120 },
-                  },
-                  { _id: false }
-                ),
-              ],
-              default: undefined,
-              maxlength: 5,
-            },
-          },
-          { _id: false }
-        ),
-      ],
-      default: undefined,
-      maxlength: 5,
-    },
-    mediaUrls: { type: [String], default: [], maxlength: 5 },
-    media: {
-      type: [
-        {
-          url: { type: String, required: true, trim: true, maxlength: 500 },
-          title: { type: String, trim: true, maxlength: 120 },
-        },
-      ],
-      default: [],
-      maxlength: 5,
-      _id: false,
-    },
-  },
-  { _id: false }
-);
-
-const EducationSchema = new Schema(
-  {
-    eduId: { type: String, trim: true, maxlength: 20 },
-    school: { type: String, required: true, trim: true, maxlength: 200 },
-    schoolDomain: { type: String, trim: true, maxlength: 120 },
-    schoolLogo: { type: String, trim: true, maxlength: 2000 },
-    schoolLogoAlt: { type: String, trim: true, maxlength: 120 },
-    degree: { type: String, required: true, trim: true, maxlength: 80 },
-    fieldOfStudy: { type: String, trim: true, maxlength: 120 },
-    currentEducation: { type: Boolean, default: false },
-    startDate: { type: String, trim: true, maxlength: 20 },
-    endDate: { type: String, trim: true, maxlength: 20 },
-    grade: { type: String, trim: true, maxlength: 80 },
-    description: { type: String, trim: true, maxlength: 2000 },
-    activity: { type: String, trim: true, maxlength: 500 },
-    refCode: { type: String, trim: true, maxlength: 40 },
-  },
-  { _id: false }
-);
 
 const CertificationSchema = new Schema(
   {
@@ -432,7 +282,8 @@ const UserSchema = new Schema<IUser>(
     profileLocation: { type: String, trim: true, maxlength: 180 },
     bio: {
       type: String,
-      default: 'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀',
+      trim: true,
+      maxlength: BIO_MAX_LENGTH,
     },
     portfolioUrl: { type: String, trim: true, maxlength: 500 },
     linkedin: { type: String },
@@ -449,8 +300,6 @@ const UserSchema = new Schema<IUser>(
         message: 'Stack & Tools cannot exceed 10 items.',
       },
     },
-    workExperiences: { type: [WorkExperienceSchema], default: [], maxlength: 5 },
-    education: { type: [EducationSchema], default: [] },
     certifications: { type: [CertificationSchema], default: [] },
     projects: { type: [ProjectSchema], default: [] },
     openSourceContributions: { type: [OpenSourceContributionSchema], default: [] },

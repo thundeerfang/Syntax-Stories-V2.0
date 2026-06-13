@@ -1,10 +1,10 @@
 import { createClient } from 'redis';
 import { redisKeys } from '../shared/redis/keys.js';
+import { READ_VIEW_START_MAX_PER_MINUTE } from '../variable/constants.js';
 
 type RedisClient = ReturnType<typeof createClient>;
 
-/** Max VIEW_START calls per user per rolling minute (F.2). */
-export const READ_VIEW_START_MAX_PER_MINUTE = 30;
+export { READ_VIEW_START_MAX_PER_MINUTE };
 
 /**
  * Redis INCR + EXPIRE rate limit. Returns `false` when limit exceeded.

@@ -974,6 +974,37 @@ html.ss-scroll-locked body {
   margin: 0 !important;
 }
 
+/* Notification toasts: Sonner's icon slot is 16×16 with negative start margin; expand for 32px custom icons. */
+.ss-notification-toaster {
+  --toast-icon-margin-start: 0px;
+  --toast-icon-margin-end: 0px;
+}
+
+[data-sonner-toast][data-styled='true'] [data-icon] {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  min-width: 2rem;
+  flex-shrink: 0;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin-top: 0.125rem;
+  overflow: visible;
+}
+
+.ss-notification-toaster [data-sonner-toast][data-styled='true'] {
+  gap: 0.875rem !important;
+  align-items: flex-start !important;
+}
+
+.ss-notification-toaster [data-sonner-toast][data-styled='true'] [data-content] {
+  min-width: 0;
+  flex: 1 1 0%;
+}
+
 /* Electron desktop shell — native title bar drag region + traffic-light inset */
 html[data-desktop-shell] {
   --desktop-titlebar-height: calc(2.5rem + 2px);

@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { createClient } from 'redis';
+import { MS_PER_DAY } from '../constants/durations.js';
 import { BlogReadDayModel } from '../models/BlogReadDay.js';
+import { DAY_BUCKET_RE, READ_HEATMAP_WINDOW_DAYS } from '../variable/constants.js';
 import { recomputeDailyStreakFromSortedDays } from '../streak/applyDailyStreakTransition.js';
 import {
   previousUtcCalendarDay,
@@ -18,8 +20,9 @@ export type ReadStreakMode = 'daily' | 'weekly' | 'monthly';
 
 export type ReadStreakCounts = { current: number; longest: number };
 
-const DAY_MS = 86400000;
-const WEEK_MS = 7 * DAY_MS;
+const WEEK_MS = 7 * MS_PER_DAY;
+
+export { READ_HEATMAP_WINDOW_DAYS };
 
 /** Monday 00:00 UTC of the ISO week containing `d`. */
 export function utcMondayOfWeekContaining(d: Date): number {
@@ -45,7 +48,7 @@ export async function loadUtcReadDayMidnightsForReader(
   const rows = await BlogReadDayModel.find({ readerId }).select('dayBucket').lean();
   const buckets = rows
     .map((r) => (r as { dayBucket?: string }).dayBucket)
-    .filter((b): b is string => typeof b === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b));
+    .filter((b): b is string => typeof b === 'string' && DAY_BUCKET_RE.test(b));
   return buckets.map(utcMidnightFromDayBucket);
 }
 
@@ -64,11 +67,8 @@ export async function getMaxDayBucketForReader(
     .select('dayBucket')
     .lean();
   const b = (row as { dayBucket?: string } | null)?.dayBucket;
-  return typeof b === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b) ? b : null;
+  return typeof b === 'string' && DAY_BUCKET_RE.test(b) ? b : null;
 }
-
-/** UTC window for profile heatmap (must match webapp `READ_HEATMAP_WINDOW_DAYS`). */
-export const READ_HEATMAP_WINDOW_DAYS = 200;
 
 /** Distinct `dayBucket` strings in `[today - window + 1, today]` UTC for heatmap UI. */
 export async function loadReadDayBucketsForHeatmap(

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Compass, Sparkles, UserPlus, UsersRound } from 'lucide-react';
+import { Compass, UserPlus, UsersRound } from 'lucide-react';
 import {
   RailFeedEmptyState,
   RailSectionSubheader,
@@ -12,9 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { CreateSquadDialog } from '../components/CreateSquadDialog';
 import { SquadDirectoryCard } from '../components/SquadDirectoryCard';
-import { SQUADS_INTRO_SLIDES } from '../components/squadsIntroSlides';
 import { SquadsPageContentSkeleton } from '@/components/skeletons/SquadsPageSkeleton';
-import { InfoSwiperDialog } from '@/components/ui/dialog';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { squadCategoryLabel } from '@/lib/squads/squadCategory';
 import { SQUAD_DISCOVER_CARD_GRID_CLASS } from '@/lib/squads/squadDiscoverCardLayout';
@@ -79,7 +77,6 @@ export default function SquadsBrowsePage() {
   const openAuth = useAuthDialogStore((s) => s.open);
   const [squadFormOpen, setSquadFormOpen] = useState(false);
   const [editingSquad, setEditingSquad] = useState<SquadSummary | null>(null);
-  const [introOpen, setIntroOpen] = useState(false);
   const [browseTab, setBrowseTab] = useState<SquadBrowseTab>('all');
   const [sort, setSort] = useState<SquadSort>('newest');
   const [searchInput, setSearchInput] = useState('');
@@ -212,16 +209,6 @@ export default function SquadsBrowsePage() {
           description="Small groups for reading and writing together—public or private, with clear rules for who can post."
           descriptionEnd={
             <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="font-mono text-[10px] font-black uppercase tracking-widest"
-                onClick={() => setIntroOpen(true)}
-              >
-                <Sparkles className="size-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
-                Open tour
-              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -358,13 +345,6 @@ export default function SquadsBrowsePage() {
           </>
         )}
       </div>
-
-      <InfoSwiperDialog
-        open={introOpen}
-        onClose={() => setIntroOpen(false)}
-        slides={SQUADS_INTRO_SLIDES}
-        titleId="squads-intro-dialog-title"
-      />
 
       {token ? (
         <CreateSquadDialog

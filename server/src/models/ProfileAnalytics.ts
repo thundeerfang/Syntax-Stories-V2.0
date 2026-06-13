@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { PROFILE_VIEW_EVENT_RETENTION_SEC } from '../variable/constants.js';
 
 export interface IProfileViewEvent extends Document {
   profileUserId: mongoose.Types.ObjectId;
@@ -35,7 +36,7 @@ ProfileViewEventSchema.index(
 );
 
 // Optional retention (e.g. 90 days)
-ProfileViewEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+ProfileViewEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: PROFILE_VIEW_EVENT_RETENTION_SEC });
 
 export interface IProfileDailyMetrics extends Document {
   profileUserId: mongoose.Types.ObjectId;

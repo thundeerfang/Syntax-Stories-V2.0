@@ -20,7 +20,17 @@ export {
   RailSectionSubheader,
   type RailSectionSubheaderSearchProps,
   type RailSectionSubheaderSortProps,
+  type RailSectionSubheaderFilterProps,
 } from './rail/RailSectionSubheader';
+export {
+  RailCountPill,
+  RailCountPillLoading,
+  RailCountPillPair,
+} from './rail/RailCountPill';
+export {
+  RailListPaginationFooter,
+  RailResultRangeBadge,
+} from './rail/RailListPaginationFooter';
 export { ShellPageIntroHeader } from './rail/ShellPageIntroHeader';
 export {
   RectangleAppBreadcrumb,

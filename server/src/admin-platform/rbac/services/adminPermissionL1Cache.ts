@@ -1,4 +1,4 @@
-const L1_TTL_MS = 60_000;
+import { ADMIN_PERMISSION_L1_TTL_MS } from '../../../variable/constants.js';
 
 type L1Entry = {
   permissions: Set<string>;
@@ -20,7 +20,7 @@ export function getL1PermissionCache(userId: string): Set<string> | null {
 export function setL1PermissionCache(userId: string, permissions: Set<string>): void {
   l1.set(userId, {
     permissions,
-    expiresAt: Date.now() + L1_TTL_MS,
+    expiresAt: Date.now() + ADMIN_PERMISSION_L1_TTL_MS,
   });
 }
 

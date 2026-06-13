@@ -1,9 +1,7 @@
 import crypto from 'node:crypto';
 import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';
-
-/** Short-lived: user must open callback and POST exchange quickly. */
-const EXCHANGE_TTL_SEC = 90;
+import { OAUTH_EXCHANGE_TTL_SEC } from '../variable/constants.js';
 
 export type OAuthExchangePayload = {
   accessToken: string;
@@ -22,7 +20,7 @@ export async function storeOAuthExchange(payload: OAuthExchangePayload): Promise
   const redis = getRedis();
   if (!redis) return null;
   const code = crypto.randomBytes(32).toString('hex');
-  await redis.setEx(redisKeys.oauth.exchange(code), EXCHANGE_TTL_SEC, JSON.stringify(payload));
+  await redis.setEx(redisKeys.oauth.exchange(code), OAUTH_EXCHANGE_TTL_SEC, JSON.stringify(payload));
   return code;
 }
 

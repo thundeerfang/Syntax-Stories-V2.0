@@ -10,38 +10,12 @@ const SECTION_LABELS: Record<string, string> = {
   basic: 'profile',
   'stack-tools': 'stack & tools',
   'my-setup': 'my setup',
-  'work-experiences': 'work experience',
-  education: 'education',
   certifications: 'certifications',
   projects: 'projects',
   'open-source': 'open source',
 };
 
 const AUDIT_TO_MESSAGE: Partial<Record<string, { title: string; message: string }>> = {
-  [AuditAction.EDUCATION_ADDED]: {
-    title: 'Education added',
-    message: 'You added a new education entry to your profile.',
-  },
-  [AuditAction.EDUCATION_UPDATED]: {
-    title: 'Education updated',
-    message: 'You updated an education entry on your profile.',
-  },
-  [AuditAction.EDUCATION_REMOVED]: {
-    title: 'Education removed',
-    message: 'You removed an education entry from your profile.',
-  },
-  [AuditAction.WORK_ADDED]: {
-    title: 'Work experience added',
-    message: 'You added a new work experience to your profile.',
-  },
-  [AuditAction.WORK_UPDATED]: {
-    title: 'Work experience updated',
-    message: 'You updated a work experience on your profile.',
-  },
-  [AuditAction.WORK_REMOVED]: {
-    title: 'Work experience removed',
-    message: 'You removed a work experience from your profile.',
-  },
   [AuditAction.PROJECT_ADDED]: {
     title: 'Project added',
     message: 'You added a new project to your profile.',

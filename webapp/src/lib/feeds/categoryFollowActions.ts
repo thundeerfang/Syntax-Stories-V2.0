@@ -51,5 +51,5 @@ export async function refreshFollowedCategoriesFromServer(
     await blogApi.syncFollowedCategories(localSlugs, token);
   }
   const { slugs } = await blogApi.listFollowedCategories(token);
-  writeFollowedCategorySlugs(slugs, userId);
+  writeFollowedCategorySlugs(slugs, userId, { notify: false });
 }

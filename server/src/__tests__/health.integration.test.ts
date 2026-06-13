@@ -12,3 +12,17 @@ describe('GET /api/health', () => {
     expect(typeof res.body.timestamp).toBe('string');
   });
 });
+
+describe('GET /api/health/storage', () => {
+  it('returns storage status payload', async () => {
+    const res = await request(app).get('/api/health/storage');
+    expect([200, 503]).toContain(res.status);
+    expect(res.body).toMatchObject({
+      storage: {
+        blocked: expect.any(Boolean),
+      },
+    });
+    expect(res.body.storage).toHaveProperty('reason');
+    expect(res.body.storage).toHaveProperty('mode');
+  });
+});
