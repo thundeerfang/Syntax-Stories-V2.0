@@ -36,7 +36,7 @@ import {
   highlightCodeToHtml,
   inferCodeLanguage,
 } from '@/lib/blog/codeHighlight';
-import { MermaidBlockDisplay } from '@/features/blog/post-detail/blogPostDetailSections';
+import { MermaidBlockDisplay } from '@/components/ui/MermaidBlockDisplay';
 import { validateMermaidSource } from '@/lib/blog/mermaidValidate';
 import {
   clampTableMatrix,

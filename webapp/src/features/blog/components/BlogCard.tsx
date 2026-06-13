@@ -134,7 +134,7 @@ export type SquadFeedShareChrome = Readonly<{
   };
 }>;
 
-function squadShareAvatarSrc(profileImg: string | undefined, username: string): string | null {
+function squadShareAvatarSrc(profileImg: string | undefined): string | null {
   const trimmed = profileImg?.trim();
   if (!trimmed) return null;
   if (
@@ -318,10 +318,7 @@ export function BlogCard({
                   />
                   {(() => {
                     const uname = squadFeedShare.sharedBy.username;
-                    const avatarSrc = squadShareAvatarSrc(
-                      squadFeedShare.sharedBy.profileImg,
-                      uname
-                    );
+                    const avatarSrc = squadShareAvatarSrc(squadFeedShare.sharedBy.profileImg);
                     const label = squadFeedShare.sharedBy.fullName?.trim() || uname;
                     return avatarSrc ? (
                       <img

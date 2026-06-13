@@ -135,36 +135,6 @@ function SidebarAccordion({
   );
 }
 
-function AccordionLink({
-  href,
-  label,
-  pathname,
-  onNavigate,
-}: Readonly<{
-  href: string;
-  label: string;
-  pathname: string;
-  onNavigate: () => void;
-}>) {
-  const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
-  return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      className={cn(
-        'flex w-full min-w-0 items-center justify-between gap-2  py-2 pl-1 pr-0 text-[10px] font-black uppercase tracking-widest transition-colors',
-        isActive ? 'text-primary' : 'text-foreground/75 hover:text-foreground'
-      )}
-    >
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      <ChevronRight
-        className={cn('size-3 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground/35')}
-        strokeWidth={3}
-        aria-hidden
-      />
-    </Link>
-  );
-}
 
 /** /bookmarks with no ?group= — matches “all”; chevron on the right like other accordion rows. */
 function AllBookmarksAccordionLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {

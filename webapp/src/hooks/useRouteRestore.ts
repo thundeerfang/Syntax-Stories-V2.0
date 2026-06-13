@@ -23,7 +23,10 @@ export function useRouteRestoreNonce(): number {
 export function useRouteRestore(callback: () => void): void {
   const restoreNonce = useRouteRestoreNonce();
   const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  });
 
   useEffect(() => {
     callbackRef.current();

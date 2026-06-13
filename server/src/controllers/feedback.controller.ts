@@ -352,7 +352,7 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
         attachmentUrl,
         attachmentTitle,
         username,
-        userId: userId ? String(userId) : undefined,
+        userId: String(userId),
         submittedAtIst,
         ip,
         forwardedFor,
@@ -380,10 +380,8 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
       message: 'Thanks — your feedback was received.',
       emailSent: emailDelivered,
     };
-    if (userId) {
-      const newlyUnlocked = await dispatchAchievementEvents(String(userId), [{ type: 'profile_sync' }]);
-      responseBody = attachAchievementsToResponse(responseBody, newlyUnlocked);
-    }
+    const newlyUnlocked = await dispatchAchievementEvents(String(userId), [{ type: 'profile_sync' }]);
+    responseBody = attachAchievementsToResponse(responseBody, newlyUnlocked);
 
     res.status(201).json(responseBody);
   } catch (err) {

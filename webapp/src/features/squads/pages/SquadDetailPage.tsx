@@ -755,7 +755,7 @@ export default function SquadDetailPage() {
             </div>
       </div>
 
-      {token && squad && isAdmin ? (
+      {token && isAdmin ? (
         <CreateSquadDialog
           open={editSquadOpen}
           onClose={() => setEditSquadOpen(false)}

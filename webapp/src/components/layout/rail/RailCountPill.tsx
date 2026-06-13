@@ -1,6 +1,6 @@
 'use client';
 
-import { RankCountPill } from '@/features/topics';
+import { RankCountPill } from './RankCountPill';
 import { cn } from '@/lib/core/utils';
 
 /** Circular count for `RailSectionSubheader` toolbars (explore, trending, category feeds). */

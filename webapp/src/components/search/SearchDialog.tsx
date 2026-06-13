@@ -18,7 +18,6 @@ import {
 } from '@/lib/search/flattenGroups';
 import { isSearchQueryReady, normalizeSearchQuery, searchQueryCharCount } from '@/lib/search/normalizeQuery';
 import { SearchGroupSection } from './SearchGroupSection';
-import { SearchHitRow } from './SearchHitRow';
 import {
   Search,
   X,

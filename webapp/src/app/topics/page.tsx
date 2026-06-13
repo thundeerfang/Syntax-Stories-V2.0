@@ -727,7 +727,7 @@ export default function TopicsPage() {
                     pageSize={CATEGORY_PAGE_SIZE}
                     total={categoriesTotal}
                     onPageChange={setCategoryPage}
-                    disabled={categoriesBootstrapping || categoriesPagePending}
+                    disabled={categoriesPagePending}
                   />
                 ) : null}
               </>
@@ -812,7 +812,7 @@ export default function TopicsPage() {
                     pageSize={TAG_PAGE_SIZE}
                     total={tagsTotal}
                     onPageChange={setTagPage}
-                    disabled={tagsBootstrapping || tagsPagePending}
+                    disabled={tagsPagePending}
                   />
                 ) : null}
               </>

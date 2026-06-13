@@ -12,9 +12,7 @@ import { cn } from '@/lib/core/utils';
 import { fetchBillingPlans, type BillingPlanCatalogItem } from '@/api/billing';
 import { fetchPlatformStats, type PublicPlatformStatsDto } from '@/api/platform';
 import { 
-  CheckCircle2, 
   Heart, 
-  ArrowRight, 
   Zap, 
   ExternalLink, 
   Layers, 
@@ -264,12 +262,7 @@ export default function AboutPage() {
                   {dev.role}
                 </p>
 
-                <div
-                  className={cn(
-                    'flex flex-wrap items-center justify-center',
-                    dev.featured ? 'mt-4 gap-3' : 'mt-4 gap-3'
-                  )}
-                >
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                   {dev.githubUrl ? (
                     <a
                       href={dev.githubUrl}

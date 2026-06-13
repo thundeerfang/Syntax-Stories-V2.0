@@ -11,8 +11,7 @@ import { HoverCard } from '@/components/ui/popover';
 import { LinkPreviewCardContent } from '@/components/ui/popover';
 import { Dialog } from '@/components/ui/dialog';
 import { Input, Label } from '@/components/retroui';
-import { buildLocationString } from '@/lib/profile/profileLocation';
-import { monthYearToValue, profileYearOptions } from '@/lib/profile/dateLabels';
+import { profileYearOptions } from '@/lib/profile/dateLabels';
 
 export type MediaItem = {
   url: string;

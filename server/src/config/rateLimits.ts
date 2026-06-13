@@ -1,4 +1,4 @@
-import { MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } from '../constants/durations.js';
+import { MS_PER_HOUR, MS_PER_MINUTE } from '../constants/durations.js';
 
 export type RateLimitSpec = { readonly windowMs: number; readonly max: number };
 

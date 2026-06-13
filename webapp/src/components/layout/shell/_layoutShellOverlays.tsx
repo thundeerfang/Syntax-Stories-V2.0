@@ -226,7 +226,7 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
       const title = buildUploadImageMeta(file.name, user?.username ?? 'user').title;
       applyAttachment(file, 'upload', title);
     },
-    [applyAttachment, user?.username]
+    [applyAttachment, user]
   );
 
   const handleScreenCapture = useCallback(async () => {
@@ -253,7 +253,7 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
     } finally {
       setCapturing(false);
     }
-  }, [applyAttachment, user?.username]);
+  }, [applyAttachment, user]);
 
   const fieldClass =
     'w-full border-2 border-border bg-background px-4 py-3 text-sm font-medium text-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground/50 transition-colors';

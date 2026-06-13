@@ -8,7 +8,6 @@ import {
   achievementEventAction,
   type AuditDomain,
   type NotificationAuditActionName,
-  ACHIEVEMENT_EVENT_LOG_TTL_SEC,
 } from './domains.js';
 
 function toObjectId(id: string | mongoose.Types.ObjectId): mongoose.Types.ObjectId {

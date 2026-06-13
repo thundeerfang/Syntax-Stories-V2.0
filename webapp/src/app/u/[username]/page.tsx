@@ -67,24 +67,6 @@ function domainFromUrl(url: string): string {
   }
 }
 
-function normalizeDomain(domain: string | undefined): string {
-  if (!domain?.trim()) return '';
-  const d = domain
-    .trim()
-    .replaceAll(/^https?:\/\//gi, '')
-    .replaceAll(/\/$/g, '');
-  return d ? `https://${d}` : '';
-}
-
-function locationWithoutType(location: string | undefined): string {
-  if (!location?.trim()) return '';
-  return location
-    .trim()
-    .replaceAll(/\s*\([^)]+\)/g, '')
-    .replaceAll(/\s+/g, ' ')
-    .trim();
-}
-
 function entriesCountSubtitle(count: number): string | undefined {
   if (count <= 0) return undefined;
   return count === 1 ? `${count} entry` : `${count} entries`;
