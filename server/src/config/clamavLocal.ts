@@ -126,13 +126,13 @@ export async function ensureLocalClamd(): Promise<void> {
   const conf = resolveClamdConf();
   if (!clamd) {
     console.warn(
-      '[ClamAV] clamd binary not found. Install ClamAV (e.g. brew install clamav) or set CLAMD_PATH.',
+      '[ClamAV] clamd binary not found. Install ClamAV (e.g. brew install clamav) or set CLAMD_PATH.'
     );
     return;
   }
   if (!conf) {
     console.warn(
-      '[ClamAV] clamd.conf not found. Run server/scripts/setup-clamav-homebrew.sh or set CLAMD_CONF.',
+      '[ClamAV] clamd.conf not found. Run server/scripts/setup-clamav-homebrew.sh or set CLAMD_CONF.'
     );
     return;
   }

@@ -1,0 +1,135 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/store/auth';
+import { useNotificationStore } from '@/store/notifications';
+import { celebrateAchievements } from '@/store/achievementCelebration';
+import { notificationsStreamUrl } from '@/api/notifications';
+import { consumeNotificationStream } from '@/lib/notifications/notificationStream';
+import { notificationIconComponent } from '@/lib/notifications/notificationIcons';
+import { NOTIFICATION_TYPE_LABELS } from '@contracts/notificationsApi';
+import type { AppNotification } from '@contracts/notificationsApi';
+import type { AchievementUnlockDto } from '@/contracts/achievementsApi';
+
+const NOTIFICATION_TOASTER_ID = 'notifications';
+
+function unlocksFromNotificationMetadata(
+  metadata: Record<string, unknown> | undefined
+): AchievementUnlockDto[] | undefined {
+  if (!metadata) return undefined;
+  const raw = metadata.unlocks;
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  return raw.map((u) => {
+    const row = u as Record<string, unknown>;
+    return {
+      id: String(row.id ?? ''),
+      slug: String(row.slug ?? ''),
+      title: String(row.title ?? 'Achievement'),
+      description: String(row.description ?? ''),
+      category: (row.category as AchievementUnlockDto['category']) ?? 'meta',
+      points: Number(row.points ?? 0),
+      celebrateAs: 'dialog',
+      metric: String(row.metric ?? ''),
+      target: Number(row.target ?? 1),
+      current: Number(row.current ?? 1),
+    };
+  });
+}
+
+function showNotificationToast(n: AppNotification): void {
+  const Icon = notificationIconComponent(n.icon);
+  const typeLabel = NOTIFICATION_TYPE_LABELS[n.type] ?? 'Alert';
+  toast(n.title, {
+    id: `notif-${n.id}`,
+    toasterId: NOTIFICATION_TOASTER_ID,
+    description: (
+      <div className="space-y-1">
+        <span className="text-[10px] font-black uppercase tracking-widest text-primary/90">
+          {typeLabel}
+        </span>
+        <Link href={n.href} className="block hover:underline leading-snug">
+          {n.message}
+        </Link>
+      </div>
+    ),
+    icon: (
+      <span className="flex h-8 w-8 items-center justify-center border-2 border-border bg-primary/10 text-primary">
+        <Icon className="size-4 shrink-0" aria-hidden />
+      </span>
+    ),
+    duration: 7000,
+  });
+}
+
+/** Subscribes to SSE notification stream and surfaces top-right toasts. */
+export function NotificationRealtimeBridge() {
+  const token = useAuthStore((s) => s.token);
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
+  const pushNotification = useNotificationStore((s) => s.pushNotification);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    if (!token) {
+      setUnreadCount(0);
+      return undefined;
+    }
+
+    const ac = new AbortController();
+    abortRef.current = ac;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const connect = () => {
+      if (cancelled) return;
+      void consumeNotificationStream(
+        notificationsStreamUrl(),
+        token,
+        (event) => {
+          if (event.type === 'snapshot') {
+            setUnreadCount(event.unreadCount);
+            return;
+          }
+          if (event.type === 'notification' && event.payload?.notification) {
+            const raw = event.payload.notification;
+            const n: AppNotification = {
+              id: raw.id,
+              type: raw.type ?? raw.kind ?? 'settings_update',
+              title: raw.title,
+              message: raw.message,
+              href: raw.href,
+              icon: raw.icon ?? 'bell',
+              time: raw.time,
+              unread: raw.unread,
+            };
+            pushNotification(n);
+            showNotificationToast(n);
+            if (n.type === 'achievement_unlocked') {
+              const meta = (raw as { metadata?: Record<string, unknown> }).metadata;
+              const unlocks = unlocksFromNotificationMetadata(meta);
+              if (unlocks?.length) celebrateAchievements(unlocks);
+            }
+          }
+        },
+        ac.signal
+      ).catch(() => {
+        if (cancelled || ac.signal.aborted) return;
+        retryTimer = setTimeout(connect, 8000);
+      });
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      ac.abort();
+    };
+  }, [token, setUnreadCount, pushNotification]);
+
+  return null;
+}
+
+export { NOTIFICATION_TOASTER_ID };

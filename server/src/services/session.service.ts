@@ -16,8 +16,12 @@ function getClientMeta(req: Request): { ip: string; userAgent: string } {
   return { ip, userAgent };
 }
 
-function hashToken(token: string): string {
+export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+export function computeDeviceFingerprint(ip: string, userAgent: string): string {
+  return crypto.createHash('sha256').update(`${ip}|${userAgent}`).digest('hex').slice(0, 32);
 }
 
 export function generateRefreshToken(): string {
@@ -40,9 +44,13 @@ export async function createSession(
 ): Promise<InstanceType<typeof SessionModel>> {
   const { ip, userAgent } = getClientMeta(req);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+  const sessionFamilyId = crypto.randomUUID();
   const session = await SessionModel.create({
     userId,
     refreshTokenHash: hashToken(refreshToken),
+    sessionFamilyId,
+    rotationGeneration: 0,
+    deviceFingerprint: computeDeviceFingerprint(ip, userAgent),
     deviceName: parseUserAgent(userAgent),
     userAgent,
     ip,
@@ -55,7 +63,11 @@ export async function createSession(
 export async function createSessionAndTokens(
   userId: string,
   req: Request
-): Promise<{ accessToken: string; refreshToken: string; session: InstanceType<typeof SessionModel> }> {
+): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  session: InstanceType<typeof SessionModel>;
+}> {
   const refreshToken = generateRefreshToken();
   const session = await createSession(userId, req, refreshToken);
   const accessToken = signAccessToken({ _id: userId, sessionId: String(session._id) });

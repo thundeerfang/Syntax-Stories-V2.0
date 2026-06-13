@@ -4,7 +4,6 @@ import { useDropzone, type Accept } from 'react-dropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 
-
 /** Raster images accepted by `/api/upload` image routes. */
 export const IMAGE_ACCEPT_RASTER: Accept = {
   'image/jpeg': ['.jpg', '.jpeg'],

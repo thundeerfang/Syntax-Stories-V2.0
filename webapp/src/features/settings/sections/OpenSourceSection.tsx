@@ -13,11 +13,11 @@ import { FormDialog } from '@/components/ui/dialog';
 import { FormInput } from '@/components/retroui';
 import { OpenSourceCard } from '@/components/settings-list/OpenSourceCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
-import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+import {
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 import { SettingsSectionEmptyState } from '../components/SettingsSectionEmptyState';
-
-
-
 
 type OpenSourceGitHubRepo = {
   id: number;
@@ -36,10 +36,15 @@ type OpenSourceGitHubRepo = {
 
 export function OpenSourceContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
-  const apiBase = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '') : '';
+  const apiBase =
+    typeof window !== 'undefined'
+      ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '')
+      : '';
   const MAX_OPEN_SOURCE_REPOS = 7;
 
-  const imported = (user?.projects ?? []).filter((p) => (p as { source?: string }).source === 'github');
+  const imported = (user?.projects ?? []).filter(
+    (p) => (p as { source?: string }).source === 'github'
+  );
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [githubConnectPromptOpen, setGithubConnectPromptOpen] = useState(false);
@@ -58,7 +63,11 @@ export function OpenSourceContent() {
       const res = await fetch(`${apiBase}/api/github/repos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = (await res.json().catch(() => null)) as { success?: boolean; message?: string; repos?: OpenSourceGitHubRepo[] } | null;
+      const data = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        message?: string;
+        repos?: OpenSourceGitHubRepo[];
+      } | null;
       if (!res.ok || !data?.success) throw new Error(data?.message || 'Failed to fetch repos.');
       setRepos((data.repos ?? []).filter((r) => !r.archived));
     } catch (e) {
@@ -82,7 +91,9 @@ export function OpenSourceContent() {
     if (!token) return;
     if (!user?.isGitAccount) return;
     if (imported.length >= MAX_OPEN_SOURCE_REPOS) {
-      toast.error(`You can link up to ${MAX_OPEN_SOURCE_REPOS} repositories. Remove one to add another.`);
+      toast.error(
+        `You can link up to ${MAX_OPEN_SOURCE_REPOS} repositories. Remove one to add another.`
+      );
       return;
     }
     if ((user?.projects ?? []).some((p) => projectMatchesGithubRepo(p, fullName))) {
@@ -127,7 +138,10 @@ export function OpenSourceContent() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return repos;
-    return repos.filter((r) => (r.full_name || '').toLowerCase().includes(q) || (r.name || '').toLowerCase().includes(q));
+    return repos.filter(
+      (r) =>
+        (r.full_name || '').toLowerCase().includes(q) || (r.name || '').toLowerCase().includes(q)
+    );
   }, [repos, query]);
 
   const repoBusy = loading || saving;
@@ -141,28 +155,31 @@ export function OpenSourceContent() {
       />
 
       <SettingsTabPanel>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {imported.length === 0 ? (
-          <div className="col-span-2">
-            <SettingsSectionEmptyState
-              icon={Github}
-              title="No Repositories Linked"
-              tagline="Sync your GitHub projects to display your coding activity."
-            />
-          </div>
-        ) : (
-          imported.map((p, i) => (
-            <OpenSourceCard
-              key={(p as any).repoFullName ?? i}
-              item={p}
-              index={i}
-              saving={saving}
-              onOpen={() => { if (p.publicationUrl) window.open(p.publicationUrl, '_blank', 'noopener,noreferrer'); }}
-              onDetach={() => removeImported((p as any).repoFullName || '')}
-            />
-          ))
-        )}
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {imported.length === 0 ? (
+            <div className="col-span-2">
+              <SettingsSectionEmptyState
+                icon={Github}
+                title="No Repositories Linked"
+                tagline="Sync your GitHub projects to display your coding activity."
+              />
+            </div>
+          ) : (
+            imported.map((p, i) => (
+              <OpenSourceCard
+                key={(p as any).repoFullName ?? i}
+                item={p}
+                index={i}
+                saving={saving}
+                onOpen={() => {
+                  if (p.publicationUrl)
+                    window.open(p.publicationUrl, '_blank', 'noopener,noreferrer');
+                }}
+                onDetach={() => removeImported((p as any).repoFullName || '')}
+              />
+            ))
+          )}
+        </div>
       </SettingsTabPanel>
 
       <FormDialog
@@ -176,7 +193,9 @@ export function OpenSourceContent() {
         footer={
           !repoBusy ? (
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Uses your linked GitHub token</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Uses your linked GitHub token
+              </p>
               <button
                 type="button"
                 onClick={() => void fetchRepos()}
@@ -217,7 +236,9 @@ export function OpenSourceContent() {
           <div className="border-2 border-border bg-muted/10">
             <div className="flex items-center justify-between gap-3 border-b-2 border-border bg-muted/20 px-3 py-2">
               <p className="text-[10px] font-black uppercase text-muted-foreground">Repositories</p>
-              <p className="text-[10px] font-bold uppercase text-muted-foreground">{filtered.length}</p>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                {filtered.length}
+              </p>
             </div>
             <div className="max-h-[55vh] overflow-y-auto">
               {loading ? (
@@ -228,14 +249,23 @@ export function OpenSourceContent() {
                 <div className="divide-y divide-border">
                   {filtered.map((r) => {
                     const already = (user?.projects ?? []).some(
-                      (p) => (p.publicationUrl || '').trim() === (r.html_url || '').trim(),
+                      (p) => (p.publicationUrl || '').trim() === (r.html_url || '').trim()
                     );
                     return (
-                      <div key={r.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div
+                        key={r.id}
+                        className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-black uppercase">{r.name}</p>
-                          <p className="truncate text-[10px] font-bold text-muted-foreground">{r.full_name}</p>
-                          {r.description && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{r.description}</p>}
+                          <p className="truncate text-[10px] font-bold text-muted-foreground">
+                            {r.full_name}
+                          </p>
+                          {r.description && (
+                            <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                              {r.description}
+                            </p>
+                          )}
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <a
@@ -250,7 +280,10 @@ export function OpenSourceContent() {
                             type="button"
                             onClick={() => void addRepo(r.full_name)}
                             disabled={saving || already}
-                            className={cn(settingsBtnBlockPrimarySm, 'px-3 py-2 text-[10px] tracking-widest')}
+                            className={cn(
+                              settingsBtnBlockPrimarySm,
+                              'px-3 py-2 text-[10px] tracking-widest'
+                            )}
                           >
                             {already ? 'Added' : 'Add'}
                           </button>
@@ -265,7 +298,10 @@ export function OpenSourceContent() {
         </div>
       </FormDialog>
 
-      <GithubNotConnectedDialog open={githubConnectPromptOpen} onClose={() => setGithubConnectPromptOpen(false)} />
+      <GithubNotConnectedDialog
+        open={githubConnectPromptOpen}
+        onClose={() => setGithubConnectPromptOpen(false)}
+      />
     </SettingsTabRoot>
   );
 }

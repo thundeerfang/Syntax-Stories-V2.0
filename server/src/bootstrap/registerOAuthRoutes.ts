@@ -1,10 +1,21 @@
 import type { Express, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { oauthCallbackHandler, oauthLinkHandler } from '../oauth/oauthExpress.js';
-import { getOAuthProviderRegistrations, type OAuthProviderRegistration } from '../oauth/oauth.providers.js';
-import { hasFacebookConfig, hasXConfig, hasDiscordConfig } from '../passport/index.js';
-import { getFrontendRedirectBase } from '../config/frontendUrl.js';
+import {
+  getOAuthProviderRegistrations,
+  type OAuthProviderRegistration,
+} from '../oauth/oauth.providers.js';
+import {
+  hasFacebookConfig,
+  hasXConfig,
+  hasDiscordConfig,
+  hasTwitchConfig,
+} from '../passport/index.js';
 import { buildOAuthSignupState } from '../oauth/oauthSignupState.js';
+import {
+  attachOAuthReturnOrigin,
+  resolveOAuthRedirectBase,
+} from '../oauth/oauthReturnOrigin.js';
 
 function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): void {
   const base = `/auth/${def.routeKey}`;
@@ -18,20 +29,19 @@ function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): 
 
   const startSignupWithOptionalRef = async (req: Request, res: Response, next: NextFunction) => {
     const state = await buildOAuthSignupState(req);
-    const authFn =
-      scopes?.length
-        ? passport.authenticate(strat, { scope: scopes, state })
-        : passport.authenticate(strat, { state });
+    const authFn = scopes?.length
+      ? passport.authenticate(strat, { scope: scopes, state })
+      : passport.authenticate(strat, { state });
     return authFn(req, res, next);
   };
 
-  app.get(`${base}/login`, startAuth('login'));
-  app.get(`${base}/signup`, startSignupWithOptionalRef);
-  app.get(base, startAuth('login'));
+  app.get(`${base}/login`, attachOAuthReturnOrigin, startAuth('login'));
+  app.get(`${base}/signup`, attachOAuthReturnOrigin, startSignupWithOptionalRef);
+  app.get(base, attachOAuthReturnOrigin, startAuth('login'));
 
   const linkStrat = def.linkStrategy ?? def.strategy;
   const linkOpts = scopes?.length ? { scope: scopes } : {};
-  app.get(`${base}/link`, oauthLinkHandler(linkStrat, linkOpts));
+  app.get(`${base}/link`, attachOAuthReturnOrigin, oauthLinkHandler(linkStrat, linkOpts));
 
   app.get(
     `${base}/callback`,
@@ -47,26 +57,24 @@ function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): 
 
 function registerDisabledStubs(
   app: Express,
-  def: OAuthProviderRegistration,
-  redirectBaseUrl: string
+  def: OAuthProviderRegistration
 ): void {
   if (def.whenDisabled === 'redirectLoginSignup' && def.redirectErrorMessage) {
-    const targetBase = redirectBaseUrl || 'http://localhost:3001';
     const err = def.redirectErrorMessage;
-    app.get(`/auth/${def.routeKey}/login`, (_req, res) => {
-      res.redirect(`${targetBase}/login?error=${err}`);
+    app.get(`/auth/${def.routeKey}/login`, attachOAuthReturnOrigin, (req, res) => {
+      const base = resolveOAuthRedirectBase(req, res);
+      res.redirect(`${base}/login?error=${err}`);
     });
-    app.get(`/auth/${def.routeKey}/signup`, (_req, res) => {
-      res.redirect(`${targetBase}/login?error=${err}`);
+    app.get(`/auth/${def.routeKey}/signup`, attachOAuthReturnOrigin, (req, res) => {
+      const base = resolveOAuthRedirectBase(req, res);
+      res.redirect(`${base}/login?error=${err}`);
     });
     return;
   }
 
   if (def.whenDisabled === 'stubRoot501') {
     const msg =
-      def.routeKey === 'x'
-        ? 'X (Twitter) login not configured.'
-        : 'Facebook login not configured.';
+      def.routeKey === 'x' ? 'X (Twitter) login not configured.' : 'Facebook login not configured.';
     app.get(`/auth/${def.routeKey}`, (_req, res) =>
       res.status(501).json({ message: msg, success: false })
     );
@@ -79,25 +87,25 @@ function registerDisabledStubs(
  * after the JSON router yields for non-matching paths.
  */
 export function registerOAuthRoutes(app: Express): void {
-  const redirectBaseUrl = getFrontendRedirectBase();
   const providers = getOAuthProviderRegistrations({
     hasDiscordConfig,
     hasFacebookConfig,
     hasXConfig,
+    hasTwitchConfig,
   });
 
   for (const def of providers) {
     if (def.isEnabled()) {
       registerEnabledProvider(app, def);
     } else if (def.optional) {
-      registerDisabledStubs(app, def, redirectBaseUrl);
+      registerDisabledStubs(app, def);
     }
   }
 
   app.get('/auth/apple', (_req, res) => {
     res.status(501).json({
       message:
-        'Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, Discord, X, or email OTP.',
+        'Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, Discord, X, Twitch, or email OTP.',
       success: false,
     });
   });

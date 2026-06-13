@@ -23,7 +23,9 @@ export const analyticsApi = {
 
   getProfileOverview: async (username: string): Promise<ProfileOverviewMetrics | null> => {
     try {
-      const res = await fetch(`${getApiBase()}/api/analytics/profile-overview/${encodeURIComponent(username)}`);
+      const res = await fetch(
+        `${getApiBase()}/api/analytics/profile-overview/${encodeURIComponent(username)}`
+      );
       if (!res.ok) return null;
       const json = (await res.json()) as { success: boolean; metrics?: ProfileOverviewMetrics };
       if (!json.success || !json.metrics) return null;
@@ -35,7 +37,9 @@ export const analyticsApi = {
 
   getProfileTimeSeries: async (username: string): Promise<ProfileTimePoint[]> => {
     try {
-      const res = await fetch(`${getApiBase()}/api/analytics/profile/${encodeURIComponent(username)}/timeseries`);
+      const res = await fetch(
+        `${getApiBase()}/api/analytics/profile/${encodeURIComponent(username)}/timeseries`
+      );
       if (!res.ok) return [];
       const json = (await res.json()) as { success: boolean; series?: ProfileTimePoint[] };
       if (!json.success || !json.series) return [];
@@ -45,4 +49,3 @@ export const analyticsApi = {
     }
   },
 };
-

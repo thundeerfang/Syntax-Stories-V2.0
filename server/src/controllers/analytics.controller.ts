@@ -2,7 +2,11 @@ import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import crypto from 'node:crypto';
 import { UserModel } from '../models/User.js';
-import { ProfileViewEventModel, ProfileDailyMetricsModel, AnalyticsEventModel } from '../models/index.js';
+import {
+  ProfileViewEventModel,
+  ProfileDailyMetricsModel,
+  AnalyticsEventModel,
+} from '../models/index.js';
 import type { AuthUser } from '../middlewares/auth/index.js';
 import { getRedis } from '../config/redis.js';
 import { writeAuditLog } from '../shared/audit/auditLog.js';
@@ -38,7 +42,10 @@ function isLikelyBot(req: Request): boolean {
 }
 
 async function findActiveProfileUserId(username: string): Promise<mongoose.Types.ObjectId | null> {
-  const profileUser = await UserModel.findOne({ username: username.trim().toLowerCase(), isActive: true })
+  const profileUser = await UserModel.findOne({
+    username: username.trim().toLowerCase(),
+    isActive: true,
+  })
     .select('_id')
     .lean<LeanUserWithId | null>();
 
@@ -67,7 +74,12 @@ function resolveAnonKey(req: Request, res: Response): string {
   return anonKey;
 }
 
-function computeVisitorId(viewerIdStr: string, anonKey: string | undefined, ip: string, ua: string): string {
+function computeVisitorId(
+  viewerIdStr: string,
+  anonKey: string | undefined,
+  ip: string,
+  ua: string
+): string {
   const baseId = viewerIdStr || anonKey || 'anon';
   return crypto.createHash('sha256').update(`${baseId}|${ip}|${ua}`).digest('hex');
 }
@@ -101,7 +113,9 @@ async function insertProfileViewOrDuplicate(params: {
   try {
     await ProfileViewEventModel.create({
       profileUserId: params.profileUserId,
-      viewerUserId: params.viewerIdStr ? new mongoose.Types.ObjectId(params.viewerIdStr) : undefined,
+      viewerUserId: params.viewerIdStr
+        ? new mongoose.Types.ObjectId(params.viewerIdStr)
+        : undefined,
       anonKey: params.anonKey,
       visitorId: params.visitorId,
       dayBucket: params.dayBucket,
@@ -313,7 +327,12 @@ export async function getProfileOverview(req: Request, res: Response): Promise<v
       .lean()
       .exec();
 
-    const responseMetrics = aggregateOverviewMetrics(metricsDocs, todayBucket, from7Bucket, from30Bucket);
+    const responseMetrics = aggregateOverviewMetrics(
+      metricsDocs,
+      todayBucket,
+      from7Bucket,
+      from30Bucket
+    );
 
     if (redis) {
       await redis.setEx(cacheKey, CACHE_TTL_SEC, JSON.stringify(responseMetrics));

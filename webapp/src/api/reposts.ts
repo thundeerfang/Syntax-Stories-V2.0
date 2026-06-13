@@ -13,7 +13,7 @@ async function readJson<T>(r: Response): Promise<T> {
 export const repostsApi = {
   listRepostedPosts: async (
     accessToken: string,
-    options?: { q?: string; limit?: number; sort?: 'newest' | 'oldest' },
+    options?: { q?: string; limit?: number; sort?: 'newest' | 'oldest' }
   ): Promise<{ success: boolean; posts: PublicFeedPost[] }> => {
     const sp = new URLSearchParams();
     if (options?.q?.trim()) sp.set('q', options.q.trim());
@@ -23,7 +23,7 @@ export const repostsApi = {
     const r = await blogAuthFetch(
       `${getApiBase()}/api/reposts/posts${q ? `?${q}` : ''}`,
       { method: 'GET' },
-      accessToken,
+      accessToken
     );
     const data = (await readJson(r)) as {
       success?: boolean;

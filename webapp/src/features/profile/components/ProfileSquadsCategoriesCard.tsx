@@ -5,7 +5,6 @@ import { ChevronRight, Layers, UsersRound } from 'lucide-react';
 import { SquadsCategoriesFollowDialog } from '@/features/profile/components/dialog/SquadsCategoriesFollowDialog';
 import { useProfileSquadsAndCategories } from '@/features/profile/hooks/useProfileSquadsAndCategories';
 
-
 export type ProfileSquadsCategoriesCardProps = Readonly<{
   username: string | null;
   userId: string | null;
@@ -17,7 +16,7 @@ function formatSubtitle(
   squadCount: number,
   categoryCount: number,
   showCategories: boolean,
-  loading: boolean,
+  loading: boolean
 ): string {
   if (loading) return 'Loading…';
   if (squadCount === 0 && (!showCategories || categoryCount === 0)) {

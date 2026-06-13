@@ -13,7 +13,6 @@ import {
 import { GithubIcon } from '@/components/icons/SocialProviderIcons';
 import { cn } from '@/lib/core/utils';
 
-
 export interface BottomToolbarItem {
   id: string;
   label: string;
@@ -74,7 +73,7 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     id: 'githubRepo',
     label: 'GitHub repo',
     icon: GithubIcon,
-    description: 'Showcase an open-source repository directly in your story.',
+    description: 'Link a repository with a https://github.com/owner/repo URL.',
   },
   {
     id: 'unsplashImage',
@@ -86,7 +85,7 @@ export const DEFAULT_ITEMS: BottomToolbarItem[] = [
     id: 'table',
     label: 'Table',
     icon: Table2,
-    description: 'Paste tab-separated or pipe markdown; great for feature comparisons.',
+    description: 'Build a grid (up to 20×5) for comparisons and structured data.',
   },
   {
     id: 'mermaidDiagram',
@@ -171,12 +170,7 @@ export function BottomToolbar({
 
   return (
     <div className={cn('w-full', className)}>
-      <div
-        className={cn(
-          'mx-auto w-full px-4 flex justify-center',
-          maxWidthClassName
-        )}
-      >
+      <div className={cn('mx-auto w-full px-4 flex justify-center', maxWidthClassName)}>
         <div
           className={cn(
             'flex items-center justify-between gap-2 px-4 py-2',
@@ -191,11 +185,7 @@ export function BottomToolbar({
           )}
           <nav className="flex flex-wrap items-center gap-1.5 justify-end">
             {resolvedItems.map((item) => (
-              <ToolbarItemCard
-                key={item.id}
-                item={item}
-                onClick={onItemClick}
-              />
+              <ToolbarItemCard key={item.id} item={item} onClick={onItemClick} />
             ))}
           </nav>
         </div>

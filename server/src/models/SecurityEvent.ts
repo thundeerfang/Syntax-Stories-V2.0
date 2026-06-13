@@ -15,6 +15,7 @@ export const SECURITY_EVENT_TYPES = [
   'password_change',
   'password_reset_request',
   'password_reset_success',
+  'refresh_token_reuse',
 ] as const;
 
 export type SecurityEventType = (typeof SECURITY_EVENT_TYPES)[number];
@@ -45,4 +46,5 @@ const SecurityEventSchema = new Schema<ISecurityEvent>(
 );
 
 export const SecurityEventModel: Model<ISecurityEvent> =
-  mongoose.models?.securityevents ?? mongoose.model<ISecurityEvent>('securityevents', SecurityEventSchema);
+  mongoose.models?.securityevents ??
+  mongoose.model<ISecurityEvent>('securityevents', SecurityEventSchema);

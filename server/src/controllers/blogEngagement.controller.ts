@@ -32,7 +32,9 @@ export async function setBlogRepost(req: Request, res: Response): Promise<void> 
     }
     const body = req.body as { reposting?: unknown };
     if (typeof body.reposting !== 'boolean') {
-      res.status(400).json({ success: false, message: 'Body must include reposting: true | false' });
+      res
+        .status(400)
+        .json({ success: false, message: 'Body must include reposting: true | false' });
       return;
     }
 
@@ -83,7 +85,9 @@ export async function setBlogBookmark(req: Request, res: Response): Promise<void
     }
     const body = req.body as { bookmarked?: unknown; groupId?: unknown };
     if (typeof body.bookmarked !== 'boolean') {
-      res.status(400).json({ success: false, message: 'Body must include bookmarked: true | false' });
+      res
+        .status(400)
+        .json({ success: false, message: 'Body must include bookmarked: true | false' });
       return;
     }
     const groupIdHex = typeof body.groupId === 'string' ? body.groupId.trim() : undefined;

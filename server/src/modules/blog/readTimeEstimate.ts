@@ -39,7 +39,10 @@ function appendBlockText(type: string, payload: Record<string, unknown>, chunks:
 }
 
 /** Plain-ish word count from block JSON + HTML-ish summary fallback. */
-export function estimateReadMinutesFromBlogFields(content: string | undefined, summary: string): number {
+export function estimateReadMinutesFromBlogFields(
+  content: string | undefined,
+  summary: string
+): number {
   const chunks: string[] = [];
   if (content && typeof content === 'string' && content.trim()) {
     try {

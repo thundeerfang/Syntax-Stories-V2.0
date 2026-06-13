@@ -37,7 +37,9 @@ const staffLoginSchema = z.object({
 export function sendOtpValidation(req: Request, res: Response, next: NextFunction): void {
   const r = sendOtpSchema.safeParse(req.body);
   if (!r.success) {
-    res.status(400).json({ message: 'Validation error', error: formatZodError(r.error), success: false });
+    res
+      .status(400)
+      .json({ message: 'Validation error', error: formatZodError(r.error), success: false });
     return;
   }
   req.body = r.data;
@@ -47,7 +49,9 @@ export function sendOtpValidation(req: Request, res: Response, next: NextFunctio
 export function signupEmailValidation(req: Request, res: Response, next: NextFunction): void {
   const r = signupEmailSchema.safeParse(req.body);
   if (!r.success) {
-    res.status(400).json({ message: 'Validation error', error: formatZodError(r.error), success: false });
+    res
+      .status(400)
+      .json({ message: 'Validation error', error: formatZodError(r.error), success: false });
     return;
   }
   req.body = r.data;
@@ -68,7 +72,9 @@ export function verifyOtpValidation(req: Request, res: Response, next: NextFunct
 export function staffLoginValidation(req: Request, res: Response, next: NextFunction): void {
   const r = staffLoginSchema.safeParse(req.body);
   if (!r.success) {
-    res.status(400).json({ message: 'Validation error', error: formatZodError(r.error), success: false });
+    res
+      .status(400)
+      .json({ message: 'Validation error', error: formatZodError(r.error), success: false });
     return;
   }
   req.body = r.data;

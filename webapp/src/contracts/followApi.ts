@@ -3,6 +3,8 @@
  * Keep in sync with `server/src/routes/follow.routes.ts`.
  */
 
+import type { TechStackItem } from './referenceApi';
+
 export interface FollowUser {
   id: string;
   username: string;
@@ -29,6 +31,7 @@ export interface PublicProfileUser {
   instagram?: string;
   youtube?: string;
   stackAndTools?: string[];
+  stackAndToolsDisplay?: TechStackItem[];
   mySetup?: Array<{ label: string; imageUrl: string; productUrl?: string }>;
   workExperiences?: unknown[];
   education?: unknown[];

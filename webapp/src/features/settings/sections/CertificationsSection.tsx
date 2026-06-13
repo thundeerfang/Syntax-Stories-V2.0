@@ -4,14 +4,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { flushSync } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import {
-  Award,
-  ChevronDown,
-  Plus,
-  Link2,
-  ImagePlus,
-  X,
-} from 'lucide-react';
+import { Award, ChevronDown, Plus, Link2, ImagePlus, X } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { settingsBtnBlockPrimarySm } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
@@ -32,9 +25,13 @@ import {
 import { searchOrganizations } from '@/lib/blog/referenceSearch';
 import { CertificationCard } from '@/components/settings-list/CertificationCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
-import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+import {
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 import {
   MONTH_SELECT_OPTIONS,
+  PROFILE_CERT_EXPIRATION_END_YEAR,
   formatMonthYearMedium,
   monthYearToValue,
   valueToMonthYear,
@@ -51,8 +48,6 @@ import {
   MediaThumbnailRow,
   parseMediaLinkLineInput,
 } from '../lib/workExperienceForm';
-
-
 
 type CertForm = {
   name: string;
@@ -72,7 +67,23 @@ type CertForm = {
   mediaItems: MediaItem[];
 };
 
-const CERT_DEFAULT: CertForm = { name: '', issuingOrganization: '', issuerLogo: '', issuerLogoAlt: '', issueDate: '', expirationDate: '', issueMonth: '', issueYear: '', expMonth: '', expYear: '', credentialId: '', credentialUrl: '', description: '', skills: [], mediaItems: [] };
+const CERT_DEFAULT: CertForm = {
+  name: '',
+  issuingOrganization: '',
+  issuerLogo: '',
+  issuerLogoAlt: '',
+  issueDate: '',
+  expirationDate: '',
+  issueMonth: '',
+  issueYear: '',
+  expMonth: '',
+  expYear: '',
+  credentialId: '',
+  credentialUrl: '',
+  description: '',
+  skills: [],
+  mediaItems: [],
+};
 
 export function CertificationsContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
@@ -96,7 +107,10 @@ export function CertificationsContent() {
       credentialUrl: c.credentialUrl ?? '',
       description: c.description ?? '',
       skills: (c as { skills?: string[] }).skills ?? [],
-      mediaItems: ((c as { media?: MediaItem[] }).media ?? []).map((m) => ({ url: m.url, title: m.title })),
+      mediaItems: ((c as { media?: MediaItem[] }).media ?? []).map((m) => ({
+        url: m.url,
+        title: m.title,
+      })),
     };
   });
   const [saving, setSaving] = useState(false);
@@ -114,24 +128,37 @@ export function CertificationsContent() {
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const [certLogoDialogOpen, setCertLogoDialogOpen] = useState(false);
   const certMediaDropdownRef = useRef<HTMLDivElement>(null);
-  const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
+  const hasFormChanged = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(initialForm),
+    [form, initialForm]
+  );
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (certMediaDropdownRef.current && !certMediaDropdownRef.current.contains(e.target as Node)) setCertAddMediaDropdownOpen(false);
+      if (certMediaDropdownRef.current && !certMediaDropdownRef.current.contains(e.target as Node))
+        setCertAddMediaDropdownOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const openAdd = () => { setForm(CERT_DEFAULT); setInitialForm(CERT_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = useCallback((i: number) => {
-    const next = { ...CERT_DEFAULT, ...list[i] };
-    setForm(next);
-    setInitialForm(next);
-    setEditingIndex(i);
+  const openAdd = () => {
+    setForm(CERT_DEFAULT);
+    setInitialForm(CERT_DEFAULT);
+    setEditingIndex(null);
     setFieldErrors({});
     setDialogOpen(true);
-  }, [list]);
+  };
+  const openEdit = useCallback(
+    (i: number) => {
+      const next = { ...CERT_DEFAULT, ...list[i] };
+      setForm(next);
+      setInitialForm(next);
+      setEditingIndex(i);
+      setFieldErrors({});
+      setDialogOpen(true);
+    },
+    [list]
+  );
   const openedEditFromUrlRefCert = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefCert.current || list.length === 0) return;
@@ -144,29 +171,35 @@ export function CertificationsContent() {
     router.replace('/settings', { scroll: false });
   }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
-    const next = list.filter((_, idx) => idx !== i).map((c) => ({
-      name: c.name,
-      issuingOrganization: c.issuingOrganization,
-      issuerLogo: c.issuerLogo,
-      issuerLogoAlt: c.issuerLogoAlt,
-      issueDate: c.issueDate,
-      expirationDate: c.expirationDate,
-      credentialId: c.credentialId,
-      credentialUrl: c.credentialUrl,
-      description: c.description,
-      skills: c.skills,
-      media: c.mediaItems.map((m) => ({ url: m.url, title: m.title })),
-    }));
+    const next = list
+      .filter((_, idx) => idx !== i)
+      .map((c) => ({
+        name: c.name,
+        issuingOrganization: c.issuingOrganization,
+        issuerLogo: c.issuerLogo,
+        issuerLogoAlt: c.issuerLogoAlt,
+        issueDate: c.issueDate,
+        expirationDate: c.expirationDate,
+        credentialId: c.credentialId,
+        credentialUrl: c.credentialUrl,
+        description: c.description,
+        skills: c.skills,
+        media: c.mediaItems.map((m) => ({ url: m.url, title: m.title })),
+      }));
     setSaving(true);
     try {
       await updateProfile({ certifications: next }, { section: 'certifications' });
       toast.success('Removed.');
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
   };
   const addCertSkill = (skill: string) => {
     const s = skill.trim();
-    if (s && !form.skills.includes(s) && form.skills.length < 30) setForm((f) => ({ ...f, skills: [...f.skills, s] }));
+    if (s && !form.skills.includes(s) && form.skills.length < 30)
+      setForm((f) => ({ ...f, skills: [...f.skills, s] }));
   };
   const submitDialog = async () => {
     if (!hasFormChanged) {
@@ -175,19 +208,27 @@ export function CertificationsContent() {
     }
     const err: Record<string, string> = {};
     if (!form.name.trim()) err.name = 'Certification name is required.';
-    if (!form.issuingOrganization.trim()) err.issuingOrganization = 'Issuing organization is required.';
+    if (!form.issuingOrganization.trim())
+      err.issuingOrganization = 'Issuing organization is required.';
     const issueDateVal = monthYearToValue(form.issueMonth, form.issueYear);
     if (!issueDateVal) err.issueDate = 'Issue date is required.';
     const expDateVal = monthYearToValue(form.expMonth, form.expYear);
-    if (expDateVal && issueDateVal && expDateVal < issueDateVal) err.expirationDate = 'Expiration date cannot be earlier than issue date.';
+    if (expDateVal && issueDateVal && expDateVal < issueDateVal)
+      err.expirationDate = 'Expiration date cannot be earlier than issue date.';
     if (form.skills.filter(Boolean).length < 1) err.skills = 'At least 1 skill is required.';
-    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
+    if (Object.keys(err).length) {
+      setFieldErrors(err);
+      toast.error('Please fix the errors below.', { id: 'syntax-form-errors' });
+      return;
+    }
     setFieldErrors({});
     let resolvedCertMedia: { url: string; title?: string }[];
     try {
       resolvedCertMedia = await resolveProfileMediaItems(token, form.mediaItems);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to upload media.', { id: 'syntax-media-upload' });
+      toast.error(e instanceof Error ? e.message : 'Failed to upload media.', {
+        id: 'syntax-media-upload',
+      });
       return;
     }
     const entry = {
@@ -203,48 +244,56 @@ export function CertificationsContent() {
       skills: form.skills.filter(Boolean).slice(0, 30),
       media: resolvedCertMedia,
     };
-    const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
+    const next =
+      editingIndex !== null
+        ? list.map((e, i) => (i === editingIndex ? entry : e))
+        : [...list, entry];
     setSaving(true);
     try {
       await updateProfile({ certifications: next }, { section: 'certifications' });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-cert-entry-success' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', {
+        id: 'syntax-cert-entry-success',
+      });
       setDialogOpen(false);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <SettingsTabRoot>
       <SettingsSectionHeader variant="certifications" onPrimaryAction={openAdd} disabled={saving} />
       <SettingsTabPanel>
-      <FormSection>
-        {list.length === 0 ? (
-          <SettingsSectionEmptyState
-            icon={Award}
-            title="No licenses or certifications yet"
-            tagline="Add credentials to stand out. Show what you've earned."
-          />
-        ) : (
-          <>
-            {list.map((e, i) => {
-              return (
-                <CertificationCard
-                  key={i}
-                  cert={e}
-                  index={i}
-                  saving={saving}
-                  onEdit={() => openEdit(i)}
-                  onRemove={() => setRemoveConfirmIndex(i)}
-                  onPreviewMedia={(item) => setCertFullViewMedia(item)}
-                  formatMonthYear={formatMonthYearMedium}
-                  domainFromUrl={domainFromUrl}
-                  isImageUrl={isImageUrl}
-                />
-              );
-            })}
-          </>
-        )}
-      </FormSection>
+        <FormSection>
+          {list.length === 0 ? (
+            <SettingsSectionEmptyState
+              icon={Award}
+              title="No licenses or certifications yet"
+              tagline="Add credentials to stand out. Show what you've earned."
+            />
+          ) : (
+            <>
+              {list.map((e, i) => {
+                return (
+                  <CertificationCard
+                    key={i}
+                    cert={e}
+                    index={i}
+                    saving={saving}
+                    onEdit={() => openEdit(i)}
+                    onRemove={() => setRemoveConfirmIndex(i)}
+                    onPreviewMedia={(item) => setCertFullViewMedia(item)}
+                    formatMonthYear={formatMonthYearMedium}
+                    domainFromUrl={domainFromUrl}
+                    isImageUrl={isImageUrl}
+                  />
+                );
+              })}
+            </>
+          )}
+        </FormSection>
       </SettingsTabPanel>
       <ConfirmDialog
         open={removeConfirmIndex !== null}
@@ -254,7 +303,12 @@ export function CertificationsContent() {
         confirmLabel="Remove"
         variant="danger"
         loading={saving}
-        onConfirm={() => { if (removeConfirmIndex !== null) { remove(removeConfirmIndex); setRemoveConfirmIndex(null); } }}
+        onConfirm={() => {
+          if (removeConfirmIndex !== null) {
+            remove(removeConfirmIndex);
+            setRemoveConfirmIndex(null);
+          }
+        }}
       />
       <MediaFullViewDialog
         open={!!certFullViewMedia}
@@ -288,22 +342,50 @@ export function CertificationsContent() {
         panelClassName="max-w-2xl"
         footer={
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+              * Required fields
+            </p>
             <div className="flex gap-3">
-              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>Cancel</GhostOutlineButton>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </GhostOutlineButton>
+              <button
+                type="button"
+                onClick={submitDialog}
+                disabled={saving || !hasFormChanged}
+                className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}
+              >
+                {saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}
+              </button>
             </div>
           </div>
         }
       >
         <div className="space-y-4">
-          <FormInput id="cert-name" label="Certification name *" placeholder="Ex: AWS Certified Solutions Architect" maxLength={120} value={form.name} error={fieldErrors.name} onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); if (fieldErrors.name) setFieldErrors((e2) => (e2.name ? { ...e2, name: '' } : e2)); }} />
+          <FormInput
+            id="cert-name"
+            label="Certification name *"
+            placeholder="Ex: AWS Certified Solutions Architect"
+            maxLength={120}
+            value={form.name}
+            error={fieldErrors.name}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, name: e.target.value }));
+              if (fieldErrors.name) setFieldErrors((e2) => (e2.name ? { ...e2, name: '' } : e2));
+            }}
+          />
           <EntitySearchInput
             id="cert-org"
             label="Issuing organization *"
             placeholder="Type organization (e.g. AWS, Coursera)"
             value={form.issuingOrganization}
-            onChange={(v) => { setForm((f) => ({ ...f, issuingOrganization: v })); if (fieldErrors.issuingOrganization) setFieldErrors((e2) => (e2.issuingOrganization ? { ...e2, issuingOrganization: '' } : e2)); }}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, issuingOrganization: v }));
+              if (fieldErrors.issuingOrganization)
+                setFieldErrors((e2) =>
+                  e2.issuingOrganization ? { ...e2, issuingOrganization: '' } : e2
+                );
+            }}
             searchOptions={searchOrganizations}
             error={fieldErrors.issuingOrganization}
             maxLength={120}
@@ -318,16 +400,31 @@ export function CertificationsContent() {
                     alt={form.issuerLogoAlt.trim() || 'Issuer logo'}
                     title={form.issuerLogoAlt.trim() || undefined}
                     className="size-full object-contain"
-                    onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }}
+                    onError={(ev) => {
+                      (ev.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                 ) : (
                   <Award className="size-6 text-muted-foreground" />
                 )}
               </span>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setCertLogoDialogOpen(true)} disabled={!token} className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50">Upload logo</button>
+                <button
+                  type="button"
+                  onClick={() => setCertLogoDialogOpen(true)}
+                  disabled={!token}
+                  className="px-3 py-1.5 border-2 border-border text-[10px] font-bold uppercase hover:bg-muted/30 disabled:opacity-50"
+                >
+                  Upload logo
+                </button>
                 {form.issuerLogo && (
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, issuerLogo: '', issuerLogoAlt: '' }))} className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10">Remove</button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, issuerLogo: '', issuerLogoAlt: '' }))}
+                    className="px-3 py-1.5 border-2 border-destructive text-destructive text-[10px] font-bold uppercase hover:bg-destructive/10"
+                  >
+                    Remove
+                  </button>
                 )}
               </div>
             </div>
@@ -336,7 +433,20 @@ export function CertificationsContent() {
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase">Issue date *</Label>
               <div className="flex gap-2">
-                <SearchableSelect id="cert-issue-month" label="" placeholder="Month" value={form.issueMonth} onChange={(v) => { setForm((f) => ({ ...f, issueMonth: v })); if (fieldErrors.issueDate) setFieldErrors((e2) => (e2.issueDate ? { ...e2, issueDate: '' } : e2)); }} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" />
+                <SearchableSelect
+                  id="cert-issue-month"
+                  label=""
+                  placeholder="Month"
+                  value={form.issueMonth}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, issueMonth: v }));
+                    if (fieldErrors.issueDate)
+                      setFieldErrors((e2) => (e2.issueDate ? { ...e2, issueDate: '' } : e2));
+                  }}
+                  options={MONTH_SELECT_OPTIONS}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                />
                 <SearchableSelect
                   id="cert-issue-year"
                   label=""
@@ -346,29 +456,68 @@ export function CertificationsContent() {
                     setForm((f) => {
                       const iy = parseInt(v || '', 10);
                       const ey = parseInt(f.expYear || '', 10);
-                      const nextExpYear = Number.isFinite(iy) && Number.isFinite(ey) && ey < iy ? v : f.expYear;
+                      const nextExpYear =
+                        Number.isFinite(iy) && Number.isFinite(ey) && ey < iy ? v : f.expYear;
                       return { ...f, issueYear: v, expYear: nextExpYear };
                     });
-                    if (fieldErrors.issueDate) setFieldErrors((e2) => (e2.issueDate ? { ...e2, issueDate: '' } : e2));
+                    if (fieldErrors.issueDate)
+                      setFieldErrors((e2) => (e2.issueDate ? { ...e2, issueDate: '' } : e2));
                   }}
                   options={YEAR_OPTIONS}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
                 />
               </div>
-              {fieldErrors.issueDate && <p className="text-xs text-destructive font-medium">{fieldErrors.issueDate}</p>}
+              {fieldErrors.issueDate && (
+                <p className="text-xs text-destructive font-medium">{fieldErrors.issueDate}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase">Expiration date (optional)</Label>
               <div className="flex gap-2">
-                <SearchableSelect id="cert-exp-month" label="" placeholder="Month" value={form.expMonth} onChange={(v) => setForm((f) => ({ ...f, expMonth: v }))} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" />
-                <SearchableSelect id="cert-exp-year" label="" placeholder="Year" value={form.expYear} onChange={(v) => setForm((f) => ({ ...f, expYear: v }))} options={yearOptionsFromMin(form.issueYear)} listMaxHeight={220} widthClass="flex-1 min-w-0" />
+                <SearchableSelect
+                  id="cert-exp-month"
+                  label=""
+                  placeholder="Month"
+                  value={form.expMonth}
+                  onChange={(v) => setForm((f) => ({ ...f, expMonth: v }))}
+                  options={MONTH_SELECT_OPTIONS}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                />
+                <SearchableSelect
+                  id="cert-exp-year"
+                  label=""
+                  placeholder="Year"
+                  value={form.expYear}
+                  onChange={(v) => setForm((f) => ({ ...f, expYear: v }))}
+                  options={yearOptionsFromMin(form.issueYear, PROFILE_CERT_EXPIRATION_END_YEAR)}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                />
               </div>
-              {fieldErrors.expirationDate && <p className="text-xs text-destructive font-medium">{fieldErrors.expirationDate}</p>}
+              {fieldErrors.expirationDate && (
+                <p className="text-xs text-destructive font-medium">{fieldErrors.expirationDate}</p>
+              )}
             </div>
           </div>
-          <FormInput id="cert-cred-id" label="Credential ID (optional)" placeholder="Ex: Certificate number" maxLength={80} value={form.credentialId} onChange={(e) => setForm((f) => ({ ...f, credentialId: e.target.value }))} />
-          <FormInput id="cert-cred-url" label="Credential URL (optional)" type="url" placeholder="Link to verification page" maxLength={500} value={form.credentialUrl} onChange={(e) => setForm((f) => ({ ...f, credentialUrl: e.target.value }))} />
+          <FormInput
+            id="cert-cred-id"
+            label="Credential ID (optional)"
+            placeholder="Ex: Certificate number"
+            maxLength={80}
+            value={form.credentialId}
+            onChange={(e) => setForm((f) => ({ ...f, credentialId: e.target.value }))}
+          />
+          <FormInput
+            id="cert-cred-url"
+            label="Credential URL (optional)"
+            type="url"
+            placeholder="Link to verification page"
+            maxLength={500}
+            value={form.credentialUrl}
+            onChange={(e) => setForm((f) => ({ ...f, credentialUrl: e.target.value }))}
+          />
           <div className="grid w-full items-center gap-1.5">
             <Label htmlFor="cert-skills">Skills * (min 1)</Label>
             <Input
@@ -385,7 +534,8 @@ export function CertificationsContent() {
                     .filter(Boolean)
                     .forEach(addCertSkill);
                   input.value = '';
-                  if (fieldErrors.skills) setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
+                  if (fieldErrors.skills)
+                    setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
                 }
               }}
               onBlur={(e) => {
@@ -396,17 +546,31 @@ export function CertificationsContent() {
                     .filter(Boolean)
                     .forEach(addCertSkill);
                   (e.target as HTMLInputElement).value = '';
-                  if (fieldErrors.skills) setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
+                  if (fieldErrors.skills)
+                    setFieldErrors((e2) => (e2.skills ? { ...e2, skills: '' } : e2));
                 }
               }}
               className={fieldErrors.skills ? 'border-destructive' : ''}
             />
-            {fieldErrors.skills && <p className="text-xs text-destructive font-medium">{fieldErrors.skills}</p>}
+            {fieldErrors.skills && (
+              <p className="text-xs text-destructive font-medium">{fieldErrors.skills}</p>
+            )}
             <div className="flex flex-wrap gap-1.5 mt-2">
               {form.skills.map((s, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted border border-border text-[10px] font-bold">
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted border border-border text-[10px] font-bold"
+                >
                   {s}
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, skills: f.skills.filter((_, j) => j !== i) }))} className="hover:text-destructive">×</button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({ ...f, skills: f.skills.filter((_, j) => j !== i) }))
+                    }
+                    className="hover:text-destructive"
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -414,7 +578,8 @@ export function CertificationsContent() {
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase">Media (optional)</Label>
             <p className="text-[9px] text-muted-foreground">
-              Up to 5 items total (links + images). One URL per line; optional title when adding a single URL.
+              Up to 5 items total (links + images). One URL per line; optional title when adding a
+              single URL.
             </p>
             {form.mediaItems.length > 0 && (
               <ul className="space-y-2">
@@ -423,21 +588,32 @@ export function CertificationsContent() {
                     key={i}
                     item={m}
                     onPreview={() => setCertFullViewMedia(m)}
-                    onRemove={() => setForm((f) => ({ ...f, mediaItems: f.mediaItems.filter((_, j) => j !== i) }))}
+                    onRemove={() =>
+                      setForm((f) => ({ ...f, mediaItems: f.mediaItems.filter((_, j) => j !== i) }))
+                    }
                   />
                 ))}
               </ul>
             )}
             {form.mediaItems.length < 5 && (
               <div className="flex flex-col gap-2" ref={certMediaDropdownRef}>
-                {certAddMediaDropdownOpen && <div className="fixed inset-0 z-[99]" aria-hidden onClick={() => setCertAddMediaDropdownOpen(false)} />}
+                {certAddMediaDropdownOpen && (
+                  <div
+                    className="fixed inset-0 z-[99]"
+                    aria-hidden
+                    onClick={() => setCertAddMediaDropdownOpen(false)}
+                  />
+                )}
                 <div className="relative z-[120] w-fit max-w-full">
                   <button
                     type="button"
                     onClick={() => setCertAddMediaDropdownOpen((o) => !o)}
                     className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
                   >
-                    <Plus className="size-3" /> Add media <ChevronDown className={cn('size-3', certAddMediaDropdownOpen && 'rotate-180')} />
+                    <Plus className="size-3" /> Add media{' '}
+                    <ChevronDown
+                      className={cn('size-3', certAddMediaDropdownOpen && 'rotate-180')}
+                    />
                   </button>
                   {certAddMediaDropdownOpen && (
                     <div className="absolute left-0 top-full z-[130] mt-1 min-w-[200px] border-2 border-border bg-card shadow py-1">
@@ -455,17 +631,32 @@ export function CertificationsContent() {
                       >
                         <Link2 className="size-4" /> Add link
                       </button>
-                      <button type="button" onClick={() => { setCertAddMediaDropdownOpen(false); setCertUploadMediaDialogOpen(true); }} className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"><ImagePlus className="size-4" /> Upload media</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCertAddMediaDropdownOpen(false);
+                          setCertUploadMediaDialogOpen(true);
+                        }}
+                        className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
+                      >
+                        <ImagePlus className="size-4" /> Upload media
+                      </button>
                     </div>
                   )}
                 </div>
                 {certShowLinkForm && (
                   <div className="relative z-0 overflow-hidden border-2 border-border bg-muted/10">
                     <div className="flex items-center justify-between gap-2 border-b-2 border-border bg-muted/20 px-3 py-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wide">Add link</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide">
+                        Add link
+                      </span>
                       <button
                         type="button"
-                        onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }}
+                        onClick={() => {
+                          setCertShowLinkForm(false);
+                          setCertLinkUrl('');
+                          setCertLinkTitle('');
+                        }}
                         className="flex size-8 shrink-0 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow hover:bg-muted hover:text-foreground"
                         aria-label="Close"
                       >
@@ -483,9 +674,25 @@ export function CertificationsContent() {
                         autoComplete="off"
                       />
                       <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
-                      <Input placeholder="Single-URL adds only" value={certLinkTitle} onChange={(e) => setCertLinkTitle(e.target.value)} className="text-sm" maxLength={120} />
+                      <Input
+                        placeholder="Single-URL adds only"
+                        value={certLinkTitle}
+                        onChange={(e) => setCertLinkTitle(e.target.value)}
+                        className="text-sm"
+                        maxLength={120}
+                      />
                       <div className="flex gap-2">
-                        <GhostOutlineButton type="button" size="sm" onClick={() => { setCertShowLinkForm(false); setCertLinkUrl(''); setCertLinkTitle(''); }}>Cancel</GhostOutlineButton>
+                        <GhostOutlineButton
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            setCertShowLinkForm(false);
+                            setCertLinkUrl('');
+                            setCertLinkTitle('');
+                          }}
+                        >
+                          Cancel
+                        </GhostOutlineButton>
                         <button
                           type="button"
                           onClick={() => {
@@ -521,13 +728,21 @@ export function CertificationsContent() {
                             setCertLinkTitle('');
                             setCertShowLinkForm(nextLen < 5);
                             if (skippedNonEmpty > 0) {
-                              toast.message(`Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`, { id: 'syntax-skip-url-lines' });
+                              toast.message(
+                                `Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`,
+                                { id: 'syntax-skip-url-lines' }
+                              );
                             }
                             if (urls.length > added) {
-                              toast.message(`Added ${added} link(s); max is 5 media items total.`, { id: 'syntax-max-media' });
+                              toast.message(`Added ${added} link(s); max is 5 media items total.`, {
+                                id: 'syntax-max-media',
+                              });
                             }
                           }}
-                          className={cn(settingsBtnBlockPrimarySm, 'px-3 py-1.5 text-[10px] font-bold')}
+                          className={cn(
+                            settingsBtnBlockPrimarySm,
+                            'px-3 py-1.5 text-[10px] font-bold'
+                          )}
                         >
                           Add link(s)
                         </button>
@@ -556,15 +771,28 @@ export function CertificationsContent() {
                 if (!token) throw new Error('Not signed in.');
                 const url = URL.createObjectURL(file);
                 const title = (meta?.imageTitle ?? '').trim() || 'Media image';
-                setForm((f) => ({ ...f, mediaItems: [...f.mediaItems, { url, title, isPending: true, pendingFile: file }].slice(0, 5) }));
+                setForm((f) => ({
+                  ...f,
+                  mediaItems: [
+                    ...f.mediaItems,
+                    { url, title, isPending: true, pendingFile: file },
+                  ].slice(0, 5),
+                }));
                 toast.success('Media staged. It will upload when you save.');
               }}
             />
           )}
-          <FormTextarea id="cert-desc" label="Description (optional)" placeholder="Topics, skills validated" maxLength={2000} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))} />
+          <FormTextarea
+            id="cert-desc"
+            label="Description (optional)"
+            placeholder="Topics, skills validated"
+            maxLength={2000}
+            rows={3}
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))}
+          />
         </div>
       </FormDialog>
     </SettingsTabRoot>
   );
 }
-

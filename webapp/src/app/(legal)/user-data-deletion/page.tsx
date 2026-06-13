@@ -4,7 +4,6 @@ import { LegalPolicyDocument } from '@/features/legal';
 import { LegalPolicyUnavailable } from '@/features/legal';
 import { UserDataDeletionPanel } from '@/features/legal';
 
-
 export async function generateMetadata(): Promise<Metadata> {
   const data = await fetchPublishedLegalPolicy('udd');
   if (!data) return { title: 'User Data Deletion — Syntax Stories' };

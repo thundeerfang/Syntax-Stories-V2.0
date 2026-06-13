@@ -20,7 +20,6 @@ import { uploadCover, uploadMedia } from '@/api/upload';
 import { toast } from 'sonner';
 import { cn } from '@/lib/core/utils';
 
-
 const NAME_MAX = 100;
 const HANDLE_MAX = 40;
 const DESC_MAX = 500;
@@ -90,8 +89,7 @@ export function CreateSquadDialog({
       hydratedKeyRef.current = null;
       return;
     }
-    const sessionKey =
-      isEdit && initialSquad ? `edit:${String(initialSquad._id)}` : 'create';
+    const sessionKey = isEdit && initialSquad ? `edit:${String(initialSquad._id)}` : 'create';
     if (hydratedKeyRef.current === sessionKey) return;
     hydratedKeyRef.current = sessionKey;
 
@@ -107,7 +105,9 @@ export function CreateSquadDialog({
       setInvitePermission(initialSquad.invitePermission ?? 'all_members');
       setRequirePostApproval(initialSquad.requirePostApproval === true);
       setCategory(
-        initialSquad.visibility === 'public' && initialSquad.category ? initialSquad.category : 'web',
+        initialSquad.visibility === 'public' && initialSquad.category
+          ? initialSquad.category
+          : 'web'
       );
       return;
     }
@@ -169,7 +169,7 @@ export function CreateSquadDialog({
           requirePostApproval,
           invitePermission,
         },
-        accessToken,
+        accessToken
       );
       if (visibility === 'private' && inviteToken) {
         void navigator.clipboard.writeText(inviteToken).then(
@@ -177,7 +177,7 @@ export function CreateSquadDialog({
           () =>
             toast.success('Private squad created', {
               description: `Save this invite code: ${inviteToken}`,
-            }),
+            })
         );
       } else {
         toast.success('Squad created');
@@ -213,7 +213,7 @@ export function CreateSquadDialog({
           invitePermission,
           ...(visibility === 'public' ? { category } : {}),
         },
-        accessToken,
+        accessToken
       );
       toast.success('Squad updated');
       reset();
@@ -263,12 +263,15 @@ export function CreateSquadDialog({
           <div className="flex items-center gap-2 text-muted-foreground">
             <UsersRound className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
             <p className="text-[11px] font-medium leading-snug">
-              Squad members appear together in feeds and shared spaces—your group has its own identity and rules.
+              Squad members appear together in feeds and shared spaces—your group has its own
+              identity and rules.
             </p>
           </div>
 
           <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Squad details</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Squad details
+            </h3>
             <label className="grid gap-1.5">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
@@ -305,12 +308,14 @@ export function CreateSquadDialog({
                   autoCorrect="off"
                   spellCheck={false}
                 />
-                <p className="text-[10px] text-muted-foreground">Handle is permanent for this squad.</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Handle is permanent for this squad.
+                </p>
               </label>
             ) : (
               <p className="text-[10px] leading-snug text-muted-foreground">
-                Your squad URL slug is assigned automatically from the name when you create it—you cannot choose it
-                here.
+                Your squad URL slug is assigned automatically from the name when you create it—you
+                cannot choose it here.
               </p>
             )}
             {!descOpen ? (
@@ -344,25 +349,37 @@ export function CreateSquadDialog({
           </section>
 
           <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Group icon</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Group icon
+            </h3>
             <button
               type="button"
               onClick={() => setLogoCropOpen(true)}
               className={cn(
                 'flex w-full flex-col items-stretch gap-3 border-2 border-dashed border-border bg-muted/15 px-4 py-4 text-left transition-colors hover:border-primary hover:bg-muted/25',
-                iconUrl && 'border-solid',
+                iconUrl && 'border-solid'
               )}
             >
               <div className="flex items-center gap-3">
                 <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden border-2 border-border bg-background">
                   {iconUrl ? (
-                    <img src={resolveSquadMediaSrc(iconUrl)} alt="" className="size-full object-cover" />
+                    <img
+                      src={resolveSquadMediaSrc(iconUrl)}
+                      alt=""
+                      className="size-full object-cover"
+                    />
                   ) : (
-                    <ImagePlus className="size-7 text-muted-foreground" strokeWidth={2} aria-hidden />
+                    <ImagePlus
+                      className="size-7 text-muted-foreground"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-foreground">Choose logo for the group icon</p>
+                  <p className="text-sm font-bold text-foreground">
+                    Choose logo for the group icon
+                  </p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     Square crop · JPEG, PNG, WebP, or GIF · max 2 MB. Optional.
                   </p>
@@ -381,7 +398,9 @@ export function CreateSquadDialog({
           </section>
 
           <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Squad banner</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Squad banner
+            </h3>
             <p className="text-[11px] text-muted-foreground">
               Wide cover behind the squad header. Optional — uses the gradient when empty.
             </p>
@@ -390,7 +409,10 @@ export function CreateSquadDialog({
                 <img src={bannerPreviewSrc} alt="" className="max-h-36 w-full object-cover" />
               </div>
             ) : (
-              <div className="h-24 w-full border-2 border-dashed border-border bg-muted/20" aria-hidden />
+              <div
+                className="h-24 w-full border-2 border-dashed border-border bg-muted/20"
+                aria-hidden
+              />
             )}
             <div className="flex flex-wrap gap-2">
               <Button
@@ -418,9 +440,14 @@ export function CreateSquadDialog({
           </section>
 
           <section className="grid gap-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Squad type</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Squad type
+            </h3>
             <div
-              className={cn('grid gap-2 sm:grid-cols-2', isEdit && 'pointer-events-none opacity-60')}
+              className={cn(
+                'grid gap-2 sm:grid-cols-2',
+                isEdit && 'pointer-events-none opacity-60'
+              )}
               aria-hidden={isEdit}
             >
               <button
@@ -430,13 +457,13 @@ export function CreateSquadDialog({
                   'border-2 p-3 text-left transition-colors',
                   visibility === 'public'
                     ? 'border-primary bg-primary/10 shadow'
-                    : 'border-border hover:border-primary/50',
+                    : 'border-border hover:border-primary/50'
                 )}
               >
                 <p className="text-sm font-black text-foreground">Public</p>
                 <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
-                  Searchable, listed in the squad directory, and open for everyone to join. Ideal for communities and
-                  creators.
+                  Searchable, listed in the squad directory, and open for everyone to join. Ideal
+                  for communities and creators.
                 </p>
               </button>
               <button
@@ -446,12 +473,13 @@ export function CreateSquadDialog({
                   'border-2 p-3 text-left transition-colors',
                   visibility === 'private'
                     ? 'border-primary bg-primary/10 shadow'
-                    : 'border-border hover:border-primary/50',
+                    : 'border-border hover:border-primary/50'
                 )}
               >
                 <p className="text-sm font-black text-foreground">Private</p>
                 <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
-                  Invite-only, hidden from the directory—best for teams and smaller groups who collaborate privately.
+                  Invite-only, hidden from the directory—best for teams and smaller groups who
+                  collaborate privately.
                 </p>
               </button>
             </div>
@@ -465,7 +493,9 @@ export function CreateSquadDialog({
                 <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
                   Squad category <span className="text-destructive">*</span>
                 </p>
-                <p className="text-[11px] text-muted-foreground">Public squads must pick one topic for the directory.</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Public squads must pick one topic for the directory.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {SQUAD_CATEGORIES.map((id) => (
                     <button
@@ -475,7 +505,7 @@ export function CreateSquadDialog({
                         'border-2 px-2.5 py-1.5 font-mono text-[9px] font-black uppercase tracking-widest transition-colors',
                         category === id
                           ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border bg-card text-foreground hover:border-primary/50',
+                          : 'border-border bg-card text-foreground hover:border-primary/50'
                       )}
                       onClick={() => setCategory(id)}
                     >
@@ -496,8 +526,12 @@ export function CreateSquadDialog({
             </div>
 
             <div className="grid gap-2">
-              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">Post content</p>
-              <p className="text-[11px] text-muted-foreground">Choose who may publish new posts or share into this squad.</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                Post content
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Choose who may publish new posts or share into this squad.
+              </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -506,11 +540,13 @@ export function CreateSquadDialog({
                     'border-2 p-3 text-left transition-colors',
                     postPolicy === 'all_members'
                       ? 'border-primary bg-primary/10 shadow'
-                      : 'border-border hover:border-primary/50',
+                      : 'border-border hover:border-primary/50'
                   )}
                 >
                   <p className="text-sm font-bold">All members</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">Anyone in the squad can post and share.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Anyone in the squad can post and share.
+                  </p>
                 </button>
                 <button
                   type="button"
@@ -519,11 +555,13 @@ export function CreateSquadDialog({
                     'border-2 p-3 text-left transition-colors',
                     postPolicy === 'staff_only'
                       ? 'border-primary bg-primary/10 shadow'
-                      : 'border-border hover:border-primary/50',
+                      : 'border-border hover:border-primary/50'
                   )}
                 >
                   <p className="text-sm font-bold">Staff only</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">Only admins and moderators can post or share.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Only admins and moderators can post or share.
+                  </p>
                 </button>
               </div>
             </div>
@@ -532,7 +570,8 @@ export function CreateSquadDialog({
               <div>
                 <p className="text-sm font-bold text-foreground">Require post approval</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  When on, new posts can be held for moderator review before publishing (stored for a future workflow).
+                  When on, new posts can be held for moderator review before publishing (stored for
+                  a future workflow).
                 </p>
               </div>
               <Switch
@@ -545,8 +584,12 @@ export function CreateSquadDialog({
             </div>
 
             <div className="grid gap-2">
-              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">Invitation permissions</p>
-              <p className="text-[11px] text-muted-foreground">Who may add other people to this squad by username.</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                Invitation permissions
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Who may add other people to this squad by username.
+              </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -555,11 +598,13 @@ export function CreateSquadDialog({
                     'border-2 p-3 text-left transition-colors',
                     invitePermission === 'all_members'
                       ? 'border-primary bg-primary/10 shadow'
-                      : 'border-border hover:border-primary/50',
+                      : 'border-border hover:border-primary/50'
                   )}
                 >
                   <p className="text-sm font-bold">All members</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">Any member can invite others.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Any member can invite others.
+                  </p>
                 </button>
                 <button
                   type="button"
@@ -568,11 +613,13 @@ export function CreateSquadDialog({
                     'border-2 p-3 text-left transition-colors',
                     invitePermission === 'staff_only'
                       ? 'border-primary bg-primary/10 shadow'
-                      : 'border-border hover:border-primary/50',
+                      : 'border-border hover:border-primary/50'
                   )}
                 >
                   <p className="text-sm font-bold">Staff only</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">Only admins and moderators can add members.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Only admins and moderators can add members.
+                  </p>
                 </button>
               </div>
             </div>

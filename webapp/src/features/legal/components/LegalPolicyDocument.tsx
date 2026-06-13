@@ -3,7 +3,6 @@ import { marked } from 'marked';
 import { LegalPolicyHeaderPublisher } from './LegalPolicyHeaderContext';
 import { LEGAL_MARKDOWN_ROOT } from './legalUi';
 
-
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -30,7 +29,11 @@ export function LegalPolicyDocument({ data }: Props) {
   return (
     <>
       <LegalPolicyHeaderPublisher data={data} />
-      <div id="legal-policy-body" className={LEGAL_MARKDOWN_ROOT} dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        id="legal-policy-body"
+        className={LEGAL_MARKDOWN_ROOT}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </>
   );
 }

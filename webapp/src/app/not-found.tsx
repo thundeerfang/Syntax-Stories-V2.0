@@ -3,7 +3,6 @@ import { ErrorIllustrationLottie } from '@/components/ui/lottie';
 import { blockShadowButtonClassNames } from '@/components/ui/button';
 import { cn } from '@/lib/core/utils';
 
-
 export default function NotFound() {
   return (
     <div className="min-h-[calc(100vh-var(--header-height)-8rem)] bg-background text-foreground">

@@ -12,7 +12,6 @@ import {
   type TooltipContentProps,
 } from 'recharts';
 
-
 export interface AreaChartProps<T extends Record<string, unknown>> {
   data: T[];
   index: keyof T;
@@ -35,7 +34,12 @@ type ChartTooltipProps = {
   categoryLabel?: string | number;
 };
 
-function ChartTooltipContent({ active, payload, label, categoryLabel = 'Value' }: Readonly<ChartTooltipProps>) {
+function ChartTooltipContent({
+  active,
+  payload,
+  label,
+  categoryLabel = 'Value',
+}: Readonly<ChartTooltipProps>) {
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value;
   const name = String(payload[0]?.dataKey ?? categoryLabel);
@@ -80,7 +84,12 @@ function createAreaChartTooltipContent(categoryLabel: string) {
         name: String(entry.name ?? entry.dataKey ?? ''),
         value: payloadValueToNumber(entry.value),
         dataKey: String(entry.dataKey ?? ''),
-        color: typeof entry.color === 'string' ? entry.color : typeof entry.fill === 'string' ? entry.fill : '',
+        color:
+          typeof entry.color === 'string'
+            ? entry.color
+            : typeof entry.fill === 'string'
+              ? entry.fill
+              : '',
       })) ?? [];
 
     return (
@@ -120,26 +129,33 @@ export function AreaChart<T extends Record<string, unknown>>({
   const category0Label = String(categories[0]);
   const TooltipContentComponent = useMemo(
     () => createAreaChartTooltipContent(category0Label),
-    [category0Label],
+    [category0Label]
   );
 
   if (sparkline) {
     return (
       <div className="w-full" style={{ minHeight: height }}>
         <ResponsiveContainer width="100%" height={height}>
-          <RechartsAreaChart
-            data={data}
-            margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
-          >
+          <RechartsAreaChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
             <defs>
               {categories.map((cat, i) => (
-                <linearGradient key={String(cat)} id={`area-spark-${uniqueId}-${String(cat)}`} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient
+                  key={String(cat)}
+                  id={`area-spark-${uniqueId}-${String(cat)}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
                   <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.35} />
                   <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
                 </linearGradient>
               ))}
             </defs>
-            <Tooltip content={TooltipContentComponent} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
+            <Tooltip
+              content={TooltipContentComponent}
+              cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+            />
             {categories.map((cat, i) => (
               <Area
                 key={String(cat)}
@@ -162,18 +178,23 @@ export function AreaChart<T extends Record<string, unknown>>({
       {showGrowth && (
         <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
           <span className={growthPct >= 0 ? 'text-primary' : 'text-destructive'}>
-            {growthPct >= 0 ? '+' : ''}{growthPct}% growth
+            {growthPct >= 0 ? '+' : ''}
+            {growthPct}% growth
           </span>
         </div>
       )}
       <ResponsiveContainer width="100%" height={height}>
-        <RechartsAreaChart
-          data={data}
-          margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-        >
+        <RechartsAreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <defs>
             {categories.map((cat, i) => (
-              <linearGradient key={String(cat)} id={`area-${String(cat)}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient
+                key={String(cat)}
+                id={`area-${String(cat)}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
                 <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.4} />
                 <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
               </linearGradient>
@@ -192,7 +213,10 @@ export function AreaChart<T extends Record<string, unknown>>({
             tickLine={false}
             tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))}
           />
-          <Tooltip content={TooltipContentComponent} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
+          <Tooltip
+            content={TooltipContentComponent}
+            cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+          />
           {categories.map((cat, i) => (
             <Area
               key={String(cat)}

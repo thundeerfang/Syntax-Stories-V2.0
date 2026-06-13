@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/button';
 import type { SquadSummary } from '@/api/squads';
 import { SquadDiscoverCard } from './SquadDiscoverCard';
 
-
 export type SquadDirectoryCardProps = Readonly<{
   squad: SquadSummary;
   isMember: boolean;
   isAdmin?: boolean;
   /** Join public squad in-place; private navigates to detail. */
-  onJoin: (slug: string) => void;
+  onJoin: (slug: string) => void | boolean | Promise<void | boolean>;
   joinBusy?: boolean;
   /** Overrides default “Join squad” / “Open squad” label for non-members (used for icon aria-label). */
   joinCtaLabel?: string;

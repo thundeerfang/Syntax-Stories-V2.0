@@ -1,8 +1,13 @@
 import { profileRepository } from './profile.repository.js';
 
 /** Assigns `eduId` / `refCode` when missing (education section). */
-export async function normalizeEducation(userId: string, updates: Record<string, unknown>): Promise<void> {
-  const education = updates.education as Array<{ eduId?: string; refCode?: string; [k: string]: unknown }> | undefined;
+export async function normalizeEducation(
+  userId: string,
+  updates: Record<string, unknown>
+): Promise<void> {
+  const education = updates.education as
+    | Array<{ eduId?: string; refCode?: string; [k: string]: unknown }>
+    | undefined;
   if (!Array.isArray(education) || education.length === 0) return;
 
   const current = await profileRepository.findLeanByIdSelect(userId, 'education');

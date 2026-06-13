@@ -1,16 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { GithubIcon, XIcon } from '@/components/icons/SocialProviderIcons';
-import { getAboutMarketingPage, type AboutMarketingPage } from '@/api/marketing';
+import { RailFeedEmptyState } from '@/components/layout';
+import {
+  AboutPageLoadError,
+  aboutPageUnavailableCopy,
+  getAboutMarketingPage,
+  type AboutMarketingPage,
+  type AboutPageLoadReason,
+} from '@/api/marketing';
 import { MarketingIcon } from '@/lib/marketing/marketingIcons';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
-import { CheckCircle2 } from 'lucide-react';
-
+import { fetchBillingPlans, type BillingPlanCatalogItem } from '@/api/billing';
+import { BookOpen, CheckCircle2, Compass, Home } from 'lucide-react';
 
 function AboutPageSkeleton() {
   return (
@@ -25,32 +32,85 @@ function AboutPageSkeleton() {
   );
 }
 
+function AboutPageUnavailable({
+  reason,
+  onRetry,
+}: Readonly<{ reason: AboutPageLoadReason; onRetry: () => void }>) {
+  const { title, description } = aboutPageUnavailableCopy(reason);
+  return (
+    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-12 md:py-16')}>
+      <RailFeedEmptyState
+        bordered={false}
+        icon={BookOpen}
+        title={title}
+        description={description}
+        className="py-16 sm:py-20"
+        actions={[
+          {
+            label: 'Try again',
+            onClick: onRetry,
+            variant: 'primary',
+          },
+          {
+            label: 'Explore',
+            href: '/explore',
+            variant: 'default',
+            icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+          },
+          {
+            label: 'Home',
+            href: '/',
+            variant: 'default',
+            icon: <Home className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
 export default function AboutPage() {
   const openAuthDialog = useAuthDialogStore((s) => s.open);
   const [page, setPage] = useState<AboutMarketingPage | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [plans, setPlans] = useState<BillingPlanCatalogItem[]>([]);
+  const [unavailableReason, setUnavailableReason] = useState<AboutPageLoadReason | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    void getAboutMarketingPage()
-      .then((data) => {
-        if (!cancelled) setPage(data);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load page');
-      });
-    return () => {
-      cancelled = true;
-    };
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    setUnavailableReason(null);
+    try {
+      const [data, billingPlans] = await Promise.all([
+        getAboutMarketingPage(),
+        fetchBillingPlans().catch(() => [] as BillingPlanCatalogItem[]),
+      ]);
+      setPage(data);
+      setPlans(billingPlans);
+    } catch (e: unknown) {
+      setPage(null);
+      setPlans([]);
+      const reason =
+        e instanceof AboutPageLoadError
+          ? e.reason
+          : e instanceof TypeError
+            ? 'network'
+            : 'unavailable';
+      setUnavailableReason(reason);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (error) {
-    return (
-      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-16 text-center')}>
-        <p className="text-sm font-bold uppercase text-destructive">{error}</p>
-        <p className="mt-2 text-xs text-muted-foreground">Ensure the API server is running.</p>
-      </div>
-    );
+  useEffect(() => {
+    void loadPage();
+  }, [loadPage]);
+
+  if (loading && !page) {
+    return <AboutPageSkeleton />;
+  }
+
+  if (unavailableReason) {
+    return <AboutPageUnavailable reason={unavailableReason} onRetry={() => void loadPage()} />;
   }
 
   if (!page) {
@@ -133,43 +193,44 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="border-2 border-border bg-muted/30 p-12 shadow">
-          <h2 className="mb-12 text-center text-3xl font-black uppercase italic">Membership Plans</h2>
-          <p className="mb-8 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Showcase only — see{' '}
-            <Link href="/pricing" className="text-primary underline">
-              pricing
-            </Link>{' '}
-            for live checkout.
-          </p>
-          <div className="mx-auto grid max-w-4xl grid-cols-1 gap-12 md:grid-cols-2">
-            {page.membershipPlans.map((plan) => (
-              <div key={plan.name} className="flex flex-col border-2 border-border bg-card p-8">
-                <h3 className="text-xl font-black uppercase">{plan.name}</h3>
-                <div className="my-4 text-4xl font-black">
-                  {plan.price}
-                  <span className="text-sm">{plan.priceSuffix}</span>
+        {plans.length > 0 ? (
+          <section className="border-2 border-border bg-muted/30 p-12 shadow">
+            <h2 className="mb-12 text-center text-3xl font-black uppercase italic">
+              Membership Plans
+            </h2>
+            <div className="mx-auto grid max-w-4xl grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
+              {plans.map((plan) => (
+                <div key={plan.key} className="flex flex-col border-2 border-border bg-card p-8">
+                  <h3 className="text-xl font-black uppercase">{plan.name}</h3>
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">{plan.description}</p>
+                  <div className="my-4 text-4xl font-black">
+                    {plan.amountDisplay}
+                    <span className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                      {' '}
+                      {plan.cadence}
+                    </span>
+                  </div>
+                  <ul className="mb-8 flex-1 space-y-3">
+                    {plan.features.map((feat) => (
+                      <li
+                        key={feat}
+                        className="flex items-center gap-2 text-sm font-bold uppercase tracking-tighter"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-green-500" /> {feat}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/pricing"
+                    className="w-full border-2 border-border bg-primary py-3 text-center font-black uppercase text-primary-foreground shadow transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
+                  >
+                    View {plan.name}
+                  </Link>
                 </div>
-                <ul className="mb-8 flex-1 space-y-3">
-                  {plan.features.map((feat) => (
-                    <li
-                      key={feat}
-                      className="flex items-center gap-2 text-sm font-bold uppercase tracking-tighter"
-                    >
-                      <CheckCircle2 className="h-4 w-4 text-green-500" /> {feat}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/pricing"
-                  className="w-full border-2 border-border bg-primary py-3 text-center font-black uppercase text-primary-foreground shadow transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none"
-                >
-                  View {plan.name}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="space-y-12">
           <h2 className="text-center text-3xl font-black uppercase italic">Meet the Architects</h2>
@@ -180,10 +241,17 @@ export default function AboutPage() {
                   <img src={dev.imageUrl} alt={dev.name} className="h-48 w-48 object-cover" />
                 </div>
                 <h3 className="text-xl font-black uppercase italic">{dev.name}</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary">{dev.role}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  {dev.role}
+                </p>
                 <div className="mt-4 flex justify-center gap-4">
                   {dev.githubUrl ? (
-                    <a href={dev.githubUrl} target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                    <a
+                      href={dev.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="GitHub"
+                    >
                       <GithubIcon className="h-5 w-5 cursor-pointer hover:text-primary" />
                     </a>
                   ) : (
@@ -207,7 +275,9 @@ export default function AboutPage() {
             <h2 className="whitespace-pre-line text-4xl font-black uppercase italic tracking-tighter sm:text-6xl">
               {page.cta.title}
             </h2>
-            <p className="max-w-md text-lg font-bold uppercase opacity-90">{page.cta.description}</p>
+            <p className="max-w-md text-lg font-bold uppercase opacity-90">
+              {page.cta.description}
+            </p>
             <div className="w-full max-w-xs scale-110">
               <Button variant="primary" className="w-full" onClick={() => openAuthDialog('signup')}>
                 {page.cta.buttonLabel}

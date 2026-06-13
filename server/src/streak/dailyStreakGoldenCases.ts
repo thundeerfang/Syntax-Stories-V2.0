@@ -1,4 +1,7 @@
-import type { DailyStreakState, DailyStreakTransitionResult } from './applyDailyStreakTransition.js';
+import type {
+  DailyStreakState,
+  DailyStreakTransitionResult,
+} from './applyDailyStreakTransition.js';
 
 /** Shared vectors for TS tests and future Lua golden parity (§33 Golden Test Contract). */
 export const dailyStreakGoldenCases: readonly DailyStreakState[] = [

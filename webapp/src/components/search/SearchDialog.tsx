@@ -1,158 +1,192 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchDialogStore } from '@/store/searchDialog';
 import { Dialog } from '@/components/ui';
-import { followApi, type FollowUser } from '@/api/follow';
+import { searchApi } from '@/api/search';
+import {
+  SEARCH_DEBOUNCE_MS,
+  SEARCH_MIN_CHARS,
+  type SearchGroups,
+  type SearchHit,
+} from '@contracts/searchApi';
+import { filterFeatureCatalog } from '@/lib/search/featureCatalog';
+import {
+  countSearchHits,
+  flattenSearchGroups,
+  groupedEntries,
+} from '@/lib/search/flattenGroups';
+import { isSearchQueryReady, normalizeSearchQuery, searchQueryCharCount } from '@/lib/search/normalizeQuery';
+import { SearchGroupSection } from './SearchGroupSection';
+import { SearchHitRow } from './SearchHitRow';
 import {
   Search,
   X,
-  User,
   Loader2,
   Command,
   ArrowDown,
   ArrowUp,
-  CornerDownLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/core/utils';
 
-
-const DEBOUNCE_MS = 280;
-
-/**
- * Helper to resolve avatar source using semantic fallback and API base URL
- */
-function getAvatarSrc(profileImg: string | undefined, username: string): string {
-  const trimmed = profileImg?.trim();
-  if (!trimmed) {
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
-  }
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
-    return trimmed;
-  }
-  return `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${trimmed}`;
-}
-
-function SearchUserResultsListbox({ children }: Readonly<{ children: ReactNode }>) {
-  return <ul className="divide-y-4 divide-border" role="listbox">{children}</ul>; // NOSONAR S6819 S6842
-}
-
-function SearchDialogUserHitButton({
-  selected,
-  className,
-  onPick,
-  onHover,
-  children,
-}: Readonly<{
-  selected: boolean;
-  className: string;
-  onPick: () => void;
-  onHover: () => void;
-  children: ReactNode;
-}>) {
-  return <button type="button" role="option" aria-selected={selected} onClick={onPick} onMouseEnter={onHover} className={className}>{children}</button>; // NOSONAR S6819
+function localFeatureHits(q: string): SearchHit[] {
+  return filterFeatureCatalog(q, 6).map((f) => ({
+    id: `feature:${f.id}`,
+    type: 'feature' as const,
+    label: f.label,
+    sublabel: 'App shortcut',
+    href: f.href,
+  }));
 }
 
 export function SearchDialog() {
   const { isOpen, close } = useSearchDialogStore();
   const router = useRouter();
-  
-  // Refs for logic handling
+
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
 
-  // Component State
   const [query, setQuery] = useState('');
-  const [users, setUsers] = useState<FollowUser[]>([]);
+  const [groups, setGroups] = useState<SearchGroups>({});
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [tookMs, setTookMs] = useState<number | null>(null);
+  const [matchCount, setMatchCount] = useState(0);
 
-  // Reset dialog state when opened
+  const trimmed = normalizeSearchQuery(query);
+  const charCount = searchQueryCharCount(query);
+  const queryReady = isSearchQueryReady(query);
+
+  const localFeatures = useMemo(() => {
+    if (!trimmed) return [];
+    return localFeatureHits(trimmed);
+  }, [trimmed]);
+
+  const displayGroups = useMemo((): SearchGroups => {
+    if (queryReady) return groups;
+    if (localFeatures.length === 0) return {};
+    return { features: localFeatures };
+  }, [queryReady, groups, localFeatures]);
+
+  const flatHits = useMemo(() => flattenSearchGroups(displayGroups), [displayGroups]);
+  const sections = useMemo(() => groupedEntries(displayGroups), [displayGroups]);
+  const sectionsWithOffsets = useMemo(
+    () =>
+      sections.map(([groupKey, hits], index) => ({
+        groupKey,
+        hits,
+        flatOffset: sections.slice(0, index).reduce((total, [, groupHits]) => total + groupHits.length, 0),
+      })),
+    [sections]
+  );
+
   useEffect(() => {
     if (isOpen) {
       setQuery('');
-      setUsers([]);
+      setGroups({});
       setSelectedIndex(0);
-      // Small timeout to ensure the DOM is ready for focus
+      setLoading(false);
+      setTookMs(null);
+      setMatchCount(0);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
-  // Core search logic
-  const searchUsers = useCallback((q: string) => {
-    const trimmed = q.trim();
-    if (!trimmed) {
-      setUsers([]);
+  const runSearch = useCallback((q: string) => {
+    if (!isSearchQueryReady(q)) {
+      setGroups({});
       setLoading(false);
+      setTookMs(null);
+      setMatchCount(0);
       return;
     }
 
     const id = ++requestIdRef.current;
     setLoading(true);
 
-    followApi.searchUsers(trimmed)
+    searchApi
+      .unified(q, { limit: 5 })
       .then((res) => {
-        if (requestIdRef.current === id) {
-          setUsers(res.list ?? []);
-          setSelectedIndex(0); // Reset selection to top of new results
-          setLoading(false);
-        }
+        if (requestIdRef.current !== id) return;
+        setGroups(res.groups ?? {});
+        setTookMs(res.tookMs ?? null);
+        setMatchCount(countSearchHits(res.groups ?? {}));
+        setSelectedIndex(0);
       })
       .catch(() => {
+        if (requestIdRef.current === id) {
+          setGroups({});
+          setMatchCount(0);
+        }
+      })
+      .finally(() => {
         if (requestIdRef.current === id) setLoading(false);
       });
   }, []);
 
-  // Debounce effect
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    
-    if (!query.trim()) {
-      setUsers([]);
+
+    if (!trimmed) {
+      setGroups({});
       setLoading(false);
+      setTookMs(null);
+      setMatchCount(0);
       return;
     }
 
-    debounceRef.current = setTimeout(() => searchUsers(query), DEBOUNCE_MS);
-    
+    if (!queryReady) {
+      setGroups({});
+      setLoading(false);
+      setTookMs(null);
+      setMatchCount(localFeatures.length);
+      setSelectedIndex(0);
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => runSearch(trimmed), SEARCH_DEBOUNCE_MS);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, searchUsers]);
+  }, [trimmed, queryReady, runSearch, localFeatures.length]);
 
-  // Handle Keyboard Navigation (Arrows + Enter)
+  useEffect(() => {
+    setMatchCount(flatHits.length);
+  }, [flatHits.length]);
+
+  const handlePick = useCallback(
+    (hit: SearchHit) => {
+      router.push(hit.href);
+      close();
+    },
+    [router, close]
+  );
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev < users.length - 1 ? prev + 1 : prev));
+      setSelectedIndex((prev) => (prev < flatHits.length - 1 ? prev + 1 : prev));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    } else if (e.key === 'Enter' && users[selectedIndex]) {
+    } else if (e.key === 'Enter' && flatHits[selectedIndex]) {
       e.preventDefault();
-      handleUserSelect(users[selectedIndex].username);
+      handlePick(flatHits[selectedIndex]);
     }
-  };
-
-  const handleUserSelect = (username: string) => {
-    router.push(`/u/${username}`);
-    close();
   };
 
   let footerStatusLabel = 'System_Ready';
   if (loading) {
     footerStatusLabel = 'Fetching_Data...';
-  } else if (users.length > 0) {
-    footerStatusLabel = `Identity_Matches: ${users.length}`;
+  } else if (trimmed && charCount < SEARCH_MIN_CHARS) {
+    footerStatusLabel = `Min_${SEARCH_MIN_CHARS}_Chars`;
+  } else if (matchCount > 0) {
+    footerStatusLabel = `Matches: ${matchCount}`;
+  } else if (trimmed && queryReady && !loading) {
+    footerStatusLabel = 'No_Matches';
   }
 
   return (
@@ -162,12 +196,11 @@ export function SearchDialog() {
       titleId="search-dialog-title"
       panelClassName={cn(
         'pointer-events-auto w-full max-w-xl max-h-[90vh] sm:max-h-[80vh] overflow-hidden border-2 sm:border-4 border-border bg-background',
-        'max-sm:shadow-none sm:shadow',
+        'max-sm:shadow-none sm:shadow'
       )}
       contentClassName="relative p-0"
       showCloseButton={false}
     >
-      {/* Terminal chrome — title bar uses primary (purple); input row uses muted/card tokens */}
       <div className="border-b-2 sm:border-b-4 border-border bg-card text-card-foreground">
         <div
           id="search-dialog-title"
@@ -176,7 +209,7 @@ export function SearchDialog() {
           <div className="flex items-center gap-2">
             <Command className="size-3 shrink-0 text-primary-foreground" aria-hidden />
             <span className="text-[10px] font-black uppercase tracking-widest">
-              User_Query_Terminal
+              Command_Palette
             </span>
           </div>
           <button
@@ -199,127 +232,104 @@ export function SearchDialog() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Search database by identity..."
+              placeholder="Search people, posts, topics, squads..."
               className="flex-1 bg-transparent text-lg font-mono font-black uppercase text-foreground outline-none placeholder:text-muted-foreground/30 placeholder:normal-case placeholder:font-bold"
               autoComplete="off"
             />
-            {loading && <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" strokeWidth={3} />}
+            {loading ? (
+              <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" strokeWidth={3} />
+            ) : null}
           </div>
         </form>
       </div>
 
-      {/* 3. Results Area - Fixed to prevent horizontal scroll */}
       <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden bg-muted/10">
         <AnimatePresence mode="popLayout">
-          {query.trim() ? (
-            <div className="flex flex-col">
-              {users.length === 0 && !loading ? (
-                /* No Results State */
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }}
-                  className="p-12 text-center"
-                >
-                  <User className="size-12 mx-auto mb-4 text-muted-foreground/20" />
-                  <p className="font-black uppercase text-xs text-muted-foreground">
-                    No directory matches found for: <span className="text-foreground">{query}</span>
-                  </p>
-                </motion.div>
-              ) : (
-                <SearchUserResultsListbox>
-                  {users.map((u, index) => (
-                    <motion.li 
-                      key={u.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.02 }}
-                      className="w-full overflow-hidden"
-                    >
-                      <SearchDialogUserHitButton
-                        selected={selectedIndex === index}
-                        onPick={() => handleUserSelect(u.username)}
-                        onHover={() => setSelectedIndex(index)}
-                        className={`w-full flex items-center gap-4 px-4 py-4 text-left transition-colors outline-none ${
-                          selectedIndex === index
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-background hover:bg-muted/30'
-                        }`}
-                      >
-                        {/* Avatar with Neobrutalist Shadow */}
-                        <div className="relative shrink-0">
-                           <div className="absolute inset-0 hidden bg-border translate-x-1 translate-y-1 sm:block" />
-                           <div className="relative size-12 border-2 border-border bg-muted overflow-hidden">
-                              <img 
-                                src={getAvatarSrc(u.profileImg, u.username)} 
-                                alt={u.fullName} 
-                                className="size-full object-cover" 
-                              />
-                           </div>
-                        </div>
-                        
-                        {/* User Metadata */}
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-mono text-base font-black truncate ${
-                            selectedIndex === index ? 'text-primary-foreground' : 'text-foreground'
-                          }`}>
-                            {u.fullName}
-                          </p>
-                          <p className={`text-[10px] font-bold uppercase tracking-wider ${
-                            selectedIndex === index ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                          }`}>
-                            @{u.username}
-                          </p>
-                        </div>
-
-                        {/* Action Badge */}
-                        {selectedIndex === index && (
-                          <div className="flex items-center gap-2 bg-foreground text-background px-2 py-1 shrink-0 animate-in fade-in zoom-in duration-200">
-                            <span className="hidden sm:inline text-[9px] font-black uppercase">Execute</span>
-                            <CornerDownLeft className="size-3" strokeWidth={3} />
-                          </div>
-                        )}
-                      </SearchDialogUserHitButton>
-                    </motion.li>
-                  ))}
-                </SearchUserResultsListbox>
-              )}
-            </div>
-          ) : (
-            /* Idle / Initial Hint State */
+          {!trimmed ? (
             <div className="p-4 sm:p-8">
               <div className="border-0 p-6 text-center sm:border-4 sm:border-dashed sm:border-border/40 sm:bg-background/50 sm:p-8">
-                <Search className="size-8 mx-auto mb-3 text-muted-foreground/20" strokeWidth={3} />
-                <p className="text-[11px] font-black uppercase text-muted-foreground/50 tracking-widest">
-                  Ready for input...
+                <Search className="mx-auto mb-3 size-8 text-muted-foreground/20" strokeWidth={3} />
+                <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/50">
+                  Search stories, tags, squads, and people
+                </p>
+                <p className="mt-2 text-[10px] font-bold text-muted-foreground/40">
+                  Type at least {SEARCH_MIN_CHARS} characters
                 </p>
               </div>
-              
-              {/* Controls Legend */}
               <div className="mt-8 flex justify-center gap-6">
                 <div className="flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground/60">
                   <span className="flex flex-col gap-0.5">
-                    <span className="p-0.5 border border-border bg-background"><ArrowUp className="size-2" /></span>
-                    <span className="p-0.5 border border-border bg-background"><ArrowDown className="size-2" /></span>
+                    <span className="border border-border bg-background p-0.5">
+                      <ArrowUp className="size-2" />
+                    </span>
+                    <span className="border border-border bg-background p-0.5">
+                      <ArrowDown className="size-2" />
+                    </span>
                   </span>
                   <span>Navigate</span>
                 </div>
                 <div className="flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground/60">
-                  <span className="px-1.5 py-1 border border-border bg-background">ESC</span>
+                  <span className="border border-border bg-background px-1.5 py-1">ESC</span>
                   <span>Close</span>
                 </div>
               </div>
+            </div>
+          ) : charCount > 0 && charCount < SEARCH_MIN_CHARS ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8">
+              <p className="text-center text-[11px] font-black uppercase text-muted-foreground">
+                Type {SEARCH_MIN_CHARS - charCount} more character
+                {SEARCH_MIN_CHARS - charCount === 1 ? '' : 's'} to search
+              </p>
+              {localFeatures.length > 0 ? (
+                <ul className="mt-4 divide-y divide-border/40" role="listbox">
+                  {localFeatures.map((hit, i) => (
+                    <li key={hit.id}>
+                      <SearchHitRow
+                        hit={hit}
+                        selected={selectedIndex === i}
+                        onPick={() => handlePick(hit)}
+                        onHover={() => setSelectedIndex(i)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </motion.div>
+          ) : flatHits.length === 0 && !loading ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-12 text-center">
+              <Search className="mx-auto mb-4 size-12 text-muted-foreground/20" />
+              <p className="text-xs font-black uppercase text-muted-foreground">
+                No matches for: <span className="text-foreground">{query}</span>
+              </p>
+            </motion.div>
+          ) : (
+            <div role="listbox" className="flex flex-col">
+              {sectionsWithOffsets.map(({ groupKey, hits, flatOffset }) => (
+                <SearchGroupSection
+                  key={groupKey}
+                  groupKey={groupKey}
+                  hits={hits}
+                  selectedIndex={selectedIndex}
+                  flatOffset={flatOffset}
+                  onPick={handlePick}
+                  onHoverIndex={setSelectedIndex}
+                />
+              ))}
             </div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* 4. Footer Status Bar */}
-      <div className="border-t-2 sm:border-t-4 border-border bg-background px-3 py-2 sm:px-4 flex justify-between items-center">
+      <div className="flex items-center justify-between border-t-2 border-border bg-background px-3 py-2 sm:border-t-4 sm:px-4">
         <div className="flex items-center gap-2">
-           <div className={`size-1.5  ${loading ? 'animate-pulse bg-primary' : 'bg-primary/70'}`} />
-           <span className="text-[9px] font-black uppercase text-muted-foreground">{footerStatusLabel}</span>
+          <div className={cn('size-1.5', loading ? 'animate-pulse bg-primary' : 'bg-primary/70')} />
+          <span className="text-[9px] font-black uppercase text-muted-foreground">
+            {footerStatusLabel}
+          </span>
         </div>
-        <span className="text-[9px] font-black uppercase text-muted-foreground/30">Query_Interface_v2</span>
+        <span className="text-[9px] font-black uppercase text-muted-foreground/30">
+          {tookMs != null ? `${Math.round(tookMs)}ms` : 'Query_v3'}
+        </span>
       </div>
     </Dialog>
   );

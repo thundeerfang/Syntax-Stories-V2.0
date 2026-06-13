@@ -13,8 +13,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
-
-export type ProfileSectionVariant = 'workExperience' | 'education' | 'certification' | 'project' | 'openSource' | 'mySetup';
+export type ProfileSectionVariant =
+  | 'workExperience'
+  | 'education'
+  | 'certification'
+  | 'project'
+  | 'openSource'
+  | 'mySetup';
 
 const VARIANT_CONFIG: Record<
   ProfileSectionVariant,
@@ -122,7 +127,10 @@ export function ProfileSectionAccordion({
         <div className="flex items-center gap-2 shrink-0">
           {headerAction}
           <ChevronRight
-            className={cn('size-4 text-muted-foreground transition-transform duration-300 ease-out', open && 'rotate-90')}
+            className={cn(
+              'size-4 text-muted-foreground transition-transform duration-300 ease-out',
+              open && 'rotate-90'
+            )}
           />
         </div>
       </button>
@@ -135,9 +143,7 @@ export function ProfileSectionAccordion({
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="p-4 pt-4 border-t-0">
-              {children}
-            </div>
+            <div className="p-4 pt-4 border-t-0">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>

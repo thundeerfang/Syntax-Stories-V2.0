@@ -21,7 +21,7 @@ const ReferenceEntitySchema = new Schema<IReferenceEntity>(
     name: { type: String, required: true, trim: true, maxlength: 200 },
     domain: { type: String, required: true, trim: true, lowercase: true, maxlength: 200 },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 ReferenceEntitySchema.index({ kind: 1, domain: 1 }, { unique: true });

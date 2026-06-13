@@ -14,7 +14,7 @@ const SquadPinnedPostSchema = new Schema<ISquadPinnedPost>(
     postId: { type: Schema.Types.ObjectId, ref: 'blogposts', required: true, index: true },
     pinnedById: { type: Schema.Types.ObjectId, ref: 'users', required: true },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 SquadPinnedPostSchema.index({ squadId: 1, postId: 1 }, { unique: true });

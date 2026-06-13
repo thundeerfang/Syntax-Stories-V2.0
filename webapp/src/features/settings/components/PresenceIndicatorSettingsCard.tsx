@@ -7,13 +7,16 @@ import { cn } from '@/lib/core/utils';
 import { useUserPresenceStatus } from '@/lib/presence/useUserPresenceStatus';
 import { useUIStore } from '@/store/ui';
 
-
-function resolvePreviewAvatarSrc(profileImg: string | undefined, username: string | undefined): string {
+function resolvePreviewAvatarSrc(
+  profileImg: string | undefined,
+  username: string | undefined
+): string {
   const raw = profileImg?.trim();
   const seed = username?.trim() || 'user';
   const dicebear = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
   if (!raw) return dicebear;
-  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:')) return raw;
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:'))
+    return raw;
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
   const path = raw.startsWith('/') ? raw : `/${raw}`;
   return `${base}${path}`;
@@ -43,13 +46,15 @@ export function PresenceIndicatorSettingsCard({
               Online status indicator
             </h3>
             <p className="mt-0.5 max-w-md text-[9px] font-medium text-muted-foreground/80">
-              Show a green dot on your navbar avatar when you are active on this device. It turns gray when the tab is in
-              the background or you are offline.
+              Show a green dot on your navbar avatar when you are active on this device. It turns
+              gray when the tab is in the background or you are offline.
             </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:pt-1">
-          <span className="text-[9px] font-bold uppercase text-muted-foreground">{enabled ? 'On' : 'Off'}</span>
+          <span className="text-[9px] font-bold uppercase text-muted-foreground">
+            {enabled ? 'On' : 'Off'}
+          </span>
           <Switch
             checked={enabled}
             onCheckedChange={setEnabled}
@@ -65,7 +70,12 @@ export function PresenceIndicatorSettingsCard({
         </div>
         <ul className="space-y-1 text-[9px] font-medium text-muted-foreground">
           <li className="flex items-center gap-2">
-            <span className={cn('size-2.5 border-2 border-border bg-green-500', enabled && 'presence-dot-blink')} />
+            <span
+              className={cn(
+                'size-2.5 border-2 border-border bg-green-500',
+                enabled && 'presence-dot-blink'
+              )}
+            />
             <span>Green — active on this tab</span>
           </li>
           <li className="flex items-center gap-2">

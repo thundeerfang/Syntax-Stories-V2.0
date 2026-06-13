@@ -1,6 +1,14 @@
 'use client';
 
-import React, { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef, useId } from 'react';
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useId,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -41,7 +49,6 @@ import { resolveMemberAvatarUrl } from '@/lib/profile/categoryMembers';
 import { GifPopoverCard } from '../popover/GifPopoverCard';
 import { searchGifs, type GiphyGif } from '@/api/giphy';
 import { followApi, type FollowUser } from '@/api/follow';
-
 
 /** Default Link sets `inclusive` from `autolink`, so with autolink on new typing stays inside the link. Force non-inclusive so Space/new text after a link exits the mark (matches user expectation). */
 const LinkMark = Link.extend({
@@ -122,7 +129,9 @@ function ReadOnlyRichLinkHoverLayer({
     };
 
     const onMouseOver = (e: MouseEvent) => {
-      const a = (e.target as HTMLElement | null)?.closest(READONLY_LINK_SEL) as HTMLAnchorElement | null;
+      const a = (e.target as HTMLElement | null)?.closest(
+        READONLY_LINK_SEL
+      ) as HTMLAnchorElement | null;
       if (!a?.href) return;
       if (activeLinkRef.current === a) return;
       activeLinkRef.current = a;
@@ -130,7 +139,9 @@ function ReadOnlyRichLinkHoverLayer({
     };
 
     const onMouseOut = (e: MouseEvent) => {
-      const from = (e.target as HTMLElement | null)?.closest(READONLY_LINK_SEL) as HTMLAnchorElement | null;
+      const from = (e.target as HTMLElement | null)?.closest(
+        READONLY_LINK_SEL
+      ) as HTMLAnchorElement | null;
       if (!from) return;
       const related = e.relatedTarget as Node | null;
       if (related && from.contains(related)) return;
@@ -237,7 +248,7 @@ function ReadOnlyRichLinkHoverLayer({
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body,
+      document.body
     );
 
   return <>{cardEl}</>;
@@ -287,7 +298,14 @@ function ReadOnlyMentionHoverLayer({
       openTimerRef.current = setTimeout(() => {
         anchorRef.current = el;
         const rect = el.getBoundingClientRect();
-        const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'start', 155, 260, 0);
+        const { top, left, side } = computeHoverCardPositionAuto(
+          rect,
+          'bottom',
+          'start',
+          155,
+          260,
+          0
+        );
         setPosition({ top, left });
         setResolvedSide(side);
         const username = el.dataset.username?.trim() ?? '';
@@ -307,7 +325,9 @@ function ReadOnlyMentionHoverLayer({
     };
 
     const onMouseOver = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement | null)?.closest(READONLY_MENTION_SEL) as HTMLElement | null;
+      const el = (e.target as HTMLElement | null)?.closest(
+        READONLY_MENTION_SEL
+      ) as HTMLElement | null;
       if (!el) return;
       if (activeMentionRef.current === el) return;
       activeMentionRef.current = el;
@@ -315,7 +335,9 @@ function ReadOnlyMentionHoverLayer({
     };
 
     const onMouseOut = (e: MouseEvent) => {
-      const from = (e.target as HTMLElement | null)?.closest(READONLY_MENTION_SEL) as HTMLElement | null;
+      const from = (e.target as HTMLElement | null)?.closest(
+        READONLY_MENTION_SEL
+      ) as HTMLElement | null;
       if (!from) return;
       const related = e.relatedTarget as Node | null;
       if (related && from.contains(related)) return;
@@ -372,7 +394,14 @@ function ReadOnlyMentionHoverLayer({
       const el = anchorRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'start', 155, 260, 0);
+      const { top, left, side } = computeHoverCardPositionAuto(
+        rect,
+        'bottom',
+        'start',
+        155,
+        260,
+        0
+      );
       setPosition({ top, left });
       setResolvedSide(side);
     };
@@ -427,7 +456,7 @@ function ReadOnlyMentionHoverLayer({
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body,
+      document.body
     );
 
   return <>{cardEl}</>;
@@ -477,7 +506,7 @@ function ReadOnlyGifHoverLayer({
       'bottom',
       'center',
       cr.height,
-      cr.width,
+      cr.width
     );
     setPosition({ top, left });
     setResolvedSide(side);
@@ -511,7 +540,7 @@ function ReadOnlyGifHoverLayer({
           'bottom',
           'center',
           estH,
-          estW,
+          estW
         );
         setPosition({ top, left });
         setResolvedSide(side);
@@ -531,7 +560,9 @@ function ReadOnlyGifHoverLayer({
     };
 
     const onMouseOut = (e: MouseEvent) => {
-      const from = (e.target as HTMLElement | null)?.closest(READONLY_GIF_SEL) as HTMLElement | null;
+      const from = (e.target as HTMLElement | null)?.closest(
+        READONLY_GIF_SEL
+      ) as HTMLElement | null;
       if (!from) return;
       const related = e.relatedTarget as Node | null;
       if (related && from.contains(related)) return;
@@ -639,7 +670,7 @@ function ReadOnlyGifHoverLayer({
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body,
+      document.body
     );
 
   return <>{cardEl}</>;
@@ -740,7 +771,9 @@ function collectConsecutiveEmptyParagraphDeletes(doc: PMNode): { from: number; t
 }
 
 /** Keep the first top-level empty paragraph (doc order); delete any other top-level empty paragraphs. */
-function collectTopLevelGlobalExtraEmptyParagraphDeletes(doc: PMNode): { from: number; to: number }[] {
+function collectTopLevelGlobalExtraEmptyParagraphDeletes(
+  doc: PMNode
+): { from: number; to: number }[] {
   const items: { pos: number; from: number; to: number }[] = [];
   doc.forEach((child, offset) => {
     const pos = offset + 1;
@@ -929,16 +962,16 @@ function createParagraphEnterGuardExtension() {
 function getSplittedAttributesForListSplit(
   extensionAttributes: { type: string; name: string; attribute: { keepOnSplit: boolean } }[],
   typeName: string,
-  attributes: Record<string, unknown>,
+  attributes: Record<string, unknown>
 ): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(attributes).filter(([name]) => {
       const extensionAttribute = extensionAttributes.find(
-        (item) => item.type === typeName && item.name === name,
+        (item) => item.type === typeName && item.name === name
       );
       if (!extensionAttribute) return false;
       return extensionAttribute.attribute.keepOnSplit;
-    }),
+    })
   );
 }
 
@@ -946,7 +979,9 @@ function getListItemNodeType(nameOrType: string | NodeType, schema: Schema): Nod
   if (typeof nameOrType === 'string') {
     const n = schema.nodes[nameOrType];
     if (!n) {
-      throw new Error(`There is no node type named '${nameOrType}'. Maybe you forgot to add the extension?`);
+      throw new Error(
+        `There is no node type named '${nameOrType}'. Maybe you forgot to add the extension?`
+      );
     }
     return n;
   }
@@ -977,7 +1012,10 @@ function createSplitListItemWithoutScrollExtension() {
               return false;
             }
             const extensionAttributes = editor.extensionManager.attributes;
-            if ($from.parent.content.size === 0 && $from.node(-1).childCount === $from.indexAfter(-1)) {
+            if (
+              $from.parent.content.size === 0 &&
+              $from.node(-1).childCount === $from.indexAfter(-1)
+            ) {
               if (
                 $from.depth === 2 ||
                 $from.node(-3).type !== type ||
@@ -1001,7 +1039,7 @@ function createSplitListItemWithoutScrollExtension() {
                   ...getSplittedAttributesForListSplit(
                     extensionAttributes,
                     $from.node().type.name,
-                    $from.node().attrs as Record<string, unknown>,
+                    $from.node().attrs as Record<string, unknown>
                   ),
                   ...overrideAttrs,
                 };
@@ -1023,12 +1061,13 @@ function createSplitListItemWithoutScrollExtension() {
               }
               return true;
             }
-            const nextType = $to.pos === $from.end() ? grandParent.contentMatchAt(0).defaultType : null;
+            const nextType =
+              $to.pos === $from.end() ? grandParent.contentMatchAt(0).defaultType : null;
             const newTypeAttributes = {
               ...getSplittedAttributesForListSplit(
                 extensionAttributes,
                 grandParent.type.name,
-                grandParent.attrs as Record<string, unknown>,
+                grandParent.attrs as Record<string, unknown>
               ),
               ...overrideAttrs,
             };
@@ -1036,7 +1075,7 @@ function createSplitListItemWithoutScrollExtension() {
               ...getSplittedAttributesForListSplit(
                 extensionAttributes,
                 $from.node().type.name,
-                $from.node().attrs as Record<string, unknown>,
+                $from.node().attrs as Record<string, unknown>
               ),
               ...overrideAttrs,
             };
@@ -1058,7 +1097,9 @@ function createSplitListItemWithoutScrollExtension() {
               if (!marks) {
                 return true;
               }
-              const filteredMarks = marks.filter((mark) => splittableMarks.includes(mark.type.name));
+              const filteredMarks = marks.filter((mark) =>
+                splittableMarks.includes(mark.type.name)
+              );
               tr.ensureMarks(filteredMarks);
             }
             return true;
@@ -1098,7 +1139,8 @@ function createListEmptyLastBackspaceExtension() {
           if (liDepth < 0) return false;
 
           const listNode = $from.node(liDepth - 1);
-          if (listNode.type.name !== 'bulletList' && listNode.type.name !== 'orderedList') return false;
+          if (listNode.type.name !== 'bulletList' && listNode.type.name !== 'orderedList')
+            return false;
 
           if ($from.index(liDepth - 1) !== listNode.childCount - 1) return false;
 
@@ -1118,10 +1160,7 @@ const OL_PASTE_LINE = /^\s*(\d+)\.\s+(.*)$/;
 const OL_PASTE_LINE_LOOSE = /^\s*(\d+)\.(.*)$/;
 const UL_PASTE_LINE = /^\s*[-*+]\s+(.*)$/;
 
-function buildOrderedListJson(
-  lines: string[],
-  re: RegExp,
-): JSONContent | null {
+function buildOrderedListJson(lines: string[], re: RegExp): JSONContent | null {
   const parsed = lines.map((l) => {
     const m = l.match(re);
     return m ? { n: parseInt(m[1]!, 10), body: (m[2] ?? '').trim() } : null;
@@ -1225,10 +1264,7 @@ function parsePlainTextPasteAsList(text: string): JSONContent | null {
 
 type GifAlign = 'left' | 'center' | 'right';
 
-function giphyImageUrl(
-  images: GiphyGif['images'] | undefined,
-  ...keys: string[]
-): string {
+function giphyImageUrl(images: GiphyGif['images'] | undefined, ...keys: string[]): string {
   if (!images) return '';
   const bag = images as Record<string, { url?: string } | undefined>;
   for (const k of keys) {
@@ -1304,7 +1340,9 @@ function parseLinkInputForPreview(raw: string): {
   if (!n.ok) {
     return {
       valid: false,
-      href: '', host: '', displayUrl: trimmed,
+      href: '',
+      host: '',
+      displayUrl: trimmed,
       error: n.error ?? 'Invalid URL',
     };
   }
@@ -1427,7 +1465,7 @@ const MentionNode = TipTapNode.create({
     const label = fullName?.trim() || `@${handle}`;
     const avatarSrc = resolveMemberAvatarUrl(
       typeof profileImg === 'string' ? profileImg : undefined,
-      handle,
+      handle
     );
 
     return [
@@ -1440,7 +1478,14 @@ const MentionNode = TipTapNode.create({
         class:
           'ss-mention inline-flex items-center gap-1 px-1.5 py-0.5 border border-primary/60 bg-primary/10 text-primary text-[11px] font-semibold mr-1 align-middle',
       }),
-      ['img', { src: avatarSrc, alt: '', class: 'h-4 w-4 shrink-0 border border-primary/40 object-cover' }],
+      [
+        'img',
+        {
+          src: avatarSrc,
+          alt: '',
+          class: 'h-4 w-4 shrink-0 border border-primary/40 object-cover',
+        },
+      ],
       ['span', { class: 'truncate max-w-[10rem]' }, label],
     ];
   },
@@ -1460,8 +1505,7 @@ function toInitialDoc(initialDoc?: any, legacyText?: string): any {
   };
 }
 
-const DEFAULT_EDITOR_PLACEHOLDER =
-  'Start writing… Use lists, links, @mentions, or insert a GIF.';
+const DEFAULT_EDITOR_PLACEHOLDER = 'Start writing… Use lists, links, @mentions, or insert a GIF.';
 
 export function RichParagraphEditor({
   initialDoc,
@@ -1504,43 +1548,48 @@ export function RichParagraphEditor({
       }),
       InlineGif,
       MentionNode,
-      ...(normalizeContent ? [createParagraphEnterGuardExtension(), createParagraphNormalizeExtension()] : []),
+      ...(normalizeContent
+        ? [createParagraphEnterGuardExtension(), createParagraphNormalizeExtension()]
+        : []),
       createSplitListItemWithoutScrollExtension(),
       createListEmptyLastBackspaceExtension(),
     ],
-    [normalizeContent, readOnly, editorPlaceholder],
+    [normalizeContent, readOnly, editorPlaceholder]
   );
 
-  const editor = useEditor({
-    extensions,
-    editable: !readOnly,
-    content: toInitialDoc(initialDoc, legacyText),
-    onCreate: ({ editor: ed }) => {
-      editorRef.current = ed;
-    },
-    onUpdate: readOnly
-      ? undefined
-      : ({ editor }) => {
-          const json = editor.getJSON();
-          onChange?.(json);
+  const editor = useEditor(
+    {
+      extensions,
+      editable: !readOnly,
+      content: toInitialDoc(initialDoc, legacyText),
+      onCreate: ({ editor: ed }) => {
+        editorRef.current = ed;
+      },
+      onUpdate: readOnly
+        ? undefined
+        : ({ editor }) => {
+            const json = editor.getJSON();
+            onChange?.(json);
+          },
+      immediatelyRender: false,
+      editorProps: {
+        handlePaste(_view, event) {
+          const ed = editorRef.current;
+          if (!ed) return false;
+          const clip = event.clipboardData;
+          if (!clip) return false;
+          const text = clip.getData('text/plain');
+          if (!text || !text.trim()) return false;
+          const json = parsePlainTextPasteAsList(text);
+          if (!json) return false;
+          event.preventDefault();
+          ed.chain().focus().deleteSelection().insertContent(json).run();
+          return true;
         },
-    immediatelyRender: false,
-    editorProps: {
-      handlePaste(_view, event) {
-        const ed = editorRef.current;
-        if (!ed) return false;
-        const clip = event.clipboardData;
-        if (!clip) return false;
-        const text = clip.getData('text/plain');
-        if (!text || !text.trim()) return false;
-        const json = parsePlainTextPasteAsList(text);
-        if (!json) return false;
-        event.preventDefault();
-        ed.chain().focus().deleteSelection().insertContent(json).run();
-        return true;
       },
     },
-  }, [extensions, readOnly]);
+    [extensions, readOnly]
+  );
 
   useEffect(() => {
     editorRef.current = editor ?? null;
@@ -1666,7 +1715,15 @@ export function RichParagraphEditor({
     computePopoverPosition();
     const id = requestAnimationFrame(() => computePopoverPosition());
     return () => cancelAnimationFrame(id);
-  }, [anyPanelOpen, computePopoverPosition, linkUrl, mentionQuery, showLinkPanel, showMentionPanel, showGifPanel]);
+  }, [
+    anyPanelOpen,
+    computePopoverPosition,
+    linkUrl,
+    mentionQuery,
+    showLinkPanel,
+    showMentionPanel,
+    showGifPanel,
+  ]);
 
   useEffect(() => {
     if (!anyPanelOpen) return;
@@ -1748,7 +1805,7 @@ export function RichParagraphEditor({
       setGifSearchQuery('');
       setGifResults([]);
     },
-    [editor],
+    [editor]
   );
 
   const applyLink = useCallback(() => {
@@ -1833,7 +1890,7 @@ export function RichParagraphEditor({
       setMentionQuery('');
       setMentionResults([]);
     },
-    [editor],
+    [editor]
   );
 
   const isGifSelected = editor?.isActive('inlineGif') ?? false;
@@ -1848,12 +1905,14 @@ export function RichParagraphEditor({
         safeOpenLinkHref(anchor.getAttribute('href'));
       }
     },
-    [readOnly],
+    [readOnly]
   );
 
   const onReadOnlyClickCapture = useCallback(
     (e: React.MouseEvent) => {
-      const mentionEl = (e.target as HTMLElement | null)?.closest(READONLY_MENTION_SEL) as HTMLElement | null;
+      const mentionEl = (e.target as HTMLElement | null)?.closest(
+        READONLY_MENTION_SEL
+      ) as HTMLElement | null;
       if (mentionEl) {
         const u = mentionEl.dataset.username?.trim();
         if (u) {
@@ -1862,14 +1921,16 @@ export function RichParagraphEditor({
           return;
         }
       }
-      const gifEl = (e.target as HTMLElement | null)?.closest(READONLY_GIF_SEL) as HTMLElement | null;
+      const gifEl = (e.target as HTMLElement | null)?.closest(
+        READONLY_GIF_SEL
+      ) as HTMLElement | null;
       if (gifEl) {
         e.preventDefault();
         return;
       }
       onEditorLinkClickCapture(e);
     },
-    [router, onEditorLinkClickCapture],
+    [router, onEditorLinkClickCapture]
   );
 
   const toolbarButton = (active: boolean) =>
@@ -1877,7 +1938,7 @@ export function RichParagraphEditor({
       'inline-flex items-center justify-center  border-2 border-border px-2 py-1.5 text-[11px] font-semibold min-h-[30px] shadow',
       active
         ? 'border-primary bg-primary/15 text-primary'
-        : 'bg-muted/40 text-muted-foreground hover:bg-muted/70',
+        : 'bg-muted/40 text-muted-foreground hover:bg-muted/70'
     );
 
   const popoverCard =
@@ -1894,16 +1955,23 @@ export function RichParagraphEditor({
 
   if (readOnly) {
     return (
-      <div className={cn('ss-read-only-rich ss-rich-paragraph-editor border-0 bg-transparent', className)}>
+      <div
+        className={cn(
+          'ss-read-only-rich ss-rich-paragraph-editor border-0 bg-transparent',
+          className
+        )}
+      >
         <EditorContent
           editor={editor}
           className={cn(
             'prose prose-sm dark:prose-invert max-w-none focus:outline-none',
-            '[&_.ProseMirror]:outline-none',
+            '[&_.ProseMirror]:outline-none'
           )}
           onClickCapture={onReadOnlyClickCapture}
         />
-        {readOnlyLinkPreview ? <ReadOnlyRichLinkHoverLayer editor={editor} renderPreview={readOnlyLinkPreview} /> : null}
+        {readOnlyLinkPreview ? (
+          <ReadOnlyRichLinkHoverLayer editor={editor} renderPreview={readOnlyLinkPreview} />
+        ) : null}
         <ReadOnlyMentionHoverLayer editor={editor} />
         <ReadOnlyGifHoverLayer editor={editor} />
       </div>
@@ -1914,7 +1982,7 @@ export function RichParagraphEditor({
     <div
       className={cn(
         'ss-rich-paragraph-editor relative overflow-visible border-0 bg-transparent',
-        className,
+        className
       )}
     >
       <div ref={toolbarPopoverRef} className="relative z-30 overflow-visible px-2 pt-2">
@@ -1926,7 +1994,11 @@ export function RichParagraphEditor({
               role="dialog"
               aria-modal="false"
               aria-labelledby={
-                showLinkPanel ? linkPanelTitleId : showMentionPanel ? mentionPanelTitleId : gifPanelTitleId
+                showLinkPanel
+                  ? linkPanelTitleId
+                  : showMentionPanel
+                    ? mentionPanelTitleId
+                    : gifPanelTitleId
               }
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1941,14 +2013,17 @@ export function RichParagraphEditor({
               }}
               className={cn(
                 popoverCard,
-                'pointer-events-auto max-h-[min(26rem,calc(100vh-var(--ss-nav-safe,56px)-1rem))] overflow-y-auto p-2.5 text-xs isolate',
+                'pointer-events-auto max-h-[min(26rem,calc(100vh-var(--ss-nav-safe,56px)-1rem))] overflow-y-auto p-2.5 text-xs isolate'
               )}
             >
               {showLinkPanel && (
                 <>
                   <div className="flex items-center gap-1.5 mb-2 border-b border-border pb-2">
                     <Link2 className="h-4 w-4 text-primary shrink-0" aria-hidden />
-                    <h2 id={linkPanelTitleId} className="text-xs font-bold uppercase tracking-wide text-foreground">
+                    <h2
+                      id={linkPanelTitleId}
+                      className="text-xs font-bold uppercase tracking-wide text-foreground"
+                    >
                       Link
                     </h2>
                   </div>
@@ -1956,7 +2031,10 @@ export function RichParagraphEditor({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                     <div className="min-w-0 flex-1 space-y-2">
                       <div>
-                        <label htmlFor="rp-link-url" className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+                        <label
+                          htmlFor="rp-link-url"
+                          className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5"
+                        >
                           URL
                         </label>
                         <input
@@ -1979,7 +2057,10 @@ export function RichParagraphEditor({
                       </div>
 
                       <div>
-                        <label htmlFor="rp-link-text" className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+                        <label
+                          htmlFor="rp-link-text"
+                          className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5"
+                        >
                           Label <span className="font-normal normal-case">(opt.)</span>
                         </label>
                         <input
@@ -2001,8 +2082,7 @@ export function RichParagraphEditor({
 
                     {linkPreview.valid && (
                       <div className="w-full shrink-0 overflow-hidden border border-border bg-background sm:w-[min(200px,38%)] sm:max-w-55">
-                        <p className="border-b border-border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        </p>
+                        <p className="border-b border-border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground"></p>
                         <LinkPreviewCardContent domain={linkPreview.href} />
                       </div>
                     )}
@@ -2032,7 +2112,10 @@ export function RichParagraphEditor({
                 <>
                   <div className="flex items-center gap-1.5 mb-2 border-b border-border pb-2">
                     <AtSign className="h-4 w-4 text-primary shrink-0" aria-hidden />
-                    <h2 id={mentionPanelTitleId} className="text-xs font-bold uppercase tracking-wide text-foreground">
+                    <h2
+                      id={mentionPanelTitleId}
+                      className="text-xs font-bold uppercase tracking-wide text-foreground"
+                    >
                       Mention
                     </h2>
                   </div>
@@ -2057,7 +2140,9 @@ export function RichParagraphEditor({
                       <div className="p-3 text-center text-[11px] text-muted-foreground">…</div>
                     )}
                     {!mentionLoading && mentionQuery.trim() && mentionResults.length === 0 && (
-                      <div className="p-2 text-center text-[11px] text-muted-foreground">No match</div>
+                      <div className="p-2 text-center text-[11px] text-muted-foreground">
+                        No match
+                      </div>
                     )}
                     {!mentionLoading && mentionResults.length > 0 && (
                       <ul className="divide-y divide-border">
@@ -2069,13 +2154,20 @@ export function RichParagraphEditor({
                               className="flex w-full items-center gap-2 px-2 py-2 text-left transition-colors hover:bg-primary/12 active:bg-primary/18"
                             >
                               <img
-                                src={user.profileImg || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+                                src={
+                                  user.profileImg ||
+                                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+                                }
                                 alt=""
                                 className="h-8 w-8 border border-border object-cover shrink-0"
                               />
                               <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-semibold truncate">{user.fullName || user.username}</p>
-                                <p className="text-[10px] text-muted-foreground truncate">@{user.username}</p>
+                                <p className="text-[11px] font-semibold truncate">
+                                  {user.fullName || user.username}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                  @{user.username}
+                                </p>
                               </div>
                             </button>
                           </li>
@@ -2083,7 +2175,9 @@ export function RichParagraphEditor({
                       </ul>
                     )}
                     {!mentionLoading && !mentionQuery.trim() && (
-                      <div className="p-2 text-center text-[10px] text-muted-foreground">Type to search</div>
+                      <div className="p-2 text-center text-[10px] text-muted-foreground">
+                        Type to search
+                      </div>
                     )}
                   </div>
 
@@ -2103,7 +2197,10 @@ export function RichParagraphEditor({
                 <>
                   <div className="flex items-center gap-1.5 mb-2 border-b border-border pb-2">
                     <Sparkles className="h-4 w-4 text-primary shrink-0" aria-hidden />
-                    <h2 id={gifPanelTitleId} className="text-xs font-bold uppercase tracking-wide text-foreground">
+                    <h2
+                      id={gifPanelTitleId}
+                      className="text-xs font-bold uppercase tracking-wide text-foreground"
+                    >
                       GIF <span className="font-normal text-muted-foreground">· GIPHY</span>
                     </h2>
                   </div>
@@ -2139,14 +2236,21 @@ export function RichParagraphEditor({
                         className="group aspect-square border border-border overflow-hidden hover:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                       >
                         <img
-                          src={giphyImageUrl(gif.images, 'fixed_height_small', 'fixed_height', 'original')}
+                          src={giphyImageUrl(
+                            gif.images,
+                            'fixed_height_small',
+                            'fixed_height',
+                            'original'
+                          )}
                           alt={gif.title || 'GIF result'}
                           className="w-full h-full object-cover transition-[filter] group-hover:brightness-105"
                         />
                       </button>
                     ))}
                     {!gifSearching && gifResults.length === 0 && !gifError && (
-                      <div className="col-span-full py-4 text-center text-[11px] text-muted-foreground">Search to preview</div>
+                      <div className="col-span-full py-4 text-center text-[11px] text-muted-foreground">
+                        Search to preview
+                      </div>
                     )}
                   </div>
 
@@ -2245,11 +2349,10 @@ export function RichParagraphEditor({
         editor={editor}
         className={cn(
           'prose prose-sm dark:prose-invert max-w-none focus:outline-none mt-2 mx-2 mb-2',
-          '[&_.ProseMirror]:',
+          '[&_.ProseMirror]:'
         )}
         onClickCapture={onEditorLinkClickCapture}
       />
     </div>
   );
 }
-

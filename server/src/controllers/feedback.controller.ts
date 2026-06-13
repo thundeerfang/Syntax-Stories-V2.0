@@ -6,12 +6,19 @@ import { env } from '../config/env.js';
 import { sendAuthEmail, getEmailSendErrorMessage } from '../infrastructure/mail/sendAuthEmail.js';
 import type { RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
 import { parseMultipartFeedback } from '../middlewares/feedback/feedbackMultipart.validation.js';
+import {
+  attachAchievementsToResponse,
+  dispatchAchievementEvents,
+} from '../achievements/achievement.service.js';
 import { UserModel } from '../models/User.js';
 import { FeedbackSubmissionModel } from '../models/FeedbackSubmission.js';
 import { FeedbackCategoryModel } from '../models/FeedbackCategory.js';
 import { formatDateTimeIst, istTimeZoneLabel } from '../utils/ist.js';
 import { getDefaultUploadStorage } from '../services/storage/localDiskUploadStorage.js';
-import { processUploadedImageBuffer, ImageMasterError } from '../services/image/imageMasterHandler.js';
+import {
+  processUploadedImageBuffer,
+  ImageMasterError,
+} from '../services/image/imageMasterHandler.js';
 
 function escapeHtml(s: string): string {
   return s
@@ -45,11 +52,7 @@ function feedbackNotifyTo(): string | null {
 function clientIp(req: Request): string | undefined {
   const xff = req.headers['x-forwarded-for'];
   const raw =
-    typeof xff === 'string'
-      ? xff.split(',')[0]?.trim()
-      : Array.isArray(xff)
-        ? xff[0]?.trim()
-        : '';
+    typeof xff === 'string' ? xff.split(',')[0]?.trim() : Array.isArray(xff) ? xff[0]?.trim() : '';
   if (raw) return raw.slice(0, 200);
   const ip = req.ip || req.socket?.remoteAddress;
   return typeof ip === 'string' ? ip.slice(0, 200) : undefined;
@@ -220,22 +223,30 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
 
     const attachmentTitleRaw = parsed.data.attachmentTitle?.trim();
     const attachmentTitle =
-      attachmentTitleRaw && attachmentTitleRaw.length > 0 ? attachmentTitleRaw.slice(0, 120) : undefined;
+      attachmentTitleRaw && attachmentTitleRaw.length > 0
+        ? attachmentTitleRaw.slice(0, 120)
+        : undefined;
 
     const mReq = req as MulterRequest;
     let attachmentUrl: string | undefined;
-    let attachmentMeta: {
-      mime: string;
-      width: number;
-      height: number;
-      bytesIn: number;
-      bytesOut: number;
-      originalName?: string;
-    } | undefined;
+    let attachmentMeta:
+      | {
+          mime: string;
+          width: number;
+          height: number;
+          bytesIn: number;
+          bytesOut: number;
+          originalName?: string;
+        }
+      | undefined;
 
     if (mReq.file?.buffer?.length) {
       try {
-        const processed = await processUploadedImageBuffer(mReq.file.buffer, mReq.file.mimetype, 'feedback');
+        const processed = await processUploadedImageBuffer(
+          mReq.file.buffer,
+          mReq.file.mimetype,
+          'feedback'
+        );
         const dir = getDefaultUploadStorage().dirs.feedback;
         await fs.mkdir(dir, { recursive: true });
         const base = `feedback-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.webp`;
@@ -325,13 +336,21 @@ export async function submitFeedback(req: Request, res: Response): Promise<void>
     if (emailError) doc.emailError = emailError;
     await doc.save();
 
-    res.status(201).json({
+    let responseBody: Record<string, unknown> = {
       success: true,
       message: 'Thanks — your feedback was received.',
       emailSent: emailDelivered,
-    });
+    };
+    if (userId) {
+      const newlyUnlocked = await dispatchAchievementEvents(String(userId), [{ type: 'profile_sync' }]);
+      responseBody = attachAchievementsToResponse(responseBody, newlyUnlocked);
+    }
+
+    res.status(201).json(responseBody);
   } catch (err) {
     console.error('[feedback] submitFeedback', err);
-    res.status(500).json({ success: false, message: 'Could not save feedback. Please try again later.' });
+    res
+      .status(500)
+      .json({ success: false, message: 'Could not save feedback. Please try again later.' });
   }
 }

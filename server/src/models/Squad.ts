@@ -1,9 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import {
-  SQUAD_CATEGORY_VALUES,
-  type SquadCategory,
-  isSquadCategory,
-} from '@syntax-stories/shared';
+import { SQUAD_CATEGORY_VALUES, type SquadCategory, isSquadCategory } from '@syntax-stories/shared';
 
 export { SQUAD_CATEGORY_VALUES, type SquadCategory, isSquadCategory };
 
@@ -38,7 +34,15 @@ export interface ISquad extends Document {
 
 const SquadSchema = new Schema<ISquad>(
   {
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true, maxlength: 40, index: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 40,
+      index: true,
+    },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     /** Optional in UI; stored as empty string when omitted (Mongoose `required` rejects ''). */
     description: { type: String, trim: true, maxlength: 500, default: '' },
@@ -79,4 +83,5 @@ const SquadSchema = new Schema<ISquad>(
 SquadSchema.index({ visibility: 1, createdAt: -1 });
 SquadSchema.index({ visibility: 1, category: 1, createdAt: -1 });
 
-export const SquadModel: Model<ISquad> = mongoose.models?.squads ?? mongoose.model<ISquad>('squads', SquadSchema);
+export const SquadModel: Model<ISquad> =
+  mongoose.models?.squads ?? mongoose.model<ISquad>('squads', SquadSchema);

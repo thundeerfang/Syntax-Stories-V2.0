@@ -9,6 +9,7 @@ dist
 webapp/.env.local
 server/.env.local
 
+desktop/.env
 
 webapp/.env
 server/.env
@@ -35,3 +36,6 @@ webapp/.next
 admin/.next
 admin/node_modules
 server/coverage/
+
+# Mobile APK output (built via mobile/scripts/build_apk.sh)
+build/apk/*.apk

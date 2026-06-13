@@ -6,12 +6,11 @@ import { Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { blogApi } from '@/api/blog';
 import { FeaturedCategoryCard } from '@/features/explore';
-import { ShellPageIntroHeader } from '@/components/layout';
+import { RailFeedEmptyState, ShellPageIntroHeader } from '@/components/layout';
 import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
 import type { BlogTaxonomyRow } from '@/types/blog';
-
 
 function toastApiError(e: unknown, fallback: string) {
   if (e instanceof BlogApiConnectionError) {
@@ -49,7 +48,7 @@ export default function CategoriesPage() {
 
   const sorted = useMemo(
     () => [...categories].sort((a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name)),
-    [categories],
+    [categories]
   );
 
   return (
@@ -61,7 +60,11 @@ export default function CategoriesPage() {
         ]}
         title={
           <h1 className="font-mono text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
-            <Layers className="mr-2 inline-block size-7 text-primary sm:size-8" strokeWidth={2.25} aria-hidden />
+            <Layers
+              className="mr-2 inline-block size-7 text-primary sm:size-8"
+              strokeWidth={2.25}
+              aria-hidden
+            />
             Categories
           </h1>
         }
@@ -77,7 +80,10 @@ export default function CategoriesPage() {
       />
 
       {loading ? (
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+        <div
+          className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          aria-busy="true"
+        >
           {[0, 1, 2, 3, 4, 5].map((k) => (
             <div key={k} className="h-48 animate-pulse border-2 border-border bg-muted/40" />
           ))}
@@ -94,7 +100,13 @@ export default function CategoriesPage() {
           </button>
         </div>
       ) : sorted.length === 0 ? (
-        <p className="mt-10 text-sm text-muted-foreground">No categories in taxonomy yet.</p>
+        <RailFeedEmptyState
+          icon={Layers}
+          className="mt-10"
+          title="No categories in taxonomy yet"
+          description="When staff publish taxonomy categories and writers file stories under them, they will show up here."
+          actions={[{ label: 'All topics', href: '/topics', variant: 'primary' }]}
+        />
       ) : (
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.map((c) => (

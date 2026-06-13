@@ -7,7 +7,6 @@ import { SHELL_RAIL_FROST_CLASS, SHELL_RAIL_FROST_STYLE } from '@/lib/shell/shel
 import { LEGAL_FOOTER_LINKS } from '@/lib/shell/siteLinks';
 import { cn } from '@/lib/core/utils';
 
-
 const OPERATIONAL_POLL_MS = 12_000;
 const OPERATIONAL_FETCH_TIMEOUT_MS = 8000;
 
@@ -77,10 +76,7 @@ function OperationalStatusIndicator() {
   const showLatency = hydrated && latencyMs != null && !checking && ok;
 
   return (
-    <div
-      className="flex shrink-0 items-center gap-2"
-      title={hydrated ? title : undefined}
-    >
+    <div className="flex shrink-0 items-center gap-2" title={hydrated ? title : undefined}>
       <div
         className={cn(
           'size-3 shrink-0 border-2 border-border',
@@ -88,11 +84,17 @@ function OperationalStatusIndicator() {
           hydrated && checking && 'animate-pulse bg-muted',
           hydrated && !checking && ok && 'bg-emerald-600 dark:bg-emerald-500',
           hydrated && !checking && !ok && 'bg-red-600 dark:bg-red-500',
-          'motion-reduce:animate-none',
+          'motion-reduce:animate-none'
         )}
         role="img"
         aria-label={
-          !hydrated ? 'Backend status initializing' : checking ? 'Checking backend' : ok ? 'Operational' : 'Offline'
+          !hydrated
+            ? 'Backend status initializing'
+            : checking
+              ? 'Checking backend'
+              : ok
+                ? 'Operational'
+                : 'Offline'
         }
       />
       <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">

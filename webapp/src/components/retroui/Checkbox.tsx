@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/core/utils';
 
-
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   onCheckedChange?: (checked: boolean) => void;
 }
@@ -15,8 +14,10 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
       onCheckedChange?.(e.target.checked);
     };
 
-    let controlProps: Pick<React.InputHTMLAttributes<HTMLInputElement>, 'checked' | 'defaultChecked'> =
-      {};
+    let controlProps: Pick<
+      React.InputHTMLAttributes<HTMLInputElement>,
+      'checked' | 'defaultChecked'
+    > = {};
     if (checked !== undefined) {
       controlProps = { checked };
     } else if (defaultChecked !== undefined) {

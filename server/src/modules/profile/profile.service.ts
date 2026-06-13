@@ -5,6 +5,7 @@ import { applyBasicProfileRules } from './profile-basic.service.js';
 import { normalizeCertifications } from './profile-certifications.service.js';
 import { normalizeEducation } from './profile-education.service.js';
 import { toAccountUser } from './profile.mapper.js';
+import { attachStackAndToolsDisplay } from './profile.enrich.js';
 import { normalizeProjectsPrjLog } from './profile-projects.service.js';
 import { profileRepository } from './profile.repository.js';
 import type { ProfileSections, ProfileUpdateSection } from './profile.types.js';
@@ -20,6 +21,7 @@ const UPDATE_PROFILE_KEYS = [
   'coverBanner',
   'coverBannerAlt',
   'job',
+  'profileLocation',
   'portfolioUrl',
   'linkedin',
   'instagram',
@@ -88,7 +90,12 @@ async function applyProfileUpdate(
   if (hasBasicKey) {
     const basicResult = await applyBasicProfileRules(userId, updates);
     if (!basicResult.ok) {
-      return { ok: false, status: basicResult.status, message: basicResult.message, code: basicResult.code };
+      return {
+        ok: false,
+        status: basicResult.status,
+        message: basicResult.message,
+        code: basicResult.code,
+      };
     }
   }
 
@@ -111,7 +118,12 @@ async function applyProfileUpdate(
     normalizeProjectsPrjLog(updates);
   }
 
-  const updated = await profileRepository.updateBySection(userId, section, updates, expectedVersion);
+  const updated = await profileRepository.updateBySection(
+    userId,
+    section,
+    updates,
+    expectedVersion
+  );
   if (!updated) {
     if (expectedVersion !== undefined) {
       return {
@@ -140,7 +152,7 @@ async function applyProfileUpdate(
     section,
   });
 
-  return { ok: true, user: toAccountUser(updated as Record<string, unknown>) };
+  return { ok: true, user: await attachStackAndToolsDisplay(toAccountUser(updated as Record<string, unknown>)) };
 }
 
 export const profileService = {
@@ -154,10 +166,14 @@ export const profileService = {
         code: ProfileErrorCode.USER_NOT_FOUND,
       };
     }
-    return { ok: true, user: toAccountUser(found as Record<string, unknown>) };
+    return { ok: true, user: await attachStackAndToolsDisplay(toAccountUser(found as Record<string, unknown>)) };
   },
 
-  async updateProfile(req: Request, user: AuthUser, body: Record<string, unknown>): Promise<ProfileUpdateResult> {
+  async updateProfile(
+    req: Request,
+    user: AuthUser,
+    body: Record<string, unknown>
+  ): Promise<ProfileUpdateResult> {
     return applyProfileUpdate(req, user, body, UPDATE_PROFILE_KEYS, 'legacy');
   },
 
@@ -176,7 +192,9 @@ export const profileService = {
     missingFields: string[];
     incompleteItemHints: Record<string, unknown>;
   }> {
-    const pdfParse = (await import('pdf-parse')).default as (buf: Buffer) => Promise<{ text: string }>;
+    const pdfParse = (await import('pdf-parse')).default as (
+      buf: Buffer
+    ) => Promise<{ text: string }>;
     const { text } = await pdfParse(buffer);
     const { parseCvFromText } = await import('../../utils/parseCvFromPdf.js');
     const { extracted, missingFields, incompleteItemHints } = parseCvFromText(text ?? '');

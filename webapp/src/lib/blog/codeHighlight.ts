@@ -96,7 +96,7 @@ export function inferCodeLanguage(code: string): string {
 /** Produce highlighted HTML (safe: escaped by highlight.js). */
 export function highlightCodeToHtml(
   code: string,
-  languageHint?: string | null,
+  languageHint?: string | null
 ): { language: string; html: string } {
   const safe = code ?? '';
   const resolved = resolveLanguageId(languageHint ?? undefined);
@@ -110,8 +110,7 @@ export function highlightCodeToHtml(
   }
   try {
     const r = hljs.highlightAuto(safe, HLJS_AUTO_DETECT_SUBSET);
-    const lang =
-      r.language && hljs.getLanguage(r.language) ? r.language : 'plaintext';
+    const lang = r.language && hljs.getLanguage(r.language) ? r.language : 'plaintext';
     const out = hljs.highlight(safe, { language: lang });
     return { language: lang, html: out.value };
   } catch {

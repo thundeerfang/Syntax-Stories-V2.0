@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 
-
 /**
  * Sets `pendingReferralCode` in sessionStorage (backup for verify body) and redirects to the API
  * attach endpoint so the signed `ss_ref` cookie is set on the API origin.

@@ -6,7 +6,6 @@ import { Users, UserPlus } from 'lucide-react';
 import { followApi, type PublicProfileUser } from '@/api/follow';
 import { SparkLottie, StreakFireLottie } from '@/components/ui/lottie';
 
-
 const profileCache = new Map<string, PublicProfileUser>();
 
 /** Fixed width for profile hover surfaces (matches squad popover). */
@@ -27,7 +26,9 @@ export function ProfilePopoverCard({
   initialProfileImg,
   profileHref,
 }: ProfilePopoverCardProps) {
-  const [user, setUser] = useState<PublicProfileUser | null>(() => profileCache.get(username) ?? null);
+  const [user, setUser] = useState<PublicProfileUser | null>(
+    () => profileCache.get(username) ?? null
+  );
   const [loading, setLoading] = useState(() => !profileCache.has(username));
   const [followersCount, setFollowersCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
@@ -78,7 +79,9 @@ export function ProfilePopoverCard({
 
   const avatarSrc =
     display.profileImg?.trim() ||
-    (username ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}` : '');
+    (username
+      ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`
+      : '');
 
   let coverBannerEl: React.ReactNode;
   if (loading && !user) {
@@ -102,11 +105,7 @@ export function ProfilePopoverCard({
             </div>
           ) : (
             <div className="flex h-[52px] w-[52px] items-center justify-center border-2 border-border bg-card shadow">
-              <img
-                src={avatarSrc}
-                alt=""
-                className="object-cover"
-              />
+              <img src={avatarSrc} alt="" className="object-cover" />
             </div>
           )}
         </div>
@@ -117,22 +116,34 @@ export function ProfilePopoverCard({
         </p>
         <p className="mt-0.5 text-left font-mono text-[10px] text-primary">@{username}</p>
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
-          <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground" title="Respect">
+          <span
+            className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground"
+            title="Respect"
+          >
             <SparkLottie play size={14} />
             <span>10</span>
           </span>
-          <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground" title="Streak">
+          <span
+            className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground"
+            title="Streak"
+          >
             <StreakFireLottie play size={14} />
             <span>0</span>
           </span>
           {followersCount != null && (
-            <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground" title="Followers">
+            <span
+              className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground"
+              title="Followers"
+            >
               <Users className="size-3.5 shrink-0 text-primary" aria-hidden />
               {followersCount}
             </span>
           )}
           {followingCount != null && (
-            <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground" title="Following">
+            <span
+              className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground"
+              title="Following"
+            >
               <UserPlus className="size-3.5 shrink-0 text-primary" aria-hidden />
               {followingCount}
             </span>

@@ -1,5 +1,14 @@
 import { Router } from 'express';
-import { getPublicProfile, getFollowCounts, getFollowers, getFollowing, followUser, unfollowUser, checkFollowing, searchUsers } from '../controllers/follow.controller.js';
+import {
+  getPublicProfile,
+  getFollowCounts,
+  getFollowers,
+  getFollowing,
+  followUser,
+  unfollowUser,
+  checkFollowing,
+  searchUsers,
+} from '../controllers/follow.controller.js';
 import { verifyToken } from '../middlewares/auth/index.js';
 import { rateLimitFollowWrite } from '../middlewares/follow/rateLimitFollow.js';
 

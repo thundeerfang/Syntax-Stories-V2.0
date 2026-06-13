@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Wallet } from 'lucide-react';
 
-
 export default function WalletPage() {
   return (
     <div className="mx-auto flex min-h-[min(70vh,36rem)] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">

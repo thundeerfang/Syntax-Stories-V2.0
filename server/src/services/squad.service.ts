@@ -60,7 +60,7 @@ export function isStaffRole(role: SquadMemberRole): boolean {
 
 export async function getSquadMemberRole(
   squadId: mongoose.Types.ObjectId,
-  userId: string,
+  userId: string
 ): Promise<SquadMemberRole | null> {
   if (!mongoose.Types.ObjectId.isValid(userId)) return null;
   const row = await SquadMemberModel.findOne({
@@ -79,7 +79,8 @@ export async function assertCanPostOrShareToSquad(params: {
   const squad = await SquadModel.findById(params.squadId).lean();
   if (!squad) return { ok: false, message: 'Squad not found', status: 404 };
   const role = await getSquadMemberRole(params.squadId, params.userId);
-  if (!role) return { ok: false, message: 'Join this squad before posting or sharing here', status: 403 };
+  if (!role)
+    return { ok: false, message: 'Join this squad before posting or sharing here', status: 403 };
   if (squad.postPolicy === 'staff_only' && !isStaffRole(role)) {
     return {
       ok: false,
@@ -119,7 +120,7 @@ export type CreateSquadInput = {
 };
 
 export async function createSquadWithAdmin(
-  input: CreateSquadInput,
+  input: CreateSquadInput
 ): Promise<{ squad: ISquad; inviteToken?: string }> {
   const slug = await allocateUniqueSquadSlug(input.handle);
   const creatorOid = new mongoose.Types.ObjectId(input.creatorUserId);
@@ -161,12 +162,16 @@ export async function createSquadWithAdmin(
 
 export async function joinPublicSquad(
   squadId: mongoose.Types.ObjectId,
-  userId: string,
+  userId: string
 ): Promise<{ ok: true } | { ok: false; message: string; status: number }> {
   const squad = await SquadModel.findById(squadId).lean();
   if (!squad) return { ok: false, message: 'Squad not found', status: 404 };
   if (squad.visibility !== 'public') {
-    return { ok: false, message: 'This squad is private—use an invite or ask an admin to add you', status: 403 };
+    return {
+      ok: false,
+      message: 'This squad is private—use an invite or ask an admin to add you',
+      status: 403,
+    };
   }
   const uid = new mongoose.Types.ObjectId(userId);
   try {
@@ -190,15 +195,18 @@ export async function joinPrivateSquadWithToken(params: {
   if (squad.visibility !== 'private') {
     return { ok: false, message: 'Use join for public squads', status: 400 };
   }
-  const tok = typeof (squad as { inviteToken?: string }).inviteToken === 'string'
-    ? (squad as { inviteToken?: string }).inviteToken
-    : '';
+  const tok =
+    typeof (squad as { inviteToken?: string }).inviteToken === 'string'
+      ? (squad as { inviteToken?: string }).inviteToken
+      : '';
   if (!tok || tok !== params.inviteToken.trim()) {
     return { ok: false, message: 'Invalid or missing invite code', status: 403 };
   }
   const uid = new mongoose.Types.ObjectId(params.userId);
   try {
-    await SquadMemberModel.create([{ squadId: params.squadId, userId: uid, role: 'member' as const }]);
+    await SquadMemberModel.create([
+      { squadId: params.squadId, userId: uid, role: 'member' as const },
+    ]);
     await SquadModel.updateOne({ _id: params.squadId }, { $inc: { memberCount: 1 } });
     return { ok: true };
   } catch (e) {
@@ -219,9 +227,14 @@ export async function addSquadMemberByUsername(params: {
   if (!actorRole) {
     return { ok: false, message: 'You are not a member of this squad', status: 403 };
   }
-  const perm = (squad as { invitePermission?: SquadInvitePermission }).invitePermission ?? 'all_members';
+  const perm =
+    (squad as { invitePermission?: SquadInvitePermission }).invitePermission ?? 'all_members';
   if (perm === 'staff_only' && !isStaffRole(actorRole)) {
-    return { ok: false, message: 'Only admins and moderators can add members to this squad', status: 403 };
+    return {
+      ok: false,
+      message: 'Only admins and moderators can add members to this squad',
+      status: 403,
+    };
   }
   const uname = params.targetUsername.trim().toLowerCase();
   if (!uname) return { ok: false, message: 'Username required', status: 400 };
@@ -231,7 +244,11 @@ export async function addSquadMemberByUsername(params: {
   if (!user?._id) return { ok: false, message: 'User not found', status: 404 };
   try {
     await SquadMemberModel.create([
-      { squadId: params.squadId, userId: user._id as mongoose.Types.ObjectId, role: 'member' as const },
+      {
+        squadId: params.squadId,
+        userId: user._id as mongoose.Types.ObjectId,
+        role: 'member' as const,
+      },
     ]);
     await SquadModel.updateOne({ _id: params.squadId }, { $inc: { memberCount: 1 } });
     return { ok: true };
@@ -251,7 +268,10 @@ export async function sharePostToSquad(params: {
   postId: mongoose.Types.ObjectId;
   userId: string;
 }): Promise<{ ok: true } | { ok: false; message: string; status: number }> {
-  const gate = await assertCanPostOrShareToSquad({ squadId: params.squadId, userId: params.userId });
+  const gate = await assertCanPostOrShareToSquad({
+    squadId: params.squadId,
+    userId: params.userId,
+  });
   if (!gate.ok) return gate;
 
   const post = await BlogPostModel.findOne({
@@ -274,7 +294,8 @@ export async function sharePostToSquad(params: {
     return { ok: true };
   } catch (e) {
     const code = (e as { code?: number }).code;
-    if (code === 11000) return { ok: false, message: 'This article is already in the squad feed', status: 409 };
+    if (code === 11000)
+      return { ok: false, message: 'This article is already in the squad feed', status: 409 };
     throw e;
   }
 }
@@ -306,7 +327,7 @@ export async function setSquadMemberRole(params: {
   const updated = await SquadMemberModel.findOneAndUpdate(
     { squadId: params.squadId, userId: user._id },
     { $set: { role: params.role } },
-    { new: true },
+    { new: true }
   ).lean();
   if (!updated) return { ok: false, message: 'Member not found', status: 404 };
   return { ok: true };
@@ -316,7 +337,7 @@ export type SquadMemberPreview = { username: string; profileImg: string };
 
 /** Up to four members per squad (oldest joins first) for directory cards. */
 export async function getMemberPreviewsForSquads(
-  squadIds: mongoose.Types.ObjectId[],
+  squadIds: mongoose.Types.ObjectId[]
 ): Promise<Map<string, SquadMemberPreview[]>> {
   const out = new Map<string, SquadMemberPreview[]>();
   if (!squadIds.length) return out;
@@ -354,7 +375,7 @@ export async function getMemberPreviewsForSquads(
         username: typeof u.username === 'string' ? u.username : '',
         profileImg: typeof u.profileImg === 'string' ? u.profileImg : '',
       },
-    ]),
+    ])
   );
 
   for (const g of grouped) {
@@ -382,7 +403,10 @@ export async function assertPostInSquadFeed(params: {
   squadId: mongoose.Types.ObjectId;
   postId: mongoose.Types.ObjectId;
 }): Promise<{ ok: true } | { ok: false; message: string; status: number }> {
-  const shared = await SquadSharedPostModel.exists({ squadId: params.squadId, postId: params.postId });
+  const shared = await SquadSharedPostModel.exists({
+    squadId: params.squadId,
+    postId: params.postId,
+  });
   if (shared) return { ok: true };
   const authored = await BlogPostModel.exists({
     _id: params.postId,
@@ -428,12 +452,17 @@ export async function unpinSquadFeedPost(params: {
   if (role !== 'admin') {
     return { ok: false, message: 'Only squad admins can unpin posts', status: 403 };
   }
-  const r = await SquadPinnedPostModel.deleteOne({ squadId: params.squadId, postId: params.postId });
+  const r = await SquadPinnedPostModel.deleteOne({
+    squadId: params.squadId,
+    postId: params.postId,
+  });
   if (r.deletedCount === 0) return { ok: false, message: 'Pin not found', status: 404 };
   return { ok: true };
 }
 
-export async function listPinnedPostIdsForSquad(squadId: mongoose.Types.ObjectId): Promise<Set<string>> {
+export async function listPinnedPostIdsForSquad(
+  squadId: mongoose.Types.ObjectId
+): Promise<Set<string>> {
   const rows = await SquadPinnedPostModel.find({ squadId }).select('postId').lean();
   return new Set(rows.map((r) => String((r as { postId: mongoose.Types.ObjectId }).postId)));
 }

@@ -8,11 +8,13 @@ import { cn } from '@/lib/core/utils';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
 import { markOAuthNavigationPending } from '@/lib/auth/oauthNavigation';
+import { withDesktopOAuthReturnOrigin } from '@/lib/auth/oauthStartHref';
 import { GithubConnectLottie } from '@/components/ui/lottie';
-import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
-
-
-
+import {
+  SettingsSectionHeading,
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 
 export function ConnectedAccountsContent() {
   const { user, logout, token } = useAuthStore();
@@ -37,10 +39,13 @@ export function ConnectedAccountsContent() {
     if (!token) return;
     setLinkingProvider(id);
     try {
-      const data = await authApi.getLinkRedirectUrl(token, id as 'google' | 'github' | 'facebook' | 'x' | 'discord');
+      const data = await authApi.getLinkRedirectUrl(
+        token,
+        id as 'google' | 'github' | 'facebook' | 'x' | 'discord'
+      );
       if (data.redirectUrl) {
         markOAuthNavigationPending();
-        globalThis.location.assign(data.redirectUrl);
+        globalThis.location.assign(withDesktopOAuthReturnOrigin(data.redirectUrl));
         return;
       }
       toast.error(data.message ?? 'Could not start linking');
@@ -68,94 +73,91 @@ export function ConnectedAccountsContent() {
       />
 
       <SettingsTabPanel>
-      <div className="grid gap-4 md:grid-cols-2">
-        {providers.map((p) => {
-          const Icon = PROVIDER_ICONS[p.id] ?? Plug;
-          return (
-            <div
-              key={p.id}
-              className={cn(
-                "group relative border-4 p-5 transition-all",
-                p.linked ? "border-primary bg-primary/5 shadow" : "border-border bg-background"
-              )}
-            >
-              {/* Status Light */}
-              <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                <span
-                  className={cn(
-                    "text-[8px] font-black uppercase tracking-tighter",
-                    p.linked ? "text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {p.linked
-                    ? "LINKED"
-                    : linkingProvider === p.id
-                      ? "LINKING..."
-                      : "OFFLINE"}
-                </span>
-                <div
-                  className={cn(
-                    "size-2 border border-black",
-                    p.linked
-                      ? "bg-primary animate-pulse"
-                      : linkingProvider === p.id
-                        ? "bg-yellow-400 animate-pulse"
-                        : "bg-muted"
-                  )}
-                />
-              </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {providers.map((p) => {
+            const Icon = PROVIDER_ICONS[p.id] ?? Plug;
+            return (
+              <div
+                key={p.id}
+                className={cn(
+                  'group relative border-4 p-5 transition-all',
+                  p.linked ? 'border-primary bg-primary/5 shadow' : 'border-border bg-background'
+                )}
+              >
+                {/* Status Light */}
+                <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      'text-[8px] font-black uppercase tracking-tighter',
+                      p.linked ? 'text-primary' : 'text-muted-foreground'
+                    )}
+                  >
+                    {p.linked ? 'LINKED' : linkingProvider === p.id ? 'LINKING...' : 'OFFLINE'}
+                  </span>
+                  <div
+                    className={cn(
+                      'size-2 border border-black',
+                      p.linked
+                        ? 'bg-primary animate-pulse'
+                        : linkingProvider === p.id
+                          ? 'bg-yellow-400 animate-pulse'
+                          : 'bg-muted'
+                    )}
+                  />
+                </div>
 
-              <div className="flex items-center gap-4 mb-6">
-                <div
-                  className={cn(
-                    'flex shrink-0 items-center justify-center border-2 border-black shadow',
-                    p.id === 'github' && !p.linked ? 'size-16 overflow-hidden' : 'size-12',
-                    p.linked ? 'bg-primary text-primary-foreground' : 'bg-muted/20 text-muted-foreground',
-                  )}
-                >
-                  {p.id === 'github' && !p.linked ? (
-                    <GithubConnectLottie size={56} />
-                  ) : p.id === 'google' ? (
-                    <span className="flex items-center justify-center bg-white p-1.5">
+                <div className="flex items-center gap-4 mb-6">
+                  <div
+                    className={cn(
+                      'flex shrink-0 items-center justify-center border-2 border-black shadow',
+                      p.id === 'github' && !p.linked ? 'size-16 overflow-hidden' : 'size-12',
+                      p.linked
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/20 text-muted-foreground'
+                    )}
+                  >
+                    {p.id === 'github' && !p.linked ? (
+                      <GithubConnectLottie size={56} />
+                    ) : p.id === 'google' ? (
+                      <span className="flex items-center justify-center bg-white p-1.5">
+                        <Icon className="size-6" />
+                      </span>
+                    ) : (
                       <Icon className="size-6" />
-                    </span>
-                  ) : (
-                    <Icon className="size-6" />
-                  )}
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black uppercase leading-none">{p.label}</h4>
+                    <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">
+                      {p.linked ? `Active Session` : 'No connection'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-black uppercase leading-none">{p.label}</h4>
-                  <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">
-                    {p.linked ? `Active Session` : 'No connection'}
-                  </p>
-                </div>
-              </div>
 
-              {p.linked ? (
-                <button
-                  type="button"
-                  onClick={() => handleDisconnect(p.id)}
-                  disabled={!!disconnecting}
-                  className="w-full py-2 border-2 border-destructive text-destructive font-black text-[10px] uppercase tracking-widest hover:bg-destructive hover:text-white transition-all disabled:opacity-50"
-                >
-                  {disconnecting === p.id ? 'SEVERING...' : 'Sever Connection'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleConnect(p.id)}
-                  disabled={!!linkingProvider}
-                  className="w-full py-2 border-2 border-black bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-black hover:text-white transition-all disabled:opacity-50 shadow active:shadow-none"
-                >
-                  {linkingProvider === p.id ? 'REDIRECTING...' : 'Establish Link'}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                {p.linked ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDisconnect(p.id)}
+                    disabled={!!disconnecting}
+                    className="w-full py-2 border-2 border-destructive text-destructive font-black text-[10px] uppercase tracking-widest hover:bg-destructive hover:text-white transition-all disabled:opacity-50"
+                  >
+                    {disconnecting === p.id ? 'SEVERING...' : 'Sever Connection'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleConnect(p.id)}
+                    disabled={!!linkingProvider}
+                    className="w-full py-2 border-2 border-black bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-black hover:text-white transition-all disabled:opacity-50 shadow active:shadow-none"
+                  >
+                    {linkingProvider === p.id ? 'REDIRECTING...' : 'Establish Link'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </SettingsTabPanel>
     </SettingsTabRoot>
   );
 }
-

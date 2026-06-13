@@ -10,7 +10,12 @@ import { followApi, type PublicProfileUser } from '@/api/follow';
 import { blogApi, type BlogPostResponse } from '@/api/blog';
 import { BlogCard, type BlogCardOwnerActions } from '@/features/blog';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import { RailFeedEmptyState, RailSectionSubheader, RectangleAppBreadcrumb, type RailSectionSubheaderSortProps } from '@/components/layout';
+import {
+  RailFeedEmptyState,
+  RailSectionSubheader,
+  RectangleAppBreadcrumb,
+  type RailSectionSubheaderSortProps,
+} from '@/components/layout';
 import { blockShadowButtonClassNames } from '@/components/ui/button';
 import { mapBlogPostResponseToPost } from '@/lib/blog/mapBlogPostResponseToPost';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
@@ -24,14 +29,17 @@ import { useAuthStore } from '@/store/auth';
 import type { BlogTaxonomyRow } from '@/types/blog';
 import type { Post } from '@/types';
 
-
 const TRASH_MS = 7 * 24 * 60 * 60 * 1000;
 
 type BlogStatusTab = 'published' | 'drafts' | 'deleted';
 
 function formatBlogDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   } catch {
     return '';
   }
@@ -112,10 +120,7 @@ function ProfileBlogsPageIntro({
                   <p className="mt-1 font-mono text-[10px] font-bold uppercase tracking-widest text-primary">
                     @{username}
                     {joinedLabel ? (
-                      <span className="text-muted-foreground">
-                        {' '}
-                        · Joined {joinedLabel}
-                      </span>
+                      <span className="text-muted-foreground"> · Joined {joinedLabel}</span>
                     ) : null}
                   </p>
                 </div>
@@ -125,7 +130,7 @@ function ProfileBlogsPageIntro({
                     onClick={() => setWriteEditorSessionPostId(null)}
                     className={cn(
                       blockShadowButtonClassNames({ variant: 'primary', size: 'md', shadow: 'sm' }),
-                      'shrink-0 no-underline',
+                      'shrink-0 no-underline'
                     )}
                   >
                     <NotebookPen className="size-3.5" /> Write
@@ -168,13 +173,13 @@ function ProfileBlogGridItem({
   );
 }
 
-
 export function UserProfileBlogsContent({ username }: Readonly<{ username: string }>) {
   const router = useRouter();
   const { user: currentUser, token } = useAuthStore();
   const normalizedUsername = username.trim().toLowerCase();
   const ownerUsername = currentUser?.username?.trim().toLowerCase() ?? '';
-  const isOwner = Boolean(token) && ownerUsername.length > 0 && ownerUsername === normalizedUsername;
+  const isOwner =
+    Boolean(token) && ownerUsername.length > 0 && ownerUsername === normalizedUsername;
 
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<BlogStatusTab>('published');
@@ -199,7 +204,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
       displayName: profile?.fullName?.trim() || currentUser?.fullName || normalizedUsername,
       profileImg: profile?.profileImg || (isOwner ? currentUser?.profileImg : undefined),
     }),
-    [normalizedUsername, isOwner, profile, currentUser?.fullName, currentUser?.profileImg],
+    [normalizedUsername, isOwner, profile, currentUser?.fullName, currentUser?.profileImg]
   );
 
   useEffect(() => {
@@ -283,7 +288,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
         setDeleteSubmitting(false);
       }
     },
-    [token, load],
+    [token, load]
   );
 
   const confirmPurge = useCallback(
@@ -301,7 +306,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
         setPurgeSubmitting(false);
       }
     },
-    [token, load],
+    [token, load]
   );
 
   const restore = useCallback(
@@ -321,7 +326,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
         setRestoreId(null);
       }
     },
-    [token, load],
+    [token, load]
   );
 
   const goToEditor = useCallback(
@@ -330,7 +335,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
       setEditTarget(null);
       router.push('/blogs/write');
     },
-    [router],
+    [router]
   );
 
   const publicHref = (slug: string) =>
@@ -341,7 +346,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
       { value: '', label: 'All categories' },
       ...categories.map((c) => ({ value: c.slug, label: c.name })),
     ],
-    [categories],
+    [categories]
   );
 
   const statusButtons = useMemo(() => {
@@ -373,13 +378,21 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
 
   const filteredPublished = useMemo(
     () => filterByCategory(published, categoryFilter),
-    [published, categoryFilter],
+    [published, categoryFilter]
   );
-  const filteredDrafts = useMemo(() => filterByCategory(drafts, categoryFilter), [drafts, categoryFilter]);
-  const filteredDeleted = useMemo(() => filterByCategory(deleted, categoryFilter), [deleted, categoryFilter]);
+  const filteredDrafts = useMemo(
+    () => filterByCategory(drafts, categoryFilter),
+    [drafts, categoryFilter]
+  );
+  const filteredDeleted = useMemo(
+    () => filterByCategory(deleted, categoryFilter),
+    [deleted, categoryFilter]
+  );
   const filteredPublic = useMemo(() => {
     if (!categoryFilter) return publishedPublic;
-    return publishedPublic.filter((p) => (p.category ?? '').toLowerCase() === categoryFilter.toLowerCase());
+    return publishedPublic.filter(
+      (p) => (p.category ?? '').toLowerCase() === categoryFilter.toLowerCase()
+    );
   }, [publishedPublic, categoryFilter]);
 
   const renderOwnerPublished = () => {
@@ -388,8 +401,19 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
         <RailFeedEmptyState
           icon={FileText}
           title="No published posts"
-          description={categoryFilter ? 'Try another category or clear the filter.' : 'Publish from the write workspace.'}
-          actions={[{ label: 'Write', href: '/blogs/write', variant: 'primary',icon: <NotebookPen className="size-4 shrink-0" strokeWidth={2.5} aria-hidden /> }]}
+          description={
+            categoryFilter
+              ? 'Try another category or clear the filter.'
+              : 'Publish from the write workspace.'
+          }
+          actions={[
+            {
+              label: 'Write',
+              href: '/blogs/write',
+              variant: 'primary',
+              icon: <NotebookPen className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+            },
+          ]}
         />
       );
     }
@@ -417,7 +441,9 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
         <RailFeedEmptyState
           icon={FileText}
           title="No published posts"
-          description={categoryFilter ? 'Try another category.' : 'This author has not published yet.'}
+          description={
+            categoryFilter ? 'Try another category.' : 'This author has not published yet.'
+          }
         />
       );
     }
@@ -437,7 +463,14 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
           icon={NotebookPen}
           title="No drafts"
           description="Autosave keeps drafts while you write."
-          actions={[{ label: 'Write', href: '/blogs/write', variant: 'primary',icon: <NotebookPen className="size-4 shrink-0" strokeWidth={2.5} aria-hidden /> }]}
+          actions={[
+            {
+              label: 'Write',
+              href: '/blogs/write',
+              variant: 'primary',
+              icon: <NotebookPen className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+            },
+          ]}
         />
       );
     }
@@ -473,7 +506,7 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
         {filteredDeleted.map((p) => {
           const post = mapBlogPostResponseToPost(
             { ...p, status: 'draft', updatedAt: p.deletedAt ?? p.updatedAt },
-            author,
+            author
           );
           return (
             <ProfileBlogGridItem
@@ -513,7 +546,11 @@ export function UserProfileBlogsContent({ username }: Readonly<{ username: strin
   return (
     <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
-        <ProfileBlogsPageIntro profile={profile} isOwner={isOwner} profileLoading={profileLoading} />
+        <ProfileBlogsPageIntro
+          profile={profile}
+          isOwner={isOwner}
+          profileLoading={profileLoading}
+        />
 
         <RailSectionSubheader
           buttons={statusButtons}

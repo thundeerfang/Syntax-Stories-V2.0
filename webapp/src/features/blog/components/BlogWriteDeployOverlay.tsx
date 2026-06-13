@@ -1,20 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  FolderTree,
-  ImageIcon,
-  Rocket,
-  Tags,
-  UsersRound,
-} from 'lucide-react';
+import { FolderTree, ImageIcon, Rocket, Tags, UsersRound } from 'lucide-react';
 import { FormDialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/retroui';
 import { cn } from '@/lib/core/utils';
 import type { BlogTaxonomyRow } from '@/types/blog';
-import { blogPublishSummaryPreviewPlain, type BlogPublishTaxonomy } from '@/lib/blog/blogPublishTaxonomy';
-
+import {
+  blogPublishSummaryPreviewPlain,
+  type BlogPublishTaxonomy,
+} from '@/lib/blog/blogPublishTaxonomy';
 
 export type BlogWriteDeploySquadOption = Readonly<{
   _id: string;
@@ -90,7 +86,12 @@ export function BlogWriteDeployOverlay({
   }, [taxonomyCategories, category]);
 
   const addTag = useCallback((raw: string) => {
-    const t = raw.trim().toLowerCase().replaceAll(/\s+/g, '-').replaceAll(/[^\w-]/g, '').slice(0, 32);
+    const t = raw
+      .trim()
+      .toLowerCase()
+      .replaceAll(/\s+/g, '-')
+      .replaceAll(/[^\w-]/g, '')
+      .slice(0, 32);
     if (!t) return;
     setTags((prev) => (prev.includes(t) || prev.length >= 20 ? prev : [...prev, t]));
     setTagInput('');
@@ -102,11 +103,16 @@ export function BlogWriteDeployOverlay({
 
   const buildTax = useCallback(
     (): BlogPublishTaxonomy => ({
-      category: category.trim().toLowerCase().replaceAll(/\s+/g, '-').replaceAll(/[^\w-]/g, '').slice(0, 48),
+      category: category
+        .trim()
+        .toLowerCase()
+        .replaceAll(/\s+/g, '-')
+        .replaceAll(/[^\w-]/g, '')
+        .slice(0, 48),
       tags,
       language: 'en',
     }),
-    [category, tags],
+    [category, tags]
   );
 
   const handleDeploy = () => {
@@ -196,9 +202,13 @@ export function BlogWriteDeployOverlay({
               )}
             </div>
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{displayTitle}</p>
+              <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+                {displayTitle}
+              </p>
               {summaryLine ? (
-                <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{summaryLine}</p>
+                <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+                  {summaryLine}
+                </p>
               ) : (
                 <p className="text-sm italic text-muted-foreground">No summary</p>
               )}
@@ -256,8 +266,8 @@ export function BlogWriteDeployOverlay({
                   className="gap-0 [&>label]:hidden"
                 />
                 <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
-                  Publish or save this draft as a squad post for the feed you pick. Leave unset for a personal post
-                  only.
+                  Publish or save this draft as a squad post for the feed you pick. Leave unset for
+                  a personal post only.
                 </p>
               </div>
             ) : null}
@@ -301,7 +311,13 @@ export function BlogWriteDeployOverlay({
                   placeholder="Type a tag, press Enter"
                   className={cn(fieldClass, 'min-w-0 flex-1')}
                 />
-                <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => addTag(tagInput)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => addTag(tagInput)}
+                >
                   Add
                 </Button>
               </div>

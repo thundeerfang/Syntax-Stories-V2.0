@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/core/utils';
 
-
 export function RetroBadge({
   children,
   variant = 'default',
@@ -31,4 +30,3 @@ export function RetroBadge({
     </span>
   );
 }
-

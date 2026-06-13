@@ -15,11 +15,9 @@ import React, {
   type ReactNode,
 } from 'react';
 import {
-  AlignLeft,
   AtSign,
-  BookOpen,
   Braces,
-  Copy,
+  Eye,
   Grid3x3,
   Info,
   Keyboard,
@@ -31,7 +29,6 @@ import {
   Trash2,
   Type,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { MAX_COLS, MAX_ROWS, TableVisualGrid } from '@/components/blog';
 import { Dialog, DIALOG_FOOTER_ACTIONS_CLASS } from '../dialog/dialogs';
 import {
@@ -39,25 +36,17 @@ import {
   highlightCodeToHtml,
   inferCodeLanguage,
 } from '@/lib/blog/codeHighlight';
+import { MermaidBlockDisplay } from '@/features/blog/post-detail/blogPostDetailSections';
 import { validateMermaidSource } from '@/lib/blog/mermaidValidate';
-import { parseTableFromText } from '@/lib/blog/tablePaste';
 import {
   clampTableMatrix,
   MAX_TABLE_CELL_CHARS,
-  MAX_TABLE_PASTE_CHARS,
+  tableEffectiveColCount,
+  tableHasContent,
 } from '@/lib/blog/tableBlockLimits';
 import { cn } from '@/lib/core/utils';
 import type { CodePayload, MermaidDiagramPayload, TablePayload } from '@/types/blog';
 import 'highlight.js/styles/github-dark.css';
-
-const EXAMPLE_TSV = `Feature\tOption A\tOption B
-Speed\tFast\tVery fast
-Cost\tLow\tHigher`;
-
-const EXAMPLE_PIPE = `| Plan | Free | Pro |
-|------|------|-----|
-| Storage | 1 GB | 100 GB |
-| API | Yes | Yes |`;
 
 interface TableBlockHelpDialogProps {
   open: boolean;
@@ -65,15 +54,6 @@ interface TableBlockHelpDialogProps {
 }
 
 function TableBlockHelpDialog({ open, onClose }: Readonly<TableBlockHelpDialogProps>) {
-  const copyText = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`Copied ${label}`);
-    } catch {
-      toast.error('Could not copy');
-    }
-  };
-
   return (
     <Dialog
       open={open}
@@ -81,7 +61,7 @@ function TableBlockHelpDialog({ open, onClose }: Readonly<TableBlockHelpDialogPr
       titleId="table-block-help-title"
       titleIcon={<Table2 aria-hidden />}
       title="Table block"
-      description="Paste, grid, and limits."
+      description="Grid editing and limits."
       panelClassName={cn('max-w-2xl max-h-[min(88vh,720px)] flex flex-col overflow-hidden')}
       contentClassName="flex min-h-0 flex-1 flex-col p-6 sm:p-8"
     >
@@ -90,54 +70,16 @@ function TableBlockHelpDialog({ open, onClose }: Readonly<TableBlockHelpDialogPr
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
           <div className="min-w-0 space-y-1">
             <p>
-              Use <strong className="text-foreground">Paste &amp; table</strong> for TSV or pipe markdown, or{' '}
-              <strong className="text-foreground">Visual grid</strong> to edit cells directly.
+              Use <strong className="text-foreground">Edit Grid</strong> to fill cells directly.
+              Open <strong className="text-foreground">Preview</strong> once at least one cell has
+              content.
             </p>
             <p className="font-mono text-[10px] text-foreground/85">
-              Limits: {MAX_ROWS}×{MAX_COLS} · paste {MAX_TABLE_PASTE_CHARS.toLocaleString()} chars ·{' '}
+              Limits: {MAX_ROWS} rows · {MAX_COLS} columns ·{' '}
               {MAX_TABLE_CELL_CHARS.toLocaleString()} chars/cell
             </p>
           </div>
         </div>
-
-        <section className="space-y-2">
-          <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-foreground">
-            <BookOpen className="h-3.5 w-3.5 text-primary" aria-hidden />
-            Example formats
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="border-2 border-border bg-muted/20 p-3">
-              <div className="mb-2 flex items-center justify-between gap-1">
-                <span className="text-[9px] font-black uppercase text-muted-foreground">TSV</span>
-                <button
-                  type="button"
-                  onClick={() => void copyText(EXAMPLE_TSV, 'TSV example')}
-                  className="inline-flex items-center gap-0.5 border-2 border-border bg-card px-2 py-1 text-[9px] font-bold uppercase shadow hover:bg-muted/60 active:translate-x-px active:translate-y-px active:shadow-none"
-                >
-                  <Copy className="h-2.5 w-2.5" aria-hidden /> Copy
-                </button>
-              </div>
-              <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] leading-snug text-foreground">
-                {EXAMPLE_TSV}
-              </pre>
-            </div>
-            <div className="border-2 border-border bg-muted/20 p-3">
-              <div className="mb-2 flex items-center justify-between gap-1">
-                <span className="text-[9px] font-black uppercase text-muted-foreground">Pipe</span>
-                <button
-                  type="button"
-                  onClick={() => void copyText(EXAMPLE_PIPE, 'pipe example')}
-                  className="inline-flex items-center gap-0.5 border-2 border-border bg-card px-2 py-1 text-[9px] font-bold uppercase shadow hover:bg-muted/60 active:translate-x-px active:translate-y-px active:shadow-none"
-                >
-                  <Copy className="h-2.5 w-2.5" aria-hidden /> Copy
-                </button>
-              </div>
-              <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] leading-snug text-foreground">
-                {EXAMPLE_PIPE}
-              </pre>
-            </div>
-          </div>
-        </section>
       </div>
 
       <footer className={cn(DIALOG_FOOTER_ACTIONS_CLASS, 'mt-5 space-y-0')}>
@@ -178,7 +120,10 @@ function Section({
   );
 }
 
-export function ParagraphBlockHelpDialog({ open, onClose }: Readonly<ParagraphBlockHelpDialogProps>) {
+export function ParagraphBlockHelpDialog({
+  open,
+  onClose,
+}: Readonly<ParagraphBlockHelpDialogProps>) {
   return (
     <Dialog
       open={open}
@@ -191,51 +136,71 @@ export function ParagraphBlockHelpDialog({ open, onClose }: Readonly<ParagraphBl
       contentClassName="flex min-h-0 flex-1 flex-col p-0"
     >
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-6">
-      <Section icon={Keyboard} title="Line breaks & paragraphs">
-        <p>
-          Press <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">Enter</kbd> to start a
-          new paragraph or a new list item when you are inside a list.
-        </p>
-        <p>
-          Extra blank lines are normalized: you will not stack many empty rows—only one empty line is kept at a time in
-          most cases.
-        </p>
-      </Section>
+        <Section icon={Keyboard} title="Line breaks & paragraphs">
+          <p>
+            Press{' '}
+            <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">
+              Enter
+            </kbd>{' '}
+            to start a new paragraph or a new list item when you are inside a list.
+          </p>
+          <p>
+            Extra blank lines are normalized: you will not stack many empty rows—only one empty line
+            is kept at a time in most cases.
+          </p>
+        </Section>
 
-      <Section icon={List} title="Lists">
-        <p>
-          Start a line with <code className="text-[11px] bg-muted px-1 py-0.5">1. </code> (number, dot, space) for a
-          numbered list, or <code className="text-[11px] bg-muted px-1 py-0.5">- </code> for bullets—then keep typing.
-        </p>
-        <p>
-          When the list keeps going with the next number or bullet, press{' '}
-          <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">Enter</kbd> to stop that and
-          return to normal paragraphs—often on an empty line at the end of the list, or press Enter again if a new empty
-          list row appears first.
-        </p>
-        <p>
-          <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">Backspace</kbd> at the
-          start of an empty list line can merge or lift in some cases, but exiting list continuation is usually done with
-          Enter, not Backspace.
-        </p>
-      </Section>
+        <Section icon={List} title="Lists">
+          <p>
+            Start a line with <code className="text-[11px] bg-muted px-1 py-0.5">1. </code> (number,
+            dot, space) for a numbered list, or{' '}
+            <code className="text-[11px] bg-muted px-1 py-0.5">- </code> for bullets—then keep
+            typing.
+          </p>
+          <p>
+            When the list keeps going with the next number or bullet, press{' '}
+            <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">
+              Enter
+            </kbd>{' '}
+            to stop that and return to normal paragraphs—often on an empty line at the end of the
+            list, or press Enter again if a new empty list row appears first.
+          </p>
+          <p>
+            <kbd className="px-1 py-0.5 border border-border bg-muted font-mono text-[10px]">
+              Backspace
+            </kbd>{' '}
+            at the start of an empty list line can merge or lift in some cases, but exiting list
+            continuation is usually done with Enter, not Backspace.
+          </p>
+        </Section>
 
-      <Section icon={Link2} title="Formatting & links">
-        <p>Use the toolbar for bold, italic, underline, and links. Ctrl/Cmd-click a link to open it in a new tab.</p>
-        <p>Pasted plain text that looks like a list (e.g. lines starting with <code className="text-[11px] bg-muted px-1">1.</code> or{' '}
-          <code className="text-[11px] bg-muted px-1">-</code>) can turn into a real list automatically.</p>
-      </Section>
+        <Section icon={Link2} title="Formatting & links">
+          <p>
+            Use the toolbar for bold, italic, underline, and links. Ctrl/Cmd-click a link to open it
+            in a new tab.
+          </p>
+          <p>
+            Pasted plain text that looks like a list (e.g. lines starting with{' '}
+            <code className="text-[11px] bg-muted px-1">1.</code> or{' '}
+            <code className="text-[11px] bg-muted px-1">-</code>) can turn into a real list
+            automatically.
+          </p>
+        </Section>
 
-      <Section icon={AtSign} title="Mentions & GIFs">
-        <p>
-          Use the toolbar buttons to insert a <strong className="text-foreground">mention</strong> or{' '}
-          <strong className="text-foreground">GIF</strong>. Search picks from your app’s GIF search and user search.
-        </p>
-      </Section>
+        <Section icon={AtSign} title="Mentions & GIFs">
+          <p>
+            Use the toolbar buttons to insert a <strong className="text-foreground">mention</strong>{' '}
+            or <strong className="text-foreground">GIF</strong>. Search picks from your app’s GIF
+            search and user search.
+          </p>
+        </Section>
 
-      <Section icon={Save} title="Saving">
-        <p>Your draft saves as you edit. You do not need a separate “save paragraph” action for the rich text itself.</p>
-      </Section>
+        <Section icon={Save} title="Saving">
+          <p>
+            Your draft saves as you edit. You do not need a separate “save paragraph” action for the
+            rich text itself.
+          </p>
+        </Section>
       </div>
       <footer className={cn(DIALOG_FOOTER_ACTIONS_CLASS, 'px-6')}>
         <button
@@ -298,15 +263,18 @@ export function CodeBlockEditor({
         languageSource: langSource,
       });
     },
-    [onUpdate, payload],
+    [onUpdate, payload]
   );
 
-  const runHighlightPreview = useCallback((text: string, lang: string, langSource: 'auto' | 'manual') => {
-    const effectiveLang = langSource === 'manual' ? lang : inferCodeLanguage(text);
-    const { language, html } = highlightCodeToHtml(text, effectiveLang);
-    setPreviewLang(language);
-    setPreviewHtml(html);
-  }, []);
+  const runHighlightPreview = useCallback(
+    (text: string, lang: string, langSource: 'auto' | 'manual') => {
+      const effectiveLang = langSource === 'manual' ? lang : inferCodeLanguage(text);
+      const { language, html } = highlightCodeToHtml(text, effectiveLang);
+      setPreviewLang(language);
+      setPreviewHtml(html);
+    },
+    []
+  );
 
   useEffect(() => {
     runHighlightPreview(localCode, storedLang, manualLock ? 'manual' : 'auto');
@@ -322,7 +290,7 @@ export function CodeBlockEditor({
         pushUpdate(nextCode, lang, src);
       }, DEBOUNCE_MS);
     },
-    [manualLock, storedLang, pushUpdate],
+    [manualLock, storedLang, pushUpdate]
   );
 
   const handleChange = (next: string) => {
@@ -372,7 +340,7 @@ export function CodeBlockEditor({
         className={cn(
           'min-h-[140px] w-full resize-y  bg-muted/25 p-3 font-mono text-xs leading-relaxed text-foreground',
           'ring-1 ring-inset ring-border/45 placeholder:text-muted-foreground placeholder:italic',
-          'focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-inset',
+          'focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-inset'
         )}
       />
 
@@ -432,6 +400,8 @@ const DEFAULT = `graph TD
     A[Client App] --> B[API]
     B --> C[Database]`;
 
+type MermaidViewTab = 'edit' | 'preview';
+
 export function MermaidBlockEditor({
   blockId: _blockId,
   payload,
@@ -443,9 +413,11 @@ export function MermaidBlockEditor({
   onUpdate: (p: MermaidDiagramPayload) => void;
   onRemove: () => void;
 }>) {
-  const initial = typeof payload.source === 'string' && payload.source.trim() ? payload.source : DEFAULT;
+  const initial =
+    typeof payload.source === 'string' && payload.source.trim() ? payload.source : DEFAULT;
   const [source, setSource] = useState(initial);
   const [parseHint, setParseHint] = useState<string | null>(null);
+  const [mermaidTab, setMermaidTab] = useState<MermaidViewTab>('edit');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persist = useCallback(
@@ -453,7 +425,7 @@ export function MermaidBlockEditor({
       setSource(next);
       onUpdate({ source: next });
     },
-    [onUpdate],
+    [onUpdate]
   );
 
   useEffect(() => {
@@ -474,6 +446,14 @@ export function MermaidBlockEditor({
     };
   }, [source]);
 
+  const canPreview = source.trim().length > 0 && !parseHint;
+
+  useEffect(() => {
+    if (!canPreview && mermaidTab === 'preview') {
+      setMermaidTab('edit');
+    }
+  }, [canPreview, mermaidTab]);
+
   return (
     <div className="group space-y-2 border-0 bg-muted/10 p-3 ring-1 ring-border/35">
       <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -489,32 +469,78 @@ export function MermaidBlockEditor({
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
-      <textarea
-        value={source}
-        onChange={(e) => persist(e.target.value)}
-        spellCheck={false}
-        placeholder="graph TD ..."
-        className={cn(
-          'min-h-[160px] w-full resize-y  border-0 bg-muted/25 p-3 font-mono text-[11px] leading-relaxed ring-1 ring-border/40',
-          'text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35',
-          parseHint ? 'ring-destructive/50' : '',
-        )}
-      />
-      {parseHint ? (
-        <p className="border border-destructive/40 bg-destructive/5 px-2 py-1.5 font-mono text-[10px] leading-snug text-destructive">
-          {parseHint}
-        </p>
-      ) : null}
-      <p className="text-[10px] text-muted-foreground">
-        Validated before publish. Use quotes for labels with spaces:{' '}
-        <code className="border border-border px-1">B[&quot;Supabase API&quot;]</code>. One statement per line after{' '}
-        <code className="border border-border px-1">graph TD</code>.
-      </p>
+
+      <div
+        role="tablist"
+        aria-label="Mermaid editing mode"
+        className="flex w-full gap-0 border-0 border-b border-border/40 bg-transparent p-0"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mermaidTab === 'edit'}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-1.5 rounded-none border-0 border-b-2 px-2 py-2 text-[10px] font-black tracking-wide transition-colors',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
+            mermaidTab === 'edit'
+              ? 'border-primary bg-primary/10 text-foreground'
+              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+          )}
+          onClick={() => setMermaidTab('edit')}
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mermaidTab === 'preview'}
+          disabled={!canPreview}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-1.5 rounded-none border-0 border-b-2 px-2 py-2 text-[10px] font-black tracking-wide transition-colors',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
+            !canPreview && 'cursor-not-allowed opacity-45',
+            mermaidTab === 'preview'
+              ? 'border-primary bg-primary/10 text-foreground'
+              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+          )}
+          onClick={() => canPreview && setMermaidTab('preview')}
+        >
+          <Eye className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+          Preview
+        </button>
+      </div>
+
+      {mermaidTab === 'edit' ? (
+        <div className="space-y-2">
+          <textarea
+            value={source}
+            onChange={(e) => persist(e.target.value)}
+            spellCheck={false}
+            placeholder="graph TD ..."
+            className={cn(
+              'min-h-[160px] w-full resize-y border-0 bg-muted/25 p-3 font-mono text-[11px] leading-relaxed ring-1 ring-border/40',
+              'text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35',
+              parseHint ? 'ring-destructive/50' : ''
+            )}
+          />
+          {parseHint ? (
+            <p className="border border-destructive/40 bg-destructive/5 px-2 py-1.5 font-mono text-[10px] leading-snug text-destructive">
+              {parseHint}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="overflow-hidden border-0 bg-muted/15 ring-1 ring-border/30">
+          <div className="max-h-[min(52vh,360px)] overflow-auto p-2">
+            <MermaidBlockDisplay source={source} quiet className="min-w-0" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-type TableViewTab = 'paste' | 'grid';
+type TableViewTab = 'grid' | 'preview';
 
 export function TableBlockEditor({
   blockId: _blockId,
@@ -529,13 +555,16 @@ export function TableBlockEditor({
 }>) {
   const rows = useMemo(() => {
     const base =
-      Array.isArray(payload.rows) && payload.rows.length ? payload.rows : [['Column A', 'Column B'], ['']];
+      Array.isArray(payload.rows) && payload.rows.length
+        ? payload.rows
+        : [['Column A', 'Column B'], ['']];
     return clampTableMatrix(base, MAX_ROWS, MAX_COLS, MAX_TABLE_CELL_CHARS);
   }, [payload.rows]);
   const [caption, setCaption] = useState(payload.caption ?? '');
-  const [rawPaste, setRawPaste] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
-  const [tableTab, setTableTab] = useState<TableViewTab>('paste');
+  const [tableTab, setTableTab] = useState<TableViewTab>('grid');
+  const canPreview = tableHasContent(rows);
+  const previewCols = tableEffectiveColCount(rows);
 
   const sync = useCallback(
     (nextRows: string[][], cap?: string) => {
@@ -545,37 +574,10 @@ export function TableBlockEditor({
         rows: clampTableMatrix(nextRows, MAX_ROWS, MAX_COLS, MAX_TABLE_CELL_CHARS),
       });
     },
-    [caption, onUpdate],
+    [caption, onUpdate]
   );
 
-  const applyParsed = useCallback(
-    (text: string) => {
-      const sliced = text.slice(0, MAX_TABLE_PASTE_CHARS);
-      if (sliced.length < text.length) {
-        toast.message('Paste trimmed', {
-          description: `Only the first ${MAX_TABLE_PASTE_CHARS.toLocaleString()} characters are used.`,
-        });
-      }
-      const parsed = parseTableFromText(sliced);
-      if (!parsed) {
-        toast.error('Could not parse a table (need 2+ rows and tabs or | pipes).');
-        return;
-      }
-      const clamped = clampTableMatrix(parsed, MAX_ROWS, MAX_COLS, MAX_TABLE_CELL_CHARS);
-      const maxParsedCols = parsed.length ? Math.max(1, ...parsed.map((r) => r.length)) : 1;
-      if (parsed.length > MAX_ROWS || maxParsedCols > MAX_COLS) {
-        toast.message('Table size limited', {
-          description: `Kept at most ${MAX_ROWS} rows and ${MAX_COLS} columns.`,
-        });
-      }
-      sync(clamped);
-      setRawPaste('');
-      toast.success('Table updated from paste');
-    },
-    [sync],
-  );
-
-  const limitsSummary = `Up to ${MAX_ROWS} rows · ${MAX_COLS} columns · paste box ${MAX_TABLE_PASTE_CHARS.toLocaleString()} characters · ${MAX_TABLE_CELL_CHARS.toLocaleString()} characters per cell`;
+  const limitsSummary = `Up to ${MAX_ROWS} rows · ${MAX_COLS} columns · ${MAX_TABLE_CELL_CHARS.toLocaleString()} characters per cell`;
 
   return (
     <div className="group space-y-3 border-0 bg-muted/10 p-3 ring-1 ring-border/35">
@@ -627,38 +629,40 @@ export function TableBlockEditor({
         <button
           type="button"
           role="tab"
-          id="table-tab-paste"
-          aria-selected={tableTab === 'paste'}
-          aria-controls="table-panel-paste"
-          className={cn(
-            'flex flex-1 items-center justify-center gap-1.5  border-0 border-b-2 px-2 py-2 text-[10px] font-black uppercase tracking-wide transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
-            tableTab === 'paste'
-              ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground',
-          )}
-          onClick={() => setTableTab('paste')}
-        >
-          <AlignLeft className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-          Paste & table
-        </button>
-        <button
-          type="button"
-          role="tab"
           id="table-tab-grid"
           aria-selected={tableTab === 'grid'}
           aria-controls="table-panel-grid"
           className={cn(
-            'flex flex-1 items-center justify-center gap-1.5  border-0 border-b-2 px-2 py-2 text-[10px] font-black uppercase tracking-wide transition-colors',
+            'flex flex-1 items-center justify-center gap-1.5 rounded-none border-0 border-b-2 px-2 py-2 text-[10px] font-black tracking-wide transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
             tableTab === 'grid'
               ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground'
           )}
           onClick={() => setTableTab('grid')}
         >
           <Grid3x3 className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-          Visual grid
+          Edit Grid
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="table-tab-preview"
+          aria-selected={tableTab === 'preview'}
+          aria-controls="table-panel-preview"
+          disabled={!canPreview}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-1.5 rounded-none border-0 border-b-2 px-2 py-2 text-[10px] font-black tracking-wide transition-colors',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0',
+            !canPreview && 'cursor-not-allowed opacity-45',
+            tableTab === 'preview'
+              ? 'border-primary bg-primary/10 text-foreground'
+              : 'border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+          )}
+          onClick={() => canPreview && setTableTab('preview')}
+        >
+          <Eye className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+          Preview
         </button>
       </div>
 
@@ -666,65 +670,16 @@ export function TableBlockEditor({
         {limitsSummary}
       </p>
 
-      {tableTab === 'paste' ? (
-        <div id="table-panel-paste" role="tabpanel" aria-labelledby="table-tab-paste" className="space-y-2">
-          <textarea
-            value={rawPaste}
-            maxLength={MAX_TABLE_PASTE_CHARS}
-            onChange={(e) => setRawPaste(e.target.value.slice(0, MAX_TABLE_PASTE_CHARS))}
-            onPaste={(e) => {
-              const t = e.clipboardData.getData('text/plain').slice(0, MAX_TABLE_PASTE_CHARS);
-              const parsed = parseTableFromText(t);
-              if (parsed) {
-                e.preventDefault();
-                applyParsed(t);
-              }
-            }}
-            placeholder={`Feature\tSupabase\tConvex\nDatabase\tPostgreSQL\tCustom DB`}
-            spellCheck={false}
-            className={cn(
-              'min-h-[100px] w-full resize-y border-0 bg-muted/25 p-2 font-mono text-[11px] leading-relaxed ring-1 ring-border/35',
-              'text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35',
-            )}
-          />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <button
-              type="button"
-              className="border-2 border-black bg-primary px-3 py-2 font-mono text-[10px] font-black uppercase text-primary-foreground shadow transition-all hover:brightness-110 active:translate-x-px active:translate-y-px active:shadow-none"
-              onClick={() => applyParsed(rawPaste)}
-            >
-              Apply paste
-            </button>
-            <span className="font-mono text-[9px] text-muted-foreground">
-              {rawPaste.length.toLocaleString()} / {MAX_TABLE_PASTE_CHARS.toLocaleString()}
-            </span>
-          </div>
-          <div className="overflow-hidden border-0 bg-muted/15 ring-1 ring-border/30">
-            <div className="border-0 border-b border-border/35 bg-muted/25 px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-              Current table
-            </div>
-            <div className="overflow-x-auto p-2">
-              <table className="w-full min-w-[280px] border-collapse text-left text-[11px]">
-                <tbody>
-                  {rows.map((r, ri) => (
-                    <tr key={`r-${ri}`} className="border-b border-border last:border-b-0">
-                      {r.map((c, ci) => (
-                        <td key={`c-${ri}-${ci}`} className="border-r border-border px-2 py-1 font-mono last:border-r-0">
-                          {c}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div id="table-panel-grid" role="tabpanel" aria-labelledby="table-tab-grid" className="space-y-2">
+      {tableTab === 'grid' ? (
+        <div
+          id="table-panel-grid"
+          role="tabpanel"
+          aria-labelledby="table-tab-grid"
+          className="space-y-2"
+        >
           <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Edit cells below. Size controls change the grid; changes apply to the block immediately. Use{' '}
-            <strong className="text-foreground">Paste & table</strong> for TSV or pipe tables.
+            Edit cells below. Hover row/column headers to delete, or use + to add (max{' '}
+            {MAX_ROWS}×{MAX_COLS}).
           </p>
           <div className="overflow-hidden border-0 bg-muted/15 p-2 ring-1 ring-border/30">
             <TableVisualGrid
@@ -732,6 +687,34 @@ export function TableBlockEditor({
               onChange={(next) => sync(next)}
               scrollClassName="max-h-[min(52vh,360px)]"
             />
+          </div>
+        </div>
+      ) : (
+        <div
+          id="table-panel-preview"
+          role="tabpanel"
+          aria-labelledby="table-tab-preview"
+          className="space-y-2"
+        >
+          <div className="bg-muted/15 p-2">
+            <table className="w-full table-fixed border-collapse text-left text-[11px]">
+              <tbody>
+                {rows.map((r, ri) => (
+                  <tr key={`r-${ri}`} className={cn(ri === 0 && 'bg-muted/40 font-bold')}>
+                    {Array.from({ length: previewCols }, (_, ci) => (
+                      <td
+                        key={`c-${ri}-${ci}`}
+                        className="truncate px-2 py-2 font-mono align-top"
+                        style={{ width: `${100 / previewCols}%` }}
+                        title={r[ci] ?? ''}
+                      >
+                        {r[ci] ?? ''}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

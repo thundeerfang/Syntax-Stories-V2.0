@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  Suspense,
-  useEffect,
-  useMemo,
-  useState,
-  type ComponentType,
-  type ReactNode,
-} from 'react';
+import { Suspense, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,7 +11,6 @@ import {
   PlusSquare,
   ChevronRight,
   Settings,
-  HelpCircle,
   Users,
   ChevronDown,
   Rss,
@@ -27,14 +19,15 @@ import {
   UsersRound,
 } from 'lucide-react';
 
-
 import { bookmarksApi, type BookmarkGroupRow } from '@/api/bookmarks';
 import { useSidebar } from '@/hooks/useSidebar';
+import { useDesktopShell } from '@/hooks/useDesktopShell';
 import { SHELL_RAIL_FROST_CLASS, SHELL_RAIL_FROST_STYLE } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
 import { blockShadowButtonClassNames } from '@/components/ui';
 import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
 import { useAuthStore } from '@/store/auth';
+import { useAuthDialogStore } from '@/store/authDialog';
 import { getDefaultFeedId, useCustomFeedsStore } from '@/store/customFeeds';
 
 const WRITE_NEW_POST_HREF = '/blogs/write';
@@ -51,10 +44,7 @@ const MAIN_NAV = [
   { href: '/reposts', label: 'REPOSTS', icon: Repeat2 },
 ];
 
-const RAIL_UTILITY_LINKS = [
-  { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/help', label: 'Support Center', icon: HelpCircle },
-];
+const RAIL_UTILITY_LINKS = [{ href: '/settings', label: 'Settings', icon: Settings }];
 
 const SQUADS_LINKS = [{ href: '/squads', label: 'Browse squads' }] as const;
 
@@ -87,8 +77,7 @@ const sidebarFrameClassNames =
   'sidebar-drawer absolute left-0 top-full z-40 flex shrink-0 flex-col border-r-2 border-border';
 
 /** `100%` = navbar block height inside the chrome wrapper; fills the viewport below the header. */
-const sidebarGeometryClassNames =
-  'h-[calc(100dvh-100%)] max-h-[calc(100dvh-100%)] min-h-0';
+const sidebarGeometryClassNames = 'h-[calc(100dvh-100%)] max-h-[calc(100dvh-100%)] min-h-0';
 
 const railInnerSpring = { type: 'spring' as const, stiffness: 420, damping: 32 };
 
@@ -193,12 +182,16 @@ function FeedsAccordionNav({ onNavigate }: Readonly<{ onNavigate: () => void }>)
   const feedParam = searchParams.get('feed');
   const feeds = useCustomFeedsStore((s) => s.feeds);
   const openNewFeedDialog = useCustomFeedsStore((s) => s.openNewFeedDialog);
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const openAuth = useAuthDialogStore((s) => s.open);
   const defaultId = useMemo(() => getDefaultFeedId(feeds), [feeds]);
 
   const rowClass = (active: boolean) =>
     cn(
       'flex w-full min-w-0 items-center justify-between gap-2  py-2 pl-1 pr-0 text-[10px] font-black uppercase tracking-widest transition-colors',
-      active ? 'text-primary' : 'text-foreground/75 hover:text-foreground',
+      active ? 'text-primary' : 'text-foreground/75 hover:text-foreground'
     );
 
   return (
@@ -227,7 +220,10 @@ function FeedsAccordionNav({ onNavigate }: Readonly<{ onNavigate: () => void }>)
               <span className="min-w-0 truncate normal-case tracking-normal">{f.name}</span>
             </span>
             <ChevronRight
-              className={cn('size-3 shrink-0', active ? 'text-primary' : 'text-muted-foreground/35')}
+              className={cn(
+                'size-3 shrink-0',
+                active ? 'text-primary' : 'text-muted-foreground/35'
+              )}
               strokeWidth={3}
               aria-hidden
             />
@@ -237,13 +233,22 @@ function FeedsAccordionNav({ onNavigate }: Readonly<{ onNavigate: () => void }>)
       <button
         type="button"
         onClick={() => {
-          openNewFeedDialog();
           onNavigate();
+          if (!isHydrated) return;
+          if (!token || !user) {
+            openAuth('login');
+            return;
+          }
+          openNewFeedDialog();
         }}
         className={rowClass(false)}
       >
         <span className="min-w-0 flex-1 truncate text-left">New feed</span>
-        <ChevronRight className="size-3 shrink-0 text-muted-foreground/35" strokeWidth={3} aria-hidden />
+        <ChevronRight
+          className="size-3 shrink-0 text-muted-foreground/35"
+          strokeWidth={3}
+          aria-hidden
+        />
       </button>
     </>
   );
@@ -334,11 +339,13 @@ function CollapsedSidebarRail({
   onNavigate,
   openAccordion,
   onAccordionExpand,
+  hideUtilityLinks = false,
 }: Readonly<{
   pathname: string;
   onNavigate: () => void;
   openAccordion: SidebarAccordionId | null;
   onAccordionExpand: (id: SidebarAccordionId) => void;
+  hideUtilityLinks?: boolean;
 }>) {
   return (
     <div className="flex h-full min-h-0 flex-col items-center bg-transparent py-3">
@@ -421,7 +428,8 @@ function CollapsedSidebarRail({
       </div>
 
       <div className="mt-auto flex w-full shrink-0 flex-col items-center gap-1.5 px-1 pt-2">
-        {RAIL_UTILITY_LINKS.map(({ href, label, icon: Icon }) => {
+        {!hideUtilityLinks
+          ? RAIL_UTILITY_LINKS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (
             <Link
@@ -448,7 +456,8 @@ function CollapsedSidebarRail({
               </motion.span>
             </Link>
           );
-        })}
+        })
+          : null}
       </div>
     </div>
   );
@@ -458,13 +467,16 @@ function CollapsedSidebarRail({
    SIDEBAR DRAWER COMPONENT
    ========================================================================== */
 
-export function SidebarDrawer() {
+export function SidebarDrawer({
+  hideWhenCollapsed = false,
+}: Readonly<{ hideWhenCollapsed?: boolean }>) {
   const { isOpen, close, open } = useSidebar();
   const pathname = usePathname();
   const token = useAuthStore((s) => s.token);
   const [mounted, setMounted] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<SidebarAccordionId | null>('feeds');
   const [bookmarkGroups, setBookmarkGroups] = useState<BookmarkGroupRow[]>([]);
+  const desktop = useDesktopShell();
 
   const toggleAccordion = (id: SidebarAccordionId) => {
     setOpenAccordion((prev) => (prev === id ? null : id));
@@ -494,6 +506,7 @@ export function SidebarDrawer() {
   }, [token]);
 
   if (!mounted) {
+    if (hideWhenCollapsed) return null;
     return (
       <aside
         className={cn(
@@ -510,6 +523,10 @@ export function SidebarDrawer() {
         />
       </aside>
     );
+  }
+
+  if (hideWhenCollapsed && !isOpen) {
+    return null;
   }
 
   return (
@@ -537,6 +554,7 @@ export function SidebarDrawer() {
               setOpenAccordion(id);
               open();
             }}
+            hideUtilityLinks={desktop}
           />
         ) : (
           <nav className="flex h-full min-h-0 w-full flex-col overflow-hidden px-4 py-4">
@@ -648,22 +666,17 @@ export function SidebarDrawer() {
               </section>
             </div>
 
-            <section className="mt-auto shrink-0 space-y-2 border-t border-primary/15 pt-6 dark:border-primary/25">
-              <Link
-                href="/settings"
-                onClick={close}
-                className="flex cursor-pointer items-center gap-3 border-0 bg-transparent px-3 py-2 text-[10px] font-black uppercase text-muted-foreground transition-colors hover:bg-primary/[0.1] hover:text-primary dark:hover:bg-primary/[0.14]"
-              >
-                <Settings className="size-3.5 shrink-0" /> Settings
-              </Link>
-              <Link
-                href="/help"
-                onClick={close}
-                className="flex cursor-pointer items-center gap-3 border-0 bg-transparent px-3 py-2 text-[10px] font-black uppercase text-muted-foreground transition-colors hover:bg-primary/[0.1] hover:text-primary dark:hover:bg-primary/[0.14]"
-              >
-                <HelpCircle className="size-3.5 shrink-0" /> Support Center
-              </Link>
-            </section>
+            {!desktop ? (
+              <section className="mt-auto shrink-0 space-y-2 border-t border-primary/15 pt-6 dark:border-primary/25">
+                <Link
+                  href="/settings"
+                  onClick={close}
+                  className="flex cursor-pointer items-center gap-3 border-0 bg-transparent px-3 py-2 text-[10px] font-black uppercase text-muted-foreground transition-colors hover:bg-primary/[0.1] hover:text-primary dark:hover:bg-primary/[0.14]"
+                >
+                  <Settings className="size-3.5 shrink-0" /> Settings
+                </Link>
+              </section>
+            ) : null}
           </nav>
         )}
       </div>

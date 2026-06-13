@@ -9,9 +9,9 @@ This document is a **whole-repo scan** of `webapp/` (May 2026): what exists toda
 
 Companion docs:
 
-| Doc | Focus |
-|-----|--------|
-| [README.md](./README.md) | Routes, stack, hardcoded data, UI layers |
+| Doc                              | Focus                                            |
+| -------------------------------- | ------------------------------------------------ |
+| [README.md](./README.md)         | Routes, stack, hardcoded data, UI layers         |
 | [COMPONENTS.md](./COMPONENTS.md) | Component inline rules; batches **P0–P6** (done) |
 
 ---
@@ -114,11 +114,11 @@ app/
 
 **Dead / duplicate route folders (cleanup candidates):**
 
-| Path | Issue |
-|------|--------|
+| Path                                                    | Issue                                               |
+| ------------------------------------------------------- | --------------------------------------------------- |
 | `app/privacy/`, `app/terms/`, `app/user-data-deletion/` | Superseded by `(legal)/`; no `page.tsx` or redirect |
-| `app/products/` | No page |
-| `app/help/` vs `app/docs/` | Overlapping help/docs UX |
+| `app/products/`                                         | No page                                             |
+| `app/help/` vs `app/docs/`                              | Overlapping help/docs UX                            |
 
 ---
 
@@ -215,28 +215,28 @@ features/
 
 ### 2.6 Other `src/` roots
 
-| Folder | Role | Files |
-|--------|------|-------|
-| `hooks/` | Shared hooks | `useAuth`, `useBlogCardEngagement`, `useRequireAuth`, … |
-| `store/` | Zustand | `auth`, `theme`, `customFeeds`, `ui`, `engagementEffects`, … |
-| `types/` | Domain types | `blog.ts`, … |
+| Folder       | Role                                            | Files                                                                             |
+| ------------ | ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `hooks/`     | Shared hooks                                    | `useAuth`, `useBlogCardEngagement`, `useRequireAuth`, …                           |
+| `store/`     | Zustand                                         | `auth`, `theme`, `customFeeds`, `ui`, `engagementEffects`, …                      |
+| `types/`     | Domain types                                    | `blog.ts`, …                                                                      |
 | `contracts/` | API request/response types (mirror `src/api/*`) | [`contracts/README.md`](src/contracts/README.md), `blogApi.ts`, `squadsApi.ts`, … |
-| `context/` | `AuthContext` | 1 file |
+| `context/`   | `AuthContext`                                   | 1 file                                                                            |
 
 ---
 
 ## 3. Consolidation already done (P0–P6)
 
-| Batch | What moved | Co-located target |
-|-------|------------|-------------------|
-| **P0** | Blog post detail UI (8 files) | `app/blogs/[username]/[slug]/_blogPostDetailSections.tsx` |
-| **P1** | Blog card engagement chain (4 files) | `components/blog/_blogCardEngagement.tsx` |
-| **P2** | Explore + trending trees (6 files) | `app/explore/_explorePageContent.tsx`, `app/trending/_trendingPageContent.tsx` |
-| **P3** | Squads featured + slug helpers (5 files) | `app/squads/featured/_squadsFeaturedPageContent.tsx`, `app/squads/[slug]/_squadSlugSections.tsx` |
-| **P4** | Footer status, feedback, custom feed dialog (4 files) | `layout/footer/Footer.tsx`, `layout/shell/_layoutShellOverlays.tsx` |
-| **P5** | Blog write block editors (5 files) | `components/ui/_blogWriteEditorBlocks.tsx` |
-| **P6** | Syntax card + missing-fields (4 files) | `profile/dialog/_syntaxCardDialog.tsx`, `_missingFieldsDialog.tsx` |
-| **Lib** | Flat `lib/*.ts` → modules | `lib/{core,api,auth,blog,profile,…}/` |
+| Batch   | What moved                                            | Co-located target                                                                                |
+| ------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **P0**  | Blog post detail UI (8 files)                         | `app/blogs/[username]/[slug]/_blogPostDetailSections.tsx`                                        |
+| **P1**  | Blog card engagement chain (4 files)                  | `components/blog/_blogCardEngagement.tsx`                                                        |
+| **P2**  | Explore + trending trees (6 files)                    | `app/explore/_explorePageContent.tsx`, `app/trending/_trendingPageContent.tsx`                   |
+| **P3**  | Squads featured + slug helpers (5 files)              | `app/squads/featured/_squadsFeaturedPageContent.tsx`, `app/squads/[slug]/_squadSlugSections.tsx` |
+| **P4**  | Footer status, feedback, custom feed dialog (4 files) | `layout/footer/Footer.tsx`, `layout/shell/_layoutShellOverlays.tsx`                              |
+| **P5**  | Blog write block editors (5 files)                    | `components/ui/_blogWriteEditorBlocks.tsx`                                                       |
+| **P6**  | Syntax card + missing-fields (4 files)                | `profile/dialog/_syntaxCardDialog.tsx`, `_missingFieldsDialog.tsx`                               |
+| **Lib** | Flat `lib/*.ts` → modules                             | `lib/{core,api,auth,blog,profile,…}/`                                                            |
 
 **Empty folders to delete:** `components/trending/`, `components/home/`, `components/feedback/`, `components/profile/syntax-card/`.
 
@@ -248,22 +248,22 @@ features/
 
 ### 4.1 Split brain: routes vs features vs components
 
-| Area | Today | Problem |
-|------|--------|---------|
-| Settings | `features/settings/SettingsPage.tsx` + `app/settings/settings-list/*` | One feature, two trees |
-| Auth | `features/auth/*` + `components/auth/*` + `app/auth/*` | OAuth UI scattered |
-| Explore / Trending | Logic in `app/*/_*.tsx` | Good for page-only; explore still has 2 shared components in `components/explore/` |
-| Legal | `components/legal/*` + `app/(legal)/*` | Could be `features/legal/` |
+| Area               | Today                                                                 | Problem                                                                            |
+| ------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Settings           | `features/settings/SettingsPage.tsx` + `app/settings/settings-list/*` | One feature, two trees                                                             |
+| Auth               | `features/auth/*` + `components/auth/*` + `app/auth/*`                | OAuth UI scattered                                                                 |
+| Explore / Trending | Logic in `app/*/_*.tsx`                                               | Good for page-only; explore still has 2 shared components in `components/explore/` |
+| Legal              | `components/legal/*` + `app/(legal)/*`                                | Could be `features/legal/`                                                         |
 
 ### 4.2 Oversized files (split or co-locate further)
 
-| File | Lines | Suggestion |
-|------|-------|------------|
-| `features/settings/SettingsPage.tsx` | ~4,900 | Split by section under `features/settings/sections/*` or co-locate cards only |
-| `app/profile/page.tsx` | ~1,500 | Extract tabs into `_profileSections.tsx` |
-| `app/blogs/write/page.tsx` | ~2,400 | Extract publish/deploy into `_writePageSections.tsx` |
-| `components/skeletons/PageSkeletons.tsx` | ~1,400 | Split by route group: `skeletons/blog.ts`, `skeletons/squads.ts`, … |
-| `components/ui/BlogWriteEditor.tsx` | ~1,800 | Acceptable with `_blogWriteEditorBlocks`; avoid growing further |
+| File                                     | Lines  | Suggestion                                                                    |
+| ---------------------------------------- | ------ | ----------------------------------------------------------------------------- |
+| `features/settings/SettingsPage.tsx`     | ~4,900 | Split by section under `features/settings/sections/*` or co-locate cards only |
+| `app/profile/page.tsx`                   | ~1,500 | Extract tabs into `_profileSections.tsx`                                      |
+| `app/blogs/write/page.tsx`               | ~2,400 | Extract publish/deploy into `_writePageSections.tsx`                          |
+| `components/skeletons/PageSkeletons.tsx` | ~1,400 | Split by route group: `skeletons/blog.ts`, `skeletons/squads.ts`, …           |
+| `components/ui/BlogWriteEditor.tsx`      | ~1,800 | Acceptable with `_blogWriteEditorBlocks`; avoid growing further               |
 
 ### 4.3 API + lib + types duplication
 
@@ -350,16 +350,16 @@ Prioritized batches — **low risk first**. Do not start a batch until the previ
 
 For **team-scale priority** (feature-first, boundaries, thin routes), see **§14 Scale P1–P8** — use that order when planning sprints across multiple developers.
 
-| Phase | Scope | Risk | Outcome |
-|-------|--------|------|---------|
-| **P7** | Hygiene | Low | Delete empty dirs; remove `BlogCoverPlaceholder`; remove dead `app/privacy|terms|products` |
-| **P8** | Legal + search + docs | Low | `features/legal/`, `features/search/`, `features/docs/`; inline wrappers |
-| **P9** | Settings unify | Medium | Move `app/settings/settings-list/*` → `features/settings/sections/`; thin `app/settings/page.tsx` |
-| **P10** | Profile split | Medium | `app/profile/_profileSections.tsx`; optional `features/profile/` |
-| **P11** | Blog feature module | Medium | `features/blog/components/` for shared blog UI; keep route co-located detail/write |
-| **P12** | API domain folders | Low | `api/blog/`, `api/auth/`, … + `api/index.ts` re-exports |
-| **P13** | Skeletons split | Low | `skeletons/by-route/*.tsx` composed from `primitives.tsx` |
-| **P14** | `shared/` rename | High | Rename `components/{ui,retroui,layout}` → `shared/*` (mass import change) — only if team wants strict layering |
+| Phase   | Scope                 | Risk   | Outcome                                                                                                        |
+| ------- | --------------------- | ------ | -------------------------------------------------------------------------------------------------------------- | ----- | --------- |
+| **P7**  | Hygiene               | Low    | Delete empty dirs; remove `BlogCoverPlaceholder`; remove dead `app/privacy                                     | terms | products` |
+| **P8**  | Legal + search + docs | Low    | `features/legal/`, `features/search/`, `features/docs/`; inline wrappers                                       |
+| **P9**  | Settings unify        | Medium | Move `app/settings/settings-list/*` → `features/settings/sections/`; thin `app/settings/page.tsx`              |
+| **P10** | Profile split         | Medium | `app/profile/_profileSections.tsx`; optional `features/profile/`                                               |
+| **P11** | Blog feature module   | Medium | `features/blog/components/` for shared blog UI; keep route co-located detail/write                             |
+| **P12** | API domain folders    | Low    | `api/blog/`, `api/auth/`, … + `api/index.ts` re-exports                                                        |
+| **P13** | Skeletons split       | Low    | `skeletons/by-route/*.tsx` composed from `primitives.tsx`                                                      |
+| **P14** | `shared/` rename      | High   | Rename `components/{ui,retroui,layout}` → `shared/*` (mass import change) — only if team wants strict layering |
 
 **Not recommended soon:** Moving `retroui/` or `ui/` into each feature (duplication). Keep design system centralized.
 
@@ -385,18 +385,18 @@ New code?
 
 ## 8. Route → ownership map (quick reference)
 
-| Route | Primary UI location today | Target owner |
-|-------|---------------------------|--------------|
-| `/` | `app/page.tsx`, `components/blog`, `components/home` (empty) | `features/home` |
-| `/explore` | `app/explore/_explorePageContent.tsx` | `features/explore` (move file) |
-| `/trending` | `app/trending/_trendingPageContent.tsx` | `features/trending` |
-| `/blogs/[u]/[slug]` | `app/blogs/.../page.tsx`, `_blogPostDetailSections` | `features/blog/post-detail` |
-| `/blogs/write` | `app/blogs/write/page.tsx`, `ui/BlogWriteEditor` | `features/blog/write` |
-| `/squads/*` | `app/squads/*`, `components/squads` | `features/squads` |
-| `/profile` | `app/profile/page.tsx`, `components/profile` | `features/profile` |
-| `/settings` | `features/settings`, `app/settings/settings-list` | `features/settings` only |
-| `/u/[username]` | `app/u/...`, `components/profile` | `features/profile/public` |
-| Legal pages | `app/(legal)/*`, `components/legal` | `features/legal` |
+| Route               | Primary UI location today                                    | Target owner                   |
+| ------------------- | ------------------------------------------------------------ | ------------------------------ |
+| `/`                 | `app/page.tsx`, `components/blog`, `components/home` (empty) | `features/home`                |
+| `/explore`          | `app/explore/_explorePageContent.tsx`                        | `features/explore` (move file) |
+| `/trending`         | `app/trending/_trendingPageContent.tsx`                      | `features/trending`            |
+| `/blogs/[u]/[slug]` | `app/blogs/.../page.tsx`, `_blogPostDetailSections`          | `features/blog/post-detail`    |
+| `/blogs/write`      | `app/blogs/write/page.tsx`, `ui/BlogWriteEditor`             | `features/blog/write`          |
+| `/squads/*`         | `app/squads/*`, `components/squads`                          | `features/squads`              |
+| `/profile`          | `app/profile/page.tsx`, `components/profile`                 | `features/profile`             |
+| `/settings`         | `features/settings`, `app/settings/settings-list`            | `features/settings` only       |
+| `/u/[username]`     | `app/u/...`, `components/profile`                            | `features/profile/public`      |
+| Legal pages         | `app/(legal)/*`, `components/legal`                          | `features/legal`               |
 
 ---
 
@@ -414,13 +414,13 @@ After any structural change:
 
 ## 10. Summary
 
-| Layer | Current state | Direction |
-|-------|---------------|-----------|
-| `app/` | Mix of thin pages + co-located `_*.tsx` (good) | Stay thin; add co-located modules per heavy route |
-| `components/` | Domain folders + empty leftovers | Shrink as features absorb; keep `ui` / `retroui` / `layout` shared |
-| `features/` | Only auth + settings | Grow per product domain (P8–P11) |
-| `lib/` | **Modular** (done) | Keep module folders; optional `shared/lib` rename only with P14 |
-| `api/` | Flat | Split by domain when file count grows (P12) |
+| Layer         | Current state                                  | Direction                                                          |
+| ------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
+| `app/`        | Mix of thin pages + co-located `_*.tsx` (good) | Stay thin; add co-located modules per heavy route                  |
+| `components/` | Domain folders + empty leftovers               | Shrink as features absorb; keep `ui` / `retroui` / `layout` shared |
+| `features/`   | Only auth + settings                           | Grow per product domain (P8–P11)                                   |
+| `lib/`        | **Modular** (done)                             | Keep module folders; optional `shared/lib` rename only with P14    |
+| `api/`        | Flat                                           | Split by domain when file count grows (P12)                        |
 
 The project is **mid-migration**: page-only UI has moved next to routes (P0–P3); shell and editor chains are co-located (P4–P5); profile dialogs consolidated (P6); utilities are module-based. The **advanced** end state is feature-first modules with a stable shared design system — implemented incrementally via **P7–P14**, not a single rewrite.
 
@@ -461,20 +461,20 @@ That direction is sound. Part II focuses on **consistency**, **stronger boundari
 
 `components/` still acts as a **semi-feature layer**:
 
-| Current | Reality |
-|---------|---------|
-| `components/blog` | Feature code |
+| Current              | Reality      |
+| -------------------- | ------------ |
+| `components/blog`    | Feature code |
 | `components/profile` | Feature code |
-| `components/squads` | Feature code |
+| `components/squads`  | Feature code |
 
 Feature logic, hooks, state, and UI are still split across `app/`, `components/`, and `features/` — that creates **mental fragmentation**.
 
 **Rule:**
 
-| Layer | Holds |
-|-------|--------|
-| **Shared** | Generic, reusable, no product semantics |
-| **Features** | Business / domain |
+| Layer        | Holds                                   |
+| ------------ | --------------------------------------- |
+| **Shared**   | Generic, reusable, no product semantics |
+| **Features** | Business / domain                       |
 
 ```txt
 shared/          # future rename of components/{ui,retroui,layout,skeletons,…}
@@ -618,12 +618,12 @@ features/blog/
   hooks/            # React only — call services, don’t embed business logic
 ```
 
-| Layer | Responsibility |
-|-------|----------------|
-| `api/` | Raw HTTP, auth headers, URLs |
-| `services/` | Business orchestration (e.g. `getBlogFeed.ts`: call API, map DTOs, merge pages) |
-| `hooks/` | React integration, loading/error state |
-| `lib/` (root) | Pure helpers shared across features |
+| Layer         | Responsibility                                                                  |
+| ------------- | ------------------------------------------------------------------------------- |
+| `api/`        | Raw HTTP, auth headers, URLs                                                    |
+| `services/`   | Business orchestration (e.g. `getBlogFeed.ts`: call API, map DTOs, merge pages) |
+| `hooks/`      | React integration, loading/error state                                          |
+| `lib/` (root) | Pure helpers shared across features                                             |
 
 Avoid bloating hooks with fetch + map + merge + cache logic.
 
@@ -683,13 +683,13 @@ Reserve `_` or `internal/` for **private** modules inside a feature, not for pri
 
 ### 12.9 Split mega files earlier
 
-| File | ~LOC | Risk |
-|------|------|------|
-| `features/settings/SettingsPage.tsx` | 4,900 | Very high |
-| `app/blogs/write/page.tsx` | 2,400 | High |
-| `app/profile/page.tsx` | 1,500 | Medium–high |
-| `components/ui/BlogWriteEditor.tsx` | 1,800 | High (mitigated by `_blogWriteEditorBlocks`) |
-| `components/skeletons/PageSkeletons.tsx` | 1,400 | Medium |
+| File                                     | ~LOC  | Risk                                         |
+| ---------------------------------------- | ----- | -------------------------------------------- |
+| `features/settings/SettingsPage.tsx`     | 4,900 | Very high                                    |
+| `app/blogs/write/page.tsx`               | 2,400 | High                                         |
+| `app/profile/page.tsx`                   | 1,500 | Medium–high                                  |
+| `components/ui/BlogWriteEditor.tsx`      | 1,800 | High (mitigated by `_blogWriteEditorBlocks`) |
+| `components/skeletons/PageSkeletons.tsx` | 1,400 | Medium                                       |
 
 **Guideline:** Above ~1,200–1,500 LOC, split by **section** or **tab** into separate files in the same feature folder. Editors and settings are the worst offenders for merge conflicts and onboarding cost.
 
@@ -701,12 +701,12 @@ Prioritize **Scale P2** (§15) — aligns with doc batches P9–P10.
 
 The repo is large enough to justify automation beyond manual audits.
 
-| Tool | Use |
-|------|-----|
-| [madge](https://github.com/pahen/madge) | Dependency graph, circular deps |
-| [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) | Rules + violations report |
-| [knip](https://github.com/webpro/knip) | Unused exports, dead files |
-| `scripts/audit-component-usage.mjs` | Single-use component detection (§9) |
+| Tool                                                                 | Use                                 |
+| -------------------------------------------------------------------- | ----------------------------------- |
+| [madge](https://github.com/pahen/madge)                              | Dependency graph, circular deps     |
+| [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) | Rules + violations report           |
+| [knip](https://github.com/webpro/knip)                               | Unused exports, dead files          |
+| `scripts/audit-component-usage.mjs`                                  | Single-use component detection (§9) |
 
 **Also useful:** route bundle analysis (Next.js / `@next/bundle-analyzer`), especially before splitting mega pages.
 
@@ -751,13 +751,13 @@ Not fully specified in Part I — add explicit rules as the app grows.
 
 ### Data-fetch ownership
 
-| Concern | Owner |
-|---------|--------|
-| Route metadata, static params | `app/` |
-| Initial list/detail payload (RSC) | `features/<x>/server/` or page server wrapper |
-| Infinite scroll, mutations, optimistic UI | `features/<x>/hooks/` + `services/` |
-| Cross-route cache / revalidation tags | Document per feature in feature README or `features/<x>/cache.ts` |
-| Global session | `store/auth` + `features/auth` |
+| Concern                                   | Owner                                                             |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| Route metadata, static params             | `app/`                                                            |
+| Initial list/detail payload (RSC)         | `features/<x>/server/` or page server wrapper                     |
+| Infinite scroll, mutations, optimistic UI | `features/<x>/hooks/` + `services/`                               |
+| Cross-route cache / revalidation tags     | Document per feature in feature README or `features/<x>/cache.ts` |
+| Global session                            | `store/auth` + `features/auth`                                    |
 
 ### Caching strategy (to document per feature as you adopt)
 
@@ -773,51 +773,51 @@ Revisit when adding Server Actions broadly.
 
 Two numbering schemes exist on purpose:
 
-| Series | Purpose |
-|--------|---------|
-| **P0–P14** (§6) | File-move consolidation batches (COMPONENTS.md) |
+| Series                  | Purpose                                                            |
+| ----------------------- | ------------------------------------------------------------------ |
+| **P0–P14** (§6)         | File-move consolidation batches (COMPONENTS.md)                    |
 | **Scale P1–P8** (below) | Team velocity / architecture quality — **recommended merge order** |
 
 Map between them where they overlap.
 
 ### Immediate
 
-| Scale | Action | Maps to |
-|-------|--------|---------|
+| Scale        | Action                                                                                                                | Maps to       |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- | ------------- |
 | **Scale P1** | Feature-first migration: domain code out of `components/<domain>` into `features/<domain>` with `index.ts` public API | P8–P11, §12.1 |
-| **Scale P2** | Split mega files: Settings, Profile, Blog write | P9–P10, §12.9 |
-| **Scale P3** | Enforce import boundaries (ESLint) | New — §12.3 |
+| **Scale P2** | Split mega files: Settings, Profile, Blog write                                                                       | P9–P10, §12.9 |
+| **Scale P3** | Enforce import boundaries (ESLint)                                                                                    | New — §12.3   |
 
 ### Near future
 
-| Scale | Action | Maps to |
-|-------|--------|---------|
+| Scale        | Action                                              | Maps to      |
+| ------------ | --------------------------------------------------- | ------------ |
 | **Scale P4** | Thin `app/` routes; feature entry `pages/*Page.tsx` | §12.5, §12.7 |
-| **Scale P5** | Feature-level `store/`, `services/` | §12.4, §12.6 |
-| **Scale P6** | Public feature APIs stable; stop deep imports | §12.2 |
+| **Scale P5** | Feature-level `store/`, `services/`                 | §12.4, §12.6 |
+| **Scale P6** | Public feature APIs stable; stop deep imports       | §12.2        |
 
 ### Later
 
-| Scale | Action | Maps to |
-|-------|--------|---------|
-| **Scale P7** | `shared/` rename (`components/ui` → `shared/ui`, …) | P14 |
-| **Scale P8** | Tooling: madge, dependency-cruiser, knip, bundle analysis | §12.10 |
+| Scale        | Action                                                    | Maps to |
+| ------------ | --------------------------------------------------------- | ------- |
+| **Scale P7** | `shared/` rename (`components/ui` → `shared/ui`, …)       | P14     |
+| **Scale P8** | Tooling: madge, dependency-cruiser, knip, bundle analysis | §12.10  |
 
 ### Hygiene (do anytime)
 
-| Doc batch | Action |
-|-----------|--------|
-| **P7** | Delete empty dirs, orphan `BlogCoverPlaceholder`, dead legal folders |
+| Doc batch | Action                                                               |
+| --------- | -------------------------------------------------------------------- |
+| **P7**    | Delete empty dirs, orphan `BlogCoverPlaceholder`, dead legal folders |
 
 ---
 
 ## 15. Final assessment
 
-| Dimension | Status |
-|-----------|--------|
+| Dimension     | Status                                                                         |
+| ------------- | ------------------------------------------------------------------------------ |
 | Documentation | Above average for a product frontend — map, phases, ownership, decision matrix |
-| Main gap | **Consistency** and **enforced boundaries**, not lack of ideas |
-| End state | `app` (thin) + `features` (fat) + `shared` (generic) |
+| Main gap      | **Consistency** and **enforced boundaries**, not lack of ideas                 |
+| End state     | `app` (thin) + `features` (fat) + `shared` (generic)                           |
 
 ```txt
 Today (transitional):
@@ -844,10 +844,10 @@ This section turns the doc from a folder audit into an **internal architecture R
 
 ## 17. What improved in this document (meta)
 
-| Earlier doc | This doc |
-|-------------|----------|
-| What folders exist | Why decisions exist, tradeoffs, scaling, DX, ownership |
-| Routes and file lists | Cognitive load, merge conflict prevention, velocity |
+| Earlier doc                     | This doc                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| What folders exist              | Why decisions exist, tradeoffs, scaling, DX, ownership                        |
+| Routes and file lists           | Cognitive load, merge conflict prevention, velocity                           |
 | Single migration track (P0–P14) | **Two tracks:** migration chronology vs strategic priority (Scale P1–P8, §14) |
 
 Strongest additions in Part II: shared vs feature philosophy (§12.1), feature `services/` layer (§12.6), public `index.ts` APIs (§12.2), import boundaries (§12.3), rendering/data ownership (§13).
@@ -864,15 +864,15 @@ features/blog/README.md
 
 **Suggested contents:**
 
-| Section | Purpose |
-|---------|---------|
-| Ownership | Team or primary maintainers |
-| Data flow | Server vs client fetch, main entry components |
-| APIs used | Which `api/*` or feature `api/` modules |
-| Cache rules | `revalidate`, React Query keys, invalidation |
-| Server/client boundaries | What is RSC vs `'use client'` |
-| Important decisions | Non-obvious choices worth preserving |
-| Known pitfalls | Editor quirks, auth requirements, rate limits |
+| Section                  | Purpose                                       |
+| ------------------------ | --------------------------------------------- |
+| Ownership                | Team or primary maintainers                   |
+| Data flow                | Server vs client fetch, main entry components |
+| APIs used                | Which `api/*` or feature `api/` modules       |
+| Cache rules              | `revalidate`, React Query keys, invalidation  |
+| Server/client boundaries | What is RSC vs `'use client'`                 |
+| Important decisions      | Non-obvious choices worth preserving          |
+| Known pitfalls           | Editor quirks, auth requirements, rate limits |
 
 Without feature READMEs, architecture knowledge stays **tribal** and onboarding slows.
 
@@ -905,12 +905,12 @@ Without feature READMEs, architecture knowledge stays **tribal** and onboarding 
 
 **Rules (must hold):**
 
-| From | May import | Must not import |
-|------|------------|-----------------|
-| `app/` | `features/*`, `shared/*`, `lib/*`, `api/*` | — |
-| `features/*` | `shared/*`, `lib/*`, `api/*`, other features’ **public** `index.ts` only | `app/*` |
-| `shared/*` | `lib/*` (pure helpers only) | `features/*`, `app/*` |
-| `lib/`, `api/` | Each other, `types/`, `contracts/` | React UI, `features/*`, `app/*` |
+| From           | May import                                                               | Must not import                 |
+| -------------- | ------------------------------------------------------------------------ | ------------------------------- |
+| `app/`         | `features/*`, `shared/*`, `lib/*`, `api/*`                               | —                               |
+| `features/*`   | `shared/*`, `lib/*`, `api/*`, other features’ **public** `index.ts` only | `app/*`                         |
+| `shared/*`     | `lib/*` (pure helpers only)                                              | `features/*`, `app/*`           |
+| `lib/`, `api/` | Each other, `types/`, `contracts/`                                       | React UI, `features/*`, `app/*` |
 
 **Forbidden (architecture collapse):**
 
@@ -929,13 +929,13 @@ Enforce with dependency-cruiser / eslint-plugin-boundaries (Scale P3, §14).
 
 Define testing by layer so approaches are consistent across the team.
 
-| Layer | Primary test type | Notes |
-|-------|-------------------|--------|
-| `lib/`, `services/` | Unit | Pure functions, mappers, orchestration |
-| `features/*/hooks/` | Hook tests | React Testing Library + mocked services |
-| `features/*/pages/` | Integration | Compose sections; mock API at service boundary |
-| `shared/ui`, `retroui/` | Visual / Storybook (optional) | Design system regressions |
-| `app/` routes | Smoke / E2E | Critical paths only (auth, publish, signup) |
+| Layer                   | Primary test type             | Notes                                          |
+| ----------------------- | ----------------------------- | ---------------------------------------------- |
+| `lib/`, `services/`     | Unit                          | Pure functions, mappers, orchestration         |
+| `features/*/hooks/`     | Hook tests                    | React Testing Library + mocked services        |
+| `features/*/pages/`     | Integration                   | Compose sections; mock API at service boundary |
+| `shared/ui`, `retroui/` | Visual / Storybook (optional) | Design system regressions                      |
+| `app/` routes           | Smoke / E2E                   | Critical paths only (auth, publish, signup)    |
 
 **Conventions:**
 
@@ -949,13 +949,13 @@ Define testing by layer so approaches are consistent across the team.
 
 Feature-first systems fail when everything becomes a “feature.” **Do not** create `features/<name>/` for:
 
-| Situation | Instead |
-|-----------|---------|
-| One-off dialog used on a single route | `app/<route>/_*.tsx` or private module in parent feature |
-| Route-only utility (< ~100 LOC) | Co-locate in route or feature `lib/internal.ts` |
-| Temporary experiment / A/B branch | Branch or `app/` until stable |
-| Isolated area **< ~500 LOC** with no expected reuse | Keep co-located until second consumer appears |
-| Generic button/layout tweak | `shared/ui` |
+| Situation                                           | Instead                                                  |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| One-off dialog used on a single route               | `app/<route>/_*.tsx` or private module in parent feature |
+| Route-only utility (< ~100 LOC)                     | Co-locate in route or feature `lib/internal.ts`          |
+| Temporary experiment / A/B branch                   | Branch or `app/` until stable                            |
+| Isolated area **< ~500 LOC** with no expected reuse | Keep co-located until second consumer appears            |
+| Generic button/layout tweak                         | `shared/ui`                                              |
 
 **Symptoms of over-modularization:** shallow features, folder explosion, fake abstractions, two-line `index.ts` re-exports with no real boundary.
 
@@ -967,14 +967,14 @@ Feature-first systems fail when everything becomes a “feature.” **Do not** c
 
 Architecture here focuses on organization; runtime performance needs explicit ownership too.
 
-| Concern | Owner / rule |
-|---------|----------------|
-| Route bundle size | Feature owner; lazy-load heavy tabs/sections |
-| Client component budget | Prefer RSC shell; audit `'use client'` at page root |
-| Heavy dependencies | Contain in feature (e.g. editor, mermaid, cropper) — avoid importing from `shared/ui` barrel if it pulls entire lib |
-| Code splitting | `dynamic(() => import(...), { ssr: false })` for editor-only routes |
-| Lists / swipers | Virtualize or paginate; skeletons match final layout |
-| Images | Use existing optimized remote image patterns |
+| Concern                 | Owner / rule                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Route bundle size       | Feature owner; lazy-load heavy tabs/sections                                                                        |
+| Client component budget | Prefer RSC shell; audit `'use client'` at page root                                                                 |
+| Heavy dependencies      | Contain in feature (e.g. editor, mermaid, cropper) — avoid importing from `shared/ui` barrel if it pulls entire lib |
+| Code splitting          | `dynamic(() => import(...), { ssr: false })` for editor-only routes                                                 |
+| Lists / swipers         | Virtualize or paginate; skeletons match final layout                                                                |
+| Images                  | Use existing optimized remote image patterns                                                                        |
 
 **High-risk areas in this repo:**
 
@@ -1008,18 +1008,18 @@ A feature migration is **complete** when all of the following are true (prevents
 
 People remember anti-patterns faster than ideals. **Avoid:**
 
-| Anti-pattern | Why it hurts |
-|--------------|--------------|
-| `shared/` importing `features/` | Inverts dependency direction; shared stops being generic |
-| `features/` importing `app/` | Couples domain to routing; untestable in isolation |
-| Feature-to-feature deep imports | Hidden coupling; use public `index.ts` or `lib/` |
-| Hooks with heavy business orchestration | Untestable; duplicates service logic |
-| Business logic in `app/**/page.tsx` | Blocks thin routes and RSC strategy |
-| Global Zustand for feature-only state | Hidden cross-feature coupling |
-| Growing `components/blog`, `components/profile`, … | Two feature systems (see §26) |
-| Giant catch-all `utils.ts` / god modules | Use `lib/<module>/` |
-| Permanent `_Foo.tsx` as public entry | Looks temporary; weak discoverability (§25) |
-| New code only in `components/<domain>/` | Extends shadow-feature layer |
+| Anti-pattern                                       | Why it hurts                                             |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| `shared/` importing `features/`                    | Inverts dependency direction; shared stops being generic |
+| `features/` importing `app/`                       | Couples domain to routing; untestable in isolation       |
+| Feature-to-feature deep imports                    | Hidden coupling; use public `index.ts` or `lib/`         |
+| Hooks with heavy business orchestration            | Untestable; duplicates service logic                     |
+| Business logic in `app/**/page.tsx`                | Blocks thin routes and RSC strategy                      |
+| Global Zustand for feature-only state              | Hidden cross-feature coupling                            |
+| Growing `components/blog`, `components/profile`, … | Two feature systems (see §26)                            |
+| Giant catch-all `utils.ts` / god modules           | Use `lib/<module>/`                                      |
+| Permanent `_Foo.tsx` as public entry               | Looks temporary; weak discoverability (§25)              |
+| New code only in `components/<domain>/`            | Extends shadow-feature layer                             |
 
 **Prefer:** services for orchestration, hooks for React glue, thin routes, feature README, public APIs.
 
@@ -1035,11 +1035,11 @@ Long-term they:
 - Hide ownership in file search
 - Weaken discoverability (`_explorePageContent` vs `ExplorePage`)
 
-| Interim (today) | Target |
-|-----------------|--------|
-| `app/explore/_explorePageContent.tsx` | `features/explore/pages/ExplorePage.tsx` |
-| `app/blogs/.../_blogPostDetailSections.tsx` | `features/blog/post-detail/BlogPostDetailSections.tsx` |
-| `components/blog/_blogCardEngagement.tsx` | `features/blog/components/BlogCardEngagement.tsx` (internal or exported via index) |
+| Interim (today)                             | Target                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `app/explore/_explorePageContent.tsx`       | `features/explore/pages/ExplorePage.tsx`                                           |
+| `app/blogs/.../_blogPostDetailSections.tsx` | `features/blog/post-detail/BlogPostDetailSections.tsx`                             |
+| `components/blog/_blogCardEngagement.tsx`   | `features/blog/components/BlogCardEngagement.tsx` (internal or exported via index) |
 
 **Convention going forward:**
 
@@ -1083,16 +1083,16 @@ Until this is fixed, enforce informally in PR review: **no new domain folders un
 
 ## 27. Next evolution (governance summary)
 
-| Dimension | Part I | Part II | Part III (this) |
-|-----------|--------|---------|------------------|
-| Structure | ✓ | | |
-| Migration batches | ✓ | | |
-| Team scaling | | ✓ | |
-| Boundaries & enforcement | | ✓ | ✓ |
-| Rendering / data | | ✓ | |
-| Testing / performance | | | ✓ |
-| Anti-patterns & done criteria | | | ✓ |
-| Feature READMEs | | | ✓ |
+| Dimension                     | Part I | Part II | Part III (this) |
+| ----------------------------- | ------ | ------- | --------------- |
+| Structure                     | ✓      |         |                 |
+| Migration batches             | ✓      |         |                 |
+| Team scaling                  |        | ✓       |                 |
+| Boundaries & enforcement      |        | ✓       | ✓               |
+| Rendering / data              |        | ✓       |                 |
+| Testing / performance         |        |         | ✓               |
+| Anti-patterns & done criteria |        |         | ✓               |
+| Feature READMEs               |        |         | ✓               |
 
 **Strongest long-term direction (unchanged):**
 
@@ -1117,7 +1117,7 @@ This document now exceeds what many production startups keep internally. The rem
 
 # Part IV — Highest-impact improvements (action plan)
 
-This section is the **short list**: what matters most for the handbook *and* the codebase. Details live in Part II–III; this is the execution order.
+This section is the **short list**: what matters most for the handbook _and_ the codebase. Details live in Part II–III; this is the execution order.
 
 ---
 
@@ -1182,11 +1182,11 @@ Move composition, orchestration, sections, and business UI into `features/<domai
 
 ### 28.4 Split mega files immediately
 
-| File | LOC (approx) | Risk |
-|------|----------------|------|
-| `features/settings/pages/SettingsPage.tsx` | ~4,900 | Critical |
-| `app/blogs/write/page.tsx` (+ editor blocks) | ~2,400 | High |
-| `app/profile/page.tsx` (+ panels) | ~1,500 | High |
+| File                                         | LOC (approx) | Risk     |
+| -------------------------------------------- | ------------ | -------- |
+| `features/settings/pages/SettingsPage.tsx`   | ~4,900       | Critical |
+| `app/blogs/write/page.tsx` (+ editor blocks) | ~2,400       | High     |
+| `app/profile/page.tsx` (+ panels)            | ~1,500       | High     |
 
 **Major fix** — split by sections, tabs, workflows, and orchestration layers **before** adding more features. Large files become merge-conflict hotspots, onboarding nightmares, and refactor blockers. See §12.9, Scale P2 (§14).
 
@@ -1205,11 +1205,11 @@ features/blog/
   hooks/      # React integration only
 ```
 
-| Layer | Responsibility |
-|-------|----------------|
-| `api/` | Request/response, types, no React |
+| Layer       | Responsibility                                               |
+| ----------- | ------------------------------------------------------------ |
+| `api/`      | Request/response, types, no React                            |
 | `services/` | Orchestration, mapping, validation, cache invalidation calls |
-| `hooks/` | `useQuery` / `useMutation` wiring to services |
+| `hooks/`    | `useQuery` / `useMutation` wiring to services                |
 
 See §12.6, Scale P5 (§14).
 
@@ -1220,8 +1220,8 @@ See §12.6, Scale P5 (§14).
 **Avoid:**
 
 ```ts
-import X from "@/features/blog/components/X";
-import Y from "@/components/blog/BlogCard";
+import X from '@/features/blog/components/X';
+import Y from '@/components/blog/BlogCard';
 ```
 
 **Prefer:**
@@ -1231,7 +1231,7 @@ features/blog/index.ts   → public surface
 ```
 
 ```ts
-import { BlogCard } from "@/features/blog";
+import { BlogCard } from '@/features/blog';
 ```
 
 Stable boundaries, painless refactors, hidden internals. See §12.2, Scale P6 (§14).
@@ -1302,28 +1302,28 @@ Optional later: CI job running `dependency-cruiser` on PRs; CODEOWNERS per `feat
 
 ### Immediate (do first)
 
-| # | Item | § |
-|---|------|---|
-| 1 | Eliminate `components/` shadow-features | 28.1, §26 |
-| 2 | Enforce import boundaries (ESLint + dependency-cruiser) | 28.2 |
-| 3 | Split mega files (Settings, blog write, profile) | 28.4 |
-| 4 | Thin `app/` routes | 28.3 |
+| #   | Item                                                    | §         |
+| --- | ------------------------------------------------------- | --------- |
+| 1   | Eliminate `components/` shadow-features                 | 28.1, §26 |
+| 2   | Enforce import boundaries (ESLint + dependency-cruiser) | 28.2      |
+| 3   | Split mega files (Settings, blog write, profile)        | 28.4      |
+| 4   | Thin `app/` routes                                      | 28.3      |
 
 ### Next
 
-| # | Item | § |
-|---|------|---|
-| 5 | Feature `api/` + `services/` + `hooks/` split | 28.5 |
-| 6 | Public `features/*/index.ts` APIs | 28.6 |
-| 7 | Rename / relocate `_*.tsx` into feature pages | 28.7 |
-| 8 | Feature READMEs | 28.8 |
+| #   | Item                                          | §    |
+| --- | --------------------------------------------- | ---- |
+| 5   | Feature `api/` + `services/` + `hooks/` split | 28.5 |
+| 6   | Public `features/*/index.ts` APIs             | 28.6 |
+| 7   | Rename / relocate `_*.tsx` into feature pages | 28.7 |
+| 8   | Feature READMEs                               | 28.8 |
 
 ### Later
 
-| # | Item | § |
-|---|------|---|
-| 9 | ADR system under `docs/adr/` | 28.9 |
-| 10 | Governance automation (CI boundaries, PR template) | 28.10 |
+| #   | Item                                               | §     |
+| --- | -------------------------------------------------- | ----- |
+| 9   | ADR system under `docs/adr/`                       | 28.9  |
+| 10  | Governance automation (CI boundaries, PR template) | 28.10 |
 
 Maps to Scale roadmap: **Immediate** ≈ Scale P1–P4; **Next** ≈ Scale P5–P6 + §18; **Later** ≈ Scale P8 + ADRs.
 

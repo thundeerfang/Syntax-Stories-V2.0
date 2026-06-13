@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/core/utils';
 
-
 export interface ToggleGroupContextValue {
   type: 'single' | 'multiple';
   value: string | string[];
@@ -18,7 +17,10 @@ function useToggleGroup() {
   return ctx;
 }
 
-export interface ToggleGroupProps extends Omit<React.FieldsetHTMLAttributes<HTMLFieldSetElement>, 'onChange'> {
+export interface ToggleGroupProps extends Omit<
+  React.FieldsetHTMLAttributes<HTMLFieldSetElement>,
+  'onChange'
+> {
   type?: 'single' | 'multiple';
   value?: string | string[];
   defaultValue?: string | string[];
@@ -41,7 +43,7 @@ export const ToggleGroup = React.forwardRef<HTMLFieldSetElement, ToggleGroupProp
     ref
   ) => {
     const [uncontrolledValue, setUncontrolledValue] = React.useState<string | string[]>(
-      type === 'multiple' ? (defaultValue as string[] ?? []) : (defaultValue as string ?? '')
+      type === 'multiple' ? ((defaultValue as string[]) ?? []) : ((defaultValue as string) ?? '')
     );
     const isControlled = controlledValue !== undefined;
     const value = isControlled ? controlledValue : uncontrolledValue;
@@ -50,7 +52,9 @@ export const ToggleGroup = React.forwardRef<HTMLFieldSetElement, ToggleGroupProp
       (itemValue: string) => {
         if (type === 'multiple') {
           const arr = (value as string[]) ?? [];
-          const next = arr.includes(itemValue) ? arr.filter((v) => v !== itemValue) : [...arr, itemValue];
+          const next = arr.includes(itemValue)
+            ? arr.filter((v) => v !== itemValue)
+            : [...arr, itemValue];
           if (!isControlled) setUncontrolledValue(next);
           onValueChange?.(next);
         } else {

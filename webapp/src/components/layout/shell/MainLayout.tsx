@@ -1,30 +1,36 @@
 'use client';
 
 import { useSidebar } from '@/hooks/useSidebar';
+import { useDesktopShell } from '@/hooks/useDesktopShell';
 import { cn } from '@/lib/core/utils';
 import { Footer } from '../footer/Footer';
 import { MAIN_COLUMN_OFFSET_TRANSITION, mainColumnOffsetClass } from '../shared';
-
 
 export function MainLayout({
   children,
   className,
 }: Readonly<{ children: React.ReactNode; className?: string }>) {
   const { isOpen } = useSidebar();
+  const isDesktop = useDesktopShell();
 
   return (
-    <main className={cn('relative flex w-full min-h-0 min-w-0 flex-1 flex-col items-stretch', className)}>
+    <main
+      className={cn(
+        'relative flex w-full min-h-0 min-w-0 flex-1 flex-col items-stretch',
+        className
+      )}
+    >
       <div
         className={cn(
           'relative flex min-h-0 max-w-none flex-1 flex-col items-stretch overflow-x-hidden',
           mainColumnOffsetClass(isOpen),
-          MAIN_COLUMN_OFFSET_TRANSITION,
+          MAIN_COLUMN_OFFSET_TRANSITION
         )}
       >
         <div className="relative z-[1] flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col items-stretch overflow-x-hidden px-0 pb-4 sm:pb-5 lg:pb-6">
           {children}
         </div>
-        <Footer />
+        {!isDesktop ? <Footer /> : null}
       </div>
     </main>
   );

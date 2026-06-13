@@ -26,4 +26,3 @@ export const rateLimitFollowWrite = rateLimit({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   store: RedisRateLimitStore('rl:follow:write:', 10_000) as any,
 });
-

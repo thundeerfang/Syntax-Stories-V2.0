@@ -1,13 +1,16 @@
+import { diceBearAvatarUrl } from '@/lib/core/diceBearAvatarUrl';
+
 /** Resolve profile/cover media paths for display and image export. */
-export function resolveProfileMediaUrl(
-  raw: string | undefined,
-  username?: string,
-): string {
+export function resolveProfileMediaUrl(raw: string | undefined, username?: string): string {
   const trimmed = raw?.trim();
   const seed = username?.trim() || 'user';
-  const dicebear = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+  const dicebear = diceBearAvatarUrl(seed);
   if (!trimmed) return dicebear;
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:')
+  ) {
     return trimmed;
   }
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');

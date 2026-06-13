@@ -14,7 +14,6 @@ import {
   LEGAL_TOC_TITLE,
 } from './legalUi';
 
-
 export type TocItem = { id: string; text: string; level: 2 | 3 };
 
 function slugify(raw: string, used: Set<string>): string {

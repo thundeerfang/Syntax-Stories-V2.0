@@ -4,16 +4,24 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Bell, ChevronDown, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useAuthStore } from '@/store/auth';
-import { SettingsContentSkeleton, SettingsSidebarSkeleton, StackToolsSettingsSkeleton } from '@/components/skeletons';
+import {
+  SettingsContentSkeleton,
+  SettingsSidebarSkeleton,
+  StackToolsSettingsSkeleton,
+} from '@/components/skeletons';
 import { PaymentsSettingsContent } from '@/app/settings/PaymentsSettingsContent';
 import { BlogStreakSettingsContent } from '@/app/settings/BlogStreakSettingsContent';
 import { SettingsComingSoonPlaceholder } from './components/SettingsComingSoonPlaceholder';
-import { SETTINGS_ACCORDION_VARIANTS, SETTINGS_IMPLEMENTED_SECTION_IDS, SETTINGS_NAV_GROUPS } from './config/nav';
+import {
+  SETTINGS_ACCORDION_VARIANTS,
+  SETTINGS_IMPLEMENTED_SECTION_IDS,
+  SETTINGS_NAV_GROUPS,
+} from './config/nav';
 import { SyntaxCardContent } from './sections/SyntaxCardSection';
 import { EditProfileContent } from './sections/EditProfileSection';
 import { SecurityEmailContent } from './sections/SecurityEmailSection';
@@ -25,7 +33,7 @@ import { EducationContent } from './sections/EducationSection';
 import { CertificationsContent } from './sections/CertificationsSection';
 import { ProjectsContent } from './sections/ProjectsSection';
 import { OpenSourceContent } from './sections/OpenSourceSection';
-
+import { NotificationsSettingsContent } from './sections/NotificationsSection';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -41,7 +49,10 @@ export default function SettingsPage() {
     Other: true,
   });
 
-  const validSectionIds = useMemo(() => SETTINGS_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.id)), []);
+  const validSectionIds = useMemo(
+    () => SETTINGS_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.id)),
+    []
+  );
 
   // Re-validate auth when tab becomes visible so token refresh + user sync happen without full page reload
   useEffect(() => {
@@ -130,17 +141,28 @@ export default function SettingsPage() {
     <div className="min-h-screen text-foreground font-sans">
       <div className={SHELL_CONTENT_RAIL_CLASS}>
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-[256px_1fr]">
-
           {/* SIDEBAR */}
           <aside className="w-full max-w-[256px] mx-auto lg:mx-0 space-y-4">
             {/* User Profile Brief */}
             <div className="border-4 border-border bg-card p-4 flex items-center gap-3 shadow">
               <div className="size-10 border-2 border-border bg-muted overflow-hidden shrink-0">
-                <img src={user?.profileImg || user?.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'} alt="Avatar" className="w-full h-full object-cover" />
+                <img
+                  src={
+                    user?.profileImg ||
+                    user?.image ||
+                    'https://api.dicebear.com/7.x/avataaars/svg?seed=user'
+                  }
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase truncate">{user?.fullName || user?.name || 'Account'}</p>
-                <p className="text-[9px] font-bold text-muted-foreground ">@{user?.username || 'user'}</p>
+                <p className="text-xs font-black uppercase truncate">
+                  {user?.fullName || user?.name || 'Account'}
+                </p>
+                <p className="text-[9px] font-bold text-muted-foreground ">
+                  @{user?.username || 'user'}
+                </p>
               </div>
             </div>
 
@@ -158,7 +180,12 @@ export default function SettingsPage() {
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">
                         {group.heading}
                       </span>
-                      <ChevronDown className={cn('size-3 transition-transform shrink-0', isOpen && 'rotate-180')} />
+                      <ChevronDown
+                        className={cn(
+                          'size-3 transition-transform shrink-0',
+                          isOpen && 'rotate-180'
+                        )}
+                      />
                     </button>
 
                     <AnimatePresence initial={false}>
@@ -188,7 +215,12 @@ export default function SettingsPage() {
                                       : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30'
                                   )}
                                 >
-                                  <Icon className={cn('size-4 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground/60')} />
+                                  <Icon
+                                    className={cn(
+                                      'size-4 shrink-0',
+                                      isActive ? 'text-primary' : 'text-muted-foreground/60'
+                                    )}
+                                  />
                                   <span className="whitespace-nowrap">{item.label}</span>
                                 </button>
                               );
@@ -212,9 +244,7 @@ export default function SettingsPage() {
 
           {/* MAIN CONTENT */}
           <main className="min-w-0">
-            <div
-              className="border-4 border-border bg-card p-6 md:p-10 shadow min-h-0"
-            >
+            <div className="border-4 border-border bg-card p-6 md:p-10 shadow min-h-0">
               <AnimatePresence mode="wait">
                 {contentLoading ? (
                   <motion.div
@@ -250,22 +280,15 @@ export default function SettingsPage() {
                     {activeSection === 'connected-accounts' && <ConnectedAccountsContent />}
                     {activeSection === 'syntax-card' && <SyntaxCardContent />}
                     {activeSection === 'payments' && <PaymentsSettingsContent />}
-                    {activeSection === 'notifications' && (
-                      <SettingsComingSoonPlaceholder
-                        title={activeItemLabel}
-                        icon={<Bell />}
-                        description="Notification channels and digest schedules will be configurable here."
-                      />
-                    )}
-                    {!(SETTINGS_IMPLEMENTED_SECTION_IDS as readonly string[]).includes(activeSection) && (
-                      <SettingsComingSoonPlaceholder title={activeItemLabel} />
-                    )}
+                    {activeSection === 'notifications' && <NotificationsSettingsContent />}
+                    {!(SETTINGS_IMPLEMENTED_SECTION_IDS as readonly string[]).includes(
+                      activeSection
+                    ) && <SettingsComingSoonPlaceholder title={activeItemLabel} />}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
           </main>
-
         </div>
       </div>
     </div>

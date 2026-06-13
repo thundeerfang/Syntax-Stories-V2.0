@@ -16,12 +16,20 @@ export interface IBlogTag extends Document {
 
 const BlogTagSchema = new Schema<IBlogTag>(
   {
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true, maxlength: 48, index: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 48,
+      index: true,
+    },
     name: { type: String, required: true, trim: true, maxlength: 80 },
     description: { type: String, trim: true, maxlength: 600, default: '' },
     sortOrder: { type: Number, default: 0 },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 export const BlogTagModel: Model<IBlogTag> =

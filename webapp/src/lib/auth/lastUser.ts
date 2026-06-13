@@ -1,7 +1,5 @@
 const KEY = 'syntax-stories-last-user';
 
-
-
 export function setLastUserName(fullName: string): void {
   if (globalThis.window === undefined) return;
   try {

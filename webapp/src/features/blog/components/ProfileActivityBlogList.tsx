@@ -6,7 +6,6 @@ import { CompactBlogPostsSwiper } from './CompactBlogPostsSwiper';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import type { Post } from '@/types';
 
-
 export const PROFILE_ACTIVITY_PREVIEW_LIMIT = 12;
 
 export function profileBlogsPageHref(username: string): string {
@@ -30,7 +29,10 @@ export function ProfileActivityBlogList({
     setLoading(true);
     setError(null);
     try {
-      const { posts: raw } = await blogApi.getUserPublishedPosts(username.trim(), Math.max(limit, 24));
+      const { posts: raw } = await blogApi.getUserPublishedPosts(
+        username.trim(),
+        Math.max(limit, 24)
+      );
       setPosts(raw.map(mapPublicFeedPostToPost));
     } catch (e) {
       setError(e);

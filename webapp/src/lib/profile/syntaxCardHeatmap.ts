@@ -12,11 +12,13 @@ function utcDayStringFromDate(d: Date): string {
 /** Compact heatmap cells for card export (last N UTC days). */
 export function buildHeatmapCells(
   activeDayBuckets: readonly string[] | null | undefined,
-  windowDays = READ_HEATMAP_WINDOW_DAYS,
+  windowDays = READ_HEATMAP_WINDOW_DAYS
 ): HeatmapCell[] {
   const active = new Set(activeDayBuckets ?? []);
   const anchor = new Date();
-  const todayUtc = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
+  const todayUtc = new Date(
+    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate())
+  );
   const cells: HeatmapCell[] = [];
   const days = Math.max(1, windowDays);
   for (let i = days - 1; i >= 0; i--) {
@@ -30,7 +32,7 @@ export function buildHeatmapCells(
 
 /** Derive UTC publish-day buckets from blog post timestamps. */
 export function publishDaysFromPosts(
-  posts: ReadonlyArray<{ createdAt?: string; updatedAt?: string }>,
+  posts: ReadonlyArray<{ createdAt?: string; updatedAt?: string }>
 ): string[] {
   const days = new Set<string>();
   for (const post of posts) {

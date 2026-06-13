@@ -17,6 +17,36 @@ export type ReferralConvertedPayload = {
   referrerId: string;
   refereeUserId: string;
   source: string;
+  conversionId?: string;
+};
+
+export type ReferralSignupCompletedPayload = {
+  conversionId: string;
+  referrerId: string;
+  refereeUserId: string;
+  source: string;
+};
+
+export type ReferralRejectedPayload = {
+  conversionId: string;
+  referrerId: string;
+  refereeUserId: string;
+  reason: string;
+  code: string;
+};
+
+export type ReferralRewardedPayload = {
+  conversionId: string;
+  referrerId: string;
+  refereeUserId: string;
+  rewardType: string;
+  amount: number;
+};
+
+export type ReferralSharePayload = {
+  userId: string;
+  channel: string;
+  referralCode?: string;
 };
 
 export type ProfileUpdatedPayload = {
@@ -32,8 +62,13 @@ export type ProfileUpdatedPayload = {
 export type AppEventMap = {
   /** Successful sign-in after session + JWT issuance (email OTP, OAuth, etc.). */
   'auth.signin.success': AuthSigninSuccessPayload;
-  /** Referral attributed on new user (post-DB conditional update). */
+  /** Referral attributed on new user (verified conversion). */
   'referral.converted': ReferralConvertedPayload;
+  'referral.signup_completed': ReferralSignupCompletedPayload;
+  'referral.rejected': ReferralRejectedPayload;
+  'referral.rewarded': ReferralRewardedPayload;
+  'referral.share': ReferralSharePayload;
+  'referral.attached': { referrerId: string; code: string };
   /** Profile document updated (post-DB write). */
   'profile.updated': ProfileUpdatedPayload;
 };
@@ -59,7 +94,9 @@ export function emitAppEvent<K extends keyof AppEventMap>(event: K, payload: App
   if (!set?.size) return;
   for (const fn of set) {
     try {
-      void Promise.resolve(fn(payload)).catch((e) => console.error('[appEvents]', String(event), e));
+      void Promise.resolve(fn(payload)).catch((e) =>
+        console.error('[appEvents]', String(event), e)
+      );
     } catch (e) {
       console.error('[appEvents]', String(event), e);
     }

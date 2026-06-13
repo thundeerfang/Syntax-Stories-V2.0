@@ -1,14 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useThemeStore } from '@/store/theme';
+import { applyTheme, getEffectiveTheme, useThemeStore, type Theme } from '@/store/theme';
 import { useShallow } from 'zustand/react/shallow';
 
-function getEffectiveIsDark(theme: 'light' | 'dark' | 'system'): boolean {
-  if (theme === 'dark') return true;
-  if (theme === 'light') return false;
-  if (globalThis.window === undefined) return false;
-  return globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+function getEffectiveIsDark(theme: Theme): boolean {
+  return getEffectiveTheme(theme) === 'dark';
 }
 
 export function useTheme() {
@@ -18,11 +15,15 @@ export function useTheme() {
   const [isDark, setIsDark] = useState(() => getEffectiveIsDark(theme));
 
   useEffect(() => {
-    const effective = getEffectiveIsDark(theme);
-    setIsDark(effective);
+    const sync = () => {
+      const effective = getEffectiveIsDark(theme);
+      setIsDark(effective);
+      applyTheme(theme);
+    };
+    sync();
     if (theme !== 'system') return;
     const mq = globalThis.matchMedia('(prefers-color-scheme: dark)');
-    const listener = () => setIsDark(mq.matches);
+    const listener = () => sync();
     mq.addEventListener('change', listener);
     return () => mq.removeEventListener('change', listener);
   }, [theme]);

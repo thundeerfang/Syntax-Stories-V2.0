@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -16,7 +10,6 @@ import { fetchBackendHealth } from '@/lib/api/fetchBackendHealth';
 import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
 import { cn } from '@/lib/core/utils';
 import { useScrollLock } from '@/hooks/useScrollLock';
-
 
 /** Above {@link UiProcessingShield} (110) and {@link DIALOG_Z_INDEX} (100). */
 const CONNECTIVITY_Z = 130;
@@ -28,7 +21,7 @@ const CLOUD_LOTTIE_SRC = `/lottie/${encodeURIComponent('Cloud robotics abstract.
 
 const DotLottieReact = dynamic(
   () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false },
+  { ssr: false }
 );
 
 type GateState = 'unknown' | 'ok' | 'offline' | 'backend_down';
@@ -45,7 +38,7 @@ function ConnectionSegment({
         broken && 'bg-destructive/45',
         !broken && active && 'bg-primary animate-pulse',
         !broken && !active && 'bg-muted-foreground/25',
-        className,
+        className
       )}
       aria-hidden
     />
@@ -182,7 +175,7 @@ export function ConnectivityGate() {
               transition={{ duration: 0.22 }}
               className={cn(
                 'pointer-events-auto w-full max-w-md overflow-hidden border-2 border-border bg-card',
-                'shadow',
+                'shadow'
               )}
               onClick={(e) => e.stopPropagation()}
             >
@@ -215,7 +208,7 @@ export function ConnectivityGate() {
                   <div
                     className={cn(
                       'flex size-9 shrink-0 items-center justify-center border-2 border-border bg-muted text-foreground',
-                      gate === 'offline' && 'opacity-40',
+                      gate === 'offline' && 'opacity-40'
                     )}
                   >
                     <Cloud className="size-4" strokeWidth={2.25} aria-hidden />
@@ -224,7 +217,7 @@ export function ConnectivityGate() {
                   <div
                     className={cn(
                       'flex size-9 shrink-0 items-center justify-center border-2 border-border bg-muted text-foreground',
-                      gate === 'backend_down' && 'ring-2 ring-destructive/35',
+                      gate === 'backend_down' && 'ring-2 ring-destructive/35'
                     )}
                   >
                     <Server className="size-4" strokeWidth={2.25} aria-hidden />
@@ -232,10 +225,16 @@ export function ConnectivityGate() {
                 </div>
 
                 <div className="mb-6 max-w-sm space-y-2">
-                  <h2 id={titleId} className="font-sans text-base font-black uppercase tracking-wide text-foreground">
+                  <h2
+                    id={titleId}
+                    className="font-sans text-base font-black uppercase tracking-wide text-foreground"
+                  >
                     {title}
                   </h2>
-                  <p id={descId} className="text-xs font-medium leading-relaxed text-muted-foreground">
+                  <p
+                    id={descId}
+                    className="text-xs font-medium leading-relaxed text-muted-foreground"
+                  >
                     {subtitle}
                   </p>
                 </div>

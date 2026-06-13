@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { ArchiveRestore, Pencil, Skull, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 
-
 export type BlogCardOwnerActions =
   | { mode: 'published'; viewHref: string; onEdit: () => void; onDelete: () => void }
   | { mode: 'draft'; onEdit: () => void; onDelete: () => void }
@@ -22,7 +21,9 @@ const FOOTER_BTN =
 const DANGER_BTN =
   'flex flex-1 items-center justify-center gap-1 border-2 border-destructive/60 bg-destructive/20 py-2.5 font-mono text-[9px] font-black uppercase tracking-wide text-destructive transition-[background-color,border-color] duration-300 ease-out hover:bg-destructive/35 dark:bg-red-500/12 dark:text-red-300 dark:hover:bg-red-500/22';
 
-export function BlogCardOwnerActionsOverlay({ actions }: Readonly<{ actions: BlogCardOwnerActions }>) {
+export function BlogCardOwnerActionsOverlay({
+  actions,
+}: Readonly<{ actions: BlogCardOwnerActions }>) {
   const mode = actions.mode;
 
   return (
@@ -33,7 +34,7 @@ export function BlogCardOwnerActionsOverlay({ actions }: Readonly<{ actions: Blo
         'transform-gpu transition-opacity duration-300 ease-out',
         'motion-reduce:transition-none motion-reduce:duration-0',
         'group-hover/card:pointer-events-auto group-hover/card:opacity-100',
-        'group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100',
+        'group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100'
       )}
     >
       <div
@@ -45,7 +46,7 @@ export function BlogCardOwnerActionsOverlay({ actions }: Readonly<{ actions: Blo
           'relative z-10 flex w-full flex-row items-stretch gap-2 border-t-2 border-border bg-card/95 p-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-md dark:border-border/40 dark:bg-black/88 dark:shadow-none',
           'translate-y-2 transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]',
           'motion-reduce:translate-y-0 motion-reduce:transition-none',
-          'group-hover/card:translate-y-0 group-focus-within/card:translate-y-0',
+          'group-hover/card:translate-y-0 group-focus-within/card:translate-y-0'
         )}
       >
         {mode === 'published' ? (

@@ -1,3 +1,8 @@
+import {
+  PROFILE_CERT_EXPIRATION_END_YEAR,
+  PROFILE_DATE_START_YEAR,
+} from '@syntax-stories/shared';
+
 /** Full month names (settings forms, long display). */
 export const MONTH_NAMES_FULL = [
   'January',
@@ -30,7 +35,7 @@ export const MONTH_NAMES_SHORT = [
   'Dec',
 ] as const;
 
-export const PROFILE_DATE_START_YEAR = 1980;
+export { PROFILE_CERT_EXPIRATION_END_YEAR, PROFILE_DATE_START_YEAR };
 
 export function profileYearOptions(endYear = new Date().getFullYear()) {
   return Array.from({ length: endYear - PROFILE_DATE_START_YEAR + 1 }, (_, i) => {
@@ -75,7 +80,7 @@ export function formatMonthYearMedium(val: string): string {
 
 export function yearOptionsFromMin(
   minYear: string | undefined,
-  endYear = new Date().getFullYear(),
+  endYear = new Date().getFullYear()
 ) {
   const all = profileYearOptions(endYear);
   const n = parseInt(minYear ?? '', 10);

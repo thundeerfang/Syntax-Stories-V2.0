@@ -21,12 +21,19 @@ export function formatMonthYear(val: string | undefined): string {
 /** Strip work arrangement suffixes like "(On-site)" from location (legacy / duplicated data). */
 export function locationWithoutType(location: string | undefined): string {
   if (!location?.trim()) return '';
-  return location.trim().replaceAll(/\s*\([^)]+\)/g, '').replaceAll(/\s+/g, ' ').trim();
+  return location
+    .trim()
+    .replaceAll(/\s*\([^)]+\)/g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
 }
 
 export function normalizeDomain(domain: string | undefined): string {
   if (!domain?.trim()) return '';
-  const d = domain.trim().replaceAll(/^https?:\/\//gi, '').replaceAll(/\/$/g, '');
+  const d = domain
+    .trim()
+    .replaceAll(/^https?:\/\//gi, '')
+    .replaceAll(/\/$/g, '');
   return d ? `https://${d}` : '';
 }
 
@@ -56,10 +63,7 @@ export function reposCountSubtitle(count: number): string | undefined {
 }
 
 /** Min visible rows after opening an accordion section (matches profile/public profile UX). */
-export function profileSectionMinVisible(
-  variant: string,
-  prior: number | undefined,
-): number {
+export function profileSectionMinVisible(variant: string, prior: number | undefined): number {
   const floor = variant === 'openSource' || variant === 'mySetup' ? 2 : 1;
   return Math.max(prior ?? floor, floor);
 }

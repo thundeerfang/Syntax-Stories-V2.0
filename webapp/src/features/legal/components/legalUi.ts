@@ -80,8 +80,7 @@ export const LEGAL_UNAVAILABLE_TITLE = 'text-2xl font-black tracking-tight text-
 
 export const LEGAL_UNAVAILABLE_BODY = 'text-sm text-muted-foreground leading-relaxed';
 
-export const LEGAL_INLINE_CODE =
-  ' border border-border bg-muted px-1.5 py-0.5 font-mono text-xs';
+export const LEGAL_INLINE_CODE = ' border border-border bg-muted px-1.5 py-0.5 font-mono text-xs';
 
 /** Divider + block below published policy (e.g. UDD request panel). */
 export const LEGAL_CARD_SECTION_RULE = 'mt-10 border-t-4 border-dashed border-border pt-10';

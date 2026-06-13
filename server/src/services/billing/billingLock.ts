@@ -25,7 +25,10 @@ end
  * Serialize writes per Stripe subscription id using Redis token lock (§2.4.1).
  * Without Redis, runs unguarded (dev / degraded single-instance).
  */
-export async function withBillingLock<T>(stripeSubscriptionId: string, work: () => Promise<T>): Promise<T> {
+export async function withBillingLock<T>(
+  stripeSubscriptionId: string,
+  work: () => Promise<T>
+): Promise<T> {
   const redis = getRedis();
   if (!redis) {
     return work();

@@ -4,7 +4,6 @@ import { AlertCircle, WifiOff } from 'lucide-react';
 import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
 import { cn } from '@/lib/core/utils';
 
-
 export function resolveFeedErrorPresentation(
   error: unknown,
   defaults: Readonly<{
@@ -12,14 +11,13 @@ export function resolveFeedErrorPresentation(
     connectionTitle?: string;
     connectionDescription?: string;
     fallbackDescription?: string;
-  }>,
+  }>
 ): Readonly<{ title: string; description: string; isConnection: boolean }> {
   const isConnection = error instanceof BlogApiConnectionError;
   if (isConnection) {
     return {
       title: defaults.connectionTitle ?? 'Cannot connect to the server',
-      description:
-        defaults.connectionDescription ?? 'Check your connection and try again.',
+      description: defaults.connectionDescription ?? 'Check your connection and try again.',
       isConnection,
     };
   }
@@ -58,7 +56,7 @@ function ErrorIconTile({
     <span
       className={cn(
         'flex shrink-0 items-center justify-center border-2 border-destructive/45 bg-destructive/10 text-destructive',
-        compact ? 'size-12' : 'size-16 shadow-sm',
+        compact ? 'size-12' : 'size-16 shadow-sm'
       )}
       aria-hidden
     >
@@ -92,16 +90,22 @@ export function RailFeedErrorState({
         role="alert"
         className={cn(
           'flex w-full flex-col gap-3 border-2 border-dashed border-destructive/40 bg-destructive/5 p-4 sm:flex-row sm:items-start',
-          className,
+          className
         )}
       >
         <ErrorIconTile isConnection={isConn} compact />
         <div className="min-w-0 flex-1 space-y-1.5 text-left">
-          <p className="font-mono text-xs font-black uppercase tracking-wide text-foreground">{headline}</p>
+          <p className="font-mono text-xs font-black uppercase tracking-wide text-foreground">
+            {headline}
+          </p>
           {body ? <p className="text-sm leading-relaxed text-muted-foreground">{body}</p> : null}
         </div>
         {onRetry ? (
-          <button type="button" onClick={onRetry} className={cn(RETRY_BTN, 'self-start sm:shrink-0')}>
+          <button
+            type="button"
+            onClick={onRetry}
+            className={cn(RETRY_BTN, 'self-start sm:shrink-0')}
+          >
             {retryLabel}
           </button>
         ) : null}
@@ -114,7 +118,7 @@ export function RailFeedErrorState({
       role="alert"
       className={cn(
         'ss-empty-dashed-panel relative flex flex-col items-center justify-center border-2 border-dashed border-destructive/40 bg-destructive/5 px-6 py-14 text-center sm:py-16',
-        className,
+        className
       )}
     >
       <ErrorIconTile isConnection={isConn} compact={false} />

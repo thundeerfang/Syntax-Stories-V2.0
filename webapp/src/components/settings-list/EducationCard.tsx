@@ -1,17 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Calendar,
-  GraduationCap,
-  Pencil,
-  Sigma,
-  Tag,
-  Trash2,
-  Cpu,
-} from 'lucide-react';
+import { Calendar, GraduationCap, Pencil, Sigma, Tag, Trash2, Cpu } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
-
 
 const EDU_CARD_FOOTER_MARKS = ['e0', 'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7'] as const;
 
@@ -114,7 +105,6 @@ export function EducationCard({
     <div className="group relative ss-settings-card">
       {/* Fixed Industrial Frame (No Translate/Uplift) */}
       <div className="ss-card-border relative border-[3px] border-border bg-card">
-        
         {/* Hardware Corner Brackets */}
         <div className="absolute -top-[3px] -left-[3px] size-4 border-t-[3px] border-l-[3px] border-primary z-10" />
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-10" />
@@ -141,12 +131,11 @@ export function EducationCard({
 
         {/* Main Interface Content */}
         <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10">
-          
           {/* Logo Display Screen — reduced size */}
           <div className="ss-card-logo-box relative size-12 shrink-0 border-2 border-border bg-background flex items-center justify-center overflow-hidden">
             {/* Retro CRT Grid Effect */}
             <div className="absolute inset-0 opacity-[0.1] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:4px_4px]" />
-            
+
             {e.schoolLogo ? (
               <img
                 src={e.schoolLogo}
@@ -216,7 +205,10 @@ export function EducationCard({
             </div>
 
             {e.activity && (
-              <div ref={infoRef} className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5">
+              <div
+                ref={infoRef}
+                className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5"
+              >
                 <button
                   type="button"
                   onClick={(ev) => {
@@ -253,7 +245,10 @@ export function EducationCard({
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1 opacity-30">
             {EDU_CARD_FOOTER_MARKS.map((mark, i) => (
-              <div key={mark} className={cn('h-2 w-[1px] bg-foreground', i % 3 === 0 && 'w-[2px]')} />
+              <div
+                key={mark}
+                className={cn('h-2 w-[1px] bg-foreground', i % 3 === 0 && 'w-[2px]')}
+              />
             ))}
           </div>
           <span className="text-[9px] font-mono font-bold text-muted-foreground/40 tracking-[0.2em]">

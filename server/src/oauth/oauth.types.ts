@@ -1,6 +1,6 @@
 import type { Request } from 'express';
 
-export type OAuthProviderKey = 'google' | 'github' | 'facebook' | 'x' | 'discord';
+export type OAuthProviderKey = 'google' | 'github' | 'facebook' | 'x' | 'discord' | 'twitch';
 
 /** Shape passed to `oauthCallbackHandler` / Passport `done(null, user)`. */
 export type OAuthPassportUser = {
@@ -10,6 +10,7 @@ export type OAuthPassportUser = {
   facebookId?: string;
   xId?: string;
   discordId?: string;
+  twitchId?: string;
 };
 
 /**
@@ -26,6 +27,8 @@ export type NormalizedOAuthProfile = {
   githubUsername?: string;
   /** Discord: sanitized base for username before random suffix */
   discordUsernameBase?: string;
+  /** Twitch: sanitized login for username before random suffix */
+  twitchUsernameBase?: string;
   /** X/Twitter handle for signup username */
   xHandle?: string;
   /** When true, signup stores `x-{id}@syntaxstories.placeholder` instead of `email` */

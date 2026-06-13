@@ -34,18 +34,36 @@ import { FormDialog } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/feedback';
 import { ImageUploadCropDialog } from '@/components/upload/ImageUploadCropDialog';
 import { AltchaField, readAltchaPayload } from '@/components/auth';
-import type { CustomFeedRules, CustomFeedSort, CustomFeedTimeRange } from '@/lib/feeds/applyCustomFeedRules';
+import type {
+  CustomFeedRules,
+  CustomFeedSort,
+  CustomFeedTimeRange,
+} from '@/lib/feeds/applyCustomFeedRules';
 import { captureScreenToFeedbackFile } from '@/lib/media/captureScreenToFeedbackFile';
 import { validateFeedbackAttachmentFile } from '@/lib/media/feedbackAttachmentClient';
 import { cn } from '@/lib/core/utils';
 import { useAuthStore } from '@/store/auth';
+import { useAuthDialogStore } from '@/store/authDialog';
 import { defaultRules, useCustomFeedsStore } from '@/store/customFeeds';
 import { useUIStore } from '@/store/ui';
 import type { BlogTaxonomyRow } from '@/types/blog';
 
 const FEED_NAME_MAX = 50;
 
-const ICON_PRESETS = ['🔥', '📡', '💡', '🛠️', '🧪', '🚀', '📚', '🎯', '⚡', '🌐', '💜', '🧠'] as const;
+const ICON_PRESETS = [
+  '🔥',
+  '📡',
+  '💡',
+  '🛠️',
+  '🧪',
+  '🚀',
+  '📚',
+  '🎯',
+  '⚡',
+  '🌐',
+  '💜',
+  '🧠',
+] as const;
 
 const SORT_OPTIONS: { value: CustomFeedSort; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
@@ -111,6 +129,11 @@ export function NewCustomFeedDialog() {
   const open = useCustomFeedsStore((s) => s.newFeedDialogOpen);
   const close = useCustomFeedsStore((s) => s.closeNewFeedDialog);
   const addFeed = useCustomFeedsStore((s) => s.addFeed);
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const openAuth = useAuthDialogStore((s) => s.open);
+  const isAuthed = isHydrated && Boolean(token && user);
 
   const [tab, setTab] = useState<SidebarTab>('general');
   const [name, setName] = useState('My new feed');
@@ -120,7 +143,10 @@ export function NewCustomFeedDialog() {
   const [tagQuery, setTagQuery] = useState('');
   const [sourceSubTab, setSourceSubTab] = useState<'squads' | 'users'>('squads');
   const [sourceSearch, setSourceSearch] = useState('');
-  const [taxonomy, setTaxonomy] = useState<{ tags: BlogTaxonomyRow[]; categories: BlogTaxonomyRow[] }>({
+  const [taxonomy, setTaxonomy] = useState<{
+    tags: BlogTaxonomyRow[];
+    categories: BlogTaxonomyRow[];
+  }>({
     tags: [],
     categories: [],
   });
@@ -129,6 +155,11 @@ export function NewCustomFeedDialog() {
 
   useEffect(() => {
     if (!open) return;
+    if (!isAuthed) {
+      close();
+      openAuth('login');
+      return;
+    }
     setTab('general');
     setName('My new feed');
     setIconEmoji('📡');
@@ -158,19 +189,21 @@ export function NewCustomFeedDialog() {
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, isAuthed, close, openAuth]);
 
   const nameLen = name.length;
   const suggestedTags = useMemo(() => {
     const q = normSlug(tagQuery);
     return taxonomy.tags
-      .filter((t) => (q ? normSlug(t.slug).includes(q) || normSlug(t.name ?? '').includes(q) : true))
+      .filter((t) =>
+        q ? normSlug(t.slug).includes(q) || normSlug(t.name ?? '').includes(q) : true
+      )
       .slice(0, 14);
   }, [taxonomy.tags, tagQuery]);
 
   const sortedCategories = useMemo(() => {
     return [...taxonomy.categories].sort((a, b) =>
-      (a.name ?? a.slug).localeCompare(b.name ?? b.slug, undefined, { sensitivity: 'base' }),
+      (a.name ?? a.slug).localeCompare(b.name ?? b.slug, undefined, { sensitivity: 'base' })
     );
   }, [taxonomy.categories]);
 
@@ -190,7 +223,7 @@ export function NewCustomFeedDialog() {
     const s = normSlug(slug);
     if (!s) return;
     setRules((r) =>
-      r.squadSources.includes(s) ? r : { ...r, squadSources: [...r.squadSources, s] },
+      r.squadSources.includes(s) ? r : { ...r, squadSources: [...r.squadSources, s] }
     );
   }, []);
 
@@ -198,9 +231,7 @@ export function NewCustomFeedDialog() {
     const raw = sourceSearch.trim().replace(/^@/, '');
     const s = normSlug(raw);
     if (!s) return;
-    setRules((r) =>
-      r.userSources.includes(s) ? r : { ...r, userSources: [...r.userSources, s] },
-    );
+    setRules((r) => (r.userSources.includes(s) ? r : { ...r, userSources: [...r.userSources, s] }));
     setSourceSearch('');
   }, [sourceSearch]);
 
@@ -229,7 +260,11 @@ export function NewCustomFeedDialog() {
     }
   }, [addFeed, close, iconEmoji, makeDefault, name, rules]);
 
-  const sidebarBtn = (id: SidebarTab, label: string, Icon: ComponentType<{ className?: string; strokeWidth?: number }>) => (
+  const sidebarBtn = (
+    id: SidebarTab,
+    label: string,
+    Icon: ComponentType<{ className?: string; strokeWidth?: number }>
+  ) => (
     <button
       key={id}
       type="button"
@@ -238,7 +273,7 @@ export function NewCustomFeedDialog() {
         'flex w-full items-center gap-2  border-2 px-2.5 py-2 text-left font-mono text-[10px] font-black uppercase tracking-widest transition-colors sm:gap-3 sm:px-3 sm:py-2.5',
         tab === id
           ? 'border-primary bg-primary/10 text-primary'
-          : 'border-transparent bg-transparent text-foreground/80 hover:bg-muted/50',
+          : 'border-transparent bg-transparent text-foreground/80 hover:bg-muted/50'
       )}
     >
       <Icon className="size-4 shrink-0" strokeWidth={2.25} aria-hidden />
@@ -264,10 +299,22 @@ export function NewCustomFeedDialog() {
       footerClassName="flex flex-wrap justify-end gap-2"
       footer={
         <>
-          <Button type="button" variant="ghost" size="sm" disabled={submitting} onClick={handleClose}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={submitting}
+            onClick={handleClose}
+          >
             Cancel
           </Button>
-          <Button type="button" variant="primary" size="sm" loading={submitting} onClick={() => void onSave()}>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            loading={submitting}
+            onClick={() => void onSave()}
+          >
             Create feed
           </Button>
         </>
@@ -290,8 +337,12 @@ export function NewCustomFeedDialog() {
             {tab === 'general' ? (
               <div className="space-y-8">
                 <section className="space-y-2">
-                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">Feed name</h3>
-                  <p className="text-xs text-muted-foreground">Choose a name that reflects the focus of your feed.</p>
+                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">
+                    Feed name
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Choose a name that reflects the focus of your feed.
+                  </p>
                   <label className="block space-y-1.5">
                     <span className="sr-only">Enter feed name</span>
                     <input
@@ -309,7 +360,9 @@ export function NewCustomFeedDialog() {
                 </section>
 
                 <section className="space-y-2">
-                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">Choose an icon</h3>
+                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">
+                    Choose an icon
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {ICON_PRESETS.map((e) => (
                       <button
@@ -320,7 +373,7 @@ export function NewCustomFeedDialog() {
                           'flex size-11 items-center justify-center border-2 text-lg transition-colors',
                           iconEmoji === e
                             ? 'border-primary bg-primary/10'
-                            : 'border-border bg-card hover:bg-muted/50',
+                            : 'border-border bg-card hover:bg-muted/50'
                         )}
                         aria-label={`Icon ${e}`}
                       >
@@ -352,10 +405,12 @@ export function NewCustomFeedDialog() {
             {tab === 'tags' ? (
               <div className="space-y-6">
                 <section className="space-y-2">
-                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">Search tags</h3>
+                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">
+                    Search tags
+                  </h3>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Tags are a strong starting signal for your feed. As you engage with content, live activity can weigh
-                    more over time.
+                    Tags are a strong starting signal for your feed. As you engage with content,
+                    live activity can weigh more over time.
                   </p>
                   <input
                     value={tagQuery}
@@ -363,7 +418,9 @@ export function NewCustomFeedDialog() {
                     placeholder="Search tags…"
                     className="h-10 w-full border-2 border-border bg-background px-3 font-mono text-xs outline-none ring-primary focus-visible:ring-2"
                   />
-                  <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Suggested</p>
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Suggested
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {suggestedTags.map((t) => (
                       <button
@@ -376,10 +433,14 @@ export function NewCustomFeedDialog() {
                       </button>
                     ))}
                   </div>
-                  <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-muted-foreground">My tags</p>
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                    My tags
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {rules.tagSlugs.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">None yet — add from suggested above.</span>
+                      <span className="text-xs text-muted-foreground">
+                        None yet — add from suggested above.
+                      </span>
                     ) : (
                       rules.tagSlugs.map((s) => (
                         <Chip
@@ -399,12 +460,19 @@ export function NewCustomFeedDialog() {
             {tab === 'categories' ? (
               <div className="space-y-6">
                 <section className="space-y-2">
-                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">Categories</h3>
+                  <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">
+                    Categories
+                  </h3>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     Choose one or more categories from the server taxonomy. Hold{' '}
-                    <kbd className="border border-border bg-muted px-1 font-mono text-[10px]">⌘</kbd> /{' '}
-                    <kbd className="border border-border bg-muted px-1 font-mono text-[10px]">Ctrl</kbd> to
-                    select multiple.
+                    <kbd className="border border-border bg-muted px-1 font-mono text-[10px]">
+                      ⌘
+                    </kbd>{' '}
+                    /{' '}
+                    <kbd className="border border-border bg-muted px-1 font-mono text-[10px]">
+                      Ctrl
+                    </kbd>{' '}
+                    to select multiple.
                   </p>
                   {sortedCategories.length === 0 ? (
                     <p className="text-xs text-muted-foreground">No categories loaded yet.</p>
@@ -413,7 +481,9 @@ export function NewCustomFeedDialog() {
                       multiple
                       value={rules.categorySlugs}
                       onChange={(e) => {
-                        const slugs = Array.from(e.target.selectedOptions, (o) => normSlug(o.value));
+                        const slugs = Array.from(e.target.selectedOptions, (o) =>
+                          normSlug(o.value)
+                        );
                         setRules((r) => ({ ...r, categorySlugs: slugs }));
                       }}
                       aria-label="Categories from server"
@@ -442,7 +512,8 @@ export function NewCustomFeedDialog() {
                     Search sources, squads, or users
                   </h3>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    Following squads and authors steers where posts come from. Leave empty to include all sources.
+                    Following squads and authors steers where posts come from. Leave empty to
+                    include all sources.
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -452,7 +523,7 @@ export function NewCustomFeedDialog() {
                         ' border-2 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest',
                         sourceSubTab === 'squads'
                           ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border bg-card',
+                          : 'border-border bg-card'
                       )}
                     >
                       Squads
@@ -464,7 +535,7 @@ export function NewCustomFeedDialog() {
                         ' border-2 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest',
                         sourceSubTab === 'users'
                           ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border bg-card',
+                          : 'border-border bg-card'
                       )}
                     >
                       Users
@@ -479,7 +550,11 @@ export function NewCustomFeedDialog() {
                         addUserFromInput();
                       }
                     }}
-                    placeholder={sourceSubTab === 'squads' ? 'Filter squads…' : 'Type @username and press Enter'}
+                    placeholder={
+                      sourceSubTab === 'squads'
+                        ? 'Filter squads…'
+                        : 'Type @username and press Enter'
+                    }
                     className="h-10 w-full border-2 border-border bg-background px-3 font-mono text-xs outline-none ring-primary focus-visible:ring-2"
                   />
                   {sourceSubTab === 'squads' ? (
@@ -498,7 +573,9 @@ export function NewCustomFeedDialog() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-[10px] text-muted-foreground">Press Enter to add a username. Chips appear below.</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Press Enter to add a username. Chips appear below.
+                    </p>
                   )}
                   <div className="flex flex-wrap gap-2 pt-1">
                     {rules.squadSources.map((s) => (
@@ -506,7 +583,10 @@ export function NewCustomFeedDialog() {
                         key={s}
                         label={`squad:${s}`}
                         onRemove={() =>
-                          setRules((r) => ({ ...r, squadSources: r.squadSources.filter((x) => x !== s) }))
+                          setRules((r) => ({
+                            ...r,
+                            squadSources: r.squadSources.filter((x) => x !== s),
+                          }))
                         }
                       />
                     ))}
@@ -515,7 +595,10 @@ export function NewCustomFeedDialog() {
                         key={s}
                         label={`@${s}`}
                         onRemove={() =>
-                          setRules((r) => ({ ...r, userSources: r.userSources.filter((x) => x !== s) }))
+                          setRules((r) => ({
+                            ...r,
+                            userSources: r.userSources.filter((x) => x !== s),
+                          }))
                         }
                       />
                     ))}
@@ -530,7 +613,9 @@ export function NewCustomFeedDialog() {
                   <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">
                     Set default sorting
                   </h3>
-                  <p className="text-xs text-muted-foreground">Choose how posts are ordered in your feed.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Choose how posts are ordered in your feed.
+                  </p>
                   <select
                     value={rules.sort}
                     onChange={(e) =>
@@ -550,7 +635,9 @@ export function NewCustomFeedDialog() {
                   <h3 className="font-mono text-[11px] font-black uppercase tracking-widest text-foreground">
                     Filter by time range
                   </h3>
-                  <p className="text-xs text-muted-foreground">Include only posts published within a window.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Include only posts published within a window.
+                  </p>
                   <select
                     value={rules.timeRange}
                     onChange={(e) =>
@@ -571,7 +658,8 @@ export function NewCustomFeedDialog() {
                     Content thresholds
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Minimum counts — choose <span className="font-mono">—</span> for no minimum, or a fixed tier.
+                    Minimum counts — choose <span className="font-mono">—</span> for no minimum, or
+                    a fixed tier.
                   </p>
                   <div className="grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
                     {(
@@ -733,7 +821,9 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
     setCropDialogOpen(false);
     setCategoryId('');
     if (user) {
-      const sp = user.fullName ? splitFullNameForForm(user.fullName) : { firstName: '', lastName: '' };
+      const sp = user.fullName
+        ? splitFullNameForForm(user.fullName)
+        : { firstName: '', lastName: '' };
       setFirstName(sp.firstName);
       setLastName(sp.lastName);
       setEmail((user.email ?? '').slice(0, MAX_EMAIL));
@@ -780,7 +870,9 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
     clearAttachment();
     setCategoryId(categories[0]?.id ?? '');
     if (isAuthed && user) {
-      const sp = user.fullName ? splitFullNameForForm(user.fullName) : { firstName: '', lastName: '' };
+      const sp = user.fullName
+        ? splitFullNameForForm(user.fullName)
+        : { firstName: '', lastName: '' };
       setFirstName(sp.firstName);
       setLastName(sp.lastName);
       setEmail((user.email ?? '').slice(0, MAX_EMAIL));
@@ -791,15 +883,18 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
     }
   }, [categories, clearAttachment, isAuthed, user]);
 
-  const applyAttachment = useCallback((file: File, source: 'capture' | 'upload', title?: string) => {
-    setAttachmentFile(file);
-    setAttachmentSource(source);
-    setAttachmentImageTitle(title ?? '');
-    setAttachmentPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
-    });
-  }, []);
+  const applyAttachment = useCallback(
+    (file: File, source: 'capture' | 'upload', title?: string) => {
+      setAttachmentFile(file);
+      setAttachmentSource(source);
+      setAttachmentImageTitle(title ?? '');
+      setAttachmentPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
+      });
+    },
+    []
+  );
 
   const handleCropConfirm = useCallback(
     async (file: File, meta?: { imageTitle?: string }) => {
@@ -826,7 +921,8 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
       }
       applyAttachment(file, 'capture', 'Screen capture');
     } catch (e) {
-      const name = e && typeof e === 'object' && 'name' in e ? String((e as { name?: string }).name) : '';
+      const name =
+        e && typeof e === 'object' && 'name' in e ? String((e as { name?: string }).name) : '';
       if (name === 'NotAllowedError' || name === 'AbortError') {
         toast.info('Capture cancelled.');
       } else {
@@ -900,9 +996,7 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
             subject: sub,
             description: desc,
             clientMeta,
-            ...(isAuthed
-              ? {}
-              : { firstName: fn, lastName: ln, email: em, altcha: altchaPayload }),
+            ...(isAuthed ? {} : { firstName: fn, lastName: ln, email: em, altcha: altchaPayload }),
             attachment: attachmentFile,
             attachmentTitle: attachmentImageTitle.trim() || undefined,
           },
@@ -963,297 +1057,337 @@ function FeedbackDialog({ open, onClose }: Readonly<Props>) {
 
   return (
     <>
-    <FormDialog
-      open={open}
-      onClose={onClose}
-      titleId={titleId}
-      title="Feedback"
-      titleIcon={<MessageSquare className="size-5" strokeWidth={2.5} aria-hidden />}
-      subtitle={FEEDBACK_SUBTITLE}
-      subtitleClassName="min-w-0 max-w-full text-[10px] sm:text-[11px] font-medium leading-snug tracking-wide text-muted-foreground sm:line-clamp-2 normal-case"
-      panelClassName={cn(
-        'max-w-[min(56rem,calc(100vw-1.25rem))] sm:max-w-[56rem]',
-        capturing && FEEDBACK_CAPTURE_HIDE_UI_CLASS,
-      )}
-      backdropClassName={capturing ? FEEDBACK_CAPTURE_HIDE_UI_CLASS : undefined}
-      footer={formFooter}
-      footerClassName="flex flex-row flex-wrap items-center justify-end gap-2"
-      interactionLock={submitting}
-      interactionLockContent={submitting ? <FeedbackSuccessSubmitSkeleton /> : undefined}
-    >
-      {sessionPending && phase === 'form' && (
-        <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Loading your account…
-        </p>
-      )}
-      {phase === 'success' ? (
-        <div className="space-y-6 text-center py-4">
-          <CheckCircle2 className="mx-auto size-14 text-primary" strokeWidth={2} aria-hidden />
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-foreground">We received your message.</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {emailSent === false
-                ? 'Your feedback was saved. Email notification could not be sent automatically; our team can still read it in the dashboard.'
-                : 'Thank you for helping improve Syntax Stories.'}
-            </p>
-          </div>
-          <Button
-            type="button"
-            className="w-full py-6 text-xs font-black uppercase tracking-widest"
-            onClick={onClose}
-          >
-            Close
-          </Button>
-        </div>
-      ) : (
-        <form
-          id={FEEDBACK_FORM_ID}
-          onSubmit={runSubmit}
-          className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:grid-rows-[auto_auto] lg:items-stretch lg:gap-x-8 lg:gap-y-6"
-        >
-          {/* Left: preview + capture / upload — on lg, column height matches category→subject block */}
-          <aside className="order-first flex w-full max-w-[15rem] flex-col lg:col-start-1 lg:row-start-1 lg:max-w-none lg:h-full lg:min-h-0">
-            <div className="flex min-h-[14rem] flex-1 flex-col border-2 border-border bg-muted/10 shadow lg:min-h-0">
-              <p className="shrink-0 border-b-2 border-border bg-muted/30 px-2 py-1.5 text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">
-                Attachment
+      <FormDialog
+        open={open}
+        onClose={onClose}
+        titleId={titleId}
+        title="Feedback"
+        titleIcon={<MessageSquare className="size-5" strokeWidth={2.5} aria-hidden />}
+        subtitle={FEEDBACK_SUBTITLE}
+        subtitleClassName="min-w-0 max-w-full text-[10px] sm:text-[11px] font-medium leading-snug tracking-wide text-muted-foreground sm:line-clamp-2 normal-case"
+        panelClassName={cn(
+          'max-w-[min(56rem,calc(100vw-1.25rem))] sm:max-w-[56rem]',
+          capturing && FEEDBACK_CAPTURE_HIDE_UI_CLASS
+        )}
+        backdropClassName={capturing ? FEEDBACK_CAPTURE_HIDE_UI_CLASS : undefined}
+        footer={formFooter}
+        footerClassName="flex flex-row flex-wrap items-center justify-end gap-2"
+        interactionLock={submitting}
+        interactionLockContent={submitting ? <FeedbackSuccessSubmitSkeleton /> : undefined}
+      >
+        {sessionPending && phase === 'form' && (
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Loading your account…
+          </p>
+        )}
+        {phase === 'success' ? (
+          <div className="space-y-6 text-center py-4">
+            <CheckCircle2 className="mx-auto size-14 text-primary" strokeWidth={2} aria-hidden />
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">We received your message.</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {emailSent === false
+                  ? 'Your feedback was saved. Email notification could not be sent automatically; our team can still read it in the dashboard.'
+                  : 'Thank you for helping improve Syntax Stories.'}
               </p>
-              <div className="relative min-h-[9rem] flex-1 border-b-2 border-dashed border-border/80 bg-background/50 lg:min-h-0">
-                {attachmentPreview ? (
-                  <img
-                    src={attachmentPreview}
-                    alt={attachmentImageTitle.trim() || 'Screenshot preview'}
-                    title={attachmentImageTitle.trim() || undefined}
-                    className="absolute inset-0 size-full object-contain p-1"
-                  />
-                ) : (
-                  <div className="flex size-full min-h-[9rem] flex-col items-center justify-center gap-1 p-3 text-center lg:min-h-0">
-                    <ImagePlus className="size-7 text-muted-foreground/40" strokeWidth={1.5} aria-hidden />
-                    <span className="text-[8px] font-bold uppercase leading-tight tracking-wide text-muted-foreground">
-                      None yet
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="shrink-0 space-y-1.5 p-2">
-                <p id="fb-screenshot-hint" className="text-[8px] leading-snug text-muted-foreground">
-                  One optional image — Chrome screen share or upload. Max{' '}
-                  {Math.round(FEEDBACK_MAX_IMAGE_BYTES / (1024 * 1024))} MB. Server scans (malware) and re-encodes.
+            </div>
+            <Button
+              type="button"
+              className="w-full py-6 text-xs font-black uppercase tracking-widest"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </div>
+        ) : (
+          <form
+            id={FEEDBACK_FORM_ID}
+            onSubmit={runSubmit}
+            className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:grid-rows-[auto_auto] lg:items-stretch lg:gap-x-8 lg:gap-y-6"
+          >
+            {/* Left: preview + capture / upload — on lg, column height matches category→subject block */}
+            <aside className="order-first flex w-full max-w-[15rem] flex-col lg:col-start-1 lg:row-start-1 lg:max-w-none lg:h-full lg:min-h-0">
+              <div className="flex min-h-[14rem] flex-1 flex-col border-2 border-border bg-muted/10 shadow lg:min-h-0">
+                <p className="shrink-0 border-b-2 border-border bg-muted/30 px-2 py-1.5 text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">
+                  Attachment
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  className="h-9 w-full border-2 px-2 text-[9px] font-black uppercase tracking-wider"
-                  onClick={() => void handleScreenCapture()}
-                  disabled={capturing || submitting || sessionPending}
-                  aria-describedby="fb-screenshot-hint"
-                >
-                  <Monitor className="mr-1.5 inline size-3.5 shrink-0 opacity-80" aria-hidden />
-                  {capturing ? 'Capturing…' : 'Capture screen'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  className="h-9 w-full border-2 px-2 text-[9px] font-black uppercase tracking-wider"
-                  onClick={() => setCropDialogOpen(true)}
-                  disabled={capturing || submitting || sessionPending}
-                  aria-describedby="fb-screenshot-hint"
-                >
-                  <ImagePlus className="mr-1.5 inline size-3.5 shrink-0 opacity-80" aria-hidden />
-                  Upload image
-                </Button>
-                {attachmentFile && (
-                  <button
-                    type="button"
-                    onClick={clearAttachment}
-                    className="w-full border-2 border-dashed border-border py-1.5 text-[8px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
+                <div className="relative min-h-[9rem] flex-1 border-b-2 border-dashed border-border/80 bg-background/50 lg:min-h-0">
+                  {attachmentPreview ? (
+                    <img
+                      src={attachmentPreview}
+                      alt={attachmentImageTitle.trim() || 'Screenshot preview'}
+                      title={attachmentImageTitle.trim() || undefined}
+                      className="absolute inset-0 size-full object-contain p-1"
+                    />
+                  ) : (
+                    <div className="flex size-full min-h-[9rem] flex-col items-center justify-center gap-1 p-3 text-center lg:min-h-0">
+                      <ImagePlus
+                        className="size-7 text-muted-foreground/40"
+                        strokeWidth={1.5}
+                        aria-hidden
+                      />
+                      <span className="text-[8px] font-bold uppercase leading-tight tracking-wide text-muted-foreground">
+                        None yet
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 space-y-1.5 p-2">
+                  <p
+                    id="fb-screenshot-hint"
+                    className="text-[8px] leading-snug text-muted-foreground"
                   >
-                    Remove image
-                  </button>
-                )}
-                {attachmentSource !== 'none' && (
-                  <p className="text-center text-[7px] font-mono font-bold uppercase tracking-tighter text-primary/80">
-                    {attachmentSource === 'capture' ? 'Source: capture' : 'Source: upload'}
+                    One optional image — Chrome screen share or upload. Max{' '}
+                    {Math.round(FEEDBACK_MAX_IMAGE_BYTES / (1024 * 1024))} MB. Server scans
+                    (malware) and re-encodes.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="h-9 w-full border-2 px-2 text-[9px] font-black uppercase tracking-wider"
+                    onClick={() => void handleScreenCapture()}
+                    disabled={capturing || submitting || sessionPending}
+                    aria-describedby="fb-screenshot-hint"
+                  >
+                    <Monitor className="mr-1.5 inline size-3.5 shrink-0 opacity-80" aria-hidden />
+                    {capturing ? 'Capturing…' : 'Capture screen'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="h-9 w-full border-2 px-2 text-[9px] font-black uppercase tracking-wider"
+                    onClick={() => setCropDialogOpen(true)}
+                    disabled={capturing || submitting || sessionPending}
+                    aria-describedby="fb-screenshot-hint"
+                  >
+                    <ImagePlus className="mr-1.5 inline size-3.5 shrink-0 opacity-80" aria-hidden />
+                    Upload image
+                  </Button>
+                  {attachmentFile && (
+                    <button
+                      type="button"
+                      onClick={clearAttachment}
+                      className="w-full border-2 border-dashed border-border py-1.5 text-[8px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
+                    >
+                      Remove image
+                    </button>
+                  )}
+                  {attachmentSource !== 'none' && (
+                    <p className="text-center text-[7px] font-mono font-bold uppercase tracking-tighter text-primary/80">
+                      {attachmentSource === 'capture' ? 'Source: capture' : 'Source: upload'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </aside>
+
+            <div className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-1 lg:pt-0">
+              <div className="space-y-2">
+                <p
+                  id="fb-category-label"
+                  className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+                >
+                  Category
+                </p>
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="radiogroup"
+                  aria-labelledby="fb-category-label"
+                >
+                  {categoriesLoading && categories.length === 0 ? (
+                    <div
+                      className="flex flex-wrap gap-2"
+                      aria-busy="true"
+                      aria-label="Loading categories"
+                    >
+                      {CATEGORY_SKELETON_WIDTHS.map((w, i) => (
+                        <Skeleton key={`fb-cat-skeleton-${i}`} className={cn('h-9 ', w)} />
+                      ))}
+                    </div>
+                  ) : categories.length === 0 ? (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      No categories available.
+                    </span>
+                  ) : (
+                    categories.map((c) => {
+                      const selected = categoryId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          disabled={categoriesLoading}
+                          onClick={() => setCategoryId(c.id)}
+                          className={cn(
+                            'whitespace-nowrap  border-2 px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest transition-all',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                            selected
+                              ? 'border-primary bg-primary text-primary-foreground shadow'
+                              : 'border-border bg-card text-foreground hover:border-primary hover:bg-muted/40',
+                            categoriesLoading && 'pointer-events-none opacity-50'
+                          )}
+                        >
+                          {c.label}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="fb-fn"
+                    className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+                  >
+                    First name
+                  </label>
+                  <input
+                    id="fb-fn"
+                    type="text"
+                    autoComplete="given-name"
+                    maxLength={MAX_FN}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    readOnly={isAuthed}
+                    required={!isAuthed}
+                    className={cn(
+                      fieldClass,
+                      isAuthed && 'opacity-90 cursor-not-allowed bg-muted/40'
+                    )}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="fb-ln"
+                    className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+                  >
+                    Last name
+                  </label>
+                  <input
+                    id="fb-ln"
+                    type="text"
+                    autoComplete="family-name"
+                    maxLength={MAX_LN}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    readOnly={isAuthed}
+                    required={!isAuthed}
+                    className={cn(
+                      fieldClass,
+                      isAuthed && 'opacity-90 cursor-not-allowed bg-muted/40'
+                    )}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="fb-email"
+                  className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+                >
+                  Email
+                </label>
+                <input
+                  id="fb-email"
+                  type="email"
+                  autoComplete="email"
+                  maxLength={MAX_EMAIL}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  readOnly={isAuthed}
+                  required={!isAuthed}
+                  className={cn(
+                    fieldClass,
+                    isAuthed && 'opacity-90 cursor-not-allowed bg-muted/40'
+                  )}
+                />
+                {isAuthed && (
+                  <p className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground">
+                    Signed in — contact details match your account.
                   </p>
                 )}
               </div>
-            </div>
-          </aside>
-
-          <div className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-1 lg:pt-0">
-          <div className="space-y-2">
-            <p id="fb-category-label" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-              Category
-            </p>
-            <div
-              className="flex flex-wrap gap-2"
-              role="radiogroup"
-              aria-labelledby="fb-category-label"
-            >
-              {categoriesLoading && categories.length === 0 ? (
-                <div
-                  className="flex flex-wrap gap-2"
-                  aria-busy="true"
-                  aria-label="Loading categories"
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="fb-subject"
+                  className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
                 >
-                  {CATEGORY_SKELETON_WIDTHS.map((w, i) => (
-                    <Skeleton key={`fb-cat-skeleton-${i}`} className={cn('h-9 ', w)} />
-                  ))}
-                </div>
-              ) : categories.length === 0 ? (
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  No categories available.
-                </span>
-              ) : (
-                categories.map((c) => {
-                  const selected = categoryId === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      disabled={categoriesLoading}
-                      onClick={() => setCategoryId(c.id)}
-                      className={cn(
-                        'whitespace-nowrap  border-2 px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest transition-all',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                        selected
-                          ? 'border-primary bg-primary text-primary-foreground shadow'
-                          : 'border-border bg-card text-foreground hover:border-primary hover:bg-muted/40',
-                        categoriesLoading && 'pointer-events-none opacity-50'
-                      )}
-                    >
-                      {c.label}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label htmlFor="fb-fn" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                First name
-              </label>
-              <input
-                id="fb-fn"
-                type="text"
-                autoComplete="given-name"
-                maxLength={MAX_FN}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                readOnly={isAuthed}
-                required={!isAuthed}
-                className={cn(fieldClass, isAuthed && 'opacity-90 cursor-not-allowed bg-muted/40')}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="fb-ln" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Last name
-              </label>
-              <input
-                id="fb-ln"
-                type="text"
-                autoComplete="family-name"
-                maxLength={MAX_LN}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                readOnly={isAuthed}
-                required={!isAuthed}
-                className={cn(fieldClass, isAuthed && 'opacity-90 cursor-not-allowed bg-muted/40')}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="fb-email" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-              Email
-            </label>
-            <input
-              id="fb-email"
-              type="email"
-              autoComplete="email"
-              maxLength={MAX_EMAIL}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              readOnly={isAuthed}
-              required={!isAuthed}
-              className={cn(fieldClass, isAuthed && 'opacity-90 cursor-not-allowed bg-muted/40')}
-            />
-            {isAuthed && (
-              <p className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground">
-                Signed in — contact details match your account.
-              </p>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="fb-subject" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-              Subject
-            </label>
-            <input
-              id="fb-subject"
-              type="text"
-              maxLength={MAX_SUBJECT}
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-              className={fieldClass}
-            />
-          </div>
-          </div>
-
-          <div className="min-w-0 space-y-4 lg:col-span-2 lg:row-start-2">
-            <div className="space-y-1.5">
-              <label htmlFor="fb-desc" className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Message
-              </label>
-              <textarea
-                id="fb-desc"
-                rows={5}
-                maxLength={MAX_DESC}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required
-                minLength={MIN_DESC}
-                className={cn(fieldClass, 'min-h-[120px] resize-y')}
-              />
-              <p className="text-[9px] text-muted-foreground">
-                {description.trim().length}/{MAX_DESC} · minimum {MIN_DESC} characters
-              </p>
+                  Subject
+                </label>
+                <input
+                  id="fb-subject"
+                  type="text"
+                  maxLength={MAX_SUBJECT}
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  required
+                  className={fieldClass}
+                />
+              </div>
             </div>
 
-            {altchaOn && (
-              <div className="flex w-full flex-col gap-2">
-                <AltchaField enabled floating="bottom" floatingAnchor="#fb-submit" floatingOffset={8} />
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Verification required when not signed in.
+            <div className="min-w-0 space-y-4 lg:col-span-2 lg:row-start-2">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="fb-desc"
+                  className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"
+                >
+                  Message
+                </label>
+                <textarea
+                  id="fb-desc"
+                  rows={5}
+                  maxLength={MAX_DESC}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                  minLength={MIN_DESC}
+                  className={cn(fieldClass, 'min-h-[120px] resize-y')}
+                />
+                <p className="text-[9px] text-muted-foreground">
+                  {description.trim().length}/{MAX_DESC} · minimum {MIN_DESC} characters
                 </p>
               </div>
-            )}
-          </div>
-        </form>
-      )}
-    </FormDialog>
 
-    <ImageUploadCropDialog
-      open={cropDialogOpen}
-      onClose={() => setCropDialogOpen(false)}
-      titleId={cropTitleId}
-      title="Screenshot"
-      titleIcon={<ImagePlus className="size-5" strokeWidth={2.5} aria-hidden />}
-      subtitle={`Square crop · max ${Math.round(FEEDBACK_MAX_IMAGE_BYTES / (1024 * 1024))} MB`}
-      subtitleClassName="min-w-0 max-w-full text-[10px] sm:text-[11px] font-medium leading-tight tracking-wide text-muted-foreground line-clamp-1 normal-case"
-      maxSizeBytes={FEEDBACK_MAX_IMAGE_BYTES}
-      aspect={1}
-      imageTitleField
-      imageTitleLabel="Title (optional)"
-      imageTitlePlaceholder="e.g. Settings page, billing section"
-      confirmLabel="Attach"
-      chooseAnotherLabel="Choose another"
-      onConfirm={handleCropConfirm}
-    />
+              {altchaOn && (
+                <div className="flex w-full flex-col gap-2">
+                  <AltchaField
+                    enabled
+                    floating="bottom"
+                    floatingAnchor="#fb-submit"
+                    floatingOffset={8}
+                  />
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Verification required when not signed in.
+                  </p>
+                </div>
+              )}
+            </div>
+          </form>
+        )}
+      </FormDialog>
+
+      <ImageUploadCropDialog
+        open={cropDialogOpen}
+        onClose={() => setCropDialogOpen(false)}
+        titleId={cropTitleId}
+        title="Screenshot"
+        titleIcon={<ImagePlus className="size-5" strokeWidth={2.5} aria-hidden />}
+        subtitle={`Square crop · max ${Math.round(FEEDBACK_MAX_IMAGE_BYTES / (1024 * 1024))} MB`}
+        subtitleClassName="min-w-0 max-w-full text-[10px] sm:text-[11px] font-medium leading-tight tracking-wide text-muted-foreground line-clamp-1 normal-case"
+        maxSizeBytes={FEEDBACK_MAX_IMAGE_BYTES}
+        aspect={1}
+        imageTitleField
+        imageTitleLabel="Title (optional)"
+        imageTitlePlaceholder="e.g. Settings page, billing section"
+        confirmLabel="Attach"
+        chooseAnotherLabel="Choose another"
+        onConfirm={handleCropConfirm}
+      />
     </>
   );
 }

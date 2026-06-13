@@ -1,39 +1,64 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import {
-  Box,
-  Button,
-  CircularProgress,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Box, Button, CircularProgress, Stack } from '@mui/material';
+import ContactMailRoundedIcon from '@mui/icons-material/ContactMailRounded';
 import { listContactLeads, type ContactLeadListItem } from '@/lib/api';
-import { DashboardPageHeader } from '@/components/layout/DashboardPageHeader';
+import { CentricPageHeader } from '@/components/layout/CentricPageHeader';
+import { pageBreadcrumbs } from '@/components/layout/pageHeaderBreadcrumbs';
+import { AdminBlinkSectionHeader } from '@/components/ui/AdminBlinkSectionHeader';
+import { AdminDataTable } from '@/components/ui/AdminDataTable';
+import { AdminFilterSelect } from '@/components/ui/AdminFilterSelect';
+import { AdminSearchField } from '@/components/ui/AdminSearchField';
+import { AdminFeedbackMessage } from '@/components/ui/AdminFeedbackMessage';
+import {
+  filterAndSortContactLeads,
+  type ContactLeadFilter,
+  type ContactLeadSort,
+} from '@/lib/contactLeads/filterContactLeads';
+import { resolveAdminApiToken } from '@/lib/auth/adminAuthSession';
 import { useSessionStore } from '@/store/session';
+import { contactLeadsColumns } from './contactLeadsColumns';
+
+const FILTER_OPTIONS = [
+  { value: 'all' as const, label: 'All leads' },
+  { value: 'members' as const, label: 'Signed-in users' },
+  { value: 'guests' as const, label: 'Guests' },
+  { value: 'with_company' as const, label: 'With company' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'newest' as const, label: 'Newest first' },
+  { value: 'oldest' as const, label: 'Oldest first' },
+];
 
 export default function ContactLeadsPage() {
   const token = useSessionStore((s) => s.token);
+  const httpOnlyCookies = useSessionStore((s) => s.httpOnlyCookies);
+  const apiToken = resolveAdminApiToken(token, httpOnlyCookies);
+
   const [items, setItems] = useState<ContactLeadListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<ContactLeadFilter>('all');
+  const [sort, setSort] = useState<ContactLeadSort>('newest');
+
+  const columns = useMemo(() => contactLeadsColumns, []);
+
+  const filteredItems = useMemo(
+    () => filterAndSortContactLeads(items, { search, filter, sort }),
+    [items, search, filter, sort]
+  );
 
   const load = useCallback(
     async (cursor?: string | null) => {
-      if (!token) return;
+      if (!apiToken) return;
       setLoading(true);
       setError(null);
       try {
-        const r = await listContactLeads(token, { limit: 30, cursor: cursor ?? undefined });
+        const r = await listContactLeads(apiToken, { limit: 100, cursor: cursor ?? undefined });
         if (cursor) {
           setItems((prev) => [...prev, ...r.items]);
         } else {
@@ -46,7 +71,7 @@ export default function ContactLeadsPage() {
         setLoading(false);
       }
     },
-    [token]
+    [apiToken]
   );
 
   useEffect(() => {
@@ -55,95 +80,64 @@ export default function ContactLeadsPage() {
 
   return (
     <Stack spacing={3}>
-      <DashboardPageHeader
+      <CentricPageHeader
         title="Contact leads"
-        subtitle="Inbound messages from the public /contact form. Open an item for the full thread and request metadata."
+        description="Inbound messages from the public /contact form. Open an item for the full thread and request metadata."
+        icon={<ContactMailRoundedIcon />}
+        breadcrumbs={pageBreadcrumbs('Contact leads', '/contact-leads')}
       />
 
       {error ? (
-        <Typography color="error" variant="body2">
-          {error}
-        </Typography>
+        <AdminFeedbackMessage severity="error" message={error} onClose={() => setError(null)} />
       ) : null}
 
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        className="border border-[var(--color-border)]"
-        sx={{ borderColor: 'divider', borderRadius: 2 }}
-      >
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'action.hover' }}>
-              <TableCell>Submitted</TableCell>
-              <TableCell>From</TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Topic</TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Company</TableCell>
-              <TableCell align="right" width={100}>
-                {' '}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading && items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
-                  <CircularProgress size={28} />
-                </TableCell>
-              </TableRow>
-            ) : items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    No contact leads yet.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              items.map((row) => (
-                <TableRow key={row.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {row.createdAt
-                        ? new Date(row.createdAt).toLocaleString(undefined, {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })
-                        : '—'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography fontWeight={600}>{row.fullName}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {row.email}
-                    </Typography>
-                    {row.username ? (
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        @{row.username}
-                      </Typography>
-                    ) : null}
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                    <Typography variant="body2" noWrap title={row.topic}>
-                      {row.topic}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {row.company ?? '—'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button component={Link} href={`/contact-leads/${row.id}`} size="small" variant="outlined">
-                      Open
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <AdminBlinkSectionHeader
+        title="All leads"
+        right={
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ sm: 'center' }}
+            sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: { sm: 420 } }}
+          >
+            <AdminSearchField
+              value={search}
+              onChange={setSearch}
+              placeholder="Search name, email, topic…"
+              sx={{ minWidth: { xs: '100%', sm: 240 }, flex: 1 }}
+            />
+            <AdminFilterSelect
+              aria-label="Filter leads"
+              value={filter}
+              onChange={setFilter}
+              options={FILTER_OPTIONS}
+              sx={{ minWidth: { xs: '100%', sm: 168 } }}
+            />
+            <AdminFilterSelect
+              aria-label="Sort leads"
+              value={sort}
+              onChange={setSort}
+              options={SORT_OPTIONS}
+              sx={{ minWidth: { xs: '100%', sm: 150 } }}
+            />
+          </Stack>
+        }
+      />
+
+      <AdminDataTable
+        data={filteredItems}
+        columns={columns}
+        loading={loading && items.length === 0}
+        getRowId={(row) => row.id}
+        emptyMessage={
+          search.trim() || filter !== 'all'
+            ? 'No leads match your search or filters.'
+            : 'No contact leads yet.'
+        }
+        totalLabel="leads"
+        pageSize={25}
+        dense
+      />
 
       {nextCursor ? (
         <Box>

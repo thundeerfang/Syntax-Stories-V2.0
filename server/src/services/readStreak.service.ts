@@ -2,7 +2,11 @@ import mongoose from 'mongoose';
 import { createClient } from 'redis';
 import { BlogReadDayModel } from '../models/BlogReadDay.js';
 import { recomputeDailyStreakFromSortedDays } from '../streak/applyDailyStreakTransition.js';
-import { previousUtcCalendarDay, streakUtcDayBucket, utcMidnightFromDayBucket } from '../streak/calendarUtc.js';
+import {
+  previousUtcCalendarDay,
+  streakUtcDayBucket,
+  utcMidnightFromDayBucket,
+} from '../streak/calendarUtc.js';
 import { tryAnchoredDailyReadStreakFromRedis } from './readStreakRedisDisplay.js';
 
 type RedisClient = ReturnType<typeof createClient> | null;
@@ -45,12 +49,16 @@ export async function loadUtcReadDayMidnightsForReader(
   return buckets.map(utcMidnightFromDayBucket);
 }
 
-export async function countDistinctReadDaysForReader(readerId: mongoose.Types.ObjectId): Promise<number> {
+export async function countDistinctReadDaysForReader(
+  readerId: mongoose.Types.ObjectId
+): Promise<number> {
   return BlogReadDayModel.countDocuments({ readerId });
 }
 
 /** Latest UTC `dayBucket` for the reader (lexicographic max works for `YYYY-MM-DD`). */
-export async function getMaxDayBucketForReader(readerId: mongoose.Types.ObjectId): Promise<string | null> {
+export async function getMaxDayBucketForReader(
+  readerId: mongoose.Types.ObjectId
+): Promise<string | null> {
   const row = await BlogReadDayModel.findOne({ readerId })
     .sort({ dayBucket: -1 })
     .select('dayBucket')
@@ -239,10 +247,16 @@ export async function computeReadStreakPayload(
     countDistinctReadDaysForReader(profileUserId),
     getMaxDayBucketForReader(profileUserId),
   ]);
-  const mode: ReadStreakMode = displayMode === 'weekly' || displayMode === 'monthly' ? displayMode : 'daily';
+  const mode: ReadStreakMode =
+    displayMode === 'weekly' || displayMode === 'monthly' ? displayMode : 'daily';
   let daily = computeDailyStreak(dates, now);
   if (redis) {
-    const fromRedis = await tryAnchoredDailyReadStreakFromRedis(redis, profileUserId, mongoMaxDay, now);
+    const fromRedis = await tryAnchoredDailyReadStreakFromRedis(
+      redis,
+      profileUserId,
+      mongoMaxDay,
+      now
+    );
     if (fromRedis) daily = fromRedis;
   }
   const weekly = computeWeeklyStreak(dates, now);

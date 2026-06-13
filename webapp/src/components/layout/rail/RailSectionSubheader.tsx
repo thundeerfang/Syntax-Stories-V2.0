@@ -6,7 +6,6 @@ import { SearchableSelect, type SearchableSelectOption } from '@/components/retr
 import { SearchField } from '@/components/ui/form';
 import { cn } from '@/lib/core/utils';
 
-
 export type RailSectionSubheaderSearchProps = Readonly<{
   value: string;
   onChange: (value: string) => void;
@@ -151,7 +150,7 @@ export function RailSectionSubheader({
     <div className={cn('w-full min-w-0', className)}>
       <div
         className={cn(
-          'flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-2 border-border bg-white px-3 py-2 shadow sm:gap-x-4 sm:px-4 sm:py-2.5 dark:bg-card',
+          'flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-2 border-border bg-white px-3 py-2 shadow sm:gap-x-4 sm:px-4 sm:py-2.5 dark:bg-card'
         )}
       >
         <div className="flex min-h-[42px] min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
@@ -181,7 +180,7 @@ export function RailSectionSubheader({
                 disabled={search.disabled}
                 wrapperClassName={cn(
                   'min-w-0 max-w-[11rem] sm:max-w-[15rem]',
-                  search.wrapperClassName,
+                  search.wrapperClassName
                 )}
               />
             </div>

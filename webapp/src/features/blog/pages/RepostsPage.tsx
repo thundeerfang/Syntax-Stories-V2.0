@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Compass, Repeat2 } from 'lucide-react';
 import { repostsApi } from '@/api/reposts';
@@ -10,6 +9,7 @@ import {
   RailFeedErrorState,
   RailSectionSubheader,
   ShellPageIntroHeader,
+  SignInRequiredPanel,
   type RailSectionSubheaderSortProps,
 } from '@/components/layout';
 import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
@@ -18,9 +18,6 @@ import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
-
-
-const LOGIN_NEXT = '/reposts';
 
 type RepostSort = 'newest' | 'oldest';
 
@@ -110,15 +107,7 @@ export default function RepostsPage() {
             </section>
           </div>
         ) : showGate ? (
-          <div className="max-w-lg space-y-3">
-            <p className="text-sm text-muted-foreground">Sign in to see posts you have reposted.</p>
-            <Link
-              href={`/login?next=${encodeURIComponent(LOGIN_NEXT)}`}
-              className="inline-block border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-            >
-              Sign in
-            </Link>
-          </div>
+          <SignInRequiredPanel description="Sign in to see posts you have reposted." />
         ) : (
           <>
             <RailSectionSubheader

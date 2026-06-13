@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
 import { RectangleAppBreadcrumb, type RectangleAppBreadcrumbItem } from './RectangleAppBreadcrumb';
 
-
 type ShellPageIntroHeaderProps = Readonly<{
   breadcrumbItems: RectangleAppBreadcrumbItem[];
   title: ReactNode;
@@ -33,12 +32,16 @@ export function ShellPageIntroHeader({
               {description}
             </p>
           </div>
-          <div className="flex w-full shrink-0 justify-center sm:w-auto sm:justify-end">{descriptionEnd}</div>
+          <div className="flex w-full shrink-0 justify-center sm:w-auto sm:justify-end">
+            {descriptionEnd}
+          </div>
         </div>
       ) : (
         <>
           <div className="min-w-0 max-w-full text-left">{title}</div>
-          <p className="max-w-3xl text-left text-xs leading-relaxed text-muted-foreground sm:text-sm">{description}</p>
+          <p className="max-w-3xl text-left text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            {description}
+          </p>
         </>
       )}
     </header>

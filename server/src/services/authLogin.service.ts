@@ -7,12 +7,19 @@ import { createAuthChallenge } from '../utils/authChallenge.js';
 import { writeAuditLog } from '../shared/audit/auditLog.js';
 import { AuditAction } from '../shared/audit/events.js';
 import { createSession, generateRefreshToken } from './session.service.js';
+import { assertNewStaffDeviceAllowed } from '../admin-platform/iam/deviceBinding.service.js';
+import { createStaffPermissionSnapshot } from '../admin-platform/iam/permissionSnapshot.service.js';
+import { setAdminSessionCookies } from '../admin-platform/auth/adminSessionCookies.js';
+import { resolveStaffRoleForUser } from '../admin-platform/rbac/services/adminStaffResolution.js';
+import { env } from '../config/env.js';
 import { emitAppEvent } from '../shared/events/appEvents.js';
 import { REFERRAL_COOKIE } from './referral.service.js';
 
 type EmailAuthOpts = {
   /** When set from staff password login, audit + app events use this source; 2FA is skipped. */
   loginSource?: 'otp' | 'staff_password';
+  /** Merged into successful JSON response (e.g. twoFactorSetupRequired). */
+  responseExtras?: Record<string, unknown>;
 };
 
 /**
@@ -53,7 +60,20 @@ export async function respondWithSessionAfterEmailAuth(
 
   const refreshToken = generateRefreshToken();
   const session = await createSession(String(user._id), req, refreshToken);
-  const accessToken = signAccessToken({ _id: String(user._id), sessionId: String(session._id) });
+  const sessionId = String(session._id);
+  const accessToken = signAccessToken({ _id: String(user._id), sessionId });
+  const staffRole = await resolveStaffRoleForUser(String(user._id));
+  if (staffRole) {
+    const deviceCheck = await assertNewStaffDeviceAllowed(String(user._id), req);
+    if (!deviceCheck.ok) {
+      session.revoked = true;
+      await session.save();
+      res.status(403).json({ success: false, message: deviceCheck.reason });
+      return;
+    }
+    setAdminSessionCookies(res, { accessToken, refreshToken });
+  }
+  void createStaffPermissionSnapshot(String(user._id), sessionId);
   const auditSource = isNewUser
     ? 'signup_email'
     : opts?.loginSource === 'staff_password'
@@ -82,14 +102,13 @@ export async function respondWithSessionAfterEmailAuth(
     res.clearCookie(REFERRAL_COOKIE.name, { path: '/' });
   }
 
-  res.status(200).json({
+  const body: Record<string, unknown> = {
     message: 'Signed in successfully 🚀',
     success: true,
-    accessToken,
-    refreshToken,
     expiresIn: authConfig.ACCESS_TOKEN_EXPIRY,
     sessionId: session._id,
     isNewUser,
+    tokensInCookies: staffRole ? env.FEATURE_ADMIN_HTTPONLY_COOKIES : false,
     user: {
       _id: user._id,
       fullName: user.fullName,
@@ -97,5 +116,11 @@ export async function respondWithSessionAfterEmailAuth(
       email: user.email,
       profileImg: normalizeProfileImg(user.profileImg),
     },
-  });
+    ...(opts?.responseExtras ?? {}),
+  };
+  if (!staffRole || !env.FEATURE_ADMIN_HTTPONLY_COOKIES) {
+    body.accessToken = accessToken;
+    body.refreshToken = refreshToken;
+  }
+  res.status(200).json(body);
 }

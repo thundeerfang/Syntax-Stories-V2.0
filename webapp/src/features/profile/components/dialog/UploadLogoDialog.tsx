@@ -7,7 +7,6 @@ import { ImageUploadCropDialog } from '@/components/upload/ImageUploadCropDialog
 import { toast } from 'sonner';
 import { uploadSettingsLogo } from '@/api/upload';
 
-
 export type SettingsLogoUploadKind = 'company-logo' | 'school-logo' | 'org-logo';
 
 export interface UploadLogoDialogProps {
@@ -19,13 +18,14 @@ export interface UploadLogoDialogProps {
   onSuccess: (result: { url: string; imageTitle?: string }) => void;
 }
 
-const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024;
 
 const LOGO_ACCEPT: Accept = {
   'image/jpeg': ['.jpg', '.jpeg'],
   'image/png': ['.png'],
   'image/webp': ['.webp'],
-  'image/svg+xml': ['.svg'],
+  'image/heic': ['.heic'],
+  'image/heif': ['.heif'],
 };
 
 const TITLES: Record<SettingsLogoUploadKind, string> = {
@@ -50,14 +50,13 @@ export function UploadLogoDialog({
       titleId={titleId}
       title={TITLES[kind]}
       titleIcon={<Building2 className="size-4 shrink-0 text-primary" aria-hidden />}
-      subtitle="Raster: square crop, then upload. SVG uploads as-is (no crop). JPEG, PNG, WebP, or SVG · max 2 MB."
+      subtitle="Square crop, then upload. JPEG, PNG, WebP, or iPhone photo (HEIC) · max 5 MB."
       subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
       maxSizeBytes={MAX_BYTES}
       aspect={1}
       cropMinHeightClass="min-h-[12rem] h-48"
       accept={LOGO_ACCEPT}
-      passthroughWhen={(f) => f.type === 'image/svg+xml'}
-      secondaryDropzoneHint="Square crop for raster · SVG uploads without crop"
+      secondaryDropzoneHint="Square crop · iPhone photos supported"
       imageTitleField
       imageTitleLabel="Title (optional)"
       imageTitlePlaceholder="e.g. Acme Corp wordmark"

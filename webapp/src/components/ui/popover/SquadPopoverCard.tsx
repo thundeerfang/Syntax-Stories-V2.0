@@ -7,7 +7,6 @@ import { cn } from '@/lib/core/utils';
 import type { PublicFeedSquad } from '@/types/blog';
 import { PROFILE_POPOVER_CARD_WIDTH_PX } from './ProfilePopoverCard';
 
-
 /** Fixed width for squad hover surfaces (matches profile popover). */
 export const SQUAD_POPOVER_CARD_WIDTH_PX = PROFILE_POPOVER_CARD_WIDTH_PX;
 /** Estimated height for viewport positioning (keep close to real card to avoid a large gap). */
@@ -57,7 +56,7 @@ export function SquadPopoverCard({ squad, squadHref, interactiveSurface }: Squad
         <div className="absolute left-3 top-full z-10 -translate-y-1/2">
           <div
             className={cn(
-              'flex size-[52px] items-center justify-center overflow-hidden  border-2 border-border bg-card',
+              'flex size-[52px] items-center justify-center overflow-hidden  border-2 border-border bg-card'
             )}
           >
             <img src={iconSrc} alt="" className="size-full object-cover" />

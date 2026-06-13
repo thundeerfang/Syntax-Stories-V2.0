@@ -1,10 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { optionalVerifyToken, type RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
+import {
+  optionalVerifyToken,
+  type RequestWithOptionalAuth,
+} from '../middlewares/auth/optionalVerifyToken.js';
 import { verifyAltchaIfConfigured } from '../middlewares/auth/verifyAltcha.js';
 import { rateLimitFeedback } from '../middlewares/auth/rateLimitAuth.js';
 import { listFeedbackCategories, submitFeedback } from '../controllers/feedback.controller.js';
-import { isAllowedImageMime } from '../config/uploadValidation.js';
+import { isAllowedImageUploadMime, IMAGE_UPLOAD_REJECT_MESSAGE } from '../config/uploadValidation.js';
 import { IMAGE_MASTER_PROFILES } from '../services/image/imageMaster.constants.js';
 
 const router = Router();
@@ -22,8 +25,8 @@ const uploadFeedback = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: IMAGE_MASTER_PROFILES.feedback.maxInputBytes + 512 },
   fileFilter: (_req, file, cb) => {
-    if (!isAllowedImageMime(file.mimetype)) {
-      cb(new Error('Only JPEG, PNG, GIF, or WebP images are allowed.'));
+    if (!isAllowedImageUploadMime(file.mimetype, file.originalname)) {
+      cb(new Error(IMAGE_UPLOAD_REJECT_MESSAGE));
       return;
     }
     cb(null, true);

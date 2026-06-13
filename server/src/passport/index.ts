@@ -5,12 +5,14 @@ import { registerGithub } from './github.js';
 import { registerFacebook } from './facebook.js';
 import { registerX } from './x.js';
 import { registerDiscord } from './discord.js';
+import { registerTwitch } from './twitch.js';
 
 registerGoogle(passport);
 registerGithub(passport);
 registerFacebook(passport);
 registerX(passport);
 registerDiscord(passport);
+registerTwitch(passport);
 
 passport.serializeUser((user: Express.User, done) => {
   const u = user as {
@@ -21,6 +23,7 @@ passport.serializeUser((user: Express.User, done) => {
     facebookId?: string;
     xId?: string;
     discordId?: string;
+    twitchId?: string;
   };
   done(null, {
     id: u._id,
@@ -31,6 +34,7 @@ passport.serializeUser((user: Express.User, done) => {
     facebookId: u.facebookId,
     xId: u.xId,
     discordId: u.discordId,
+    twitchId: u.twitchId,
   });
 });
 
@@ -45,6 +49,7 @@ passport.deserializeUser(
       facebookId?: string;
       xId?: string;
       discordId?: string;
+      twitchId?: string;
     },
     done
   ) => {
@@ -58,6 +63,7 @@ passport.deserializeUser(
           ...(data.facebookId ? [{ facebookId: data.facebookId }] : []),
           ...(data.xId ? [{ xId: data.xId }] : []),
           ...(data.discordId ? [{ discordId: data.discordId }] : []),
+          ...(data.twitchId ? [{ twitchId: data.twitchId }] : []),
         ].filter(Boolean),
       });
       if (!user) return done(null, false);
@@ -72,3 +78,4 @@ export default passport;
 export { hasFacebookConfig } from './facebook.js';
 export { hasXConfig } from './x.js';
 export { hasDiscordConfig } from './discord.js';
+export { hasTwitchConfig } from './twitch.js';

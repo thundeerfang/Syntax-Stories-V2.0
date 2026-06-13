@@ -27,7 +27,6 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { cn } from '@/lib/core/utils';
 import { AnalyticsPageSkeletonInner } from '@/components/skeletons';
 
-
 type TabId = 'overview' | 'content' | 'audience';
 
 export default function ProfileAnalyticsPage() {
@@ -56,7 +55,7 @@ export default function ProfileAnalyticsPage() {
     return timeSeries.map((p) => ({
       name: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       views: p.views,
-      rawDate: p.date
+      rawDate: p.date,
     }));
   }, [timeSeries]);
 
@@ -65,7 +64,6 @@ export default function ProfileAnalyticsPage() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 font-sans text-foreground selection:bg-primary selection:text-primary-foreground">
       <div className="w-full space-y-6">
-        
         {/* TOP STATUS BAR */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-4 border-border pb-6">
           <div className="flex items-center gap-4">
@@ -73,10 +71,14 @@ export default function ProfileAnalyticsPage() {
               <Zap className="size-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">Analytics</h1>
+              <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">
+                Analytics
+              </h1>
               <div className="flex items-center gap-2 mt-1">
                 <div className="size-2 bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">System_Active: {user?.username}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  System_Active: {user?.username}
+                </span>
               </div>
             </div>
           </div>
@@ -91,8 +93,10 @@ export default function ProfileAnalyticsPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabId)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  'flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all',
+                  activeTab === tab.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted'
                 )}
               >
                 <tab.icon className="size-3.5" />
@@ -110,7 +114,6 @@ export default function ProfileAnalyticsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
             {/* LEFT COLUMN: GLOBAL STATS (4 COLS) */}
             <div className="lg:col-span-4 space-y-6">
               {/* Primary Views Card */}
@@ -118,7 +121,9 @@ export default function ProfileAnalyticsPage() {
                 <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Eye className="size-12" />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Total_Impressions</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                  Total_Impressions
+                </p>
                 <h2 className="text-5xl font-black italic tabular-nums leading-none tracking-tighter">
                   {overviewMetrics?.totalViews ?? 0}
                 </h2>
@@ -135,20 +140,35 @@ export default function ProfileAnalyticsPage() {
                   <Users className="size-4 text-primary" /> Traffic_Composition
                 </h3>
                 <div className="space-y-3">
-                  <CompositionBar label="New Visitors" value={overviewMetrics?.uniqueVisitors7Days ?? 0} total={overviewMetrics?.views7Days ?? 1} color="var(--primary)" />
-                  <CompositionBar label="Returning" value={overviewMetrics?.repeatVisitors7Days ?? 0} total={overviewMetrics?.views7Days ?? 1} color="#666" />
+                  <CompositionBar
+                    label="New Visitors"
+                    value={overviewMetrics?.uniqueVisitors7Days ?? 0}
+                    total={overviewMetrics?.views7Days ?? 1}
+                    color="var(--primary)"
+                  />
+                  <CompositionBar
+                    label="Returning"
+                    value={overviewMetrics?.repeatVisitors7Days ?? 0}
+                    total={overviewMetrics?.views7Days ?? 1}
+                    color="#666"
+                  />
                 </div>
               </div>
 
               {/* Live Activity Feed (Mocked Frontend Feature) */}
               <div className="border-4 border-border bg-card p-0 overflow-hidden">
                 <div className="bg-border text-card-foreground px-4 py-2 flex items-center justify-between">
-                  <span className="text-[9px] font-black uppercase tracking-widest">Live_Events</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest">
+                    Live_Events
+                  </span>
                   <Activity className="size-3 animate-pulse text-red-500" />
                 </div>
                 <div className="p-4 space-y-3 max-h-[220px] overflow-y-auto font-mono">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="text-[10px] border-l-2 border-primary pl-2 py-1 flex justify-between gap-2">
+                    <div
+                      key={i}
+                      className="text-[10px] border-l-2 border-primary pl-2 py-1 flex justify-between gap-2"
+                    >
                       <span className="text-muted-foreground">User_Entry_{i}024</span>
                       <span className="text-primary font-bold">PROFILE_VIEW</span>
                     </div>
@@ -171,28 +191,34 @@ export default function ProfileAnalyticsPage() {
                         <AreaChart data={chartData}>
                           <defs>
                             <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(var(--border), 0.1)" />
-                          <XAxis 
-                            dataKey="name" 
-                            axisLine={false} tickLine={false}
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            stroke="rgba(var(--border), 0.1)"
+                          />
+                          <XAxis
+                            dataKey="name"
+                            axisLine={false}
+                            tickLine={false}
                             tick={{ fontSize: 10, fontWeight: 900, fill: 'currentColor' }}
                           />
-                          <YAxis 
-                            axisLine={false} tickLine={false}
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
                             tick={{ fontSize: 10, fontWeight: 900, fill: 'currentColor' }}
                           />
                           <Tooltip content={<CustomTooltip />} />
-                          <Area 
-                            type="step" 
-                            dataKey="views" 
-                            stroke="var(--primary)" 
+                          <Area
+                            type="step"
+                            dataKey="views"
+                            stroke="var(--primary)"
                             strokeWidth={3}
-                            fillOpacity={1} 
-                            fill="url(#colorViews)" 
+                            fillOpacity={1}
+                            fill="url(#colorViews)"
                           />
                         </AreaChart>
                       </ResponsiveContainer>
@@ -214,21 +240,22 @@ export default function ProfileAnalyticsPage() {
                   </div>
                   <h3 className="text-xl font-black uppercase italic italic">Module_Locked</h3>
                   <p className="text-sm text-muted-foreground max-w-xs mt-2 font-medium">
-                    Content analytics and Audience psychographics are currently being compiled for your account.
+                    Content analytics and Audience psychographics are currently being compiled for
+                    your account.
                   </p>
                 </div>
               )}
             </div>
           </div>
         )}
-        
+
         {/* CONSOLE FOOTER */}
         <div className="flex flex-col md:flex-row items-center justify-between border-t-2 border-border pt-4 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
-           <div className="flex gap-6">
-              <span>LOC: UTC_ZONE</span>
-              <span>NODE: SYNTAX_V2</span>
-           </div>
-           <span>© 2024_ANALYTICS_SUBSYSTEM</span>
+          <div className="flex gap-6">
+            <span>LOC: UTC_ZONE</span>
+            <span>NODE: SYNTAX_V2</span>
+          </div>
+          <span>© 2024_ANALYTICS_SUBSYSTEM</span>
         </div>
       </div>
     </div>
@@ -248,7 +275,9 @@ function MiniCard({
         <Icon className="size-5 text-muted-foreground" />
       </div>
       <div>
-        <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+          {label}
+        </p>
         <p className="text-sm font-black uppercase tracking-tighter">{value}</p>
       </div>
     </div>
@@ -269,9 +298,9 @@ function CompositionBar({
         <span className="text-muted-foreground">{value}</span>
       </div>
       <div className="h-2 bg-muted border border-border">
-        <div 
-          className="h-full transition-all duration-1000" 
-          style={{ width: `${percentage}%`, backgroundColor: color }} 
+        <div
+          className="h-full transition-all duration-1000"
+          style={{ width: `${percentage}%`, backgroundColor: color }}
         />
       </div>
     </div>

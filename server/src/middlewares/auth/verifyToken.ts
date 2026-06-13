@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { authConfig } from '../../config/auth.config.js';
 import { SessionModel } from '../../models/Session.js';
+import { env } from '../../config/env.js';
+import { readAdminAccessToken } from '../../admin-platform/auth/adminSessionCookies.js';
 
 export interface AuthUser {
   _id: string;
@@ -10,7 +12,10 @@ export interface AuthUser {
 
 export async function verifyToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  let token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token && env.FEATURE_ADMIN_HTTPONLY_COOKIES) {
+    token = readAdminAccessToken(req.cookies ?? {});
+  }
 
   if (!token) {
     res.status(401).json({ message: 'No token provided', success: false });

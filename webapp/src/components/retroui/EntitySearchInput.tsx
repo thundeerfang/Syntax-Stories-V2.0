@@ -7,7 +7,6 @@ import { cn } from '@/lib/core/utils';
 import type { EntityOption } from '@/lib/core/entityOption';
 import { getLogoUrl } from '@/lib/core/entityOption';
 
-
 const DEBOUNCE_MS = 300;
 
 const ENTITY_SEARCH_LISTBOX_CLASS =
@@ -20,14 +19,28 @@ function EntitySearchSuggestionsListbox({
   listboxId,
   children,
 }: Readonly<{ listboxId: string; children: React.ReactNode }>) {
-  return <ul id={listboxId} className={ENTITY_SEARCH_LISTBOX_CLASS} role="listbox">{children}</ul>; // NOSONAR S6819 S6842
+  return (
+    <ul id={listboxId} className={ENTITY_SEARCH_LISTBOX_CLASS} role="listbox">
+      {children}
+    </ul>
+  ); // NOSONAR S6819 S6842
 }
 
 function EntityComboboxOptionButton({
   onSelect,
   children,
 }: Readonly<{ onSelect: () => void; children: React.ReactNode }>) {
-  return <button type="button" role="option" aria-selected={false} onClick={onSelect} className={ENTITY_OPTION_BTN_CLASS}>{children}</button>; // NOSONAR S6819
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={false}
+      onClick={onSelect}
+      className={ENTITY_OPTION_BTN_CLASS}
+    >
+      {children}
+    </button>
+  ); // NOSONAR S6819
 }
 
 export interface EntitySearchInputProps {
@@ -80,14 +93,16 @@ export function EntitySearchInput({
       }
       const id = ++requestIdRef.current;
       setLoading(true);
-      result.then((list) => {
-        if (requestIdRef.current === id) {
-          setSuggestions(list);
-          setLoading(false);
-        }
-      }).catch(() => {
-        if (requestIdRef.current === id) setLoading(false);
-      });
+      result
+        .then((list) => {
+          if (requestIdRef.current === id) {
+            setSuggestions(list);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (requestIdRef.current === id) setLoading(false);
+        });
     };
     if (!query.trim()) {
       const emptyResult = searchOptions('');
@@ -96,10 +111,12 @@ export function EntitySearchInput({
         setLoading(false);
       } else {
         setLoading(true);
-        emptyResult.then((list) => {
-          setSuggestions(list);
-          setLoading(false);
-        }).catch(() => setLoading(false));
+        emptyResult
+          .then((list) => {
+            setSuggestions(list);
+            setLoading(false);
+          })
+          .catch(() => setLoading(false));
       }
       return;
     }

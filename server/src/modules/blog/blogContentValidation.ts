@@ -30,8 +30,8 @@ const ALLOWED_TYPES = new Set([
   'mermaidDiagram',
 ]);
 
-const MAX_TABLE_ROWS = 40;
-const MAX_TABLE_COLS = 16;
+const MAX_TABLE_ROWS = 20;
+const MAX_TABLE_COLS = 5;
 const MAX_TABLE_CELL_CHARS = 4_000;
 const MAX_MERMAID_SOURCE_CHARS = 120_000;
 
@@ -98,7 +98,13 @@ function sanitizeImagePayload(p: unknown): Record<string, unknown> {
     out.altText = truncateString((p as { altText: string }).altText, MAX_CAPTION);
   }
   const layout = p.layout;
-  if (layout === 'landscape' || layout === 'square' || layout === 'fullWidth' || layout === 'natural' || layout === 'center') {
+  if (
+    layout === 'landscape' ||
+    layout === 'square' ||
+    layout === 'fullWidth' ||
+    layout === 'natural' ||
+    layout === 'center'
+  ) {
     out.layout = layout;
   }
   return out;
@@ -139,14 +145,48 @@ function sanitizeCodePayload(p: unknown): Record<string, unknown> {
   return out;
 }
 
+function parseGithubRepoUrl(url: string): { owner: string; repo: string } | null {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return null;
+  try {
+    const u = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    if (!/^(www\.)?github\.com$/i.test(u.hostname)) return null;
+    const parts = u.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+    if (parts.length >= 2) {
+      return { owner: parts[0], repo: parts[1].replace(/\.git$/, '') };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function sanitizeGithubPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
   if (!isPlainObject(p)) throw new Error('githubRepo payload must be an object');
   const out: Record<string, unknown> = {};
-  for (const key of ['owner', 'repo', 'name', 'url', 'avatarUrl'] as const) {
-    if (typeof p[key] === 'string') out[key] = truncateString(p[key] as string, MAX_URL_LEN);
+
+  const urlRaw = typeof p.url === 'string' ? p.url.trim() : '';
+  const parsedFromUrl = urlRaw ? parseGithubRepoUrl(urlRaw) : null;
+  const ownerRaw = typeof p.owner === 'string' ? p.owner.trim() : '';
+  const repoRaw = typeof p.repo === 'string' ? p.repo.trim() : '';
+
+  if (parsedFromUrl) {
+    out.owner = truncateString(parsedFromUrl.owner, MAX_URL_LEN);
+    out.repo = truncateString(parsedFromUrl.repo, MAX_URL_LEN);
+    out.url = `https://github.com/${parsedFromUrl.owner}/${parsedFromUrl.repo}`;
+  } else if (ownerRaw && repoRaw) {
+    out.owner = truncateString(ownerRaw, MAX_URL_LEN);
+    out.repo = truncateString(repoRaw, MAX_URL_LEN);
+    out.url = `https://github.com/${ownerRaw}/${repoRaw}`;
+  } else if (urlRaw) {
+    throw new Error('githubRepo url must be a valid https://github.com/owner/repo link');
   }
-  if (typeof p.description === 'string') out.description = truncateString(p.description, MAX_GITHUB_DESC);
+
+  if (typeof p.name === 'string') out.name = truncateString(p.name, MAX_URL_LEN);
+  if (typeof p.avatarUrl === 'string') out.avatarUrl = truncateString(p.avatarUrl, MAX_URL_LEN);
+  if (typeof p.description === 'string')
+    out.description = truncateString(p.description, MAX_GITHUB_DESC);
   return out;
 }
 
@@ -160,6 +200,14 @@ function sanitizeTablePayload(p: unknown): Record<string, unknown> {
     out.rows = [];
     return out;
   }
+  if (rowsIn.length > MAX_TABLE_ROWS) {
+    throw new Error(`table exceeds maximum of ${MAX_TABLE_ROWS} rows`);
+  }
+  for (const row of rowsIn) {
+    if (Array.isArray(row) && row.length > MAX_TABLE_COLS) {
+      throw new Error(`table exceeds maximum of ${MAX_TABLE_COLS} columns`);
+    }
+  }
   const rows: string[][] = [];
   for (let r = 0; r < rowsIn.length && r < MAX_TABLE_ROWS; r++) {
     const row = rowsIn[r];
@@ -167,7 +215,9 @@ function sanitizeTablePayload(p: unknown): Record<string, unknown> {
     const cells: string[] = [];
     for (let c = 0; c < row.length && c < MAX_TABLE_COLS; c++) {
       const cell = row[c];
-      cells.push(typeof cell === 'string' ? truncateString(cell, MAX_TABLE_CELL_CHARS) : String(cell ?? ''));
+      cells.push(
+        typeof cell === 'string' ? truncateString(cell, MAX_TABLE_CELL_CHARS) : String(cell ?? '')
+      );
     }
     if (cells.length) rows.push(cells);
   }
@@ -192,7 +242,8 @@ function sanitizeUnsplashPayload(p: unknown): Record<string, unknown> {
   if (!isPlainObject(p)) throw new Error('unsplashImage payload must be an object');
   const out: Record<string, unknown> = {};
   if (typeof p.url === 'string') out.url = truncateString(p.url, MAX_URL_LEN);
-  if (typeof p.photographer === 'string') out.photographer = truncateString(p.photographer, MAX_CAPTION);
+  if (typeof p.photographer === 'string')
+    out.photographer = truncateString(p.photographer, MAX_CAPTION);
   if (typeof p.caption === 'string') out.caption = truncateString(p.caption, MAX_CAPTION);
   if (typeof p.unsplashPhotoId === 'string') {
     out.unsplashPhotoId = truncateString(p.unsplashPhotoId, 128);
@@ -238,7 +289,11 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     return { ok: false, status: 400, message: 'Content must be a string' };
   }
   if (raw.length > MAX_CONTENT_CHARS) {
-    return { ok: false, status: 400, message: `Content exceeds maximum length (${MAX_CONTENT_CHARS} characters)` };
+    return {
+      ok: false,
+      status: 400,
+      message: `Content exceeds maximum length (${MAX_CONTENT_CHARS} characters)`,
+    };
   }
   const toParse = raw.trim() === '' ? '[]' : raw.trim();
   let parsed: unknown;
@@ -254,7 +309,12 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     return { ok: false, status: 400, message: `At most ${MAX_BLOCKS} blocks allowed` };
   }
 
-  const out: Array<{ id: string; type: string; sectionId?: string; payload?: Record<string, unknown> }> = [];
+  const out: Array<{
+    id: string;
+    type: string;
+    sectionId?: string;
+    payload?: Record<string, unknown>;
+  }> = [];
 
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i];
@@ -267,7 +327,11 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     const id = item.id;
     const type = item.type;
     if (typeof id !== 'string' || !id.trim()) {
-      return { ok: false, status: 400, message: `Block at index ${i} must have a non-empty string id` };
+      return {
+        ok: false,
+        status: 400,
+        message: `Block at index ${i} must have a non-empty string id`,
+      };
     }
     if (id.length > MAX_BLOCK_ID_LEN) {
       return { ok: false, status: 400, message: `Block id at index ${i} is too long` };
@@ -282,7 +346,11 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     let sectionId: string | undefined;
     if (item.sectionId !== undefined) {
       if (typeof item.sectionId !== 'string') {
-        return { ok: false, status: 400, message: `Block sectionId at index ${i} must be a string` };
+        return {
+          ok: false,
+          status: 400,
+          message: `Block sectionId at index ${i} must be a string`,
+        };
       }
       sectionId = truncateString(item.sectionId, MAX_SECTION_ID_LEN);
     }
@@ -295,7 +363,12 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
         return { ok: false, status: 400, message: `Block ${i} (${type}): ${msg}` };
       }
     }
-    const block: { id: string; type: string; sectionId?: string; payload?: Record<string, unknown> } = {
+    const block: {
+      id: string;
+      type: string;
+      sectionId?: string;
+      payload?: Record<string, unknown>;
+    } = {
       id: id.trim(),
       type,
     };

@@ -5,7 +5,9 @@ export async function normalizeWorkExperiences(
   userId: string,
   updates: Record<string, unknown>
 ): Promise<void> {
-  const workExperiences = updates.workExperiences as Array<{ workId?: string; [k: string]: unknown }> | undefined;
+  const workExperiences = updates.workExperiences as
+    | Array<{ workId?: string; [k: string]: unknown }>
+    | undefined;
   if (!Array.isArray(workExperiences) || workExperiences.length === 0) return;
 
   const current = await profileRepository.findLeanByIdSelect(userId, 'workExperiences');

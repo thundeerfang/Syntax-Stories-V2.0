@@ -25,11 +25,17 @@ export async function sendViaSmtp(opts: {
 }): Promise<void> {
   const smtp = getSmtpTransporter();
   if (!smtp) {
-    throw new MailSendError('SMTP not configured (EMAIL_USER / EMAIL_APP_PASSWORD)', 'configuration');
+    throw new MailSendError(
+      'SMTP not configured (EMAIL_USER / EMAIL_APP_PASSWORD)',
+      'configuration'
+    );
   }
   const from = env.EMAIL_FROM?.trim() || env.EMAIL_USER;
   if (!from) {
-    throw new MailSendError('SMTP from address missing (EMAIL_FROM or EMAIL_USER)', 'configuration');
+    throw new MailSendError(
+      'SMTP from address missing (EMAIL_FROM or EMAIL_USER)',
+      'configuration'
+    );
   }
   try {
     await smtp.sendMail({

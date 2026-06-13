@@ -2,7 +2,6 @@
 
 import { cn } from '@/lib/core/utils';
 
-
 /** Compact circular count used in topic / category rank lists and category cards. */
 export function RankCountPill({
   count,
@@ -33,7 +32,7 @@ export function RankCountPill({
         tone === 'inverse'
           ? 'bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/25'
           : 'bg-primary/12 text-primary ring-primary/20 dark:bg-primary/16',
-        className,
+        className
       )}
       aria-label={label}
     >

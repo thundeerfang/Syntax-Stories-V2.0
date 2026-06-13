@@ -3,13 +3,13 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import type { AuthUser } from '../middlewares/auth/index.js';
 import type { RequestWithOptionalAuth } from '../middlewares/auth/optionalVerifyToken.js';
-import { sanitizeThumbnailUrl, validateBlogPostContent } from '../modules/blog/blogContentValidation.js';
+import {
+  sanitizeThumbnailUrl,
+  validateBlogPostContent,
+} from '../modules/blog/blogContentValidation.js';
 import { BlogPostModel, type IBlogPost } from '../models/BlogPost.js';
 import { BlogReadDayModel } from '../models/BlogReadDay.js';
-import { BlogCategoryModel } from '../models/BlogCategory.js';
-import { BlogTagModel } from '../models/BlogTag.js';
 import { UserModel, normalizeProfileImg } from '../models/User.js';
-import { ensureBlogTaxonomySeeds } from '../modules/blog/ensureBlogTaxonomySeeds.js';
 import { normalizeTaxonomyInput } from '../modules/blog/postTaxonomy.js';
 import { getRedis } from '../config/redis.js';
 import { redisKeys } from '../shared/redis/keys.js';
@@ -46,7 +46,28 @@ import {
   viewerRespectStatesForPosts,
 } from '../services/blogRespect.service.js';
 import { publishBlogPostStatsSnapshot } from '../services/blogStatsPublish.service.js';
+import { fanoutNewPublishedPost } from '../services/notifications/notificationFanout.service.js';
+import {
+  attachAchievementsToResponse,
+  dispatchAchievementEvents,
+} from '../achievements/achievement.service.js';
 import { estimateReadMinutesFromBlogFields } from '../modules/blog/readTimeEstimate.js';
+
+async function respondReadCommit(
+  res: Response,
+  readerId: string,
+  status: number,
+  body: Record<string, unknown>
+): Promise<void> {
+  const shouldAward =
+    body.counted === true && body.alreadyProcessed !== true && body.success !== false;
+  if (!shouldAward) {
+    res.status(status).json(body);
+    return;
+  }
+  const newlyUnlocked = await dispatchAchievementEvents(readerId, [{ type: 'brief_read' }]);
+  res.status(status).json(attachAchievementsToResponse(body, newlyUnlocked));
+}
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -71,10 +92,7 @@ const NOT_DELETED: { $or: Array<{ deletedAt: null } | { deletedAt: { $exists: bo
   $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
 };
 
-function isEligibleForPublicRespect(doc: {
-  status?: string;
-  deletedAt?: Date | null;
-}): boolean {
+function isEligibleForPublicRespect(doc: { status?: string; deletedAt?: Date | null }): boolean {
   return doc.status === 'published' && (doc.deletedAt == null || doc.deletedAt === undefined);
 }
 
@@ -82,9 +100,7 @@ function optionalViewerId(req: Request): string | undefined {
   return (req as RequestWithOptionalAuth).authUser?._id;
 }
 
-function mapLastEditor(
-  raw: unknown,
-): { username: string; fullName: string } | undefined {
+function mapLastEditor(raw: unknown): { username: string; fullName: string } | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const u = raw as { username?: string; fullName?: string };
   const username = typeof u.username === 'string' ? u.username.trim() : '';
@@ -109,14 +125,42 @@ function slugify(text: string): string {
 }
 
 /** Same author cannot reuse a slug; append a short suffix until unique (schema max 320). */
-type TaxonomyFields = { category?: string; tags?: string[]; language?: string };
+type TaxonomyFields = {
+  category?: string;
+  categories?: string[];
+  tags?: string[];
+  language?: string;
+};
 
-function mapTaxonomyFromDoc(p: TaxonomyFields): { category?: string; tags?: string[]; language?: string } {
-  const category = typeof p.category === 'string' && p.category.trim() ? p.category.trim() : undefined;
+function mapTaxonomyFromDoc(p: TaxonomyFields): {
+  category?: string;
+  categories?: string[];
+  tags?: string[];
+  language?: string;
+} {
+  const categories = Array.isArray(p.categories) && p.categories.length ? p.categories : undefined;
+  const category =
+    typeof p.category === 'string' && p.category.trim()
+      ? p.category.trim()
+      : categories?.[0];
   const tags = Array.isArray(p.tags) && p.tags.length ? p.tags : undefined;
   const language =
     typeof p.language === 'string' && p.language.trim() ? p.language.trim().toLowerCase() : 'en';
-  return { category, tags, language };
+  return { category, categories, tags, language };
+}
+
+function taxonomyWriteFields(tax: {
+  category?: string;
+  categories?: string[];
+  tags?: string[];
+  language?: string;
+}) {
+  return {
+    category: tax.categories?.length ? tax.categories[0] : tax.category,
+    categories: tax.categories?.length ? tax.categories : undefined,
+    tags: tax.tags?.length ? tax.tags : undefined,
+    language: tax.language ?? 'en',
+  };
 }
 
 type FeedListItem = {
@@ -169,9 +213,14 @@ function mapLeanSquadForFeed(squadRaw: unknown): NonNullable<FeedListItem['squad
     name: typeof s.name === 'string' && s.name.trim() ? s.name.trim() : slug,
     iconUrl: typeof s.iconUrl === 'string' && s.iconUrl.trim() ? s.iconUrl.trim() : undefined,
     coverBannerUrl:
-      typeof s.coverBannerUrl === 'string' && s.coverBannerUrl.trim() ? s.coverBannerUrl.trim() : undefined,
+      typeof s.coverBannerUrl === 'string' && s.coverBannerUrl.trim()
+        ? s.coverBannerUrl.trim()
+        : undefined,
     visibility: s.visibility === 'private' ? 'private' : 'public',
-    memberCount: typeof s.memberCount === 'number' && Number.isFinite(s.memberCount) ? s.memberCount : undefined,
+    memberCount:
+      typeof s.memberCount === 'number' && Number.isFinite(s.memberCount)
+        ? s.memberCount
+        : undefined,
   };
 }
 
@@ -209,7 +258,8 @@ function mapLeanPostToFeedListItem(p: unknown): FeedListItem | null {
     readTimeMinutes: estimateReadMinutesFromBlogFields(content, summary),
     author: {
       username: a.username.trim(),
-      fullName: typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
+      fullName:
+        typeof a.fullName === 'string' && a.fullName.trim() ? a.fullName.trim() : a.username.trim(),
       profileImg: normalizeProfileImg(a.profileImg),
     },
     ...mapTaxonomyFromDoc(doc as TaxonomyFields),
@@ -228,8 +278,12 @@ function engagementCountsFromPostDoc(doc: Record<string, unknown>) {
 
 async function attachViewerEngagementToMyPosts<T extends { _id: unknown }>(
   req: Request,
-  posts: T[],
-): Promise<Array<T & { viewerHasRespected: boolean; viewerHasReposted: boolean; viewerHasBookmarked: boolean }>> {
+  posts: T[]
+): Promise<
+  Array<
+    T & { viewerHasRespected: boolean; viewerHasReposted: boolean; viewerHasBookmarked: boolean }
+  >
+> {
   const viewerId = optionalViewerId(req);
   if (!viewerId || !posts.length) {
     return posts.map((p) => ({
@@ -256,7 +310,10 @@ async function attachViewerEngagementToMyPosts<T extends { _id: unknown }>(
   });
 }
 
-async function applyViewerStateToFeedItems(req: Request, items: FeedListItem[]): Promise<FeedListItem[]> {
+async function applyViewerStateToFeedItems(
+  req: Request,
+  items: FeedListItem[]
+): Promise<FeedListItem[]> {
   const viewerId = optionalViewerId(req);
   if (!viewerId || !items.length) {
     return items;
@@ -300,11 +357,15 @@ export async function createPost(req: Request, res: Response): Promise<void> {
       tags?: unknown;
       language?: unknown;
     };
-    const tax = normalizeTaxonomyInput(req.body as { category?: unknown; tags?: unknown; language?: unknown });
+    const tax = normalizeTaxonomyInput(
+      req.body as { category?: unknown; categories?: unknown; tags?: unknown; language?: unknown }
+    );
     const titleStr = typeof title === 'string' ? title.trim() : '';
     const contentStr = typeof content === 'string' ? content : '';
     if (!titleStr || titleStr.length > 300) {
-      res.status(400).json({ success: false, message: 'Title is required and must be at most 300 characters' });
+      res
+        .status(400)
+        .json({ success: false, message: 'Title is required and must be at most 300 characters' });
       return;
     }
     const contentCheck = validateBlogPostContent(contentStr);
@@ -346,9 +407,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
           thumbnailUrl: thumb,
           status: finalStatus,
           ...(finalStatus === 'published' ? { publishedAt: new Date() } : {}),
-          ...(tax.category ? { category: tax.category } : {}),
-          ...(tax.tags?.length ? { tags: tax.tags } : {}),
-          ...(tax.language ? { language: tax.language } : { language: 'en' }),
+          ...taxonomyWriteFields(tax),
           ...(squadOid ? { squadId: squadOid } : {}),
         });
         break;
@@ -372,6 +431,17 @@ export async function createPost(req: Request, res: Response): Promise<void> {
     }
 
     const pSquad = (post as { squadId?: mongoose.Types.ObjectId }).squadId;
+    if (finalStatus === 'published') {
+      void fanoutNewPublishedPost({
+        postId: String(post._id),
+        authorId: String(user._id),
+        title: post.title,
+        slug: post.slug,
+        category: tax.category,
+        tags: tax.tags,
+        squadId: pSquad ? String(pSquad) : undefined,
+      });
+    }
     res.status(201).json({
       success: true,
       post: {
@@ -409,7 +479,11 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       thumbnailUrl?: string;
     };
     const rawBody = req.body as Record<string, unknown>;
-    const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
+    const hasTaxonomyKeys =
+      'category' in rawBody ||
+      'categories' in rawBody ||
+      'tags' in rawBody ||
+      'language' in rawBody;
     const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
     let draftSquadId: mongoose.Types.ObjectId | null | undefined = undefined;
     if ('squadId' in rawBody) {
@@ -433,7 +507,11 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
     const thumb = sanitizeThumbnailUrl(thumbnailUrl);
     const finalTitle = titleStr || 'Untitled draft';
 
-    const post = await BlogPostModel.findOne({ authorId: user._id, status: 'draft', ...NOT_DELETED })
+    const post = await BlogPostModel.findOne({
+      authorId: user._id,
+      status: 'draft',
+      ...NOT_DELETED,
+    })
       .sort({ updatedAt: -1 })
       .limit(1)
       .lean();
@@ -442,7 +520,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       const slug = slugify(finalTitle);
       const prevSq = (post as { squadId?: mongoose.Types.ObjectId | null }).squadId;
       const effectiveSq: mongoose.Types.ObjectId | null | undefined =
-        draftSquadId !== undefined ? draftSquadId : prevSq ?? null;
+        draftSquadId !== undefined ? draftSquadId : (prevSq ?? null);
       if (effectiveSq) {
         const gate = await assertCanPostOrShareToSquad({
           squadId: effectiveSq as mongoose.Types.ObjectId,
@@ -459,13 +537,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
         summary: summaryStr || undefined,
         content: contentCheck.normalizedJson,
         thumbnailUrl: thumb,
-        ...(tax
-          ? {
-              category: tax.category,
-              tags: tax.tags?.length ? tax.tags : undefined,
-              language: tax.language ?? 'en',
-            }
-          : {}),
+        ...(tax ? taxonomyWriteFields(tax) : {}),
       };
       if (draftSquadId !== undefined) {
         patch.squadId = draftSquadId;
@@ -516,13 +588,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       thumbnailUrl: thumb,
       status: 'draft',
       ...(draftSquadId ? { squadId: draftSquadId } : {}),
-      ...(tax
-        ? {
-            category: tax.category,
-            tags: tax.tags?.length ? tax.tags : undefined,
-            language: tax.language ?? 'en',
-          }
-        : { language: 'en' }),
+      ...(tax ? taxonomyWriteFields(tax) : { language: 'en' }),
     });
 
     const cSq = (created as { squadId?: mongoose.Types.ObjectId | null }).squadId;
@@ -545,7 +611,9 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
   } catch (err) {
     const e = err as { code?: number };
     if (e.code === 11000) {
-      res.status(409).json({ success: false, message: 'Draft slug conflict. Try a different title.' });
+      res
+        .status(409)
+        .json({ success: false, message: 'Draft slug conflict. Try a different title.' });
       return;
     }
     console.error(err);
@@ -561,7 +629,11 @@ export async function getDraft(req: Request, res: Response): Promise<void> {
       res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
     }
-    const draft = await BlogPostModel.findOne({ authorId: user._id, status: 'draft', ...NOT_DELETED })
+    const draft = await BlogPostModel.findOne({
+      authorId: user._id,
+      status: 'draft',
+      ...NOT_DELETED,
+    })
       .sort({ updatedAt: -1 })
       .limit(1)
       .lean();
@@ -714,7 +786,8 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
       res.status(404).json({ success: false, message: 'Author not found' });
       return;
     }
-    const post = await BlogPostModel.findOne({
+    const viewerId = optionalViewerId(req);
+    let post = await BlogPostModel.findOne({
       authorId: user._id,
       slug,
       status: 'published',
@@ -728,6 +801,24 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
         model: 'squads',
       })
       .lean();
+
+    if (!post && viewerId && viewerId === String(user._id)) {
+      post = await BlogPostModel.findOne({
+        authorId: user._id,
+        slug,
+        status: 'suspended',
+        ...NOT_DELETED,
+      })
+        .populate({ path: 'authorId', select: 'username fullName profileImg', model: 'users' })
+        .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
+        .populate({
+          path: 'squadId',
+          select: 'slug name iconUrl visibility coverBannerUrl memberCount',
+          model: 'squads',
+        })
+        .lean();
+    }
+
     if (!post) {
       res.status(404).json({ success: false, message: 'Post not found' });
       return;
@@ -747,7 +838,6 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
     const bookmarkCount = normalizeBlogCounter((post as { bookmarkCount?: number }).bookmarkCount);
     const commentCount = normalizeBlogCounter((post as { commentCount?: number }).commentCount);
     const viewCount = normalizeBlogCounter((post as { viewCount?: number }).viewCount);
-    const viewerId = optionalViewerId(req);
     let viewerHasRespected: boolean | undefined;
     let viewerHasReposted: boolean | undefined;
     let viewerHasBookmarked: boolean | undefined;
@@ -770,6 +860,8 @@ export async function getPublishedPostBySlug(req: Request, res: Response): Promi
         summary: (post as { summary?: string }).summary ?? '',
         content: post.content,
         thumbnailUrl: (post as { thumbnailUrl?: string }).thumbnailUrl,
+        status: post.status,
+        moderationSuspended: post.status === 'suspended',
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         lastEditedAt: leAt ? leAt.toISOString() : undefined,
@@ -849,7 +941,9 @@ export async function recordBlogReadDay(req: Request, res: Response): Promise<vo
       { $set: { updatedAt: now } },
       { upsert: true }
     );
-    void bumpReadStreakLongestFromMongo(readerId, now).catch((e) => console.error('[read-streak] bump longest', e));
+    void bumpReadStreakLongestFromMongo(readerId, now).catch((e) =>
+      console.error('[read-streak] bump longest', e)
+    );
     const redis = getRedis();
     if (redis) {
       void syncReadStreakRedisAfterMongoUpsert({ redis, readerId, dayBucket, now }).catch((e) =>
@@ -898,7 +992,14 @@ export async function startBlogReadView(req: Request, res: Response): Promise<vo
     const readerId = new mongoose.Types.ObjectId(authUser._id);
     const authorId = author._id as mongoose.Types.ObjectId;
     if (readerId.equals(authorId)) {
-      res.status(200).json({ success: true, sessionId: null, reason: 'self', minDwellMs: MIN_READ_COMMIT_DWELL_MS });
+      res
+        .status(200)
+        .json({
+          success: true,
+          sessionId: null,
+          reason: 'self',
+          minDwellMs: MIN_READ_COMMIT_DWELL_MS,
+        });
       return;
     }
     const post = await BlogPostModel.findOne({
@@ -1060,29 +1161,27 @@ export async function commitBlogReadView(req: Request, res: Response): Promise<v
       { $set: { updatedAt: now } },
       { upsert: true }
     );
-    await bumpReadStreakLongestFromMongo(readerId, now).catch((e) => console.error('[read-streak] bump longest', e));
+    await bumpReadStreakLongestFromMongo(readerId, now).catch((e) =>
+      console.error('[read-streak] bump longest', e)
+    );
 
     const zKey = redisKeys.readStreak.readDaysZset(String(readerId));
     let out;
     try {
-      out = await evalReadViewCommitMerged(
-        redis,
-        [sk, streakKey, zKey, ackKey],
-        {
-          today,
-          yesterday,
-          zsetScoreMs: readDayZsetScoreMs(today),
-          trimMinScoreStr: String(readDaysTrimMinRetainMsUtc(now)),
-          lastUpdatedMs: String(now.getTime()),
-          userId: String(readerId),
-          postId: sp,
-          ackTtlSeconds: READ_VIEW_ACK_TTL_SEC,
-        }
-      );
+      out = await evalReadViewCommitMerged(redis, [sk, streakKey, zKey, ackKey], {
+        today,
+        yesterday,
+        zsetScoreMs: readDayZsetScoreMs(today),
+        trimMinScoreStr: String(readDaysTrimMinRetainMsUtc(now)),
+        lastUpdatedMs: String(now.getTime()),
+        userId: String(readerId),
+        postId: sp,
+        ackTtlSeconds: READ_VIEW_ACK_TTL_SEC,
+      });
     } catch (e) {
       console.error('[read-streak] merged lua failed after mongo upsert', e);
       incrementReadStreakMetric('readViewCommitRedisFail');
-      res.status(200).json({
+      await respondReadCommit(res, String(readerId), 200, {
         success: true,
         counted: true,
         dayBucket: today,
@@ -1092,14 +1191,16 @@ export async function commitBlogReadView(req: Request, res: Response): Promise<v
     }
 
     if (out.status === 2) {
-      res.status(200).json({ success: true, counted: true, alreadyProcessed: true, dayBucket: today });
+      res
+        .status(200)
+        .json({ success: true, counted: true, alreadyProcessed: true, dayBucket: today });
       return;
     }
     if (out.status === 1 || out.status === 0) {
       const postOid = new mongoose.Types.ObjectId(sp);
       await BlogPostModel.updateOne({ _id: postOid }, { $inc: { viewCount: 1 } });
       void publishBlogPostStatsSnapshot(postOid);
-      res.status(200).json({
+      await respondReadCommit(res, String(readerId), 200, {
         success: true,
         counted: true,
         dayBucket: today,
@@ -1114,7 +1215,9 @@ export async function commitBlogReadView(req: Request, res: Response): Promise<v
     if (out.status === -1) {
       const mongoHit = await BlogReadDayModel.exists({ readerId, dayBucket: today });
       if (mongoHit) {
-        res.status(200).json({ success: true, counted: true, alreadyProcessed: true, dayBucket: today });
+        res
+          .status(200)
+          .json({ success: true, counted: true, alreadyProcessed: true, dayBucket: today });
         return;
       }
       res.status(400).json({ success: false, reason: 'invalid_session' });
@@ -1147,7 +1250,7 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
         deletedAt: { $exists: true, $ne: null, $gte: cutoff },
       })
         .select(
-          'title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount',
+          'title slug summary content thumbnailUrl status createdAt updatedAt deletedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount'
         )
         .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
         .sort({ deletedAt: -1 })
@@ -1185,11 +1288,13 @@ export async function listMyPosts(req: Request, res: Response): Promise<void> {
     }
 
     const filter: Record<string, unknown> = { authorId: user._id, ...NOT_DELETED };
-    if (status === 'draft' || status === 'published') filter.status = status;
+    if (status === 'draft' || status === 'published' || status === 'suspended') {
+      filter.status = status;
+    }
 
     const posts = await BlogPostModel.find(filter)
       .select(
-        'title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount squadId',
+        'title slug summary content thumbnailUrl status createdAt updatedAt lastEditedAt category tags language respectCount repostCount bookmarkCount commentCount squadId'
       )
       .populate({ path: 'lastEditedById', select: 'username fullName', model: 'users' })
       .populate({
@@ -1253,7 +1358,11 @@ export async function getMyPostById(req: Request, res: Response): Promise<void> 
       res.status(400).json({ success: false, message: 'Invalid post id' });
       return;
     }
-    const post = await BlogPostModel.findOne({ _id: postId, authorId: user._id, ...NOT_DELETED }).lean();
+    const post = await BlogPostModel.findOne({
+      _id: postId,
+      authorId: user._id,
+      ...NOT_DELETED,
+    }).lean();
     if (!post) {
       res.status(404).json({ success: false, message: 'Post not found' });
       return;
@@ -1303,7 +1412,11 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
     const wasEligibleRespect = isEligibleForPublicRespect(existing);
     const wasPublishedBefore = existing.status === 'published';
     const rawBody = req.body as Record<string, unknown>;
-    const hasTaxonomyKeys = 'category' in rawBody || 'tags' in rawBody || 'language' in rawBody;
+    const hasTaxonomyKeys =
+      'category' in rawBody ||
+      'categories' in rawBody ||
+      'tags' in rawBody ||
+      'language' in rawBody;
     const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
     const { title, summary, content, thumbnailUrl, status, silent } = req.body as {
       title?: string;
@@ -1324,7 +1437,9 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
       return;
     }
     const summaryStr =
-      typeof summary === 'string' ? summary.trim().slice(0, SUMMARY_MAX_LEN) : (existing.summary ?? '') || '';
+      typeof summary === 'string'
+        ? summary.trim().slice(0, SUMMARY_MAX_LEN)
+        : (existing.summary ?? '') || '';
 
     /**
      * Explicit "Save draft" while editing a **published** post: create a new draft with the
@@ -1335,14 +1450,10 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
         thumbnailUrl !== undefined ? sanitizeThumbnailUrl(thumbnailUrl) : existing.thumbnailUrl;
       const exDoc = existing as IBlogPost;
       const forkCategory = hasTaxonomyKeys ? tax?.category : exDoc.category;
-      const forkTags = hasTaxonomyKeys
-        ? tax?.tags?.length
-          ? tax.tags
-          : undefined
-        : exDoc.tags;
+      const forkTags = hasTaxonomyKeys ? (tax?.tags?.length ? tax.tags : undefined) : exDoc.tags;
       const forkLang = hasTaxonomyKeys
-        ? tax?.language ?? exDoc.language ?? 'en'
-        : exDoc.language ?? 'en';
+        ? (tax?.language ?? exDoc.language ?? 'en')
+        : (exDoc.language ?? 'en');
       const baseSlug = slugify(titleStr);
       let newPost: IBlogPost | null = null;
       let lastErr: unknown;
@@ -1439,11 +1550,17 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
     }
     if (status === 'draft' || status === 'published') {
       existing.status = status;
+      if (status === 'published') {
+        existing.suspendedAt = undefined;
+        existing.suspendedById = undefined;
+      }
     }
     if (tax) {
-      existing.category = tax.category;
-      existing.tags = tax.tags?.length ? tax.tags : undefined;
-      existing.language = tax.language ?? 'en';
+      const fields = taxonomyWriteFields(tax);
+      existing.category = fields.category;
+      existing.categories = fields.categories;
+      existing.tags = fields.tags;
+      existing.language = fields.language ?? 'en';
     }
     if (!wasPublishedBefore && existing.status === 'published') {
       const ex = existing as IBlogPost;
@@ -1490,7 +1607,8 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
     }
 
     const outSquad = (existing as { squadId?: mongoose.Types.ObjectId | null }).squadId;
-    res.status(200).json({
+    const firstPublish = !wasPublishedBefore && existing.status === 'published';
+    const postBody = {
       success: true,
       post: {
         _id: existing._id,
@@ -1505,7 +1623,24 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
         ...(outSquad ? { squadId: String(outSquad) } : {}),
         ...mapTaxonomyFromDoc(existing as TaxonomyFields),
       },
-    });
+    };
+    if (firstPublish) {
+      void fanoutNewPublishedPost({
+        postId: String(existing._id),
+        authorId: String(user._id),
+        title: existing.title,
+        slug: existing.slug,
+        category: existing.category,
+        tags: existing.tags,
+        squadId: outSquad ? String(outSquad) : undefined,
+      });
+      const newlyUnlocked = await dispatchAchievementEvents(String(user._id), [
+        { type: 'profile_sync' },
+      ]);
+      res.status(200).json(attachAchievementsToResponse(postBody, newlyUnlocked));
+    } else {
+      res.status(200).json(postBody);
+    }
   } catch (err) {
     const e = err as { code?: number };
     if (e.code === 11000) {
@@ -1541,7 +1676,12 @@ export async function restoreMyPost(req: Request, res: Response): Promise<void> 
     }
     const del = doc.deletedAt;
     if (!del || del.getTime() < Date.now() - SOFT_DELETE_RETENTION_MS) {
-      res.status(410).json({ success: false, message: 'This post is no longer in the recoverable trash window' });
+      res
+        .status(410)
+        .json({
+          success: false,
+          message: 'This post is no longer in the recoverable trash window',
+        });
       return;
     }
 
@@ -1656,7 +1796,7 @@ export async function deleteMyPost(req: Request, res: Response): Promise<void> {
         deletedAt: new Date(),
         deletedById: user._id as unknown as mongoose.Types.ObjectId,
       },
-      { new: true },
+      { new: true }
     );
     if (!updated) {
       res.status(404).json({ success: false, message: 'Post not found' });
@@ -1679,82 +1819,20 @@ export async function deleteMyPost(req: Request, res: Response): Promise<void> {
 /** GET /api/blog/taxonomy — public: curated categories/tags plus published post counts. */
 export async function getBlogTaxonomy(_req: Request, res: Response): Promise<void> {
   try {
-    await ensureBlogTaxonomySeeds();
-    const publishedMatch = { status: 'published' as const, ...NOT_DELETED };
-    const [curatedCats, curatedTags, catAgg, tagAgg] = await Promise.all([
-      BlogCategoryModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
-      BlogTagModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
-      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
-        {
-          $match: {
-            ...publishedMatch,
-            category: { $type: 'string', $nin: ['', null] },
-          },
-        },
-        { $group: { _id: { $toLower: '$category' }, postCount: { $sum: 1 } } },
-      ]),
-      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
-        {
-          $match: {
-            ...publishedMatch,
-            tags: { $exists: true, $type: 'array', $ne: [] },
-          },
-        },
-        { $unwind: '$tags' },
-        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
-        { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
-      ]),
-    ]);
-
-    const countMap = (rows: { _id: string; postCount: number }[]) =>
-      new Map(rows.map((r) => [String(r._id).toLowerCase(), r.postCount]));
-    const catCounts = countMap(catAgg);
-    const tagCounts = countMap(tagAgg);
-    const curatedSlugLower = new Set(curatedCats.map((c) => c.slug.toLowerCase()));
-
-    const categoriesFromCurated = curatedCats.map((c) => ({
-      slug: c.slug,
-      name: c.name,
-      description:
-        typeof (c as { description?: string }).description === 'string'
-          ? (c as { description?: string }).description!.trim()
-          : '',
-      postCount: catCounts.get(c.slug.toLowerCase()) ?? 0,
-    }));
-    const extraCats = catAgg
-      .filter((a) => !curatedSlugLower.has(String(a._id).toLowerCase()))
-      .map((a) => ({
-        slug: String(a._id),
-        name: String(a._id),
-        description: '',
-        postCount: a.postCount,
-      }));
-    const categories = [...categoriesFromCurated, ...extraCats].sort(
-      (a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name),
+    const { listTaxonomyCategoriesPaginated, listTaxonomyTagsPaginated } = await import(
+      '../services/blogTaxonomy.service.js'
     );
-
-    const curatedTagLower = new Set(curatedTags.map((t) => t.slug.toLowerCase()));
-    const tagsFromCurated = curatedTags.map((t) => ({
+    const [categoriesPage, tagsPage] = await Promise.all([
+      listTaxonomyCategoriesPaginated({ offset: 0, limit: 10_000, sort: 'posts-desc' }),
+      listTaxonomyTagsPaginated({ offset: 0, limit: 80, sort: 'posts-desc' }),
+    ]);
+    const categories = categoriesPage.list;
+    const tags = tagsPage.list.map((t) => ({
       slug: t.slug,
       name: t.name,
-      description:
-        typeof (t as { description?: string }).description === 'string'
-          ? (t as { description?: string }).description!.trim()
-          : '',
-      postCount: tagCounts.get(t.slug.toLowerCase()) ?? 0,
+      description: '',
+      postCount: t.postCount,
     }));
-    const extraTags = tagAgg
-      .filter((a) => !curatedTagLower.has(String(a._id).toLowerCase()))
-      .map((a) => ({
-        slug: String(a._id),
-        name: String(a._id),
-        description: '',
-        postCount: a.postCount,
-      }));
-    const tags = [...tagsFromCurated, ...extraTags]
-      .sort((a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name))
-      .slice(0, 80);
-
     res.status(200).json({ success: true, categories, tags });
   } catch (err) {
     console.error(err);
@@ -1762,133 +1840,54 @@ export async function getBlogTaxonomy(_req: Request, res: Response): Promise<voi
   }
 }
 
-/** GET /api/blog/tags/explore — public: trending / popular / recently active tags + full list for Topics page. */
+/** GET /api/blog/taxonomy/categories — public paginated category list for Topics page. */
+export async function listBlogTaxonomyCategories(req: Request, res: Response): Promise<void> {
+  try {
+    const { listTaxonomyCategoriesPaginated } = await import(
+      '../services/blogTaxonomy.service.js'
+    );
+    const page = await listTaxonomyCategoriesPaginated({
+      offset: req.query.offset,
+      limit: req.query.limit,
+      sort: req.query.sort,
+      q: req.query.q,
+    });
+    res.status(200).json({ success: true, ...page });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to load categories' });
+  }
+}
+
+/** GET /api/blog/tags/list — public paginated tag list for Topics page. */
+export async function listBlogTagsPaginated(req: Request, res: Response): Promise<void> {
+  try {
+    const { listTaxonomyTagsPaginated } = await import('../services/blogTaxonomy.service.js');
+    const page = await listTaxonomyTagsPaginated({
+      offset: req.query.offset,
+      limit: req.query.limit,
+      sort: req.query.sort,
+      q: req.query.q,
+    });
+    res.status(200).json({ success: true, ...page });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Failed to load tags' });
+  }
+}
+
+/** GET /api/blog/tags/explore — public: trending / popular / recently active tag rankings. */
 export async function getBlogTagsExplore(_req: Request, res: Response): Promise<void> {
   try {
-    await ensureBlogTaxonomySeeds();
-    const publishedMatch = { status: 'published' as const, ...NOT_DELETED };
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-
-    const tagWindowMatch = {
-      ...publishedMatch,
-      tags: { $exists: true, $ne: [] },
-      $expr: {
-        $gte: [{ $ifNull: ['$publishedAt', '$createdAt'] }, fourteenDaysAgo],
-      },
-    };
-
-    const [curatedTags, trendingAgg, popularAgg, recentAgg, tagAgg] = await Promise.all([
-      BlogTagModel.find().sort({ sortOrder: 1, name: 1 }).lean(),
-      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
-        { $match: tagWindowMatch },
-        { $unwind: '$tags' },
-        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
-        { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
-        { $sort: { postCount: -1 } },
-        { $limit: 10 },
-      ]),
-      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
-        {
-          $match: {
-            ...publishedMatch,
-            tags: { $exists: true, $ne: [] },
-          },
-        },
-        { $unwind: '$tags' },
-        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
-        { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
-        { $sort: { postCount: -1 } },
-        { $limit: 10 },
-      ]),
-      BlogPostModel.aggregate<{ _id: string; postCount: number; lastUsedAt: Date }>([
-        {
-          $match: {
-            ...publishedMatch,
-            tags: { $exists: true, $ne: [] },
-          },
-        },
-        {
-          $addFields: {
-            tagSortDate: { $ifNull: ['$publishedAt', '$createdAt'] },
-          },
-        },
-        { $unwind: '$tags' },
-        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
-        {
-          $group: {
-            _id: { $toLower: '$tags' },
-            lastUsedAt: { $max: '$tagSortDate' },
-            postCount: { $sum: 1 },
-          },
-        },
-        { $sort: { lastUsedAt: -1 } },
-        { $limit: 10 },
-      ]),
-      BlogPostModel.aggregate<{ _id: string; postCount: number }>([
-        {
-          $match: {
-            ...publishedMatch,
-            tags: { $exists: true, $ne: [] },
-          },
-        },
-        { $unwind: '$tags' },
-        { $match: { tags: { $type: 'string', $nin: ['', null] } } },
-        { $group: { _id: { $toLower: '$tags' }, postCount: { $sum: 1 } } },
-      ]),
-    ]);
-
-    const nameBySlug = new Map<string, string>();
-    for (const t of curatedTags) {
-      nameBySlug.set(t.slug.toLowerCase(), t.name);
-    }
-
-    const mapRows = (
-      rows: Array<{ _id: unknown; postCount: number; lastUsedAt?: Date }>,
-      withLast?: boolean,
-    ) =>
-      rows.map((r) => {
-        const slug = String(r._id);
-        const low = slug.toLowerCase();
-        const base: {
-          slug: string;
-          name: string;
-          postCount: number;
-          lastUsedAt?: string;
-        } = {
-          slug,
-          name: nameBySlug.get(low) ?? slug,
-          postCount: r.postCount,
-        };
-        if (withLast && r.lastUsedAt != null) {
-          const d = r.lastUsedAt;
-          base.lastUsedAt = d instanceof Date ? d.toISOString() : String(d);
-        }
-        return base;
-      });
-
-    const tagCounts = new Map(tagAgg.map((x) => [String(x._id).toLowerCase(), x.postCount]));
-    const curatedLower = new Set(curatedTags.map((t) => t.slug.toLowerCase()));
-
-    const tagsFromCurated = curatedTags.map((t) => ({
-      slug: t.slug,
-      name: t.name,
-      postCount: tagCounts.get(t.slug.toLowerCase()) ?? 0,
-    }));
-    const extraTags = tagAgg
-      .filter((a) => !curatedLower.has(String(a._id).toLowerCase()))
-      .map((a) => ({
-        slug: String(a._id),
-        name: String(a._id),
-        postCount: a.postCount,
-      }));
-    const allTags = [...tagsFromCurated, ...extraTags].sort((a, b) => a.name.localeCompare(b.name));
-
+    const { loadExploreTagRankings, mapExploreTagRows } = await import(
+      '../services/blogTaxonomy.service.js'
+    );
+    const { nameBySlug, trendingAgg, popularAgg, recentAgg } = await loadExploreTagRankings();
     res.status(200).json({
       success: true,
-      trending: mapRows(trendingAgg),
-      popular: mapRows(popularAgg),
-      recent: mapRows(recentAgg, true),
-      allTags,
+      trending: mapExploreTagRows(trendingAgg, nameBySlug),
+      popular: mapExploreTagRows(popularAgg, nameBySlug),
+      recent: mapExploreTagRows(recentAgg, nameBySlug, true),
     });
   } catch (err) {
     console.error(err);
@@ -1898,6 +1897,8 @@ export async function getBlogTagsExplore(_req: Request, res: Response): Promise<
 
 /** Build feed-shaped items for populated post docs (bookmarks library, etc.). */
 export async function buildFeedListItemsForPosts(req: Request, postDocs: unknown[]) {
-  const items = postDocs.map(mapLeanPostToFeedListItem).filter((x): x is FeedListItem => x !== null);
+  const items = postDocs
+    .map(mapLeanPostToFeedListItem)
+    .filter((x): x is FeedListItem => x !== null);
   return applyViewerStateToFeedItems(req, items);
 }

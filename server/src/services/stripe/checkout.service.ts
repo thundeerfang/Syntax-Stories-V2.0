@@ -44,7 +44,9 @@ export async function createCheckoutSessionForUser(
 
   const subDoc = user.subscription ? await SubscriptionModel.findById(user.subscription) : null;
   if (subDoc?.stripeSubscriptionId && paidActive(subDoc.status)) {
-    const err = new Error('You already have an active subscription. Use the billing portal to change plans.');
+    const err = new Error(
+      'You already have an active subscription. Use the billing portal to change plans.'
+    );
     (err as Error & { statusCode?: number }).statusCode = 409;
     throw err;
   }
@@ -54,7 +56,10 @@ export async function createCheckoutSessionForUser(
 
   const customerId = await ensureStripeCustomer(user);
 
-  const base = env.PUBLIC_APP_URL || env.FRONTEND_URL?.split(',')[0]?.replace(/\/$/, '') || 'http://localhost:3000';
+  const base =
+    env.PUBLIC_APP_URL ||
+    env.FRONTEND_URL?.split(',')[0]?.replace(/\/$/, '') ||
+    'http://localhost:3000';
   const successUrl = `${base}/settings?section=payments&checkout=success&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${base}/pricing?checkout=canceled`;
 
@@ -98,9 +103,11 @@ export async function createBillingPortalSession(userId: string): Promise<{ url:
   const user = await UserModel.findById(userId);
   if (!user) throw new Error('User not found');
   const customerId = await ensureStripeCustomer(user);
-  const base = env.PUBLIC_APP_URL || env.FRONTEND_URL?.split(',')[0]?.replace(/\/$/, '') || 'http://localhost:3000';
-  const returnUrl =
-    env.STRIPE_PORTAL_RETURN_URL || `${base}/settings?section=payments`;
+  const base =
+    env.PUBLIC_APP_URL ||
+    env.FRONTEND_URL?.split(',')[0]?.replace(/\/$/, '') ||
+    'http://localhost:3000';
+  const returnUrl = env.STRIPE_PORTAL_RETURN_URL || `${base}/settings?section=payments`;
 
   const portal = await stripe.billingPortal.sessions.create({
     customer: customerId,

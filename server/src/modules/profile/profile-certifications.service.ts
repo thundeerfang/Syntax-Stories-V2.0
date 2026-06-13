@@ -1,8 +1,13 @@
 import { profileRepository } from './profile.repository.js';
 
 /** Assigns `certId` / `certValType` when missing (certifications section). */
-export async function normalizeCertifications(userId: string, updates: Record<string, unknown>): Promise<void> {
-  const certifications = updates.certifications as Array<{ certId?: string; certValType?: string; [k: string]: unknown }> | undefined;
+export async function normalizeCertifications(
+  userId: string,
+  updates: Record<string, unknown>
+): Promise<void> {
+  const certifications = updates.certifications as
+    | Array<{ certId?: string; certValType?: string; [k: string]: unknown }>
+    | undefined;
   if (!Array.isArray(certifications) || certifications.length === 0) return;
 
   const current = await profileRepository.findLeanByIdSelect(userId, 'certifications');

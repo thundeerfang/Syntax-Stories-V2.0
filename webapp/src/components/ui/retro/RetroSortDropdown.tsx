@@ -5,7 +5,6 @@ import { cn } from '@/lib/core/utils';
 import { retroDropdownPanel, retroSortTrigger } from '@/lib/core/retroUi';
 import { useDismissiblePanel } from '@/hooks/useDismissiblePanel';
 
-
 export type RetroSortOption<T extends string> = Readonly<{
   value: T;
   label: string;
@@ -62,7 +61,7 @@ export function RetroSortDropdown<T extends string>({
                 aria-selected={value === o.value}
                 className={cn(
                   'flex w-full px-3 py-2.5 text-left font-mono text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-muted/60',
-                  value === o.value && 'bg-primary/10 text-primary',
+                  value === o.value && 'bg-primary/10 text-primary'
                 )}
                 onClick={() => {
                   onChange(o.value);

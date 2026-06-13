@@ -1,47 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { alpha } from '@mui/material/styles';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
-import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
-import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
+import { CentricPageHeader } from '@/components/layout/CentricPageHeader';
+import { pageBreadcrumbs } from '@/components/layout/pageHeaderBreadcrumbs';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import { OverviewIamMetrics } from '@/components/dashboard/OverviewIamMetrics';
 
 const cards = [
   {
-    title: 'Help center',
-    description: 'Create and publish help articles for the product.',
-    href: '/help',
-    icon: HelpOutlineRoundedIcon,
-    action: 'Open',
-  },
-  {
     title: 'Soft delete center',
-    description: 'Restore help articles, blog posts, or deactivated users from trash.',
+    description: 'Restore blog posts or deactivated users from trash.',
     href: '/trash',
     icon: DeleteOutlineRoundedIcon,
     action: 'Open',
   },
   {
-    title: 'Documentation',
-    description: 'Internal notes and links to platform docs.',
-    href: '/documentation',
-    icon: MenuBookRoundedIcon,
-    action: 'View',
-  },
-  {
     title: 'Subscriptions',
-    description: 'Plans and subscriber overview (placeholder UI).',
+    description: 'Predefined paid plans for the product.',
     href: '/subscriptions',
     icon: TrendingUpRoundedIcon,
     action: 'Open',
@@ -51,15 +32,14 @@ const cards = [
 export default function OverviewPage() {
   return (
     <Stack spacing={4}>
-      <Box>
-        <Typography variant="h4" component="h1" fontWeight={800} className="tracking-tight" gutterBottom>
-          Overview
-        </Typography>
-        <Typography variant="body1" color="text.secondary" className="max-w-2xl">
-          Welcome to the Syntax Stories admin console. Use the sidebar to move between sections, or jump in
-          below.
-        </Typography>
-      </Box>
+      <CentricPageHeader
+        title="Overview"
+        description="Welcome to the Syntax Stories admin console. Use the sidebar to move between sections, or jump in below."
+        icon={<DashboardRoundedIcon />}
+        breadcrumbs={pageBreadcrumbs('Overview')}
+      />
+
+      <OverviewIamMetrics />
 
       <Grid container spacing={2}>
         {cards.map(({ title, description, href, icon: Icon, action }) => (
@@ -99,14 +79,18 @@ export default function OverviewPage() {
         ))}
       </Grid>
 
-      <Card elevation={0} className="border border-dashed border-[var(--color-border)]" sx={{ borderColor: 'divider' }}>
+      <Card
+        elevation={0}
+        className="border border-dashed border-[var(--color-border)]"
+        sx={{ borderColor: 'divider' }}
+      >
         <CardContent className="p-6">
           <Typography variant="subtitle1" fontWeight={700} gutterBottom>
             Quick status
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Live metrics will appear here when billing and analytics APIs are connected. For now this dashboard
-            is a structured shell for CMS and future admin tools.
+            Live metrics will appear here when billing and analytics APIs are connected. For now
+            this dashboard is a structured shell for CMS and future admin tools.
           </Typography>
         </CardContent>
       </Card>

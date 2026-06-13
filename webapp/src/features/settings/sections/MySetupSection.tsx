@@ -3,24 +3,18 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import {
-  Monitor,
-  Wrench,
-  ImagePlus,
-  ExternalLink,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
+import { Monitor, Wrench, ImagePlus, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
 import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
 import { ImageUploadCropDialog } from '@/components/upload';
 import { uploadMedia } from '@/api/upload';
 import { type SetupItem as MySetupItem } from '@/app/settings/settings-list/MySetupCard';
-import { SettingsSectionHeading, SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
-
-
-
+import {
+  SettingsSectionHeading,
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 
 export function MySetupContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
@@ -70,10 +64,16 @@ export function MySetupContent() {
     try {
       await updateProfile({ mySetup: next.slice(0, 5) } as any, { section: 'setup' });
       setItems(next.slice(0, 5));
-      setDraftLabel(''); setDraftImageUrl(''); setDraftImageAlt(''); setDraftProductUrl(''); setEditIndex(null);
+      setDraftLabel('');
+      setDraftImageUrl('');
+      setDraftImageAlt('');
+      setDraftProductUrl('');
+      setEditIndex(null);
       toast.success('My Setup updated.', { id: 'syntax-setup-success' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update setup.', { id: 'syntax-setup-error' });
+      toast.error(e instanceof Error ? e.message : 'Failed to update setup.', {
+        id: 'syntax-setup-error',
+      });
     } finally {
       setSaving(false);
     }
@@ -90,16 +90,20 @@ export function MySetupContent() {
         <div className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Label</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Label
+              </label>
               <input
                 value={draftLabel}
                 onChange={(e) => setDraftLabel(e.target.value)}
-                placeholder="Ex: LG UltraWide 34&quot;"
+                placeholder='Ex: LG UltraWide 34"'
                 className="w-full p-3 border-2 border-border bg-muted/20 font-bold text-sm outline-none focus:border-primary"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Source Link</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Source Link
+              </label>
               <input
                 value={draftProductUrl}
                 onChange={(e) => setDraftProductUrl(e.target.value)}
@@ -124,7 +128,9 @@ export function MySetupContent() {
                     className="size-full object-cover"
                   />
                 </div>
-              ) : <ImagePlus className="size-5 text-muted-foreground group-hover:text-primary" />}
+              ) : (
+                <ImagePlus className="size-5 text-muted-foreground group-hover:text-primary" />
+              )}
               <span className="text-[10px] font-black uppercase tracking-widest">
                 {draftImageUrl ? 'Replace Component Image' : 'Upload Component Image'}
               </span>
@@ -135,7 +141,13 @@ export function MySetupContent() {
             {editIndex !== null && (
               <button
                 type="button"
-                onClick={() => { setEditIndex(null); setDraftLabel(''); setDraftImageUrl(''); setDraftImageAlt(''); setDraftProductUrl(''); }}
+                onClick={() => {
+                  setEditIndex(null);
+                  setDraftLabel('');
+                  setDraftImageUrl('');
+                  setDraftImageAlt('');
+                  setDraftProductUrl('');
+                }}
                 className="text-[10px] font-black uppercase tracking-widest underline underline-offset-4 hover:text-primary"
               >
                 Cancel
@@ -146,87 +158,99 @@ export function MySetupContent() {
               type="button"
               disabled={!canSaveDraft || (items.length >= 5 && editIndex === null)}
               onClick={onAddOrUpdate}
-              className={cn(settingsBtnBlockPrimaryMd, 'w-full md:w-auto px-10 py-3 text-xs tracking-widest')}
+              className={cn(
+                settingsBtnBlockPrimaryMd,
+                'w-full md:w-auto px-10 py-3 text-xs tracking-widest'
+              )}
             >
               {saving ? 'PROCESSING...' : editIndex !== null ? 'Updating Changes' : 'Save Changes'}
             </button>
           </div>
 
-      <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <AnimatePresence>
-          {items.map((it, idx) => (
-            <motion.div
-              key={idx}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="group relative border-4 border-border bg-card shadow hover:border-primary transition-colors overflow-hidden"
-            >
-              <div className="aspect-video relative overflow-hidden border-b-4 border-border">
-                <img
-                  src={it.imageUrl}
-                  alt={(it as { imageAlt?: string }).imageAlt?.trim() || it.label}
-                  title={(it as { imageAlt?: string }).imageAlt?.trim() || undefined}
-                  className="size-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                />
-                <div className="absolute top-2 left-2 px-2 py-1 bg-background/90 text-foreground border border-border text-[8px] font-black tracking-widest">
-                  SLOT_0{idx + 1}
-                </div>
-              </div>
-              <div className="p-4">
-                <h4 className="text-sm font-black uppercase truncate">{it.label}</h4>
-                <div className="flex items-center gap-4 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditIndex(idx);
-                      setDraftLabel(it.label);
-                      setDraftImageUrl(it.imageUrl);
-                      setDraftImageAlt((it as { imageAlt?: string }).imageAlt ?? '');
-                      setDraftProductUrl(it.productUrl || '');
-                    }}
-                    className="p-2 border-2 border-border hover:bg-muted transition-colors"
-                  >
-                    <Pencil className="size-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = items.filter((_, i) => i !== idx);
-                      setSaving(true);
-                      updateProfile({ mySetup: next } as any, { section: 'setup' })
-                        .then(() => {
-                          setItems(next);
-                          toast.success('Component removed.');
-                        })
-                        .catch((e) => {
-                          toast.error(e instanceof Error ? e.message : 'Failed to remove component.');
-                        })
-                        .finally(() => setSaving(false));
-                    }}
-                    className="p-2 border-2 border-border hover:text-destructive hover:border-destructive transition-colors"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
-                  {it.productUrl && (
-                    <a href={it.productUrl} target="_blank" rel="noreferrer" className="ml-auto text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:text-primary">
-                      LINK <ExternalLink className="size-3" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+          <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence>
+              {items.map((it, idx) => (
+                <motion.div
+                  key={idx}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="group relative border-4 border-border bg-card shadow hover:border-primary transition-colors overflow-hidden"
+                >
+                  <div className="aspect-video relative overflow-hidden border-b-4 border-border">
+                    <img
+                      src={it.imageUrl}
+                      alt={(it as { imageAlt?: string }).imageAlt?.trim() || it.label}
+                      title={(it as { imageAlt?: string }).imageAlt?.trim() || undefined}
+                      className="size-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                    />
+                    <div className="absolute top-2 left-2 px-2 py-1 bg-background/90 text-foreground border border-border text-[8px] font-black tracking-widest">
+                      SLOT_0{idx + 1}
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h4 className="text-sm font-black uppercase truncate">{it.label}</h4>
+                    <div className="flex items-center gap-4 mt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditIndex(idx);
+                          setDraftLabel(it.label);
+                          setDraftImageUrl(it.imageUrl);
+                          setDraftImageAlt((it as { imageAlt?: string }).imageAlt ?? '');
+                          setDraftProductUrl(it.productUrl || '');
+                        }}
+                        className="p-2 border-2 border-border hover:bg-muted transition-colors"
+                      >
+                        <Pencil className="size-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = items.filter((_, i) => i !== idx);
+                          setSaving(true);
+                          updateProfile({ mySetup: next } as any, { section: 'setup' })
+                            .then(() => {
+                              setItems(next);
+                              toast.success('Component removed.');
+                            })
+                            .catch((e) => {
+                              toast.error(
+                                e instanceof Error ? e.message : 'Failed to remove component.'
+                              );
+                            })
+                            .finally(() => setSaving(false));
+                        }}
+                        className="p-2 border-2 border-border hover:text-destructive hover:border-destructive transition-colors"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                      {it.productUrl && (
+                        <a
+                          href={it.productUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="ml-auto text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:text-primary"
+                        >
+                          LINK <ExternalLink className="size-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
 
-        {items.length === 0 && (
-          <div className="col-span-full py-12 border-4 border-dashed border-border bg-muted/5 flex flex-col items-center justify-center">
-            <Monitor className="size-12 text-muted-foreground/30 mb-4" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Hardware inventory empty.</p>
-          </div>
-        )}
-      </motion.div>
+            {items.length === 0 && (
+              <div className="col-span-full py-12 border-4 border-dashed border-border bg-muted/5 flex flex-col items-center justify-center">
+                <Monitor className="size-12 text-muted-foreground/30 mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  Hardware inventory empty.
+                </p>
+              </div>
+            )}
+          </motion.div>
         </div>
       </SettingsTabPanel>
 
@@ -258,4 +282,3 @@ export function MySetupContent() {
     </SettingsTabRoot>
   );
 }
-

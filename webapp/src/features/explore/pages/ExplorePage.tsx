@@ -29,7 +29,7 @@ import {
 import { HashtagBadgeLink } from '@/features/tags';
 import { Button } from '@/components/ui/button';
 import { PanelSectionHeader } from '@/features/explore';
-import { RailSectionSubheader, ShellPageIntroHeader } from '@/components/layout';
+import { RailSectionSubheader, RailFeedEmptyState, ShellPageIntroHeader } from '@/components/layout';
 import { RocketLottie } from '@/components/ui/lottie';
 import { RankCountPill } from '@/features/topics';
 import { SquadDirectoryCard } from '@/features/squads';
@@ -42,7 +42,8 @@ import {
 } from '@/lib/profile/categoryMembers';
 import {
   FOLLOWED_CATEGORIES_CHANGED_EVENT,
-  isCategorySlugFollowed,
+  isCategoryFollowedForViewer,
+  shouldHandleFollowedCategoriesEvent,
   refreshFollowedCategoriesFromServer,
   toggleCategoryFollowWithSync,
 } from '@/lib/feeds/categoryFollowActions';
@@ -80,7 +81,7 @@ function MemberAvatar({
       title={member.username}
       className={cn(
         'size-6 shrink-0  border-2 bg-transparent object-cover',
-        isHero ? 'border-primary-foreground/90' : 'border-background',
+        isHero ? 'border-primary-foreground/90' : 'border-background'
       )}
     />
   );
@@ -93,7 +94,7 @@ function OverflowAvatar({ count, isHero }: Readonly<{ count: number; isHero: boo
         'flex size-6 shrink-0 items-center justify-center  border-2 font-mono text-[8px] font-black leading-none',
         isHero
           ? 'border-primary-foreground/90 bg-primary-foreground/20 text-primary-foreground'
-          : 'border-background bg-muted text-primary',
+          : 'border-background bg-muted text-primary'
       )}
       aria-hidden
     >
@@ -143,13 +144,13 @@ function CategoryMemberCluster({
                 <MemberAvatar key={member.username} member={member} isHero={isHero} />
               ) : (
                 <OverflowAvatar key="overflow" count={overflow} isHero={isHero} />
-              ),
+              )
             )}
           </div>
           <span
             className={cn(
               'shrink-0 font-mono text-[9px] font-black uppercase leading-none tracking-wide',
-              isHero ? 'text-primary-foreground' : 'text-primary',
+              isHero ? 'text-primary-foreground' : 'text-primary'
             )}
           >
             {membersLabel}
@@ -159,7 +160,7 @@ function CategoryMemberCluster({
         <span
           className={cn(
             'font-mono text-[9px] font-black uppercase leading-none tracking-wide',
-            isHero ? 'text-primary-foreground/70' : 'text-muted-foreground',
+            isHero ? 'text-primary-foreground/70' : 'text-muted-foreground'
           )}
         >
           {membersLabel}
@@ -176,43 +177,47 @@ const CATEGORY_CORNER_BTN =
   '!size-9 !min-h-9 !min-w-9 shrink-0 !p-0 active:translate-x-0 active:translate-y-0 active:shadow-none';
 const CATEGORY_CORNER_FOLLOW_CLASS = cn(
   CATEGORY_CORNER_BTN,
-  '!border-border !bg-white !text-primary hover:!bg-white hover:!text-primary hover:!opacity-90',
+  '!border-border !bg-white !text-primary hover:!bg-white hover:!text-primary hover:!opacity-90'
 );
 const CATEGORY_CORNER_OPEN_CLASS = cn(
   CATEGORY_CORNER_BTN,
-  '!border-primary !bg-primary !text-white hover:!bg-primary hover:!text-white hover:!opacity-90',
+  '!border-primary !bg-primary !text-white hover:!bg-primary hover:!text-white hover:!opacity-90'
 );
 
 function CategoryFollowCornerButton({ slug, name }: Readonly<{ slug: string; name: string }>) {
   const token = useAuthStore((s) => s.token);
   const userId = useAuthStore((s) => s.user?.id ?? s.user?._id ?? null);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const openAuth = useAuthDialogStore((s) => s.open);
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
   const href = `/topics/category/${encodeURIComponent(slug)}`;
 
   const sync = useCallback(() => {
-    setFollowing(isCategorySlugFollowed(slug, userId));
-  }, [slug, userId]);
+    setFollowing(isCategoryFollowedForViewer(slug, { token, userId, isHydrated }));
+  }, [slug, userId, token, isHydrated]);
 
   useEffect(() => {
     sync();
   }, [sync]);
 
   useEffect(() => {
-    const onChanged = () => sync();
+    const onChanged = (event: Event) => {
+      if (!shouldHandleFollowedCategoriesEvent(event, userId)) return;
+      sync();
+    };
     window.addEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, onChanged);
     window.addEventListener('storage', onChanged);
     return () => {
       window.removeEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, onChanged);
       window.removeEventListener('storage', onChanged);
     };
-  }, [sync]);
+  }, [sync, userId]);
 
   const onFollowClick = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!token) {
+    if (!token || !userId) {
       openAuth('login');
       return;
     }
@@ -293,7 +298,14 @@ function TaxonomyCategoryCard({
 
   if (variant === 'compact') {
     return (
-      <div className={cn('relative flex h-full flex-col bg-card', TAXONOMY_RETRO_BORDER, TAXONOMY_CARD_SHADOW, className)}>
+      <div
+        className={cn(
+          'relative flex h-full flex-col bg-card',
+          TAXONOMY_RETRO_BORDER,
+          TAXONOMY_CARD_SHADOW,
+          className
+        )}
+      >
         <CategoryFollowCornerButton slug={slug} name={name} />
         <Link
           href={hrefResolved}
@@ -301,11 +313,19 @@ function TaxonomyCategoryCard({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <span className="font-mono text-[9px] font-black uppercase tracking-widest text-primary">Lane</span>
-              <h3 className="mt-2 font-mono text-lg font-black uppercase tracking-tight text-foreground">{name}</h3>
-              <p className="mt-2 line-clamp-2 font-mono text-[10px] uppercase text-muted-foreground">{blurb}</p>
+              <span className="font-mono text-[9px] font-black uppercase tracking-widest text-primary">
+                Lane
+              </span>
+              <h3 className="mt-2 font-mono text-lg font-black uppercase tracking-tight text-foreground">
+                {name}
+              </h3>
+              <p className="mt-2 line-clamp-2 font-mono text-[10px] uppercase text-muted-foreground">
+                {blurb}
+              </p>
             </div>
-            {typeof postCount === 'number' ? <RankCountPill count={postCount} className="shrink-0" /> : null}
+            {typeof postCount === 'number' ? (
+              <RankCountPill count={postCount} className="shrink-0" />
+            ) : null}
           </div>
         </Link>
       </div>
@@ -320,7 +340,7 @@ function TaxonomyCategoryCard({
         TAXONOMY_RETRO_BORDER,
         TAXONOMY_CARD_SHADOW,
         isHero ? 'bg-primary text-primary-foreground md:col-span-2' : 'bg-card',
-        className,
+        className
       )}
     >
       <CategoryFollowCornerButton slug={slug} name={name} />
@@ -331,17 +351,19 @@ function TaxonomyCategoryCard({
         <span
           className={cn(
             'pointer-events-none absolute -bottom-4 -right-4 font-mono text-[80px] font-black italic opacity-10',
-            isHero ? 'text-primary-foreground' : 'text-foreground',
+            isHero ? 'text-primary-foreground' : 'text-foreground'
           )}
           aria-hidden
         >
           {String(index).padStart(2, '0')}
         </span>
-        <h3 className="relative z-10 mb-4 font-mono text-2xl font-black uppercase sm:text-4xl">{name}</h3>
+        <h3 className="relative z-10 mb-4 font-mono text-2xl font-black uppercase sm:text-4xl">
+          {name}
+        </h3>
         <p
           className={cn(
             'relative z-10 mb-4 max-w-xs font-mono text-xs uppercase',
-            isHero ? 'text-primary-foreground/90' : 'text-muted-foreground',
+            isHero ? 'text-primary-foreground/90' : 'text-muted-foreground'
           )}
         >
           {blurb}
@@ -350,7 +372,7 @@ function TaxonomyCategoryCard({
           <span
             className={cn(
               'inline-block border-2 px-4 py-2 font-mono text-[10px] font-bold uppercase',
-              isHero ? 'border-primary-foreground' : 'border-primary',
+              isHero ? 'border-primary-foreground' : 'border-primary'
             )}
           >
             Open sector
@@ -378,14 +400,14 @@ function getScrollStridePx(scroller: HTMLDivElement): number {
 
 const laneSwiperNavBtn = cn(
   '!size-10 !min-h-10 !min-w-10 !p-0 !bg-white !text-primary !border-border',
-  'hover:!bg-white hover:!text-primary hover:!opacity-90 active:translate-x-0 active:translate-y-0 active:shadow-none',
+  'hover:!bg-white hover:!text-primary hover:!opacity-90 active:translate-x-0 active:translate-y-0 active:shadow-none'
 );
 
 type ExploreTopSquadsBlockProps = Readonly<{
   squads: SquadSummary[];
   loading: boolean;
   joinBusySlug: string | null;
-  onJoin: (slug: string) => void | Promise<void>;
+  onJoin: (slug: string) => void | boolean | Promise<void | boolean>;
 }>;
 
 function ExploreTopSquadsBlock({
@@ -397,16 +419,13 @@ function ExploreTopSquadsBlock({
   const scrollerRef = useRef<HTMLDivElement>(null);
   const n = squads.length;
 
-  const scrollByStep = useCallback(
-    (dir: -1 | 1) => {
-      const el = scrollerRef.current;
-      if (!el) return;
-      const stride = getScrollStridePx(el);
-      if (stride <= 0) return;
-      el.scrollBy({ left: dir * stride, behavior: 'smooth' });
-    },
-    [],
-  );
+  const scrollByStep = useCallback((dir: -1 | 1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const stride = getScrollStridePx(el);
+    if (stride <= 0) return;
+    el.scrollBy({ left: dir * stride, behavior: 'smooth' });
+  }, []);
 
   const showArrows = !loading && n > 1;
 
@@ -458,15 +477,18 @@ function ExploreTopSquadsBlock({
       {loading ? (
         <ExploreTopSquadsSkeleton />
       ) : n === 0 ? (
-        <p className="ss-empty-dashed-panel px-4 py-8 text-center font-mono text-xs uppercase text-muted-foreground">
-          No public squads yet — create one from Squads.
-        </p>
+        <RailFeedEmptyState
+          icon={UsersRound}
+          title="No public squads yet"
+          description="Create one from Squads — public groups show up here for others to discover."
+          actions={[{ label: 'Open squads', href: '/squads/featured', variant: 'primary' }]}
+        />
       ) : (
         <div
           ref={scrollerRef}
           className={cn(
             'ss-scrollbar-hide flex w-full min-w-0 flex-nowrap gap-4 overflow-x-auto pb-1',
-            'snap-x snap-mandatory scroll-smooth',
+            'snap-x snap-mandatory scroll-smooth'
           )}
           role="region"
           aria-label="Top squads"
@@ -490,7 +512,7 @@ function ExploreTopSquadsBlock({
 
 const SPOTLIGHT_NAV_BTN = cn(
   '!size-11 !min-h-11 !min-w-11 !p-0 !bg-white !text-primary !border-border',
-  'hover:!bg-white hover:!text-primary hover:!opacity-90 active:translate-x-0 active:translate-y-0 active:shadow-none',
+  'hover:!bg-white hover:!text-primary hover:!opacity-90 active:translate-x-0 active:translate-y-0 active:shadow-none'
 );
 const TRAIL_AUTO_MS = 6500;
 const EXPLORE_FEED_LIMIT = 20;
@@ -509,7 +531,7 @@ const RETRO_BORDER = 'border-2 border-[var(--border)]';
 /** White title with primary glow + offset (readable on all spotlight backdrops). */
 const SPOTLIGHT_TITLE_CLASS = cn(
   'mt-5 font-mono text-3xl font-black uppercase leading-none tracking-tighter text-white sm:text-5xl md:text-6xl',
-  '[text-shadow:0_0_32px_color-mix(in_srgb,var(--primary)_80%,transparent),0_0_12px_color-mix(in_srgb,var(--primary)_55%,transparent),2px_2px_0_var(--primary),1px_1px_0_rgba(0,0,0,0.9)]',
+  '[text-shadow:0_0_32px_color-mix(in_srgb,var(--primary)_80%,transparent),0_0_12px_color-mix(in_srgb,var(--primary)_55%,transparent),2px_2px_0_var(--primary),1px_1px_0_rgba(0,0,0,0.9)]'
 );
 
 function SpotlightImageBackdrop({ src }: Readonly<{ src: string }>) {
@@ -637,10 +659,16 @@ function TrailBadge({ kind }: Readonly<{ kind: SpotlightItem['kind'] }>) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 border-2 border-white bg-white px-3 py-1 font-mono text-[10px] font-black uppercase tracking-widest text-primary shadow',
+        'inline-flex items-center gap-2 border-2 border-white bg-white px-3 py-1 font-mono text-[10px] font-black uppercase tracking-widest text-primary shadow'
       )}
     >
-      {kind === 'squad' ? <UsersRound className="size-3" aria-hidden /> : kind === 'tag' ? <Hash className="size-3" aria-hidden /> : <Layers className="size-3" aria-hidden />}
+      {kind === 'squad' ? (
+        <UsersRound className="size-3" aria-hidden />
+      ) : kind === 'tag' ? (
+        <Hash className="size-3" aria-hidden />
+      ) : (
+        <Layers className="size-3" aria-hidden />
+      )}
       {kind}
     </span>
   );
@@ -685,7 +713,11 @@ function squadSpotlightIcon(s: SquadSummary): ReactNode {
   );
 }
 
-function mergeHotTags(popular: TagExploreRow[], trending: TagExploreRow[], limit: number): TagExploreRow[] {
+function mergeHotTags(
+  popular: TagExploreRow[],
+  trending: TagExploreRow[],
+  limit: number
+): TagExploreRow[] {
   const seen = new Set<string>();
   const out: TagExploreRow[] = [];
   for (const row of [...trending, ...popular]) {
@@ -700,7 +732,7 @@ function mergeHotTags(popular: TagExploreRow[], trending: TagExploreRow[], limit
 
 async function mergeSquadsWithMembership(
   squads: SquadSummary[],
-  token: string | null,
+  token: string | null
 ): Promise<SquadSummary[]> {
   if (!token) return squads;
   try {
@@ -718,7 +750,7 @@ async function mergeSquadsWithMembership(
 function buildSpotlightItems(
   tagsEx: { trending: TagExploreRow[]; popular: TagExploreRow[] },
   squads: SquadSummary[],
-  categories: BlogTaxonomyRow[],
+  categories: BlogTaxonomyRow[]
 ): SpotlightItem[] {
   const squadItems: SpotlightItem[] = squads
     .filter((s) => s.visibility === 'public')
@@ -776,7 +808,7 @@ function ExploreFeaturedTrail({
       if (n <= 1) return;
       setIndex((i) => (i + dir + n) % n);
     },
-    [n],
+    [n]
   );
 
   useEffect(() => {
@@ -790,7 +822,9 @@ function ExploreFeaturedTrail({
     item == null
       ? 'empty'
       : `${item.kind}-${item.kind === 'squad' ? item.squad.slug : item.kind === 'tag' ? item.tag.slug : item.category.slug}`;
-  const t = reduceMotion ? { duration: 0 } : { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const };
+  const t = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const };
 
   if (loading) {
     return <ExploreSpotlightSkeleton />;
@@ -803,18 +837,21 @@ function ExploreFeaturedTrail({
           className={cn(
             'relative flex min-h-[220px] w-full flex-col items-start justify-center gap-4 overflow-hidden bg-card p-6 md:min-h-[260px] md:p-10',
             RETRO_BORDER,
-            'shadow',
+            'shadow'
           )}
         >
-          <p className="font-mono text-sm font-black uppercase text-muted-foreground">No spotlight items yet</p>
+          <p className="font-mono text-sm font-black uppercase text-muted-foreground">
+            No spotlight items yet
+          </p>
           <p className="max-w-md text-xs uppercase leading-relaxed text-muted-foreground">
-            Publish posts with tags, create squads, or open topics — this carousel fills from live taxonomy and the public directory.
+            Publish posts with tags, create squads, or open topics — this carousel fills from live
+            taxonomy and the public directory.
           </p>
           <Link
             href="/topics"
             className={cn(
               'inline-flex items-center gap-2 bg-[var(--primary)] px-6 py-3 font-mono text-xs font-bold uppercase text-[var(--background)]',
-              RETRO_SHADOW,
+              RETRO_SHADOW
             )}
           >
             Browse topics <ArrowRight className="size-4" aria-hidden />
@@ -836,7 +873,7 @@ function ExploreFeaturedTrail({
         className={cn(
           'relative flex min-h-[min(48vh,380px)] w-full flex-col justify-end overflow-hidden bg-[var(--background)] p-6 md:min-h-[360px] md:p-10',
           RETRO_BORDER,
-          'shadow',
+          'shadow'
         )}
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -949,7 +986,9 @@ function ExploreFeaturedTrail({
               onClick={() => setIndex(i)}
               className={cn(
                 'h-2  border-2 border-[var(--border)] transition-[width,background-color] duration-300',
-                i === index ? 'w-8 bg-[var(--primary)]' : 'w-2 bg-[var(--card)] hover:bg-[var(--muted)]',
+                i === index
+                  ? 'w-8 bg-[var(--primary)]'
+                  : 'w-2 bg-[var(--card)] hover:bg-[var(--muted)]'
               )}
             />
           ))}
@@ -1029,20 +1068,17 @@ export function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    const run = () => {
-      void loadSpotlightAndTags();
-    };
+    void loadSpotlightAndTags();
+  }, [loadSpotlightAndTags]);
 
-    if (useAuthStore.getState().isHydrated) {
-      run();
-    }
-
-    return useAuthStore.subscribe((state, prevState) => {
-      if (!prevState.isHydrated && state.isHydrated) {
-        run();
+  useEffect(() => {
+    if (!isHydrated) return;
+    return useAuthStore.subscribe((state, prev) => {
+      if (state.token !== prev.token) {
+        void loadSpotlightAndTags({ silent: true });
       }
     });
-  }, [loadSpotlightAndTags]);
+  }, [isHydrated, loadSpotlightAndTags]);
 
   const sectorPreview = useMemo(
     () =>
@@ -1052,20 +1088,20 @@ export function ExplorePage() {
         .map((c) => ({
           slug: c.slug,
           name: c.name,
-          blurb: c.description?.trim() ? c.description.trim() : `Writers filing stories under ${c.name}.`,
+          blurb: c.description?.trim()
+            ? c.description.trim()
+            : `Writers filing stories under ${c.name}.`,
           postCount: c.postCount,
         })),
-    [taxonomyCats],
+    [taxonomyCats]
   );
 
   const sectorPreviewSlugsKey = useMemo(
     () => sectorPreview.map((c) => c.slug).join('\0'),
-    [sectorPreview],
+    [sectorPreview]
   );
 
   useEffect(() => {
-    if (!isHydrated) return;
-
     const slugs = sectorPreviewSlugsKey ? sectorPreviewSlugsKey.split('\0') : [];
     if (slugs.length === 0) {
       setCategoryMembersBySlug({});
@@ -1103,7 +1139,7 @@ export function ExplorePage() {
     return () => {
       cancelled = true;
     };
-  }, [isHydrated, sectorPreview, sectorPreviewSlugsKey, userId, categoryMembersRevision]);
+  }, [sectorPreview, sectorPreviewSlugsKey, userId, categoryMembersRevision]);
 
   useEffect(() => {
     const bump = () => setCategoryMembersRevision((n) => n + 1);
@@ -1116,7 +1152,11 @@ export function ExplorePage() {
     setFeedError(null);
     try {
       const activeToken = useAuthStore.getState().token;
-      const { posts: raw } = await blogApi.getPublishedFeed(EXPLORE_FEED_LIMIT, undefined, activeToken);
+      const { posts: raw } = await blogApi.getPublishedFeed(
+        EXPLORE_FEED_LIMIT,
+        undefined,
+        activeToken
+      );
       setFeedPosts(raw.map(mapPublicFeedPostToPost));
     } catch (e) {
       setFeedError(e);
@@ -1127,37 +1167,26 @@ export function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    const run = () => {
-      void loadFeed();
-    };
-
-    if (useAuthStore.getState().isHydrated) {
-      run();
-    }
-
-    return useAuthStore.subscribe((state, prevState) => {
-      if (!prevState.isHydrated && state.isHydrated) {
-        run();
-      }
-    });
+    void loadFeed();
   }, [loadFeed]);
 
   const bufferSwiperPosts = useMemo(() => feedPosts.slice(0, 12), [feedPosts]);
 
   const handleExploreTopJoin = useCallback(
-    async (squadSlug: string) => {
+    async (squadSlug: string): Promise<boolean> => {
       if (!token) {
         openAuth('login');
-        return;
+        return false;
       }
       setExploreJoinBusySlug(squadSlug);
       try {
         await squadsApi.join(squadSlug, token);
         toast.success('Joined squad');
         setTopPublicSquads((prev) =>
-          prev.map((s) => (s.slug === squadSlug ? { ...s, viewerRole: 'member' as const } : s)),
+          prev.map((s) => (s.slug === squadSlug ? { ...s, viewerRole: 'member' as const } : s))
         );
         await loadSpotlightAndTags({ silent: true });
+        return true;
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not join');
         throw e;
@@ -1165,7 +1194,7 @@ export function ExplorePage() {
         setExploreJoinBusySlug(null);
       }
     },
-    [token, openAuth, loadSpotlightAndTags],
+    [token, openAuth, loadSpotlightAndTags]
   );
 
   return (
@@ -1198,7 +1227,11 @@ export function ExplorePage() {
             aria-busy={spotlightLoading}
           >
             <div className="shrink-0">
-              <PanelSectionHeader eyebrow="Metadata" title="Hot tags" description="Live from published posts — each pill opens the tag stream." />
+              <PanelSectionHeader
+                eyebrow="Metadata"
+                title="Hot tags"
+                description="Live from published posts — each pill opens the tag stream."
+              />
             </div>
             <div className="mt-3 min-h-0 flex-1 overflow-hidden">
               <div className="ss-scrollbar-hide h-full min-h-0 overflow-y-auto">
@@ -1206,18 +1239,28 @@ export function ExplorePage() {
                   {spotlightLoading ? (
                     <ExploreHotTagsSkeleton />
                   ) : hotTags.length === 0 ? (
-                    <p className="w-full text-[10px] font-mono uppercase text-muted-foreground">No tagged posts yet.</p>
+                    <p className="w-full text-[10px] font-mono uppercase text-muted-foreground">
+                      No tagged posts yet.
+                    </p>
                   ) : (
                     hotTags.map((tag) => (
-                      <HashtagBadgeLink key={tag.slug} slug={tag.slug} label={tag.name} postCount={tag.postCount} />
+                      <HashtagBadgeLink
+                        key={tag.slug}
+                        slug={tag.slug}
+                        label={tag.name}
+                        postCount={tag.postCount}
+                      />
                     ))
                   )}
                 </div>
               </div>
             </div>
-            <div className="mt-auto w-full shrink-0 border-t border-border pt-3">
+            <div className="mt-auto w-full shrink-0 pt-3">
               {spotlightLoading ? (
-                <div className="h-12 w-full animate-pulse border-2 border-border bg-muted/40" aria-hidden />
+                <div
+                  className="h-12 w-full animate-pulse border-2 border-border bg-muted/40"
+                  aria-hidden
+                />
               ) : (
                 <Button
                   href="/topics"
@@ -1244,7 +1287,7 @@ export function ExplorePage() {
               <>
                 <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>
                   <span className="absolute inline-flex h-full w-full animate-ping bg-primary opacity-60 motion-reduce:animate-none" />
-                  <span className="relative inline-flex h-2.5 w-2.5 bg-primary shadow" />
+                  <span className="relative inline-flex h-2.5 w-2.5 bg-primary" />
                 </span>
                 <h3 className="min-w-0 truncate font-mono text-sm font-black uppercase text-muted-foreground">
                   Latest buffer transmissions
@@ -1275,9 +1318,12 @@ export function ExplorePage() {
         {spotlightLoading ? (
           <ExploreSectorGridSkeleton />
         ) : sectorPreview.length === 0 ? (
-          <p className="ss-empty-dashed-panel px-4 py-10 text-center font-mono text-xs uppercase text-muted-foreground">
-            No taxonomy sectors loaded yet.
-          </p>
+          <RailFeedEmptyState
+            icon={Layers}
+            title="No taxonomy sectors loaded yet"
+            description="When categories are published in the taxonomy, sector previews will appear here."
+            actions={[{ label: 'Browse topics', href: '/topics', variant: 'primary' }]}
+          />
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {sectorPreview.map((cat, idx: number) => (

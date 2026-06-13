@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { cn } from '@/lib/core/utils';
 
-
 type Props = Readonly<{
   src: string;
   alt: string;

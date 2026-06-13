@@ -12,5 +12,10 @@ export function getStripe(): Stripe | null {
 }
 
 export function isStripeConfigured(): boolean {
-  return !!env.STRIPE_SECRET_KEY && !!env.STRIPE_PRICE_PRO && !!env.STRIPE_PRICE_PROPLUS && !!env.STRIPE_PRICE_ULTRA;
+  return (
+    !!env.STRIPE_SECRET_KEY &&
+    !!env.STRIPE_PRICE_PRO &&
+    !!env.STRIPE_PRICE_PROPLUS &&
+    !!env.STRIPE_PRICE_ULTRA
+  );
 }

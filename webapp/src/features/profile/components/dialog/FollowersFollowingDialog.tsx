@@ -9,7 +9,6 @@ import { cn } from '@/lib/core/utils';
 import { followApi, type FollowUser } from '@/api/follow';
 import { toast } from 'sonner';
 
-
 type Tab = 'followers' | 'following';
 
 export interface FollowersFollowingDialogProps {
@@ -24,13 +23,18 @@ export interface FollowersFollowingDialogProps {
   onFollowChange?: () => void;
 }
 
-function FollowersFollowingEmptyState({ tab, hasSearch }: Readonly<{ tab: Tab; hasSearch: boolean }>) {
+function FollowersFollowingEmptyState({
+  tab,
+  hasSearch,
+}: Readonly<{ tab: Tab; hasSearch: boolean }>) {
   if (hasSearch) {
     return (
       <>
         <Search className="size-12 text-muted-foreground/60 mb-3" />
         <p className="text-[10px] font-black uppercase text-muted-foreground">No matches</p>
-        <p className="text-[9px] font-bold text-muted-foreground/80 mt-1">Try a different search.</p>
+        <p className="text-[9px] font-bold text-muted-foreground/80 mt-1">
+          Try a different search.
+        </p>
       </>
     );
   }
@@ -64,7 +68,7 @@ function showFollowActionsForUser(
   token: string | null,
   profileUsername: string | null,
   rowUsername: string,
-  currentUserUsername: string | null | undefined,
+  currentUserUsername: string | null | undefined
 ): boolean {
   if (!token || rowUsername === profileUsername) return false;
   const me = currentUserUsername?.toLowerCase() ?? '';
@@ -92,22 +96,35 @@ function FollowListRow({
   onFollow: (u: string) => void;
   onUnfollow: (u: string) => void;
 }>) {
-  const showActions = showFollowActionsForUser(token, profileUsername, user.username, currentUserUsername);
+  const showActions = showFollowActionsForUser(
+    token,
+    profileUsername,
+    user.username,
+    currentUserUsername
+  );
   const isFollowing = iFollowUsernames.has(user.username);
 
   return (
-    <div
-      className="flex items-center gap-3 p-3 border-2 border-border bg-muted/5 hover:bg-muted/20 transition-colors"
-    >
-      <Link href={`/u/${user.username}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
+    <div className="flex items-center gap-3 p-3 border-2 border-border bg-muted/5 hover:bg-muted/20 transition-colors">
+      <Link
+        href={`/u/${user.username}`}
+        onClick={onClose}
+        className="flex items-center gap-3 flex-1 min-w-0"
+      >
         <img
-          src={user.profileImg || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
+          src={
+            user.profileImg || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
+          }
           alt=""
           className="size-10 border-2 border-border shrink-0 object-cover"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase truncate">{user.fullName || user.username}</p>
-          <p className="text-[9px] font-bold text-muted-foreground uppercase truncate">@{user.username}</p>
+          <p className="text-[10px] font-black uppercase truncate">
+            {user.fullName || user.username}
+          </p>
+          <p className="text-[9px] font-bold text-muted-foreground uppercase truncate">
+            @{user.username}
+          </p>
         </div>
       </Link>
       {showActions ? (
@@ -212,7 +229,7 @@ export function FollowersFollowingDialog({
     ? list.filter(
         (u) =>
           (u.fullName ?? '').toLowerCase().includes(search.toLowerCase()) ||
-          (u.username ?? '').toLowerCase().includes(search.toLowerCase()),
+          (u.username ?? '').toLowerCase().includes(search.toLowerCase())
       )
     : list;
 
@@ -263,7 +280,9 @@ export function FollowersFollowingDialog({
   let listSection: React.ReactNode;
   if (loading) {
     listSection = (
-      <p className="text-[10px] font-bold text-muted-foreground uppercase text-center py-8">Loading...</p>
+      <p className="text-[10px] font-bold text-muted-foreground uppercase text-center py-8">
+        Loading...
+      </p>
     );
   } else if (filtered.length === 0) {
     listSection = (
@@ -327,7 +346,7 @@ export function FollowersFollowingDialog({
             'flex-1 py-3 font-black text-[10px] uppercase tracking-widest border-b-2 -mb-0.5 transition-colors',
             tab === 'followers'
               ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
           Followers {followersCount}
@@ -339,7 +358,7 @@ export function FollowersFollowingDialog({
             'flex-1 py-3 font-black text-[10px] uppercase tracking-widest border-b-2 -mb-0.5 transition-colors',
             tab === 'following'
               ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
           Following {followingCount}

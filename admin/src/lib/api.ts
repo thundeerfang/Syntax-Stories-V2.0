@@ -1,3 +1,5 @@
+import { adminAuthenticatedFetch } from '@/lib/auth/adminAuthenticatedFetch';
+
 /**
  * API origin only (no path). Defaults to `http://localhost:7373` in development
  * when `NEXT_PUBLIC_API_BASE_URL` is unset — avoids 404s from calling `/auth/*` on the Next dev server.
@@ -25,132 +27,18 @@ export type MeUser = {
   staffRole?: string | null;
 };
 
-export async function fetchMe(token: string): Promise<{ user: MeUser }> {
-  const res = await fetch(apiUrl('/auth/me'), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const json = (await res.json()) as { success?: boolean; data?: { user: MeUser } };
+export async function fetchMe(token?: string | null): Promise<{ user: MeUser }> {
+  const res = await adminAuthenticatedFetch('/auth/me', { token: token ?? null });
+  const json = (await res.json()) as {
+    success?: boolean;
+    data?: { user: MeUser };
+    message?: string;
+  };
   if (!res.ok || !json.data?.user) {
-    throw new Error('Failed to load account');
+    throw new Error(json.message ?? 'Failed to load account');
   }
   return { user: json.data.user };
 }
-
-export type HelpListItem = {
-  _id: string;
-  slug: string;
-  title: string;
-  status: string;
-  isPublished: boolean;
-  draftVersion: number;
-  publishedVersion: number;
-  publishAt: string | null;
-  updatedAt: string;
-  authorId: string;
-};
-
-export async function listHelpArticles(
-  token: string,
-  page = 1
-): Promise<{ data: HelpListItem[]; total: number }> {
-  const res = await fetch(apiUrl(`/api/v1/admin/help/articles?page=${page}`), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const json = (await res.json()) as {
-    data?: HelpListItem[];
-    total?: number;
-    message?: string;
-  };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Failed to list articles');
-  }
-  return { data: json.data ?? [], total: json.total ?? 0 };
-}
-
-export type HelpArticleDetail = {
-  _id: string;
-  slug: string;
-  slugHistory: string[];
-  title: string;
-  summary: string;
-  body: string;
-  draftTitle?: string;
-  draftSummary?: string;
-  draftBody?: string;
-  status: string;
-  isPublished: boolean;
-  draftVersion: number;
-  publishedVersion: number;
-  publishAt: string | null;
-  publishedAt: string | null;
-  authorId: string;
-  updatedAt: string;
-};
-
-export async function getHelpArticle(token: string, id: string): Promise<HelpArticleDetail> {
-  const res = await fetch(apiUrl(`/api/v1/admin/help/articles/${id}`), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const json = (await res.json()) as { success?: boolean; data?: HelpArticleDetail; message?: string };
-  if (!res.ok || !json.data) {
-    throw new Error(json.message ?? 'Failed to load article');
-  }
-  return json.data;
-}
-
-export async function patchHelpArticle(
-  token: string,
-  id: string,
-  body: Record<string, unknown>
-): Promise<{ draftVersion: number }> {
-  const res = await fetch(apiUrl(`/api/v1/admin/help/articles/${id}`), {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as {
-    success?: boolean;
-    data?: { draftVersion: number };
-    message?: string;
-  };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Save failed');
-  }
-  return { draftVersion: json.data?.draftVersion ?? 0 };
-}
-
-export async function publishHelpArticle(
-  token: string,
-  id: string,
-  expectedPublishedVersion?: number
-): Promise<void> {
-  const res = await fetch(apiUrl(`/api/v1/admin/help/articles/${id}/publish`), {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(
-      expectedPublishedVersion !== undefined ? { expectedPublishedVersion } : {}
-    ),
-  });
-  const json = (await res.json()) as { message?: string };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Publish failed');
-  }
-}
-
-export type TrashHelpItem = {
-  _id: string;
-  slug: string;
-  slugBeforeDelete: string | null;
-  title: string;
-  deletedAt: string | null;
-  authorId: string;
-};
 
 export type TrashBlogItem = {
   _id: string;
@@ -174,7 +62,6 @@ export type TrashResponse = {
   success: boolean;
   page: number;
   pageSize: number;
-  help?: { data: TrashHelpItem[]; total: number; page: number; pageSize: number };
   blog?: { data: TrashBlogItem[]; total: number; page: number; pageSize: number };
   users?: { data: TrashUserItem[]; total: number; page: number; pageSize: number };
 };
@@ -185,10 +72,10 @@ export async function fetchTrash(
 ): Promise<TrashResponse> {
   const page = opts?.page ?? 1;
   const pageSize = opts?.pageSize ?? 20;
-  const sections = opts?.sections ?? 'help,blog,user';
-  const res = await fetch(
-    apiUrl(`/api/v1/admin/trash?sections=${encodeURIComponent(sections)}&page=${page}&pageSize=${pageSize}`),
-    { headers: { Authorization: `Bearer ${token}` } }
+  const sections = opts?.sections ?? 'blog,user';
+  const res = await adminAuthenticatedFetch(
+    `/api/v1/admin/trash?sections=${encodeURIComponent(sections)}&page=${page}&pageSize=${pageSize}`,
+    { token }
   );
   const json = (await res.json()) as TrashResponse & { message?: string };
   if (!res.ok || !json.success) {
@@ -199,31 +86,18 @@ export async function fetchTrash(
 
 export async function restoreTrashItem(
   token: string,
-  resourceType: 'help' | 'blog' | 'user',
+  resourceType: 'blog' | 'user',
   id: string
 ): Promise<void> {
-  const res = await fetch(apiUrl('/api/v1/admin/trash/restore'), {
+  const res = await adminAuthenticatedFetch('/api/v1/admin/trash/restore', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    token,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resourceType, id }),
   });
   const json = (await res.json()) as { success?: boolean; message?: string };
   if (!res.ok || !json.success) {
     throw new Error(json.message ?? 'Restore failed');
-  }
-}
-
-export async function deleteHelpArticleSoft(token: string, id: string): Promise<void> {
-  const res = await fetch(apiUrl(`/api/v1/admin/help/articles/${id}`), {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const json = (await res.json()) as { success?: boolean; message?: string };
-  if (!res.ok || !json.success) {
-    throw new Error(json.message ?? 'Delete failed');
   }
 }
 
@@ -240,6 +114,7 @@ export type FeedbackSubmissionListItem = {
   createdAt: string | null;
   hasAttachment: boolean;
   userId: string | null;
+  userRef: string | null;
   username: string | null;
 };
 
@@ -254,6 +129,7 @@ export type FeedbackSubmissionDetail = {
   categorySlug: string;
   categoryLabel: string;
   userId: string | null;
+  userRef: string | null;
   username: string | null;
   attachmentUrl: string | null;
   attachmentTitle: string | null;
@@ -286,8 +162,8 @@ export async function listFeedbackSubmissions(
   const q = new URLSearchParams();
   if (opts?.limit) q.set('limit', String(opts.limit));
   if (opts?.cursor) q.set('cursor', opts.cursor);
-  const res = await fetch(apiUrl(`${MGMT}/feedback-submissions?${q.toString()}`), {
-    headers: { Authorization: `Bearer ${token}` },
+  const res = await adminAuthenticatedFetch(`${MGMT}/feedback-submissions?${q.toString()}`, {
+    token,
   });
   const json = (await res.json()) as {
     success?: boolean;
@@ -301,13 +177,105 @@ export async function listFeedbackSubmissions(
   return json.data;
 }
 
+export type FeedbackCategoryItem = {
+  id: string;
+  slug: string;
+  label: string;
+  sortOrder: number;
+  active: boolean;
+  createdAtIst: string;
+  updatedAtIst: string;
+};
+
+export async function listFeedbackCategories(token: string): Promise<FeedbackCategoryItem[]> {
+  const res = await adminAuthenticatedFetch(`${MGMT}/feedback-categories`, { token });
+  const json = (await res.json()) as {
+    success?: boolean;
+    data?: { items: FeedbackCategoryItem[] };
+    error?: { message?: string };
+    message?: string;
+  };
+  if (!res.ok || !json.success || !json.data) {
+    throw new Error(json.error?.message ?? json.message ?? 'Failed to load feedback categories');
+  }
+  return json.data.items;
+}
+
+export async function createFeedbackCategory(
+  token: string,
+  body: { label: string; sortOrder?: number }
+): Promise<FeedbackCategoryItem> {
+  const res = await adminAuthenticatedFetch(`${MGMT}/feedback-categories`, {
+    token,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json()) as {
+    success?: boolean;
+    data?: { item: FeedbackCategoryItem };
+    error?: { message?: string };
+    message?: string;
+  };
+  if (!res.ok || !json.success || !json.data?.item) {
+    throw new Error(json.error?.message ?? json.message ?? 'Failed to create category');
+  }
+  return json.data.item;
+}
+
+export async function deleteFeedbackCategory(
+  token: string,
+  id: string
+): Promise<{ id: string; deleted?: boolean; deactivated?: boolean; submissionCount?: number }> {
+  const res = await adminAuthenticatedFetch(
+    `${MGMT}/feedback-categories/${encodeURIComponent(id)}`,
+    { token, method: 'DELETE' }
+  );
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    data?: { id: string; deleted?: boolean; deactivated?: boolean; submissionCount?: number };
+    error?: { message?: string };
+    message?: string;
+  };
+  if (!res.ok || !json.success || !json.data) {
+    throw new Error(json.error?.message ?? json.message ?? 'Failed to delete category');
+  }
+  return json.data;
+}
+
+export async function patchFeedbackCategory(
+  token: string,
+  id: string,
+  body: { label?: string; sortOrder?: number; active?: boolean }
+): Promise<FeedbackCategoryItem> {
+  const res = await adminAuthenticatedFetch(`${MGMT}/feedback-categories/${encodeURIComponent(id)}`, {
+    token,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json()) as {
+    success?: boolean;
+    data?: { item: FeedbackCategoryItem };
+    error?: { message?: string };
+    message?: string;
+  };
+  if (!res.ok || !json.success || !json.data?.item) {
+    throw new Error(json.error?.message ?? json.message ?? 'Failed to update category');
+  }
+  return json.data.item;
+}
+
 export async function getFeedbackSubmission(
   token: string,
   id: string
 ): Promise<{ submission: FeedbackSubmissionDetail }> {
-  const res = await fetch(apiUrl(`${MGMT}/feedback-submissions/${encodeURIComponent(id)}`), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await adminAuthenticatedFetch(
+    `${MGMT}/feedback-submissions/${encodeURIComponent(id)}`,
+    {
+      token,
+    }
+  );
   const json = (await res.json()) as {
     success?: boolean;
     data?: { submission: FeedbackSubmissionDetail };
@@ -328,6 +296,7 @@ export type ContactLeadListItem = {
   topic: string;
   createdAt: string | null;
   userId: string | null;
+  userRef: string | null;
   username: string | null;
 };
 
@@ -339,6 +308,7 @@ export type ContactLeadDetail = {
   topic: string;
   message: string;
   userId: string | null;
+  userRef: string | null;
   username: string | null;
   clientMeta: Record<string, unknown> | null;
   serverMeta: {
@@ -359,9 +329,7 @@ export async function listContactLeads(
   const q = new URLSearchParams();
   if (opts?.limit) q.set('limit', String(opts.limit));
   if (opts?.cursor) q.set('cursor', opts.cursor);
-  const res = await fetch(apiUrl(`${MGMT}/contact-leads?${q.toString()}`), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await adminAuthenticatedFetch(`${MGMT}/contact-leads?${q.toString()}`, { token });
   const json = (await res.json()) as {
     success?: boolean;
     data?: { items: ContactLeadListItem[]; nextCursor: string | null };
@@ -378,8 +346,8 @@ export async function getContactLead(
   token: string,
   id: string
 ): Promise<{ lead: ContactLeadDetail }> {
-  const res = await fetch(apiUrl(`${MGMT}/contact-leads/${encodeURIComponent(id)}`), {
-    headers: { Authorization: `Bearer ${token}` },
+  const res = await adminAuthenticatedFetch(`${MGMT}/contact-leads/${encodeURIComponent(id)}`, {
+    token,
   });
   const json = (await res.json()) as {
     success?: boolean;
@@ -390,29 +358,5 @@ export async function getContactLead(
   if (!res.ok || !json.success || !json.data) {
     throw new Error(json.error?.message ?? json.message ?? 'Failed to load contact lead');
   }
-  return json.data;
-}
-
-export async function createHelpArticle(
-  token: string,
-  input: { slug: string; title: string; summary?: string; category?: string }
-): Promise<{ id: string; slug: string }> {
-  const res = await fetch(apiUrl('/api/v1/admin/help/articles'), {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input),
-  });
-  const json = (await res.json()) as {
-    success?: boolean;
-    data?: { id: string; slug: string };
-    message?: string;
-  };
-  if (!res.ok) {
-    throw new Error(json.message ?? 'Create failed');
-  }
-  if (!json.data) throw new Error('Invalid response');
   return json.data;
 }

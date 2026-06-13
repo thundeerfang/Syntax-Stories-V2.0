@@ -1,13 +1,22 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import type { AuthUser } from '../middlewares/auth/verifyToken.js';
-import { createBillingPortalSession, createCheckoutSessionForUser } from '../services/stripe/checkout.service.js';
+import {
+  createBillingPortalSession,
+  createCheckoutSessionForUser,
+} from '../services/stripe/checkout.service.js';
 import { verifyCheckoutAndSync } from '../services/billing/verifyCheckout.service.js';
 import { getSubscriptionForUser } from '../services/billing/getSubscriptionForUser.js';
+import { listBillingPlanCatalog } from '../services/billing/planCatalog.js';
 import { PaymentLedgerModel } from '../models/PaymentLedger.js';
 
 const planKeySchema = z.enum(['pro', 'proplus', 'ultra']);
 const verifyBodySchema = z.object({ sessionId: z.string().min(1) });
+
+export async function getPlans(_req: Request, res: Response): Promise<void> {
+  const plans = await listBillingPlanCatalog();
+  res.json({ success: true, plans });
+}
 
 export async function postCheckoutSession(req: Request, res: Response): Promise<void> {
   const user = (req as Request & { user: AuthUser }).user;
@@ -72,7 +81,10 @@ export async function getSubscription(req: Request, res: Response): Promise<void
 export async function getTransactions(req: Request, res: Response): Promise<void> {
   const user = (req as Request & { user: AuthUser }).user;
   const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1);
-  const limit = Math.min(50, Math.max(1, Number.parseInt(String(req.query.limit ?? '20'), 10) || 20));
+  const limit = Math.min(
+    50,
+    Math.max(1, Number.parseInt(String(req.query.limit ?? '20'), 10) || 20)
+  );
   const skip = (page - 1) * limit;
 
   const [rows, total] = await Promise.all([

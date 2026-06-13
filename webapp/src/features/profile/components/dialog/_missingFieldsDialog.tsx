@@ -22,7 +22,11 @@ const COMPLETE_ITEM_FIELD_LABELS: Record<string, string> = {
   publisher: 'Publisher name',
 };
 
-export type CompleteItemDialogSection = 'workExperiences' | 'education' | 'certifications' | 'projects';
+export type CompleteItemDialogSection =
+  | 'workExperiences'
+  | 'education'
+  | 'certifications'
+  | 'projects';
 
 interface CompleteItemDialogProps {
   open: boolean;
@@ -49,7 +53,9 @@ function CompleteItemDialog({
   useEffect(() => {
     if (open) {
       const next: Record<string, string> = {};
-      missingFields.forEach((f) => { next[f] = initialValues[f] ?? ''; });
+      missingFields.forEach((f) => {
+        next[f] = initialValues[f] ?? '';
+      });
       setValues(next);
     }
   }, [open, missingFields, initialValues]);
@@ -60,7 +66,9 @@ function CompleteItemDialog({
 
   const handleSubmit = async () => {
     const trimmed: Record<string, string> = {};
-    missingFields.forEach((f) => { trimmed[f] = (values[f] ?? '').trim(); });
+    missingFields.forEach((f) => {
+      trimmed[f] = (values[f] ?? '').trim();
+    });
     const allFilled = missingFields.every((f) => trimmed[f].length > 0);
     if (!allFilled) return;
     setSaving(true);
@@ -75,9 +83,17 @@ function CompleteItemDialog({
   const canSave = missingFields.every((f) => (values[f] ?? '').trim().length > 0);
 
   return (
-    <Dialog open={open} onClose={onClose} titleId="complete-item-dialog-title" panelClassName="max-w-md">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      titleId="complete-item-dialog-title"
+      panelClassName="max-w-md"
+    >
       <div className="space-y-4">
-        <h2 id="complete-item-dialog-title" className="text-sm font-black uppercase tracking-widest text-foreground">
+        <h2
+          id="complete-item-dialog-title"
+          className="text-sm font-black uppercase tracking-widest text-foreground"
+        >
           Add missing fields {itemTitle ? `— ${itemTitle}` : ''}
         </h2>
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
@@ -155,11 +171,15 @@ const MISSING_FIELD_LABELS: Record<string, string> = {
 };
 
 const SCALAR_FIELDS: ParseCvMissingFieldKey[] = ['bio', 'linkedin', 'github', 'stackAndTools'];
-const ARRAY_FIELDS = new Set<ParseCvMissingFieldKey>(['workExperiences', 'education', 'certifications']);
+const ARRAY_FIELDS = new Set<ParseCvMissingFieldKey>([
+  'workExperiences',
+  'education',
+  'certifications',
+]);
 
 function buildInitialValuesForIncompleteItem(
   item: Record<string, unknown> | undefined,
-  missingKeys: string[],
+  missingKeys: string[]
 ): Record<string, string> {
   const initialValues: Record<string, string> = {};
   for (const f of missingKeys) {
@@ -188,7 +208,11 @@ export interface MissingFieldsDialogProps {
     projects?: ReadonlyArray<object>;
   } | null;
   onSave: (values: Partial<Record<ParseCvMissingFieldKey, string | string[]>>) => Promise<void>;
-  onCompleteItem: (section: CompleteItemDialogSection, index: number, values: Record<string, string>) => Promise<void>;
+  onCompleteItem: (
+    section: CompleteItemDialogSection,
+    index: number,
+    values: Record<string, string>
+  ) => Promise<void>;
   settingsHref: string;
   /** When provided, "Edit in Settings" runs this (e.g. save pending CV data then navigate) instead of using a plain link. */
   onEditInSettings?: (section: CompleteItemDialogSection, index: number) => void | Promise<void>;
@@ -204,15 +228,24 @@ type IncompleteItemCompletePayload = Readonly<{
   initialValues: Record<string, string>;
 }>;
 
-function IncompleteHintListItem(props: Readonly<{
-  sectionKey: CompleteItemDialogSection;
-  hint: IncompleteItemHintRow;
-  settingsHref: string;
-  currentProfile: MissingFieldsDialogProps['currentProfile'];
-  onEditInSettings?: MissingFieldsDialogProps['onEditInSettings'];
-  onOpenComplete: (payload: IncompleteItemCompletePayload) => void;
-}>) {
-  const { sectionKey, hint: h, settingsHref, currentProfile, onEditInSettings, onOpenComplete } = props;
+function IncompleteHintListItem(
+  props: Readonly<{
+    sectionKey: CompleteItemDialogSection;
+    hint: IncompleteItemHintRow;
+    settingsHref: string;
+    currentProfile: MissingFieldsDialogProps['currentProfile'];
+    onEditInSettings?: MissingFieldsDialogProps['onEditInSettings'];
+    onOpenComplete: (payload: IncompleteItemCompletePayload) => void;
+  }>
+) {
+  const {
+    sectionKey,
+    hint: h,
+    settingsHref,
+    currentProfile,
+    onEditInSettings,
+    onOpenComplete,
+  } = props;
   const sectionQuery = SECTION_TO_SETTINGS_ID[sectionKey];
   const settingsUrl = `${settingsHref}?section=${sectionQuery}&edit=${h.index}`;
   const arr = currentProfile?.[sectionKey] ?? [];
@@ -275,7 +308,9 @@ export function MissingFieldsDialog({
   settingsHref,
   onEditInSettings,
 }: Readonly<MissingFieldsDialogProps>) {
-  const [values, setValues] = useState<Partial<Record<ParseCvMissingFieldKey, string | string[]>>>({});
+  const [values, setValues] = useState<Partial<Record<ParseCvMissingFieldKey, string | string[]>>>(
+    {}
+  );
   const [saving, setSaving] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [completeDialogState, setCompleteDialogState] = useState<{
@@ -329,11 +364,12 @@ export function MissingFieldsDialog({
 
   const scalarMissing = missingFields.filter((f) => SCALAR_FIELDS.includes(f));
   const arrayMissing = missingFields.filter((f) => ARRAY_FIELDS.has(f));
-  const hasIncompleteItems = !!incompleteItemHints && (
+  const hasIncompleteItems =
+    !!incompleteItemHints &&
     (incompleteItemHints.education?.length ?? 0) +
-    (incompleteItemHints.certifications?.length ?? 0) +
-    (incompleteItemHints.workExperiences?.length ?? 0)
-  ) > 0;
+      (incompleteItemHints.certifications?.length ?? 0) +
+      (incompleteItemHints.workExperiences?.length ?? 0) >
+      0;
   const hasFilledScalar = scalarMissing.some((f) => {
     if (f === 'stackAndTools') {
       const v = values.stackAndTools;
@@ -370,15 +406,31 @@ export function MissingFieldsDialog({
     saveButtonLabel = 'Save (complete required fields first)';
   }
 
-  const incompleteHintSections: { key: CompleteItemDialogSection; label: string; hints: IncompleteItemHintRow[] }[] = [];
+  const incompleteHintSections: {
+    key: CompleteItemDialogSection;
+    label: string;
+    hints: IncompleteItemHintRow[];
+  }[] = [];
   if (incompleteItemHints?.education?.length) {
-    incompleteHintSections.push({ key: 'education', label: 'Education', hints: incompleteItemHints.education });
+    incompleteHintSections.push({
+      key: 'education',
+      label: 'Education',
+      hints: incompleteItemHints.education,
+    });
   }
   if (incompleteItemHints?.certifications?.length) {
-    incompleteHintSections.push({ key: 'certifications', label: 'Certifications', hints: incompleteItemHints.certifications });
+    incompleteHintSections.push({
+      key: 'certifications',
+      label: 'Certifications',
+      hints: incompleteItemHints.certifications,
+    });
   }
   if (incompleteItemHints?.workExperiences?.length) {
-    incompleteHintSections.push({ key: 'workExperiences', label: 'Work experience', hints: incompleteItemHints.workExperiences });
+    incompleteHintSections.push({
+      key: 'workExperiences',
+      label: 'Work experience',
+      hints: incompleteItemHints.workExperiences,
+    });
   }
 
   const openIncompleteItemDialog = (payload: IncompleteItemCompletePayload) => {
@@ -405,8 +457,12 @@ export function MissingFieldsDialog({
       panelClassName="max-w-lg"
     >
       <div className="space-y-4">
-        <h2 id="missing-fields-dialog-title" className="text-sm font-black uppercase tracking-widest text-foreground">
-          {missingFields.length} {missingFields.length === 1 ? 'field' : 'fields'} not found in your CV
+        <h2
+          id="missing-fields-dialog-title"
+          className="text-sm font-black uppercase tracking-widest text-foreground"
+        >
+          {missingFields.length} {missingFields.length === 1 ? 'field' : 'fields'} not found in your
+          CV
         </h2>
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
           Fill in what you can below. You can add the rest later in Settings.
@@ -444,7 +500,8 @@ export function MissingFieldsDialog({
         {hasIncompleteItems ? (
           <div className="border-2 border-border bg-muted/10 p-3 space-y-3">
             <p className="text-[10px] font-bold uppercase text-muted-foreground">
-              Complete all required fields below before you can save. Use Add fields or Edit in Settings.
+              Complete all required fields below before you can save. Use Add fields or Edit in
+              Settings.
             </p>
             {incompleteHintSections.map(({ key, label, hints }) => (
               <div key={key} className="space-y-2">
@@ -469,13 +526,18 @@ export function MissingFieldsDialog({
 
         {arrayMissing.length > 0 && !hasIncompleteItems ? (
           <div className="border-2 border-border bg-muted/10 p-3 space-y-2">
-            <p className="text-[10px] font-bold uppercase text-muted-foreground">Add these in Settings after saving:</p>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">
+              Add these in Settings after saving:
+            </p>
             <ul className="list-disc list-inside text-[10px] font-medium text-foreground space-y-1">
               {arrayMissing.map((key) => (
                 <li key={key}>{FIELD_LABELS[key]}</li>
               ))}
             </ul>
-            <Link href={settingsHref} className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-primary hover:underline">
+            <Link
+              href={settingsHref}
+              className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-primary hover:underline"
+            >
               Open Settings →
             </Link>
           </div>
@@ -505,7 +567,9 @@ export function MissingFieldsDialog({
             type="button"
             onClick={handleSave}
             disabled={saving || !canSave}
-            title={hasIncompleteItems ? 'Complete all required fields above before saving.' : undefined}
+            title={
+              hasIncompleteItems ? 'Complete all required fields above before saving.' : undefined
+            }
             className={cn(
               'flex-1 px-4 py-2 border-2 border-border font-black text-[10px] uppercase tracking-widest',
               canSave && !saving

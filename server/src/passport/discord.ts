@@ -2,7 +2,11 @@ import passport from 'passport';
 import OAuth2Strategy from 'passport-oauth2';
 import type { Request } from 'express';
 import { env } from '../config/env.js';
-import { fetchDiscordMe, normalizeDiscordProfile, type DiscordMeProfile } from '../oauth/oauth.profiles.js';
+import {
+  fetchDiscordMe,
+  normalizeDiscordProfile,
+  type DiscordMeProfile,
+} from '../oauth/oauth.profiles.js';
 import { handleOAuthProviderAuth } from '../oauth/oauth.service.js';
 import { oauthFlowFromReq } from './oauthQuery.js';
 

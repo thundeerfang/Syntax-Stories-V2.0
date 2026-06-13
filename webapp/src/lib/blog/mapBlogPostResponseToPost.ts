@@ -5,11 +5,13 @@ import type { BlogPostResponse } from '@/types/blog';
 /** Map owner `listMyPosts` item to `BlogCard` post shape. */
 export function mapBlogPostResponseToPost(
   p: BlogPostResponse,
-  author: Readonly<{ username: string; displayName: string; profileImg?: string }>,
+  author: Readonly<{ username: string; displayName: string; profileImg?: string }>
 ): Post {
   const publishedAt =
     p.status === 'published'
-      ? (p.createdAt && String(p.createdAt).trim() ? p.createdAt : p.updatedAt)
+      ? p.createdAt && String(p.createdAt).trim()
+        ? p.createdAt
+        : p.updatedAt
       : p.updatedAt;
   return {
     id: p._id,
@@ -36,8 +38,7 @@ export function mapBlogPostResponseToPost(
     commentCount: typeof p.commentCount === 'number' ? p.commentCount : undefined,
     viewerHasRespected:
       typeof p.viewerHasRespected === 'boolean' ? p.viewerHasRespected : undefined,
-    viewerHasReposted:
-      typeof p.viewerHasReposted === 'boolean' ? p.viewerHasReposted : undefined,
+    viewerHasReposted: typeof p.viewerHasReposted === 'boolean' ? p.viewerHasReposted : undefined,
     viewerHasBookmarked:
       typeof p.viewerHasBookmarked === 'boolean' ? p.viewerHasBookmarked : undefined,
     squad: p.squad,

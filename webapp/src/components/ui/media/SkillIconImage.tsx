@@ -5,7 +5,6 @@ import { Tag } from 'lucide-react';
 import { SkillIconSkeleton } from '../feedback/Skeleton';
 import { cn } from '@/lib/core/utils';
 
-
 export type SkillIconImageProps = Readonly<{
   src: string;
   alt?: string;
@@ -29,9 +28,7 @@ export function SkillIconImage({ src, alt = '', className, imgClassName }: Skill
 
   return (
     <span className={cn('relative inline-flex size-full items-center justify-center', className)}>
-      {!loaded ? (
-        <SkillIconSkeleton className="absolute inset-0" />
-      ) : null}
+      {!loaded ? <SkillIconSkeleton className="absolute inset-0" /> : null}
       <img
         src={src}
         alt={alt}

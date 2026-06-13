@@ -8,7 +8,6 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/core/utils';
 import { useScrollLock } from '@/hooks/useScrollLock';
 
-
 /** z-index for dialog overlay so it appears above navbar (z-40) and other layout. */
 export const DIALOG_Z_INDEX = 100;
 /**
@@ -24,18 +23,22 @@ export const DIALOG_Z_INDEX_STACKED = 120;
 export const DIALOG_TITLE_BAR_BOTTOM_BORDER =
   'border-b-2 border-b-neutral-400/90 dark:border-b-zinc-600/90';
 
-export const DIALOG_FOOTER_TOP_BORDER = 'border-t-2 border-t-neutral-400/90 dark:border-t-zinc-600/90';
+export const DIALOG_FOOTER_TOP_BORDER =
+  'border-t-2 border-t-neutral-400/90 dark:border-t-zinc-600/90';
 
 /**
  * Title bar surface + bottom rule (shared with `FormDialog` and `Dialog` `title` / `description` mode).
  */
 export const DIALOG_TITLE_HEADER_CLASS = cn(
   'shrink-0 bg-muted/30 px-6 py-3.5 pr-[4.75rem] sm:py-4 sm:pr-[5.75rem]',
-  DIALOG_TITLE_BAR_BOTTOM_BORDER,
+  DIALOG_TITLE_BAR_BOTTOM_BORDER
 );
 
 /** Footer strip above primary actions (top rule + surface; add horizontal padding via parent or `className`). */
-export const DIALOG_FOOTER_ACTIONS_CLASS = cn('shrink-0 bg-muted/20 py-4', DIALOG_FOOTER_TOP_BORDER);
+export const DIALOG_FOOTER_ACTIONS_CLASS = cn(
+  'shrink-0 bg-muted/20 py-4',
+  DIALOG_FOOTER_TOP_BORDER
+);
 
 /**
  * Bordered icon tile for dialog / form headers (paired with title + description; sized to align with text block).
@@ -116,7 +119,9 @@ function DialogTitleHeaderBody({
 }>) {
   const descriptionNode =
     description == null ? null : (
-      <p className="max-w-2xl text-xs font-medium leading-relaxed text-muted-foreground">{description}</p>
+      <p className="max-w-2xl text-xs font-medium leading-relaxed text-muted-foreground">
+        {description}
+      </p>
     );
 
   if (titleIcon == null) {
@@ -136,7 +141,10 @@ function DialogTitleHeaderBody({
         {titleIcon}
       </span>
       <div className="min-w-0 flex-1 space-y-1 pb-px">
-        <h2 id={headingId} className="text-base font-black uppercase leading-tight tracking-wide text-foreground">
+        <h2
+          id={headingId}
+          className="text-base font-black uppercase leading-tight tracking-wide text-foreground"
+        >
           {title}
         </h2>
         {descriptionNode}
@@ -212,7 +220,7 @@ export function Dialog({
                 defaultPanelClass,
                 useTitleHeader && 'flex flex-col overflow-hidden',
                 panelClassName,
-                'relative',
+                'relative'
               )}
               onClick={(e) => e.stopPropagation()}
               role="dialog"
@@ -253,7 +261,9 @@ export function Dialog({
                       <X className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
                     </button>
                   ) : null}
-                  <div className={cn('min-h-0 flex-1 flex flex-col', contentClassName)}>{children}</div>
+                  <div className={cn('min-h-0 flex-1 flex flex-col', contentClassName)}>
+                    {children}
+                  </div>
                 </>
               ) : (
                 <>
@@ -271,9 +281,7 @@ export function Dialog({
                     className={cn(
                       'relative',
                       contentClassName,
-                      showCloseButton &&
-                        legacyCloseContentInset &&
-                        'pt-11 px-11 sm:pt-12 sm:px-12',
+                      showCloseButton && legacyCloseContentInset && 'pt-11 px-11 sm:pt-12 sm:px-12'
                     )}
                   >
                     {children}

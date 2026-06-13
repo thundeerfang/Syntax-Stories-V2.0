@@ -1,5 +1,15 @@
 import { normalizeProfileImg } from '../../models/User.js';
 
+/** Matches `User` schema default — legacy docs may omit `bio` until first profile save. */
+const DEFAULT_PROFILE_BIO =
+  'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀';
+
+function resolveProfileBio(raw: unknown): string | undefined {
+  if (typeof raw === 'string') return raw;
+  if (raw === undefined || raw === null) return DEFAULT_PROFILE_BIO;
+  return undefined;
+}
+
 /**
  * Account-owner projection: `GET /auth/me`, `PATCH /auth/profile*`.
  * Always map DB lean docs through this (or `toPublicProfile`) before JSON — avoid returning raw models.
@@ -15,7 +25,7 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     profileImgAlt: found.profileImgAlt,
     coverBanner: found.coverBanner,
     coverBannerAlt: found.coverBannerAlt,
-    bio: found.bio,
+    bio: resolveProfileBio(found.bio),
     job: found.job,
     portfolioUrl: found.portfolioUrl,
     linkedin: found.linkedin,

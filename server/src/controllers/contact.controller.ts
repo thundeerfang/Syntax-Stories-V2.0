@@ -146,6 +146,8 @@ export async function submitContactLead(req: Request, res: Response): Promise<vo
     res.status(201).json({ success: true, id: String(doc._id) });
   } catch (err) {
     console.error('[contact] submitContactLead', err);
-    res.status(500).json({ success: false, message: 'Could not send your message. Try again later.' });
+    res
+      .status(500)
+      .json({ success: false, message: 'Could not send your message. Try again later.' });
   }
 }

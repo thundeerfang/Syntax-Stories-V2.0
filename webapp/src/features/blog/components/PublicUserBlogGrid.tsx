@@ -9,10 +9,8 @@ import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
 import { useAuthStore } from '@/store/auth';
 import type { Post } from '@/types';
 
-
 export function PublicUserBlogGrid({ username }: Readonly<{ username: string }>) {
   const token = useAuthStore((s) => s.token);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,9 +32,8 @@ export function PublicUserBlogGrid({ username }: Readonly<{ username: string }>)
   }, [username, token]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     void load();
-  }, [load, isHydrated]);
+  }, [load]);
 
   return (
     <section className="space-y-4 border-4 border-border bg-card p-4 shadow">

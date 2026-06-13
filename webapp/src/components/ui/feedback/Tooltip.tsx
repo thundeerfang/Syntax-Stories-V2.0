@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/core/utils';
 
-
 export interface TooltipProps {
   content: React.ReactNode;
   children: React.ReactNode;
@@ -71,7 +70,10 @@ export function Tooltip({ content, children, side = 'top', className }: Readonly
     <button
       type="button"
       ref={triggerRef}
-      className={cn('inline-flex border-0 bg-transparent p-0 font-inherit text-inherit cursor-default', className)}
+      className={cn(
+        'inline-flex border-0 bg-transparent p-0 font-inherit text-inherit cursor-default',
+        className
+      )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseMove={updatePosition}

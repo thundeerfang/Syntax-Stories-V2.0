@@ -6,6 +6,7 @@ import { blogApi } from '@/api/blog';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
 import { triggerRespectLightning } from '@/store/engagementEffects';
+import { handleAchievementsResponse } from '@/lib/achievements/handleAchievementsResponse';
 import type { Post } from '@/types';
 
 export type BlogCardEngagementBusy = 'respect' | 'repost' | 'bookmark' | null;
@@ -89,13 +90,7 @@ export function useBlogCardEngagement(post: Post): BlogCardEngagementState {
     return () => {
       cancelled = true;
     };
-  }, [
-    token,
-    post.id,
-    post.viewerHasRespected,
-    post.viewerHasReposted,
-    post.viewerHasBookmarked,
-  ]);
+  }, [token, post.id, post.viewerHasRespected, post.viewerHasReposted, post.viewerHasBookmarked]);
 
   const requireToken = useCallback(() => {
     if (!token) {
@@ -105,27 +100,31 @@ export function useBlogCardEngagement(post: Post): BlogCardEngagementState {
     return token;
   }, [token, openAuthDialog]);
 
-  const toggleRespect = useCallback(async (source?: Element) => {
-    const t = requireToken();
-    if (!t) return;
-    const wantOn = !stateRef.current.respecting;
-    setBusy('respect');
-    try {
-      const r = await blogApi.setPostRespect(username, slug, wantOn, t);
-      setRespecting(r.respecting);
-      setRespectCount(r.respectCount);
-      if (r.respecting && wantOn && source) {
-        triggerRespectLightning(source);
+  const toggleRespect = useCallback(
+    async (source?: Element) => {
+      const t = requireToken();
+      if (!t) return;
+      const wantOn = !stateRef.current.respecting;
+      setBusy('respect');
+      try {
+        const r = await blogApi.setPostRespect(username, slug, wantOn, t);
+        handleAchievementsResponse(r);
+        setRespecting(r.respecting);
+        setRespectCount(r.respectCount);
+        if (r.respecting && wantOn && source) {
+          triggerRespectLightning(source);
+        }
+        if (wantOn && !r.respecting) {
+          toast.info('You can’t Respect your own post.');
+        }
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not update Respect');
+      } finally {
+        setBusy(null);
       }
-      if (wantOn && !r.respecting) {
-        toast.info('You can’t Respect your own post.');
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not update Respect');
-    } finally {
-      setBusy(null);
-    }
-  }, [requireToken, username, slug]);
+    },
+    [requireToken, username, slug]
+  );
 
   const toggleRepost = useCallback(async () => {
     const t = requireToken();

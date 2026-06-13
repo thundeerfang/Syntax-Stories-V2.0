@@ -5,6 +5,10 @@ import { env } from '../config/env.js';
 import { getRedis } from '../config/redis.js';
 import { UserModel, normalizeProfileImg, type IUser } from '../models/User.js';
 import { redisKeys } from '../shared/redis/keys.js';
+import { getDeviceHashFromRequest, getIpHashFromRequest } from '../lib/clientMeta.js';
+import { enqueueReferralGamificationOutbox } from './gamification/gamificationOutbox.service.js';
+import { processReferralAttribution } from './gamification/referralProcessor.service.js';
+import { createReferralConversion } from './referral/referralConversion.service.js';
 import { emitAppEvent } from '../shared/events/appEvents.js';
 
 const REFERRAL_CODE_REGEX = /^[0-9A-HJKMNP-TV-Z]{8,16}$/;
@@ -62,7 +66,10 @@ function readSignedReferralCookie(raw: unknown): string | null {
   if (!crypto.timingSafeEqual(sigBuf, expBuf)) return null;
   let parsed: { c?: string; exp?: number };
   try {
-    parsed = JSON.parse(Buffer.from(b64, 'base64url').toString('utf8')) as { c?: string; exp?: number };
+    parsed = JSON.parse(Buffer.from(b64, 'base64url').toString('utf8')) as {
+      c?: string;
+      exp?: number;
+    };
   } catch {
     return null;
   }
@@ -125,7 +132,9 @@ export type ReferralDisplayDto = {
   profileImg: string;
 };
 
-export async function resolveCodeForDisplay(code: string): Promise<ReferralDisplayDto | { valid: false }> {
+export async function resolveCodeForDisplay(
+  code: string
+): Promise<ReferralDisplayDto | { valid: false }> {
   const norm = normalizeReferralCode(code);
   if (!norm) return { valid: false };
   const referrerId = await lookupReferrerIdByCode(norm);
@@ -165,7 +174,11 @@ export async function lookupReferrerIdByCode(code: string): Promise<string | nul
     }
   } else if (redis && !id) {
     try {
-      await redis.setEx(redisKeys.invite.codeCache(norm), NEGATIVE_CACHE_TTL_SEC, NEGATIVE_CACHE_SENTINEL);
+      await redis.setEx(
+        redisKeys.invite.codeCache(norm),
+        NEGATIVE_CACHE_TTL_SEC,
+        NEGATIVE_CACHE_SENTINEL
+      );
     } catch {
       /* ignore */
     }
@@ -195,7 +208,10 @@ export async function ensureReferralCodeForUser(userId: string): Promise<string>
     const code = generateReferralCodeChars(10);
     try {
       const updated = await UserModel.findOneAndUpdate(
-        { _id: userId, $or: [{ referralCode: { $exists: false } }, { referralCode: null }, { referralCode: '' }] },
+        {
+          _id: userId,
+          $or: [{ referralCode: { $exists: false } }, { referralCode: null }, { referralCode: '' }],
+        },
         { $set: { referralCode: code } },
         { new: true, select: 'referralCode' }
       ).lean();
@@ -274,11 +290,32 @@ export async function applyReferralOnNewUser(args: ApplyReferralArgs): Promise<v
     })
   );
 
-  emitAppEvent('referral.converted', {
+  const deviceHash = args.req ? getDeviceHashFromRequest(args.req) : undefined;
+  const ipHash = args.req ? getIpHashFromRequest(args.req) : undefined;
+
+  const { conversionId, created } = await createReferralConversion({
+    referrerId: referrerIdStr,
+    refereeId: String(newUser._id),
+    source: source ?? 'unknown',
+    deviceHash,
+    ipHash,
+  });
+
+  if (!created || !conversionId) return;
+
+  emitAppEvent('referral.signup_completed', {
+    conversionId,
     referrerId: referrerIdStr,
     refereeUserId: String(newUser._id),
     source: source ?? 'unknown',
   });
+
+  try {
+    await enqueueReferralGamificationOutbox(conversionId);
+  } catch (e) {
+    console.error('[referral] outbox enqueue failed, processing inline:', e);
+    await processReferralAttribution(conversionId);
+  }
 }
 
 export const REFERRAL_COOKIE = { name: COOKIE_NAME, maxMs: COOKIE_MAX_MS } as const;

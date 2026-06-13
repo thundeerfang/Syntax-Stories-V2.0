@@ -29,14 +29,13 @@ import { getAltchaChallengeUrl } from '@/api/auth';
 import { collectFeedbackClientMeta } from '@/api/feedback';
 import { submitContactLead } from '@/api/contact';
 
-
 import { CONTACT_TOPIC_SUGGESTIONS, PRODUCT_SITE_LINKS } from '@/lib/shell/siteLinks';
 
 export default function ContactPage() {
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const altchaOn = Boolean(getAltchaChallengeUrl()) && !token;
-  
+
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle');
 
   const setTopic = (val: string) => {
@@ -55,7 +54,7 @@ export default function ContactPage() {
       const message = String(fd.get('message') ?? '').trim();
       const company = String(fd.get('company') ?? '').trim();
       const hp = String(fd.get('_hp') ?? '').trim();
-      
+
       if (hp) {
         setStatus('done');
         return;
@@ -99,10 +98,17 @@ export default function ContactPage() {
 
   if (!isHydrated) {
     return (
-      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-[60vh] items-center justify-center py-16')}>
+      <div
+        className={cn(
+          SHELL_CONTENT_RAIL_CLASS,
+          'flex min-h-[60vh] items-center justify-center py-16'
+        )}
+      >
         <div className="mx-auto w-full max-w-md border-4 border-border bg-card p-8 text-center shadow">
           <div className="mx-auto mb-4 size-12 animate-spin border-4 border-primary border-t-transparent" />
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">Initializing</p>
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
+            Initializing
+          </p>
         </div>
       </div>
     );
@@ -112,7 +118,6 @@ export default function ContactPage() {
     <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 pb-24 md:py-12')}>
       <div className="w-full space-y-8">
         <div className="grid items-start gap-8 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] xl:gap-12">
-          
           <div className="space-y-8">
             <Header
               systemLabel="System.Contact_Active"
@@ -143,9 +148,13 @@ export default function ContactPage() {
                     <CheckCircle2 className="relative size-20 text-primary" strokeWidth={1.5} />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Transmission Sent</h3>
+                    <h3 className="text-2xl font-black uppercase tracking-tight">
+                      Transmission Sent
+                    </h3>
                     <p className="mx-auto max-w-xs text-sm font-medium text-muted-foreground">
-                      We&apos;ve received your lead. Our average response time is currently <span className="text-foreground underline underline-offset-2">48 hours</span>.
+                      We&apos;ve received your lead. Our average response time is currently{' '}
+                      <span className="text-foreground underline underline-offset-2">48 hours</span>
+                      .
                     </p>
                   </div>
                   <BlockShadowButton
@@ -155,12 +164,22 @@ export default function ContactPage() {
                     onClick={() => setStatus('idle')}
                     className="group"
                   >
-                    Send another <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                    Send another{' '}
+                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                   </BlockShadowButton>
                 </div>
               ) : (
-                <form className="space-y-6 p-6 sm:p-10" onSubmit={(ev) => void onSubmit(ev)} noValidate>
-                  <input type="text" name="_hp" tabIndex={-1} className="absolute -left-[9999px] h-0 w-0 opacity-0" />
+                <form
+                  className="space-y-6 p-6 sm:p-10"
+                  onSubmit={(ev) => void onSubmit(ev)}
+                  noValidate
+                >
+                  <input
+                    type="text"
+                    name="_hp"
+                    tabIndex={-1}
+                    className="absolute -left-[9999px] h-0 w-0 opacity-0"
+                  />
 
                   <div className="grid gap-6">
                     {!token ? (
@@ -255,7 +274,10 @@ export default function ContactPage() {
                     shadow="md"
                     className={cn('group', status === 'sending' && 'animate-pulse')}
                   >
-                    <Send className={cn('size-5', status === 'sending' && 'animate-bounce')} aria-hidden />
+                    <Send
+                      className={cn('size-5', status === 'sending' && 'animate-bounce')}
+                      aria-hidden
+                    />
                     {status === 'sending' ? 'Processing...' : 'Send message'}
                   </BlockShadowButton>
                 </form>
@@ -281,7 +303,9 @@ export default function ContactPage() {
                       Headquarters
                     </h3>
                   </div>
-                  <p className="text-sm font-bold leading-snug text-foreground">Syntax Stories HQ</p>
+                  <p className="text-sm font-bold leading-snug text-foreground">
+                    Syntax Stories HQ
+                  </p>
                   <p className="text-xs font-medium leading-relaxed text-muted-foreground">
                     Remote-first · India operations
                   </p>
@@ -308,7 +332,8 @@ export default function ContactPage() {
                     />
                   </a>
                   <p className="text-[10px] font-medium leading-relaxed text-muted-foreground">
-                    For billing or account issues, add “URGENT” to the subject when it is time-sensitive.
+                    For billing or account issues, add “URGENT” to the subject when it is
+                    time-sensitive.
                   </p>
                 </div>
 
@@ -321,7 +346,9 @@ export default function ContactPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         Service window
                       </p>
-                      <p className="mt-0.5 text-sm font-black text-foreground">Mon–Fri · 10:00–19:00 IST</p>
+                      <p className="mt-0.5 text-sm font-black text-foreground">
+                        Mon–Fri · 10:00–19:00 IST
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 border-t-2 border-dashed border-border pt-4">
@@ -332,7 +359,9 @@ export default function ContactPage() {
                       <p className="font-mono text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                         Target first reply
                       </p>
-                      <p className="mt-0.5 text-sm font-black text-foreground">Within 2 business days</p>
+                      <p className="mt-0.5 text-sm font-black text-foreground">
+                        Within 2 business days
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -340,7 +369,9 @@ export default function ContactPage() {
             </div>
 
             <div className="border-4 border-border bg-primary p-6 shadow">
-              <h3 className="text-xs font-black uppercase tracking-widest text-primary-foreground">Quick Links</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest text-primary-foreground">
+                Quick Links
+              </h3>
               <div className="mt-4 grid grid-cols-1 gap-2">
                 {PRODUCT_SITE_LINKS.map((l) => (
                   <Link

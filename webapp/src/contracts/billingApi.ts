@@ -1,9 +1,30 @@
 /**
  * Billing / Stripe JSON API — `/api/billing/*`.
- * Keep in sync with `server/src/routes/billing.routes.ts`.
+ * Keep in sync with `server/src/routes/billing.routes.ts` and `server/src/shared/contracts/billingApi.ts`.
  */
 
 export type BillingPlanKey = 'free' | 'pro' | 'proplus' | 'ultra' | 'premium';
+
+export type BillingPaidPlanKey = 'pro' | 'proplus' | 'ultra';
+
+export type BillingPlanCatalogItem = {
+  key: BillingPaidPlanKey;
+  name: string;
+  description: string;
+  amountDisplay: string;
+  currency: string;
+  amountMinor: number;
+  cadence: string;
+  features: string[];
+  featured?: boolean;
+  badge?: string;
+  checkoutEnabled: boolean;
+};
+
+export interface BillingPlansResponse {
+  success: boolean;
+  plans: BillingPlanCatalogItem[];
+}
 
 export type BillingSubscriptionDto = {
   planKey: BillingPlanKey;
@@ -36,7 +57,7 @@ export interface BillingSubscriptionResponse {
 }
 
 export interface BillingCheckoutSessionBody {
-  planKey: BillingPlanKey;
+  planKey: BillingPaidPlanKey;
 }
 
 export interface BillingVerifyCheckoutBody {

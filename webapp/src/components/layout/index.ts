@@ -12,6 +12,8 @@ export { Footer } from './footer/Footer';
 
 export { RailFeedEmptyState } from './rail/RailFeedEmptyState';
 export type { RailFeedEmptyStateAction, RailFeedEmptyStateProps } from './rail/RailFeedEmptyState';
+export { SignInRequiredPanel } from './rail/SignInRequiredPanel';
+export type { SignInRequiredPanelProps } from './rail/SignInRequiredPanel';
 export { RailFeedErrorState, resolveFeedErrorPresentation } from './rail/RailFeedErrorState';
 export type { RailFeedErrorStateProps } from './rail/RailFeedErrorState';
 export {

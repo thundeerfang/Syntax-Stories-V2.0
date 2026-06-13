@@ -1,15 +1,7 @@
 'use client';
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useId,
-  useMemo,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useId, useMemo, type ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
-
 
 type TabsContextValue = {
   value: string;
@@ -35,13 +27,15 @@ export type TabsProps = Readonly<{
 export function Tabs({ value, onValueChange, children, className }: TabsProps) {
   const baseId = useId();
   const stable = useCallback((next: string) => onValueChange(next), [onValueChange]);
-  const memo = useMemo(
-    () => ({ value, onValueChange: stable, baseId }),
-    [value, stable, baseId],
-  );
+  const memo = useMemo(() => ({ value, onValueChange: stable, baseId }), [value, stable, baseId]);
   return (
     <TabsContext.Provider value={memo}>
-      <div className={cn('flex min-h-0 flex-col gap-0 overflow-x-hidden overflow-y-visible', className)}>
+      <div
+        className={cn(
+          'flex min-h-0 flex-col gap-0 overflow-x-hidden overflow-y-visible',
+          className
+        )}
+      >
         {children}
       </div>
     </TabsContext.Provider>
@@ -64,7 +58,7 @@ export function TabsList({ children, className, variant = 'default' }: TabsListP
         variant === 'retro' &&
           'mb-6 gap-0 overflow-x-auto overflow-y-hidden border-b-4 border-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         variant === 'default' && 'border-b border-border',
-        className,
+        className
       )}
     >
       {children}
@@ -101,16 +95,16 @@ export function TabsTrigger({ value, children, className, variant = 'default' }:
             'border-b-2 border-transparent px-4 py-2.5 text-sm',
             isSelected
               ? 'border-primary text-foreground'
-              : 'text-muted-foreground hover:text-foreground',
+              : 'text-muted-foreground hover:text-foreground'
           ),
         variant === 'retro' &&
           cn(
             'shrink-0 px-4 py-3 font-mono text-xs font-black uppercase tracking-widest sm:px-6',
             isSelected
               ? '-mb-1 border-x-2 border-t-2 border-primary bg-primary text-primary-foreground shadow [&_svg]:text-primary-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground',
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           ),
-        className,
+        className
       )}
     >
       {children}

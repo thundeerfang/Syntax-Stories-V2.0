@@ -46,6 +46,8 @@ The app reads from `/etc/secrets/` at runtime, then falls back to `server/keys/`
 
 - `GET /api/ping` → `SYNTAX STORIES`
 - `GET /api/health` → `{ success, message, timestamp }`
+- `GET /api/media/giphy/search?q=` → GIF search (requires `GIPHY_API_KEY` in server `.env`)
+- `GET /api/media/unsplash/search?q=` → Unsplash photo search (requires `UNSPLASH_ACCESS_KEY` in server `.env`)
 
 ## Structure (MVC)
 

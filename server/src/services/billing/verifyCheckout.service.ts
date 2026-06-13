@@ -35,7 +35,7 @@ export async function verifyCheckoutAndSync(
   }
 
   const customerId =
-    typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
+    typeof session.customer === 'string' ? session.customer : (session.customer?.id ?? null);
   if (!customerId) {
     const e = new Error('Missing customer on session');
     (e as Error & { statusCode?: number }).statusCode = 400;

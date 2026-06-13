@@ -10,7 +10,6 @@ import { PrimaryCoverFallback } from '@/lib/shell/primaryCoverFallback';
 import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 
-
 function formatCalendarDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -37,7 +36,10 @@ function relativeTimeLabel(iso: string): string {
 function formatBlogCardAgeShortCalendar(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  const mon = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][d.getMonth()] ?? '';
+  const mon =
+    ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][
+      d.getMonth()
+    ] ?? '';
   const day = d.getDate();
   const yy = String(d.getFullYear() % 100).padStart(2, '0');
   return `${mon} ${day} '${yy}`;
@@ -167,7 +169,6 @@ export function BlogCard({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [titleIsTwoLines, setTitleIsTwoLines] = useState(false);
 
-
   const authorFocusRing =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
@@ -187,30 +188,36 @@ export function BlogCard({
   const authorNameClass = cn(
     'min-w-0 truncate text-[10px] font-bold uppercase tracking-wide text-foreground',
     !suppressChromeHover && 'transition-colors duration-200',
-    !suppressChromeHover && (feedAuthor ? 'group-hover/blog-author-popover:text-primary' : 'group-hover/author-facelink:text-primary'),
+    !suppressChromeHover &&
+      (feedAuthor
+        ? 'group-hover/blog-author-popover:text-primary'
+        : 'group-hover/author-facelink:text-primary')
   );
 
   const authorPostLinkClass = cn(
     'flex min-w-0 flex-1 items-center gap-2 overflow-hidden ',
     authorFocusRing,
-    !feedAuthor && 'group/author-facelink',
+    !feedAuthor && 'group/author-facelink'
   );
 
-  const authorDateRow =
-    ageLabel ? (
-      <span className="flex w-full min-w-0 items-center gap-1 text-[8px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <CalendarDays className="h-2.5 w-2.5 shrink-0 text-foreground/55" strokeWidth={2.25} aria-hidden />
-        <time className="min-w-0 flex-1 truncate whitespace-nowrap" dateTime={post.publishedAt}>
-          {ageLabel}
-        </time>
-      </span>
-    ) : (
-      <span className="flex w-full min-w-0 items-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <time className="min-w-0 flex-1 truncate whitespace-nowrap" dateTime={post.publishedAt}>
-          {whenRelative}
-        </time>
-      </span>
-    );
+  const authorDateRow = ageLabel ? (
+    <span className="flex w-full min-w-0 items-center gap-1 text-[8px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <CalendarDays
+        className="h-2.5 w-2.5 shrink-0 text-foreground/55"
+        strokeWidth={2.25}
+        aria-hidden
+      />
+      <time className="min-w-0 flex-1 truncate whitespace-nowrap" dateTime={post.publishedAt}>
+        {ageLabel}
+      </time>
+    </span>
+  ) : (
+    <span className="flex w-full min-w-0 items-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <time className="min-w-0 flex-1 truncate whitespace-nowrap" dateTime={post.publishedAt}>
+        {whenRelative}
+      </time>
+    </span>
+  );
 
   return (
     <article
@@ -220,7 +227,7 @@ export function BlogCard({
         ownerActions && 'group/card',
         RETRO_BORDER,
         RETRO_SHADOW,
-        className,
+        className
       )}
     >
       {squadFeedPin?.isPinned ? (
@@ -240,7 +247,7 @@ export function BlogCard({
             'absolute right-2 top-2 z-[25] flex size-9 items-center justify-center border-2 border-border bg-card text-foreground shadow-[2px_2px_0_0_var(--border)] transition-opacity',
             'hover:border-primary hover:text-primary',
             'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card',
-            squadFeedPin.isPinned && 'opacity-100',
+            squadFeedPin.isPinned && 'opacity-100'
           )}
           onClick={(e) => {
             e.preventDefault();
@@ -264,25 +271,26 @@ export function BlogCard({
           <div className="-mx-2 -mt-2 w-[calc(100%+1rem)] shrink-0 overflow-hidden sm:-mx-2.5 sm:-mt-2.5 sm:w-[calc(100%+1.25rem)]">
             <div className="relative h-[160px] w-full overflow-hidden border-b-[3px] border-border bg-muted/15 sm:h-[178px]">
               {post.coverImage ? (
-                <img src={post.coverImage} alt={post.title} className="h-full w-full object-cover object-center" />
+                <img
+                  src={post.coverImage}
+                  alt={post.title}
+                  className="h-full w-full object-cover object-center"
+                />
               ) : (
                 <PrimaryCoverFallback variant="blog" />
               )}
             </div>
           </div>
 
-          <div
-            className={cn(
-              'flex w-full shrink-0 items-center justify-between gap-3 pb-2.5',
-            )}
-          >
+          <div className={cn('flex w-full shrink-0 items-center justify-between gap-3 pb-2.5')}>
             <span className="inline-flex min-w-0 max-w-[min(100%,16rem)] items-center border-2 border-primary bg-primary px-2 py-0.5 font-sans text-[9px] font-black uppercase tracking-wide text-white shadow-none">
               <span className="truncate">{categoryLabel.toUpperCase()}</span>
             </span>
             <span
               className={cn(
                 'shrink-0 font-mono text-[8px] font-bold tabular-nums text-muted-foreground',
-                !suppressChromeHover && 'transition-colors duration-200 group-hover:text-foreground/80',
+                !suppressChromeHover &&
+                  'transition-colors duration-200 group-hover:text-foreground/80'
               )}
             >
               {readM} min

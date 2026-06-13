@@ -13,17 +13,47 @@ type ThemeState = {
   toggleTheme: () => void;
 };
 
-function getEffectiveTheme(theme: Theme): 'light' | 'dark' {
-  if (theme === 'system' && globalThis.window !== undefined) {
-    return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-  return theme === 'system' ? 'light' : theme;
+function getSystemPrefersDark(): boolean {
+  if (globalThis.window === undefined) return false;
+  return globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-function applyTheme(theme: Theme) {
+export function getEffectiveTheme(theme: Theme): 'light' | 'dark' {
+  if (theme === 'system') {
+    return getSystemPrefersDark() ? 'dark' : 'light';
+  }
+  return theme;
+}
+
+export function applyTheme(theme: Theme) {
   if (typeof document === 'undefined') return;
   const effective = getEffectiveTheme(theme);
   document.documentElement.classList.toggle('dark', effective === 'dark');
+  document.documentElement.style.colorScheme = effective;
+}
+
+let systemListenerAttached = false;
+
+/** Re-apply when OS / browser `prefers-color-scheme` changes while theme is `system`. */
+export function attachSystemThemeListener() {
+  if (systemListenerAttached || globalThis.window === undefined) return;
+  systemListenerAttached = true;
+
+  const mq = globalThis.matchMedia('(prefers-color-scheme: dark)');
+  const onChange = () => {
+    if (useThemeStore.getState().theme === 'system') {
+      applyTheme('system');
+    }
+  };
+  mq.addEventListener('change', onChange);
+
+  if (globalThis.window.syntaxStoriesDesktop?.onSystemThemeChange) {
+    globalThis.window.syntaxStoriesDesktop.onSystemThemeChange(() => {
+      if (useThemeStore.getState().theme === 'system') {
+        applyTheme('system');
+      }
+    });
+  }
 }
 
 export const useThemeStore = create<ThemeState>()(

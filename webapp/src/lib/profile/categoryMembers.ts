@@ -11,10 +11,7 @@ export type CategoryMembersSnapshot = Readonly<{
   totalCount: number;
 }>;
 
-export function resolveMemberAvatarUrl(
-  profileImg: string | undefined,
-  username: string,
-): string {
+export function resolveMemberAvatarUrl(profileImg: string | undefined, username: string): string {
   const trimmed = profileImg?.trim();
   const handle = username.trim() || 'member';
 
@@ -38,7 +35,7 @@ export function extractCategoryMembersFromPosts(
   posts: ReadonlyArray<{
     author: { username: string; profileImg?: string };
   }>,
-  previewLimit = 6,
+  previewLimit = 6
 ): { members: CategoryMemberPreview[]; totalCount: number } {
   const seen = new Set<string>();
   const all: CategoryMemberPreview[] = [];
@@ -70,7 +67,7 @@ type MemberPost = Readonly<{
 export function buildCategoryMembersMapFromPosts(
   posts: readonly MemberPost[],
   slugs: readonly string[],
-  previewLimit = 4,
+  previewLimit = 4
 ): Record<string, CategoryMembersSnapshot> {
   const targets = new Set(slugs.map((s) => s.trim().toLowerCase()).filter(Boolean));
   const allBySlug = new Map<string, CategoryMemberPreview[]>();
@@ -108,7 +105,7 @@ export function buildCategoryMembersMapFromPosts(
 export function mergeFollowerIntoCategoryMembers(
   snapshot: CategoryMembersSnapshot,
   follower: CategoryMemberPreview | null | undefined,
-  previewLimit = 4,
+  previewLimit = 4
 ): CategoryMembersSnapshot {
   if (!follower?.username?.trim()) return snapshot;
   const key = follower.username.trim().toLowerCase();
@@ -121,9 +118,11 @@ export function mergeFollowerIntoCategoryMembers(
 /** Explore sector grid: follower counts + face previews from the API. */
 export async function fetchCategoryFollowersForExplorer(
   slugs: readonly string[],
-  fetchPreview: (slugs: readonly string[]) => Promise<
+  fetchPreview: (
+    slugs: readonly string[]
+  ) => Promise<
     Record<string, { totalCount: number; members: { username: string; profileImg?: string }[] }>
-  >,
+  >
 ): Promise<Record<string, CategoryMembersSnapshot>> {
   const unique = [...new Set(slugs.map((s) => s.trim().toLowerCase()).filter(Boolean))];
   if (unique.length === 0) return {};
@@ -159,7 +158,7 @@ export async function fetchCategoryMembersForExplorer(
   taxonomyPostCounts: Record<string, number>,
   previewLimit: number,
   fetchFeedBatch: () => Promise<readonly MemberPost[]>,
-  fetchCategoryPosts: (categorySlug: string) => Promise<readonly MemberPost[]>,
+  fetchCategoryPosts: (categorySlug: string) => Promise<readonly MemberPost[]>
 ): Promise<Record<string, CategoryMembersSnapshot>> {
   const unique = [...new Set(slugs.map((s) => s.trim().toLowerCase()).filter(Boolean))];
   if (unique.length === 0) return {};
@@ -185,7 +184,7 @@ export async function fetchCategoryMembersForExplorer(
       } catch {
         /* keep empty snapshot */
       }
-    }),
+    })
   );
 
   return map;

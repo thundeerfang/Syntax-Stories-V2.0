@@ -20,7 +20,6 @@ import { HoverCard } from '@/components/ui/popover';
 import { LinkPreviewCardContent } from '@/components/ui/popover';
 import type { WorkExperience } from '@/api/auth';
 
-
 type MediaItem = { url: string; title?: string };
 
 /** Work card uses backend fields beyond the base `WorkExperience` type. */
@@ -116,7 +115,6 @@ export function WorkExperienceCard({
     <div className="group relative ss-settings-card ss-settings-card--work">
       {/* Industrial Hardware Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card">
-        
         {/* Hardware Corner Brackets */}
         <div className="absolute -top-[3px] -left-[3px] size-4 border-t-[3px] border-l-[3px] border-primary z-20" />
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-20" />
@@ -130,7 +128,6 @@ export function WorkExperienceCard({
             </span>
           </div>
           <div className="flex items-center gap-2">
-           
             {e.currentPosition ? (
               <>
                 <Activity className="size-3 text-emerald-500 animate-pulse" />
@@ -148,10 +145,8 @@ export function WorkExperienceCard({
 
         {/* Main Body Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 relative z-10">
-          
           {/* Left Column: Core Details */}
           <div className="lg:col-span-8 p-5 space-y-6 border-r-0 lg:border-r-[3px] border-border">
-            
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 {/* Logo Display Screen — dot pattern is box background so logo/icon always on top */}
@@ -203,11 +198,13 @@ export function WorkExperienceCard({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/40 border border-border text-[9px] font-mono font-bold uppercase text-muted-foreground">
                 <Calendar className="size-3 text-primary" />
-                {formatMonthYear(e.startDate ?? '')} — {e.currentPosition ? 'PRESENT' : formatMonthYear(e.endDate ?? '')}
+                {formatMonthYear(e.startDate ?? '')} —{' '}
+                {e.currentPosition ? 'PRESENT' : formatMonthYear(e.endDate ?? '')}
               </div>
               <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/40 border border-border text-[9px] font-mono font-bold uppercase text-muted-foreground">
                 <MapPin className="size-3 text-primary" />
-                {e.location ? locationWithoutType(e.location) : 'N/A'} {e.locationType ? `[${e.locationType}]` : ''}
+                {e.location ? locationWithoutType(e.location) : 'N/A'}{' '}
+                {e.locationType ? `[${e.locationType}]` : ''}
               </div>
               <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/40 border border-border text-[9px] font-mono font-bold uppercase text-muted-foreground">
                 <Clock className="size-3 text-primary" />
@@ -227,7 +224,9 @@ export function WorkExperienceCard({
                     className="ss-link-pill flex items-center gap-2 px-2 py-1.5 bg-primary/5 border border-primary/20 text-[9px] font-mono font-bold text-primary uppercase truncate"
                   >
                     <Globe className="size-3" />
-                    {String(e.companyDomain).replace(/^https?:\/\//i, '').replace(/\/$/, '')}
+                    {String(e.companyDomain)
+                      .replace(/^https?:\/\//i, '')
+                      .replace(/\/$/, '')}
                   </a>
                 </HoverCard>
               )}
@@ -258,7 +257,9 @@ export function WorkExperienceCard({
                     isBriefExpanded && 'overflow-hidden'
                   )}
                   aria-expanded={isBriefExpanded}
-                  aria-label={isBriefExpanded ? 'Collapse description' : 'Expand to read full description'}
+                  aria-label={
+                    isBriefExpanded ? 'Collapse description' : 'Expand to read full description'
+                  }
                 >
                   {isBriefExpanded ? (
                     <div className="max-h-[180px] overflow-y-auto pr-1" data-ss-brief-scroll>
@@ -344,7 +345,11 @@ export function WorkExperienceCard({
                             onClick={() => onPreviewMedia(m)}
                             className="ss-media-thumb group/media relative aspect-square w-full border-2 border-border bg-background overflow-hidden"
                           >
-                            <img src={m.url} alt={m.title?.trim() || ''} className="size-full object-cover" />
+                            <img
+                              src={m.url}
+                              alt={m.title?.trim() || ''}
+                              className="size-full object-cover"
+                            />
                           </button>
                         ) : (
                           (() => {
@@ -395,12 +400,14 @@ export function WorkExperienceCard({
         <div className="border-t-[3px] border-border bg-muted/20 px-4 py-1.5 flex justify-between items-center">
           <div className="flex gap-1.5 items-center">
             <div className="flex gap-1">
-              {(['deco-0', 'deco-1', 'deco-2', 'deco-3', 'deco-4', 'deco-5'] as const).map((decoId, i) => (
-                <div
-                  key={decoId}
-                  className={cn('h-2.5 w-[1px] bg-foreground/20', i % 2 === 0 && 'w-[2px]')}
-                />
-              ))}
+              {(['deco-0', 'deco-1', 'deco-2', 'deco-3', 'deco-4', 'deco-5'] as const).map(
+                (decoId, i) => (
+                  <div
+                    key={decoId}
+                    className={cn('h-2.5 w-[1px] bg-foreground/20', i % 2 === 0 && 'w-[2px]')}
+                  />
+                )
+              )}
             </div>
             <span className="text-[8px] font-mono font-bold text-muted-foreground/40 tracking-[0.2em] uppercase">
               Position_Hash_Verified

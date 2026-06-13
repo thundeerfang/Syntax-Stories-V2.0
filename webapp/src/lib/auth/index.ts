@@ -1,3 +1,4 @@
+export * from './authWelcomeVisitor';
 export * from './deviceFingerprint';
 export * from './lastUser';
 export * from './legacyOAuthCallbackRedirect';

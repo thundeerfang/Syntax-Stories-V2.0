@@ -2,7 +2,10 @@ import { env } from '../../config/env.js';
 import { UserModel } from '../../models/User.js';
 import { SubscriptionModel } from '../../models/Subscription.js';
 import { getStripe } from '../stripe/stripeClient.js';
-import { getCachedSubscriptionSummary, setCachedSubscriptionSummary } from './billingSummaryCache.js';
+import {
+  getCachedSubscriptionSummary,
+  setCachedSubscriptionSummary,
+} from './billingSummaryCache.js';
 import { applyStripeSubscription } from './applyStripeSubscription.js';
 import { computeIsGraceActive } from './entitlements.js';
 import { normalizePlanForApi, planDisplayName } from './planConfig.js';
@@ -75,10 +78,7 @@ export async function getSubscriptionForUser(
   if (
     stripe &&
     sub.stripeSubscriptionId &&
-    (dtoStale ||
-      sub.status === 'incomplete' ||
-      sub.status === 'past_due' ||
-      forceSync)
+    (dtoStale || sub.status === 'incomplete' || sub.status === 'past_due' || forceSync)
   ) {
     try {
       const remote = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);

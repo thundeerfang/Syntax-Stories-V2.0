@@ -35,7 +35,11 @@ for (const file of walk(path.join(ROOT, 'src'))) {
   let count = 0;
   for (const re of LEGACY_ARBITRARY) {
     text = text.replace(re, (match) => {
-      if (match.includes('shadow-none') || match.includes('block-btn-hover') || match.includes('ghost-btn-hover')) {
+      if (
+        match.includes('shadow-none') ||
+        match.includes('block-btn-hover') ||
+        match.includes('ghost-btn-hover')
+      ) {
         return match;
       }
       count += 1;

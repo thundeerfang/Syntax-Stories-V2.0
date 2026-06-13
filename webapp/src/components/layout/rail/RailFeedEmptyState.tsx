@@ -5,7 +5,6 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/core/utils';
 
-
 export type RailFeedEmptyStateAction = Readonly<{
   label: ReactNode;
   href?: string;
@@ -21,8 +20,12 @@ export type RailFeedEmptyStateProps = Readonly<{
   description: string;
   /** `default` — primary empty; `filter` — search/filter with no matches. */
   variant?: 'default' | 'filter';
+  /** `compact` — nested panels (rank cards, swipers). */
+  density?: 'default' | 'compact';
   actions?: ReadonlyArray<RailFeedEmptyStateAction>;
   className?: string;
+  /** When false, no dashed outer panel (open layout). Default true. */
+  bordered?: boolean;
 }>;
 
 const ACTION_BASE =
@@ -64,38 +67,61 @@ export function RailFeedEmptyState({
   title,
   description,
   variant = 'default',
+  density = 'default',
   actions,
   className,
+  bordered = true,
 }: RailFeedEmptyStateProps) {
   const isFilter = variant === 'filter';
+  const isCompact = density === 'compact';
 
   return (
     <div
       className={cn(
-        'ss-empty-dashed-panel relative flex flex-col items-center justify-center px-6 text-center border-2 border-dashed border-border',
-        isFilter ? 'py-14' : 'py-16 sm:py-20',
-        className,
+        'relative flex flex-col items-center justify-center text-center',
+        bordered ? (isCompact ? 'px-4' : 'px-6') : 'px-0',
+        bordered && 'ss-empty-dashed-panel border-2 border-dashed border-border',
+        isCompact ? 'py-8' : isFilter ? 'py-14' : 'py-16 sm:py-20',
+        className
       )}
     >
       <span
         className={cn(
-          'flex shrink-0 items-center justify-center  border-2 border-border bg-card',
-          isFilter ? 'size-14 text-muted-foreground' : 'size-16 text-primary shadow',
+          'flex shrink-0 items-center justify-center border-2 border-border bg-card',
+          isCompact
+            ? 'size-12 text-primary shadow'
+            : isFilter
+              ? 'size-14 text-muted-foreground'
+              : 'size-16 text-primary shadow'
         )}
       >
-        <Icon className={isFilter ? 'size-7' : 'size-8'} strokeWidth={2} aria-hidden />
+        <Icon
+          className={isCompact ? 'size-6' : isFilter ? 'size-7' : 'size-8'}
+          strokeWidth={2}
+          aria-hidden
+        />
       </span>
       <p
         className={cn(
-          'max-w-sm font-mono text-sm font-black uppercase tracking-wide text-foreground',
-          isFilter ? 'mt-5' : 'mt-6',
+          'max-w-sm font-mono font-black uppercase tracking-wide text-foreground',
+          isCompact ? 'mt-4 text-xs' : 'text-sm',
+          !isCompact && (isFilter ? 'mt-5' : 'mt-6')
         )}
       >
         {title}
       </p>
-      <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{description}</p>
+      <p
+        className={cn(
+          'mt-2 max-w-md leading-relaxed text-muted-foreground',
+          isCompact ? 'text-xs' : 'text-sm'
+        )}
+      >
+        {description}
+      </p>
       {actions != null && actions.length > 0 ? (
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+        <div
+          className={cn('flex flex-wrap items-center justify-center gap-2', isCompact ? 'mt-5' : 'mt-8')}
+        >
           {actions.map((action, i) => (
             <RailFeedEmptyStateActionButton
               key={action.href ?? action.ariaLabel ?? i}

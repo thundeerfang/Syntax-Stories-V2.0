@@ -6,7 +6,6 @@ import { ChevronDown, Search } from 'lucide-react';
 import { Label } from './Label';
 import { cn } from '@/lib/core/utils';
 
-
 /** Above dialog panels (z-[100]) so the list tracks the trigger while the dialog body scrolls. */
 const LISTBOX_Z = 160;
 
@@ -31,7 +30,7 @@ function SearchableSelectListboxShell({
       ref={listboxRef}
       className={cn(
         'fixed  border-2 border-border bg-card shadow overflow-hidden flex flex-col',
-        className,
+        className
       )}
       style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width, zIndex: LISTBOX_Z }}
       role="listbox"
@@ -48,7 +47,13 @@ function SearchableSelectOptionRow({
   className,
 }: Readonly<{ selected: boolean; label: string; onSelect: () => void; className: string }>) {
   return (
-    <button type="button" role="option" aria-selected={selected} onClick={onSelect} className={className}>
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onClick={onSelect}
+      className={className}
+    >
       {label}
     </button>
   );
@@ -200,7 +205,7 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
               'disabled:cursor-not-allowed disabled:opacity-50',
               error && 'border-destructive',
               open && 'border-primary ring-2 ring-primary/20',
-              triggerClassName,
+              triggerClassName
             )}
             aria-haspopup="listbox"
             aria-expanded={open}
@@ -209,7 +214,10 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
               {displayLabel || placeholder}
             </span>
             <ChevronDown
-              className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+              className={cn(
+                'size-4 shrink-0 text-muted-foreground transition-transform',
+                open && 'rotate-180'
+              )}
             />
           </button>
 

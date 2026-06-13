@@ -18,7 +18,6 @@ import {
   LEGAL_RETRO_ICON_TILE_TOC,
 } from './legalUi';
 
-
 export function UserDataDeletionPanel() {
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
@@ -67,8 +66,8 @@ export function UserDataDeletionPanel() {
             <p className={LEGAL_ACTION_KICKER}>Your account</p>
             <h2 className={LEGAL_ACTION_TITLE}>Request data deletion</h2>
             <p className={LEGAL_ACTION_BODY}>
-              Send a request from this signed-in account. We process it according to the policy above, including any
-              subscription billing or legal-hold rules described there.
+              Send a request from this signed-in account. We process it according to the policy
+              above, including any subscription billing or legal-hold rules described there.
             </p>
           </div>
         </div>
@@ -78,7 +77,12 @@ export function UserDataDeletionPanel() {
               Sign in to request deletion
             </button>
           ) : (
-            <button type="button" disabled={loading} onClick={() => void onRequest()} className={LEGAL_PRIMARY_CTA}>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void onRequest()}
+              className={LEGAL_PRIMARY_CTA}
+            >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               Request data deletion
             </button>

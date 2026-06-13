@@ -20,7 +20,11 @@ function getRadianAngle(degreeValue: number): number {
   return (degreeValue * Math.PI) / 180;
 }
 
-function rotateSize(width: number, height: number, rotation: number): { width: number; height: number } {
+function rotateSize(
+  width: number,
+  height: number,
+  rotation: number
+): { width: number; height: number } {
   const rotRad = getRadianAngle(rotation);
   return {
     width: Math.abs(Math.cos(rotRad) * width) + Math.abs(Math.sin(rotRad) * height),
@@ -75,12 +79,12 @@ function hasAdjustments(a: ImageEditAdjustments): boolean {
  */
 export function imageAdjustmentsPreviewFilter(adj: ImageEditAdjustments): string | undefined {
   if (!hasAdjustments(adj)) return undefined;
-  const b =
-    100 + adj.brightness + adj.shadows * 0.22 - adj.highlights * 0.18;
+  const b = 100 + adj.brightness + adj.shadows * 0.22 - adj.highlights * 0.18;
   const c = 100 + adj.contrast + adj.sharpness * 0.2;
   const brightnessPct = Math.min(200, Math.max(0, b));
   const contrastPct = Math.min(200, Math.max(1, c));
-  const sharpExtra = adj.sharpness > 0 ? ` saturate(${100 + Math.min(20, adj.sharpness * 0.15)}%)` : '';
+  const sharpExtra =
+    adj.sharpness > 0 ? ` saturate(${100 + Math.min(20, adj.sharpness * 0.15)}%)` : '';
   return `brightness(${brightnessPct}%) contrast(${contrastPct}%)${sharpExtra}`;
 }
 
@@ -215,7 +219,10 @@ function applySharpen(data: ImageData, amount: number): void {
   }
 }
 
-function applyAdjustmentsPipeline(sourceCanvas: HTMLCanvasElement, adj: ImageEditAdjustments): HTMLCanvasElement {
+function applyAdjustmentsPipeline(
+  sourceCanvas: HTMLCanvasElement,
+  adj: ImageEditAdjustments
+): HTMLCanvasElement {
   if (!hasAdjustments(adj)) return sourceCanvas;
 
   let work = sourceCanvas;

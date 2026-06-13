@@ -21,7 +21,6 @@ import type { BlogTaxonomyRow } from '@/types/blog';
 import type { Post } from '@/types';
 import { useAuthStore } from '@/store/auth';
 
-
 type PostSort = 'newest' | 'oldest' | 'title-asc';
 
 const CATEGORY_SORT_OPTIONS: RailSectionSubheaderSortProps['options'] = [
@@ -61,7 +60,6 @@ function comparePosts(a: Post, b: Post, sort: PostSort): number {
 /** Category stream under Topics: `/topics/category/{slug}`. */
 export default function TopicsCategoryFeedPage() {
   const token = useAuthStore((s) => s.token);
-  const isHydrated = useAuthStore((s) => s.isHydrated);
   const params = useParams();
   const raw = params?.slug;
   const categorySlug = typeof raw === 'string' ? decodeURIComponent(raw) : '';
@@ -104,18 +102,17 @@ export default function TopicsCategoryFeedPage() {
   }, [categorySlug, token]);
 
   useEffect(() => {
-    if (!isHydrated) return;
     void load();
-  }, [load, isHydrated]);
+  }, [load]);
 
   const taxonomyRow = useMemo(
     () => categories.find((c) => c.slug.toLowerCase() === categorySlug.toLowerCase()),
-    [categories, categorySlug],
+    [categories, categorySlug]
   );
 
   const displayTitle = useMemo(
     () => displayCategoryTitle(categorySlug, taxonomyRow?.name),
-    [categorySlug, taxonomyRow?.name],
+    [categorySlug, taxonomyRow?.name]
   );
 
   const totalIndexed = taxonomyRow?.postCount ?? posts.length;
@@ -125,7 +122,8 @@ export default function TopicsCategoryFeedPage() {
     let list = posts;
     if (q) {
       list = posts.filter((p) => {
-        const hay = `${p.title} ${p.excerpt} ${p.author?.name ?? ''} ${p.author?.username ?? ''}`.toLowerCase();
+        const hay =
+          `${p.title} ${p.excerpt} ${p.author?.name ?? ''} ${p.author?.username ?? ''}`.toLowerCase();
         return hay.includes(q);
       });
     }
@@ -143,13 +141,15 @@ export default function TopicsCategoryFeedPage() {
           ]}
           description="Stories published in this taxonomy category across the community."
           descriptionEnd={
-            categorySlug ? (
-              <CategoryFollowButton slug={categorySlug} name={displayTitle} />
-            ) : null
+            categorySlug ? <CategoryFollowButton slug={categorySlug} name={displayTitle} /> : null
           }
           title={
             <h1 className="flex items-center gap-2 text-2xl font-black uppercase italic tracking-tighter text-foreground sm:text-3xl lg:text-4xl">
-              <Layers className="size-7 shrink-0 text-primary sm:size-8" strokeWidth={2.5} aria-hidden />
+              <Layers
+                className="size-7 shrink-0 text-primary sm:size-8"
+                strokeWidth={2.5}
+                aria-hidden
+              />
               <span className="min-w-0 break-words normal-case italic tracking-tight text-foreground uppercase ">
                 {displayTitle}
               </span>

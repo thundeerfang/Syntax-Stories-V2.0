@@ -3,7 +3,11 @@ import { AuditAction, type AuditActionName } from '../../shared/audit/events.js'
 import type { ProfileUpdatedPayload } from '../../shared/events/appEvents.js';
 import type { ProfileSections } from './profile.types.js';
 
-type SectionLogFn = (action: AuditActionName, targetType: string, metadata: Record<string, unknown>) => void;
+type SectionLogFn = (
+  action: AuditActionName,
+  targetType: string,
+  metadata: Record<string, unknown>
+) => void;
 
 function auditStackTools(
   log: SectionLogFn,
@@ -34,7 +38,8 @@ function auditEducation(
     if (!id) continue;
     if (oldIds.has(id)) {
       const prev = oldE.find((x) => (x.eduId ?? '').trim() === id);
-      if (prev && JSON.stringify(prev) !== JSON.stringify(e)) log(AuditAction.EDUCATION_UPDATED, 'education', { eduId: id });
+      if (prev && JSON.stringify(prev) !== JSON.stringify(e))
+        log(AuditAction.EDUCATION_UPDATED, 'education', { eduId: id });
     } else {
       log(AuditAction.EDUCATION_ADDED, 'education', { eduId: id, school: e.school });
     }
@@ -49,8 +54,14 @@ function auditWorkExperiences(
   currentProfile: ProfileSections,
   updatedProfile: ProfileSections & { _id: unknown }
 ): void {
-  const oldW = (currentProfile.workExperiences ?? []) as Array<{ workId?: string; company?: string }>;
-  const newW = (updatedProfile.workExperiences ?? []) as Array<{ workId?: string; company?: string }>;
+  const oldW = (currentProfile.workExperiences ?? []) as Array<{
+    workId?: string;
+    company?: string;
+  }>;
+  const newW = (updatedProfile.workExperiences ?? []) as Array<{
+    workId?: string;
+    company?: string;
+  }>;
   const oldIds = new Set(oldW.map((w) => (w.workId ?? '').trim()).filter(Boolean));
   const newIds = new Set(newW.map((w) => (w.workId ?? '').trim()).filter(Boolean));
   for (const w of newW) {
@@ -58,7 +69,8 @@ function auditWorkExperiences(
     if (!id) continue;
     if (oldIds.has(id)) {
       const prev = oldW.find((x) => (x.workId ?? '').trim() === id);
-      if (prev && JSON.stringify(prev) !== JSON.stringify(w)) log(AuditAction.WORK_UPDATED, 'work', { workId: id });
+      if (prev && JSON.stringify(prev) !== JSON.stringify(w))
+        log(AuditAction.WORK_UPDATED, 'work', { workId: id });
     } else {
       log(AuditAction.WORK_ADDED, 'work', { workId: id, company: w.company });
     }
@@ -82,7 +94,8 @@ function auditCertifications(
     if (!id) continue;
     if (oldIds.has(id)) {
       const prev = oldC.find((x) => (x.certId ?? '').trim() === id);
-      if (prev && JSON.stringify(prev) !== JSON.stringify(c)) log(AuditAction.CERTIFICATION_UPDATED, 'certification', { certId: id });
+      if (prev && JSON.stringify(prev) !== JSON.stringify(c))
+        log(AuditAction.CERTIFICATION_UPDATED, 'certification', { certId: id });
     } else {
       log(AuditAction.CERTIFICATION_ADDED, 'certification', { certId: id, name: c.name });
     }
@@ -123,8 +136,14 @@ function auditOpenSource(
   currentProfile: ProfileSections,
   updatedProfile: ProfileSections & { _id: unknown }
 ): void {
-  const oldO = (currentProfile.openSourceContributions ?? []) as Array<{ repositoryUrl?: string; title?: string }>;
-  const newO = (updatedProfile.openSourceContributions ?? []) as Array<{ repositoryUrl?: string; title?: string }>;
+  const oldO = (currentProfile.openSourceContributions ?? []) as Array<{
+    repositoryUrl?: string;
+    title?: string;
+  }>;
+  const newO = (updatedProfile.openSourceContributions ?? []) as Array<{
+    repositoryUrl?: string;
+    title?: string;
+  }>;
   const oldKeys = new Set(oldO.map((o, i) => (o.repositoryUrl ?? '').trim() || `i:${i}`));
   const newKeys = new Set(newO.map((o, i) => (o.repositoryUrl ?? '').trim() || `i:${i}`));
   for (let i = 0; i < newO.length; i++) {
@@ -133,15 +152,25 @@ function auditOpenSource(
     if (oldKeys.has(key)) {
       const prev = oldO.find((x, j) => ((x.repositoryUrl ?? '').trim() || `i:${j}`) === key);
       if (prev && JSON.stringify(prev) !== JSON.stringify(o)) {
-        log(AuditAction.OPEN_SOURCE_UPDATED, 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
+        log(AuditAction.OPEN_SOURCE_UPDATED, 'open_source', {
+          repositoryUrl: o.repositoryUrl,
+          title: o.title,
+        });
       }
     } else {
-      log(AuditAction.OPEN_SOURCE_ADDED, 'open_source', { repositoryUrl: o.repositoryUrl, title: o.title });
+      log(AuditAction.OPEN_SOURCE_ADDED, 'open_source', {
+        repositoryUrl: o.repositoryUrl,
+        title: o.title,
+      });
     }
   }
   for (let i = 0; i < oldO.length; i++) {
     const key = (oldO[i].repositoryUrl ?? '').trim() || `i:${i}`;
-    if (!newKeys.has(key)) log(AuditAction.OPEN_SOURCE_REMOVED, 'open_source', { repositoryUrl: oldO[i].repositoryUrl, title: oldO[i].title });
+    if (!newKeys.has(key))
+      log(AuditAction.OPEN_SOURCE_REMOVED, 'open_source', {
+        repositoryUrl: oldO[i].repositoryUrl,
+        title: oldO[i].title,
+      });
   }
 }
 

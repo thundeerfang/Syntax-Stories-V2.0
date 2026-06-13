@@ -7,7 +7,6 @@ import { renderButtonChildren } from '../button';
 import { Dialog, DIALOG_Z_INDEX_STACKED } from './dialogs';
 import { cn } from '@/lib/core/utils';
 
-
 export interface ConfirmDialogProps {
   open: boolean;
   onClose: () => void;
@@ -51,8 +50,7 @@ const CENTERED_TONE: Record<
       'from-destructive/20 via-destructive/10 to-card dark:from-destructive/25 dark:via-destructive/12 dark:to-card',
     iconWrap:
       'border-destructive/40 bg-destructive/15 text-destructive shadow dark:border-destructive/50 dark:bg-destructive/20',
-    button:
-      'border-destructive bg-destructive text-destructive-foreground hover:brightness-110',
+    button: 'border-destructive bg-destructive text-destructive-foreground hover:brightness-110',
     Icon: Trash2,
   },
   warning: {
@@ -96,7 +94,7 @@ function CenteredConfirmLayout({
       <span
         className={cn(
           'flex size-16 shrink-0 items-center justify-center  border-2',
-          styles.iconWrap,
+          styles.iconWrap
         )}
         aria-hidden
       >
@@ -111,7 +109,9 @@ function CenteredConfirmLayout({
       {body != null ? (
         <p className="mt-3 max-w-[20rem] text-sm leading-relaxed text-muted-foreground">{body}</p>
       ) : null}
-      {children != null ? <div className="mt-3 max-w-[20rem] text-sm text-muted-foreground">{children}</div> : null}
+      {children != null ? (
+        <div className="mt-3 max-w-[20rem] text-sm text-muted-foreground">{children}</div>
+      ) : null}
       <button
         ref={confirmRef}
         type="button"
@@ -123,7 +123,7 @@ function CenteredConfirmLayout({
           'shadow transition-all',
           'active:translate-x-0.5 active:translate-y-0.5 active:shadow-none',
           'disabled:pointer-events-none disabled:opacity-60',
-          styles.button,
+          styles.button
         )}
       >
         {renderButtonChildren(busy, 'size-4', confirmLabel)}
@@ -166,7 +166,9 @@ function StandardConfirmLayout({
           {title}
         </h2>
         {body != null ? <p className="mt-2 text-sm text-muted-foreground">{body}</p> : null}
-        {children != null ? <div className="mt-3 text-sm text-muted-foreground">{children}</div> : null}
+        {children != null ? (
+          <div className="mt-3 text-sm text-muted-foreground">{children}</div>
+        ) : null}
       </div>
       <div className={cn('flex gap-3 pt-2', hideCancel ? 'justify-stretch' : 'justify-end')}>
         {!hideCancel ? (
@@ -188,7 +190,7 @@ function StandardConfirmLayout({
           className={cn(
             'px-5 py-2.5 border-2 font-black text-xs uppercase tracking-wide shadow active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50',
             hideCancel && 'w-full',
-            'border-primary bg-primary text-primary-foreground hover:opacity-90',
+            'border-primary bg-primary text-primary-foreground hover:opacity-90'
           )}
         >
           {renderButtonChildren(busy, 'size-3.5', confirmLabel)}
@@ -256,11 +258,7 @@ export function ConfirmDialog({
       open={open}
       onClose={onClose}
       titleId={titleId}
-      panelClassName={cn(
-        'max-w-sm overflow-hidden',
-        centeredStyles?.panelBorder,
-        panelClassName,
-      )}
+      panelClassName={cn('max-w-sm overflow-hidden', centeredStyles?.panelBorder, panelClassName)}
       contentClassName={cn(isCenteredLayout ? 'p-0' : 'p-6')}
       legacyCloseContentInset={!isCenteredLayout}
       showCloseButton={showCloseButton}

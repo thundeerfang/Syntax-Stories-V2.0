@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthDialogStore } from '@/store/authDialog';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 
-
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const open = useAuthDialogStore((s) => s.open);
@@ -28,4 +27,12 @@ export default function LoginPage() {
     router.replace('/');
   }, [isHydrated, token, open, router, searchParams]);
   return null;
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
 }

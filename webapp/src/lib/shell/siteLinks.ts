@@ -6,7 +6,6 @@ export const LEGAL_FOOTER_LINKS = [
 ] as const;
 
 export const PRODUCT_SITE_LINKS = [
-  { href: '/help', label: 'Help center' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/invite', label: 'Invite program' },
 ] as const;

@@ -69,6 +69,8 @@ export interface VerifyTwoFactorLoginResponse {
 export interface RefreshTokenResponseBody {
   success: boolean;
   accessToken: string;
+  /** Present when the server rotates the refresh token (body mode, not httpOnly cookies). */
+  refreshToken?: string;
   expiresIn?: string;
 }
 

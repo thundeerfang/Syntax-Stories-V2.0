@@ -4,10 +4,14 @@ import { getRedis } from '../../../config/redis.js';
 import type { AuthUser } from '../../../middlewares/auth/index.js';
 import { writeAuditLog } from '../../../shared/audit/auditLog.js';
 import { AuditAction } from '../../../shared/audit/events.js';
-import { sendAuthEmail, isAuthEmailConfigured } from '../../../infrastructure/mail/sendAuthEmail.js';
+import {
+  sendAuthEmail,
+  isAuthEmailConfigured,
+} from '../../../infrastructure/mail/sendAuthEmail.js';
 import { redisKeys } from '../../../shared/redis/keys.js';
 import { generateEmailOtpDigits } from '../../../services/emailOtp.service.js';
 import { logSecurityEvent } from '../securityEventLog.js';
+import { notifyEmailChange } from '../../../services/notifications/notification.listener.js';
 
 const EMAIL_CHANGE_TTL_SEC = 600; // 10 min
 
@@ -35,13 +39,17 @@ export async function initEmailChange(req: Request, res: Response): Promise<void
     }
     const currentEmail = (doc.email ?? '').toLowerCase();
     if (newEmail === currentEmail) {
-      res.status(400).json({ message: 'New email must be different from current email.', success: false });
+      res
+        .status(400)
+        .json({ message: 'New email must be different from current email.', success: false });
       return;
     }
 
     const existing = await UserModel.findOne({ email: newEmail });
     if (existing) {
-      res.status(409).json({ message: 'An account already exists with this email.', success: false });
+      res
+        .status(409)
+        .json({ message: 'An account already exists with this email.', success: false });
       return;
     }
     const redis = getRedis();
@@ -52,7 +60,11 @@ export async function initEmailChange(req: Request, res: Response): Promise<void
     const codeCurrent = generateEmailOtpDigits();
     const codeNew = generateEmailOtpDigits();
     const key = redisKeys.auth.emailChange(String(user._id));
-    await redis.setEx(key, EMAIL_CHANGE_TTL_SEC, JSON.stringify({ codeCurrent, codeNew, newEmail }));
+    await redis.setEx(
+      key,
+      EMAIL_CHANGE_TTL_SEC,
+      JSON.stringify({ codeCurrent, codeNew, newEmail })
+    );
 
     await sendAuthEmail({
       to: currentEmail,
@@ -86,11 +98,18 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
     const currentCode = (body.currentCode ?? '').trim();
     const newCode = (body.newCode ?? '').trim();
     if (!currentCode || !/^\d{6}$/.test(currentCode)) {
-      res.status(400).json({ message: 'Valid 6-digit code from your current email is required.', success: false });
+      res
+        .status(400)
+        .json({
+          message: 'Valid 6-digit code from your current email is required.',
+          success: false,
+        });
       return;
     }
     if (!newCode || !/^\d{6}$/.test(newCode)) {
-      res.status(400).json({ message: 'Valid 6-digit code from your new email is required.', success: false });
+      res
+        .status(400)
+        .json({ message: 'Valid 6-digit code from your new email is required.', success: false });
       return;
     }
     const redis = getRedis();
@@ -101,7 +120,9 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
     const key = redisKeys.auth.emailChange(String(user._id));
     const raw = await redis.get(key);
     if (!raw) {
-      res.status(400).json({ message: 'Codes expired or invalid. Request a new code.', success: false });
+      res
+        .status(400)
+        .json({ message: 'Codes expired or invalid. Request a new code.', success: false });
       return;
     }
     let payload: { codeCurrent: string; codeNew: string; newEmail: string };
@@ -112,7 +133,9 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
       return;
     }
     if (payload.codeCurrent !== currentCode || payload.codeNew !== newCode) {
-      res.status(401).json({ message: 'Invalid code(s). Check both codes and try again.', success: false });
+      res
+        .status(401)
+        .json({ message: 'Invalid code(s). Check both codes and try again.', success: false });
       return;
     }
     await redis.del(key);
@@ -149,12 +172,19 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
         discordToken: 1,
       },
     });
-    await logSecurityEvent(String(user._id), 'login_success', req, { metadata: { email_change: true, newEmail } });
-    void writeAuditLog(req, AuditAction.EMAIL_CHANGE, { actorId: String(user._id), metadata: { newEmail } });
+    await logSecurityEvent(String(user._id), 'login_success', req, {
+      metadata: { email_change: true, newEmail },
+    });
+    void writeAuditLog(req, AuditAction.EMAIL_CHANGE, {
+      actorId: String(user._id),
+      metadata: { newEmail },
+    });
+    void notifyEmailChange(String(user._id), newEmail);
 
     res.status(200).json({
       success: true,
-      message: 'Email updated. All OAuth providers have been unlinked. You can link them again with your new email.',
+      message:
+        'Email updated. All OAuth providers have been unlinked. You can link them again with your new email.',
     });
   } catch (err) {
     console.error(err);

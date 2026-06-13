@@ -16,7 +16,6 @@ import {
   Wrench,
 } from 'lucide-react';
 
-
 export interface SettingsNavItem {
   id: string;
   label: string;

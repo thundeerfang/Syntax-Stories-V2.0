@@ -22,7 +22,10 @@ import {
 import { searchSchools } from '@/lib/blog/referenceSearch';
 import { EducationCard } from '@/components/settings-list/EducationCard';
 import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
-import { SettingsTabPanel, SettingsTabRoot } from '@/app/settings/settings-list/SettingsSectionHeading';
+import {
+  SettingsTabPanel,
+  SettingsTabRoot,
+} from '@/app/settings/settings-list/SettingsSectionHeading';
 import {
   MONTH_SELECT_OPTIONS,
   formatMonthYearMedium,
@@ -33,8 +36,6 @@ import {
 import { SettingsSectionEmptyState } from '../components/SettingsSectionEmptyState';
 import { FormSection } from '../components/FormSection';
 import { YEAR_OPTIONS } from '../lib/workExperienceForm';
-
-
 
 type EducationForm = {
   school: string;
@@ -109,16 +110,28 @@ export function EducationContent() {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [schoolLogoDialogOpen, setSchoolLogoDialogOpen] = useState(false);
-  const hasFormChanged = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm]);
-  const openAdd = () => { setForm(EDUCATION_DEFAULT); setInitialForm(EDUCATION_DEFAULT); setEditingIndex(null); setFieldErrors({}); setDialogOpen(true); };
-  const openEdit = useCallback((i: number) => {
-    const next = { ...EDUCATION_DEFAULT, ...list[i] };
-    setForm(next);
-    setInitialForm(next);
-    setEditingIndex(i);
+  const hasFormChanged = useMemo(
+    () => JSON.stringify(form) !== JSON.stringify(initialForm),
+    [form, initialForm]
+  );
+  const openAdd = () => {
+    setForm(EDUCATION_DEFAULT);
+    setInitialForm(EDUCATION_DEFAULT);
+    setEditingIndex(null);
     setFieldErrors({});
     setDialogOpen(true);
-  }, [list]);
+  };
+  const openEdit = useCallback(
+    (i: number) => {
+      const next = { ...EDUCATION_DEFAULT, ...list[i] };
+      setForm(next);
+      setInitialForm(next);
+      setEditingIndex(i);
+      setFieldErrors({});
+      setDialogOpen(true);
+    },
+    [list]
+  );
   const openedEditFromUrlRefEd = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefEd.current || list.length === 0) return;
@@ -131,26 +144,31 @@ export function EducationContent() {
     router.replace('/settings', { scroll: false });
   }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
-    const next = list.filter((_, idx) => idx !== i).map((e) => ({
-      school: e.school,
-      schoolDomain: e.schoolDomain,
-      schoolLogo: e.schoolLogo,
-      schoolLogoAlt: e.schoolLogoAlt,
-      degree: e.degree,
-      fieldOfStudy: e.fieldOfStudy,
-      currentEducation: e.currentEducation,
-      startDate: e.startDate,
-      endDate: e.endDate,
-      grade: e.grade,
-      description: e.description,
-      activity: e.activity,
-    }));
+    const next = list
+      .filter((_, idx) => idx !== i)
+      .map((e) => ({
+        school: e.school,
+        schoolDomain: e.schoolDomain,
+        schoolLogo: e.schoolLogo,
+        schoolLogoAlt: e.schoolLogoAlt,
+        degree: e.degree,
+        fieldOfStudy: e.fieldOfStudy,
+        currentEducation: e.currentEducation,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        grade: e.grade,
+        description: e.description,
+        activity: e.activity,
+      }));
     setSaving(true);
     try {
       await updateProfile({ education: next }, { section: 'education' });
       toast.success('Removed.');
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
   };
   const submitDialog = async () => {
     if (!hasFormChanged) {
@@ -165,11 +183,18 @@ export function EducationContent() {
     if (!form.currentEducation) {
       const endDateVal = monthYearToValue(form.endMonth, form.endYear);
       if (!endDateVal) err.endDate = 'End date is required when not currently enrolled.';
-      else if (startDateVal && endDateVal < startDateVal) err.endDate = 'End date cannot be earlier than start date.';
+      else if (startDateVal && endDateVal < startDateVal)
+        err.endDate = 'End date cannot be earlier than start date.';
     }
-    if (Object.keys(err).length) { setFieldErrors(err); toast.error('Please fix the errors below.', { id: 'syntax-form-errors' }); return; }
+    if (Object.keys(err).length) {
+      setFieldErrors(err);
+      toast.error('Please fix the errors below.', { id: 'syntax-form-errors' });
+      return;
+    }
     setFieldErrors({});
-    const endDateVal = form.currentEducation ? undefined : (monthYearToValue(form.endMonth, form.endYear) || undefined);
+    const endDateVal = form.currentEducation
+      ? undefined
+      : monthYearToValue(form.endMonth, form.endYear) || undefined;
     const entry = {
       school: form.school.trim(),
       schoolDomain: form.schoolDomain.trim().slice(0, 120) || undefined,
@@ -184,45 +209,53 @@ export function EducationContent() {
       activity: form.activity.trim().slice(0, 500) || undefined,
       description: form.description?.trim().slice(0, 2000) || undefined,
     };
-    const next = editingIndex !== null ? list.map((e, i) => (i === editingIndex ? entry : e)) : [...list, entry];
+    const next =
+      editingIndex !== null
+        ? list.map((e, i) => (i === editingIndex ? entry : e))
+        : [...list, entry];
     setSaving(true);
     try {
       await updateProfile({ education: next }, { section: 'education' });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', { id: 'syntax-education-entry-success' });
+      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', {
+        id: 'syntax-education-entry-success',
+      });
       setDialogOpen(false);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed'); }
-    finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <SettingsTabRoot>
       <SettingsSectionHeader variant="education" onPrimaryAction={openAdd} disabled={saving} />
       <SettingsTabPanel>
-      <FormSection>
-        {list.length === 0 ? (
-          <SettingsSectionEmptyState
-            icon={GraduationCap}
-            title="No education added yet"
-            tagline="Add your degrees and schools. Help others see your learning journey."
-          />
-        ) : (
-          <>
-            {list.map((e, i) => {
-              return (
-                <EducationCard
-                  key={i}
-                  education={e}
-                  index={i}
-                  saving={saving}
-                  onEdit={() => openEdit(i)}
-                  onRemove={() => setRemoveConfirmIndex(i)}
-                  formatMonthYear={formatMonthYearMedium}
-                />
-              );
-            })}
-          </>
-        )}
-      </FormSection>
+        <FormSection>
+          {list.length === 0 ? (
+            <SettingsSectionEmptyState
+              icon={GraduationCap}
+              title="No education added yet"
+              tagline="Add your degrees and schools. Help others see your learning journey."
+            />
+          ) : (
+            <>
+              {list.map((e, i) => {
+                return (
+                  <EducationCard
+                    key={i}
+                    education={e}
+                    index={i}
+                    saving={saving}
+                    onEdit={() => openEdit(i)}
+                    onRemove={() => setRemoveConfirmIndex(i)}
+                    formatMonthYear={formatMonthYearMedium}
+                  />
+                );
+              })}
+            </>
+          )}
+        </FormSection>
       </SettingsTabPanel>
       <ConfirmDialog
         open={removeConfirmIndex !== null}
@@ -232,7 +265,12 @@ export function EducationContent() {
         confirmLabel="Remove"
         variant="danger"
         loading={saving}
-        onConfirm={() => { if (removeConfirmIndex !== null) { remove(removeConfirmIndex); setRemoveConfirmIndex(null); } }}
+        onConfirm={() => {
+          if (removeConfirmIndex !== null) {
+            remove(removeConfirmIndex);
+            setRemoveConfirmIndex(null);
+          }
+        }}
       />
       {token ? (
         <UploadLogoDialog
@@ -260,10 +298,21 @@ export function EducationContent() {
         panelClassName="max-w-2xl"
         footer={
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">* Required fields</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+              * Required fields
+            </p>
             <div className="flex gap-3">
-              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>Cancel</GhostOutlineButton>
-              <button type="button" onClick={submitDialog} disabled={saving || !hasFormChanged} className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}>{saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}</button>
+              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </GhostOutlineButton>
+              <button
+                type="button"
+                onClick={submitDialog}
+                disabled={saving || !hasFormChanged}
+                className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}
+              >
+                {saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}
+              </button>
             </div>
           </div>
         }
@@ -274,13 +323,24 @@ export function EducationContent() {
             label="School name *"
             placeholder="Type school name (e.g. MIT)"
             value={form.school}
-            onChange={(v) => { setForm((f) => ({ ...f, school: v })); if (fieldErrors.school) setFieldErrors((e2) => (e2.school ? { ...e2, school: '' } : e2)); }}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, school: v }));
+              if (fieldErrors.school)
+                setFieldErrors((e2) => (e2.school ? { ...e2, school: '' } : e2));
+            }}
             onDomainSelect={(d) => setForm((f) => ({ ...f, schoolDomain: d }))}
             searchOptions={searchSchools}
             error={fieldErrors.school}
             maxLength={200}
           />
-          <FormInput id="edu-domain" label="School domain (optional)" placeholder="Ex: university.edu" maxLength={120} value={form.schoolDomain} onChange={(e) => setForm((f) => ({ ...f, schoolDomain: e.target.value.slice(0, 120) }))} />
+          <FormInput
+            id="edu-domain"
+            label="School domain (optional)"
+            placeholder="Ex: university.edu"
+            maxLength={120}
+            value={form.schoolDomain}
+            onChange={(e) => setForm((f) => ({ ...f, schoolDomain: e.target.value.slice(0, 120) }))}
+          />
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase">School logo (optional)</Label>
             <div className="flex items-center gap-3">
@@ -319,16 +379,58 @@ export function EducationContent() {
                 )}
               </div>
             </div>
-         
           </div>
-          <FormInput id="edu-degree" label="Degree *" placeholder="Ex: Bachelor, Master, PhD, Diploma" maxLength={80} value={form.degree} error={fieldErrors.degree} onChange={(e) => { setForm((f) => ({ ...f, degree: e.target.value })); if (fieldErrors.degree) setFieldErrors((e2) => (e2.degree ? { ...e2, degree: '' } : e2)); }} />
-          <FormInput id="edu-field" label="Field of study (optional)" placeholder="Ex: Science in Computer Science" maxLength={120} value={form.fieldOfStudy} onChange={(e) => setForm((f) => ({ ...f, fieldOfStudy: e.target.value }))} />
-          <FormCheckbox id="edu-current" label="I'm currently pursuing this" checked={form.currentEducation} onCheckedChange={(v) => setForm((f) => ({ ...f, currentEducation: v, ...(v ? { endMonth: '', endYear: '' } : {}) }))} />
+          <FormInput
+            id="edu-degree"
+            label="Degree *"
+            placeholder="Ex: Bachelor, Master, PhD, Diploma"
+            maxLength={80}
+            value={form.degree}
+            error={fieldErrors.degree}
+            onChange={(e) => {
+              setForm((f) => ({ ...f, degree: e.target.value }));
+              if (fieldErrors.degree)
+                setFieldErrors((e2) => (e2.degree ? { ...e2, degree: '' } : e2));
+            }}
+          />
+          <FormInput
+            id="edu-field"
+            label="Field of study (optional)"
+            placeholder="Ex: Science in Computer Science"
+            maxLength={120}
+            value={form.fieldOfStudy}
+            onChange={(e) => setForm((f) => ({ ...f, fieldOfStudy: e.target.value }))}
+          />
+          <FormCheckbox
+            id="edu-current"
+            label="I'm currently pursuing this"
+            checked={form.currentEducation}
+            onCheckedChange={(v) =>
+              setForm((f) => ({
+                ...f,
+                currentEducation: v,
+                ...(v ? { endMonth: '', endYear: '' } : {}),
+              }))
+            }
+          />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase">Start date *</Label>
               <div className="flex gap-2">
-                <SearchableSelect id="edu-start-month" label="" placeholder="Month" value={form.startMonth} onChange={(v) => { setForm((f) => ({ ...f, startMonth: v })); if (fieldErrors.startDate) setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2)); }} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" />
+                <SearchableSelect
+                  id="edu-start-month"
+                  label=""
+                  placeholder="Month"
+                  value={form.startMonth}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, startMonth: v }));
+                    if (fieldErrors.startDate)
+                      setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2));
+                  }}
+                  options={MONTH_SELECT_OPTIONS}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                />
                 <SearchableSelect
                   id="edu-start-year"
                   label=""
@@ -338,43 +440,87 @@ export function EducationContent() {
                     setForm((f) => {
                       const sy = parseInt(v || '', 10);
                       const ey = parseInt(f.endYear || '', 10);
-                      const nextEndYear = Number.isFinite(sy) && Number.isFinite(ey) && ey < sy ? v : f.endYear;
+                      const nextEndYear =
+                        Number.isFinite(sy) && Number.isFinite(ey) && ey < sy ? v : f.endYear;
                       return { ...f, startYear: v, endYear: nextEndYear };
                     });
-                    if (fieldErrors.startDate) setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2));
+                    if (fieldErrors.startDate)
+                      setFieldErrors((e2) => (e2.startDate ? { ...e2, startDate: '' } : e2));
                   }}
                   options={YEAR_OPTIONS}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
                 />
               </div>
-              {fieldErrors.startDate && <p className="text-xs text-destructive font-medium">{fieldErrors.startDate}</p>}
+              {fieldErrors.startDate && (
+                <p className="text-xs text-destructive font-medium">{fieldErrors.startDate}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase">End date{!form.currentEducation ? ' *' : ''}</Label>
+              <Label className="text-[10px] font-bold uppercase">
+                End date{!form.currentEducation ? ' *' : ''}
+              </Label>
               <div className="flex gap-2">
-                <SearchableSelect id="edu-end-month" label="" placeholder="Month" value={form.endMonth} onChange={(v) => { setForm((f) => ({ ...f, endMonth: v })); if (fieldErrors.endDate) setFieldErrors((e2) => (e2.endDate ? { ...e2, endDate: '' } : e2)); }} options={MONTH_SELECT_OPTIONS} listMaxHeight={220} widthClass="flex-1 min-w-0" disabled={form.currentEducation} />
+                <SearchableSelect
+                  id="edu-end-month"
+                  label=""
+                  placeholder="Month"
+                  value={form.endMonth}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, endMonth: v }));
+                    if (fieldErrors.endDate)
+                      setFieldErrors((e2) => (e2.endDate ? { ...e2, endDate: '' } : e2));
+                  }}
+                  options={MONTH_SELECT_OPTIONS}
+                  listMaxHeight={220}
+                  widthClass="flex-1 min-w-0"
+                  disabled={form.currentEducation}
+                />
                 <SearchableSelect
                   id="edu-end-year"
                   label=""
                   placeholder="Year"
                   value={form.endYear}
-                  onChange={(v) => { setForm((f) => ({ ...f, endYear: v })); if (fieldErrors.endDate) setFieldErrors((e2) => (e2.endDate ? { ...e2, endDate: '' } : e2)); }}
+                  onChange={(v) => {
+                    setForm((f) => ({ ...f, endYear: v }));
+                    if (fieldErrors.endDate)
+                      setFieldErrors((e2) => (e2.endDate ? { ...e2, endDate: '' } : e2));
+                  }}
                   options={yearOptionsFromMin(form.startYear)}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
                   disabled={form.currentEducation}
                 />
               </div>
-              {fieldErrors.endDate && <p className="text-xs text-destructive font-medium">{fieldErrors.endDate}</p>}
-              {form.currentEducation && !fieldErrors.endDate && <p className="text-[9px] text-muted-foreground">Disabled while currently pursuing</p>}
+              {fieldErrors.endDate && (
+                <p className="text-xs text-destructive font-medium">{fieldErrors.endDate}</p>
+              )}
+              {form.currentEducation && !fieldErrors.endDate && (
+                <p className="text-[9px] text-muted-foreground">
+                  Disabled while currently pursuing
+                </p>
+              )}
             </div>
           </div>
-          <FormInput id="edu-grade" label="Grade (optional)" placeholder="Ex: 3.8/4.0, First Class Honours" maxLength={80} value={form.grade} onChange={(e) => setForm((f) => ({ ...f, grade: e.target.value.slice(0, 80) }))} />
-          <FormTextarea id="edu-activity" label="Activity (optional)" placeholder="Clubs, hackathons, projects" maxLength={500} rows={2} value={form.activity} onChange={(e) => setForm((f) => ({ ...f, activity: e.target.value.slice(0, 500) }))} />
+          <FormInput
+            id="edu-grade"
+            label="Grade (optional)"
+            placeholder="Ex: 3.8/4.0, First Class Honours"
+            maxLength={80}
+            value={form.grade}
+            onChange={(e) => setForm((f) => ({ ...f, grade: e.target.value.slice(0, 80) }))}
+          />
+          <FormTextarea
+            id="edu-activity"
+            label="Activity (optional)"
+            placeholder="Clubs, hackathons, projects"
+            maxLength={500}
+            rows={2}
+            value={form.activity}
+            onChange={(e) => setForm((f) => ({ ...f, activity: e.target.value.slice(0, 500) }))}
+          />
         </div>
       </FormDialog>
     </SettingsTabRoot>
   );
 }
-

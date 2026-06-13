@@ -1,18 +1,17 @@
 'use client';
 
-import Link from 'next/link';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Compass, Users } from 'lucide-react';
 import { blogApi } from '@/api/blog';
 import { followApi, type FollowUser } from '@/api/follow';
 import { BlogCard } from '@/features/blog';
-import { RailFeedEmptyState, RailFeedErrorState, RailSectionSubheader, ShellPageIntroHeader } from '@/components/layout';
+import {
+  RailFeedEmptyState,
+  RailFeedErrorState,
+  RailSectionSubheader,
+  ShellPageIntroHeader,
+  SignInRequiredPanel,
+} from '@/components/layout';
 import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
 import { useAuthStore } from '@/store/auth';
 import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
@@ -21,15 +20,16 @@ import { cn } from '@/lib/core/utils';
 import type { Post } from '@/types';
 import type { PublicFeedPost } from '@/types/blog';
 
-
-const LOGIN_NEXT = '/following';
-
 function chipAvatarSrc(profileImg: string | undefined, username: string): string {
   const trimmed = profileImg?.trim();
   if (!trimmed) {
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
   }
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:')
+  ) {
     return trimmed;
   }
   return `${process.env.NEXT_PUBLIC_API_BASE_URL ?? ''}${trimmed}`;
@@ -113,7 +113,7 @@ export default function FollowingPage() {
         setFollowingLoading(false);
       }
     },
-    [me],
+    [me]
   );
 
   useEffect(() => {
@@ -146,8 +146,8 @@ export default function FollowingPage() {
       const perAuthor = 10;
       const batches = await Promise.all(
         following.map((u) =>
-          blogApi.getUserPublishedPosts(u.username, perAuthor, token).then((r) => r.posts ?? []),
-        ),
+          blogApi.getUserPublishedPosts(u.username, perAuthor, token).then((r) => r.posts ?? [])
+        )
       );
       const merged = mergeFollowingPosts(batches, 48);
       setPosts(merged.map(mapPublicFeedPostToPost));
@@ -173,8 +173,7 @@ export default function FollowingPage() {
     const q = sidebarQuery.trim().toLowerCase();
     if (!q) return following;
     return following.filter(
-      (u) =>
-        u.username.toLowerCase().includes(q) || (u.fullName ?? '').toLowerCase().includes(q),
+      (u) => u.username.toLowerCase().includes(q) || (u.fullName ?? '').toLowerCase().includes(q)
     );
   }, [following, sidebarQuery]);
 
@@ -208,7 +207,7 @@ export default function FollowingPage() {
         ariaLabel: `Posts from @${u.username}`,
       })),
     ],
-    [followingChipUsers, selectedUsername],
+    [followingChipUsers, selectedUsername]
   );
 
   const showGate = isHydrated && (!token || !me);
@@ -230,26 +229,25 @@ export default function FollowingPage() {
         />
 
         {!isHydrated ? (
-          <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8" aria-busy="true">
+          <div
+            className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8"
+            aria-busy="true"
+          >
             <FollowingToolbarSkeleton />
             <section aria-label="Loading posts" className="min-w-0">
               <FollowingPostsGridSkeleton />
             </section>
           </div>
         ) : showGate ? (
-          <div className="max-w-lg space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Sign in to see authors you follow and their latest posts.
-            </p>
-            <Link
-              href={`/login?next=${encodeURIComponent(LOGIN_NEXT)}`}
-              className="inline-block border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-            >
-              Sign in
-            </Link>
-          </div>
+          <SignInRequiredPanel
+            icon={Users}
+            description="Sign in to see authors you follow and their latest posts."
+          />
         ) : followingLoading && following.length === 0 ? (
-          <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8" aria-busy="true">
+          <div
+            className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8"
+            aria-busy="true"
+          >
             <FollowingToolbarSkeleton />
             <section aria-label="Loading posts" className="min-w-0">
               <FollowingPostsGridSkeleton />
@@ -294,7 +292,9 @@ export default function FollowingPage() {
                   className="absolute right-3 top-[calc(100%+4px)] z-50 max-h-60 w-[min(100%,18rem)] overflow-y-auto overscroll-contain border-2 border-border bg-card py-1 shadow sm:right-4 sm:w-72"
                 >
                   {filteredSidebar.length === 0 ? (
-                    <p className="px-3 py-3 font-mono text-[11px] text-muted-foreground">No matches.</p>
+                    <p className="px-3 py-3 font-mono text-[11px] text-muted-foreground">
+                      No matches.
+                    </p>
                   ) : (
                     filteredSidebar.map((u) => (
                       <button
@@ -304,7 +304,7 @@ export default function FollowingPage() {
                         aria-selected={selectedUsername === u.username}
                         className={cn(
                           'flex w-full items-center gap-3 px-2 py-2 text-left font-mono text-[11px] transition-colors hover:bg-muted/50',
-                          selectedUsername === u.username && 'bg-primary/[0.08]',
+                          selectedUsername === u.username && 'bg-primary/[0.08]'
                         )}
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => pickFollowingUser(u)}
@@ -374,7 +374,9 @@ export default function FollowingPage() {
                             label: 'Browse topics',
                             href: '/topics',
                             variant: 'primary',
-                            icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+                            icon: (
+                              <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                            ),
                           },
                         ]
                   }

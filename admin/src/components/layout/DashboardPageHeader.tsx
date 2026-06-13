@@ -1,39 +1,27 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { CentricPageHeader, type CentricPageHeaderProps } from './CentricPageHeader';
+import type { BreadcrumbItem } from '@/components/ui/AdminBreadcrumb';
 
 export type DashboardPageHeaderProps = {
   title: string;
   subtitle?: string;
+  description?: string;
+  icon?: ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
   actions?: ReactNode;
 };
 
-export function DashboardPageHeader({ title, subtitle, actions }: DashboardPageHeaderProps) {
-  return (
-    <Stack
-      direction={{ xs: 'column', sm: 'row' }}
-      spacing={2}
-      alignItems={{ xs: 'stretch', sm: 'flex-start' }}
-      justifyContent="space-between"
-    >
-      <Box sx={{ minWidth: 0 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          fontWeight={800}
-          className="tracking-tight"
-          gutterBottom
-        >
-          {title}
-        </Typography>
-        {subtitle ? (
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 640 }}>
-            {subtitle}
-          </Typography>
-        ) : null}
-      </Box>
-      {actions ? <Box sx={{ flexShrink: 0 }}>{actions}</Box> : null}
-    </Stack>
-  );
+/** @deprecated Prefer `CentricPageHeader` — this wrapper keeps existing call sites working. */
+export function DashboardPageHeader({
+  title,
+  subtitle,
+  description,
+  ...rest
+}: DashboardPageHeaderProps) {
+  return <CentricPageHeader title={title} description={description ?? subtitle} {...rest} />;
 }
+
+export { CentricPageHeader };
+export type { CentricPageHeaderProps };

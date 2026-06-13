@@ -26,6 +26,17 @@ export interface TechStackItem {
   name: string;
   slug: string;
   category: TechStackCategory;
+  iconSlug: string;
+  iconUrl: string;
+}
+
+export interface TechStackResolveRequest {
+  names: string[];
+}
+
+export interface TechStackResolveResponse {
+  success: boolean;
+  items: TechStackItem[];
 }
 
 export interface ReferenceEntitiesResponse {

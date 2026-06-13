@@ -34,9 +34,10 @@ export async function findEligiblePublishedPostByUsernameSlug(
     .select('_id authorId respectCount')
     .lean();
   if (!post?._id) return null;
-  const rc = typeof (post as { respectCount?: number }).respectCount === 'number'
-    ? Math.max(0, (post as { respectCount: number }).respectCount)
-    : 0;
+  const rc =
+    typeof (post as { respectCount?: number }).respectCount === 'number'
+      ? Math.max(0, (post as { respectCount: number }).respectCount)
+      : 0;
   return {
     postId: post._id as mongoose.Types.ObjectId,
     authorId: post.authorId as mongoose.Types.ObjectId,
@@ -52,13 +53,19 @@ export async function suspendRespectContributionsForPost(
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      const doc = await BlogPostModel.findById(postId).session(session).select('respectCount').lean();
+      const doc = await BlogPostModel.findById(postId)
+        .session(session)
+        .select('respectCount')
+        .lean();
       const n = Math.max(0, doc?.respectCount ?? 0);
       if (n === 0) {
         await BlogPostModel.updateOne({ _id: postId }, { $set: { respectCount: 0 } }, { session });
         return;
       }
-      const author = await UserModel.findById(authorId).session(session).select('blogRespectReceivedCount').lean();
+      const author = await UserModel.findById(authorId)
+        .session(session)
+        .select('blogRespectReceivedCount')
+        .lean();
       const cur = Math.max(0, author?.blogRespectReceivedCount ?? 0);
       const nextAuthor = Math.max(0, cur - n);
       await UserModel.updateOne(
@@ -85,7 +92,11 @@ export async function resumeRespectContributionsForPost(
       const m = Math.max(0, count);
       await BlogPostModel.updateOne({ _id: postId }, { $set: { respectCount: m } }, { session });
       if (m === 0) return;
-      await UserModel.updateOne({ _id: authorId }, { $inc: { blogRespectReceivedCount: m } }, { session });
+      await UserModel.updateOne(
+        { _id: authorId },
+        { $inc: { blogRespectReceivedCount: m } },
+        { session }
+      );
     });
   } finally {
     await session.endSession();
@@ -93,7 +104,13 @@ export async function resumeRespectContributionsForPost(
 }
 
 export type SetRespectResult =
-  | { ok: true; respecting: boolean; respectCount: number; authorBlogRespectReceivedCount: number }
+  | {
+      ok: true;
+      respecting: boolean;
+      respectCount: number;
+      authorBlogRespectReceivedCount: number;
+      newRespectEdge: boolean;
+    }
   | { ok: false; code: 'NOT_FOUND' | 'NOT_ELIGIBLE' };
 
 /**
@@ -112,13 +129,16 @@ export async function setRespectDesiredState(params: {
       .lean();
     const post = await BlogPostModel.findById(params.postId).select('respectCount').lean();
     const count = Math.max(0, post?.respectCount ?? 0);
-    const author = await UserModel.findById(params.authorId).select('blogRespectReceivedCount').lean();
+    const author = await UserModel.findById(params.authorId)
+      .select('blogRespectReceivedCount')
+      .lean();
     const authorTotal = Math.max(0, author?.blogRespectReceivedCount ?? 0);
     return {
       ok: true,
       respecting: !!edge,
       respectCount: count,
       authorBlogRespectReceivedCount: authorTotal,
+      newRespectEdge: false,
     };
   }
 
@@ -141,6 +161,7 @@ export async function setRespectDesiredState(params: {
     let respecting = false;
     let respectCount = 0;
     let authorBlogRespectReceivedCount = 0;
+    let newRespectEdge = false;
 
     await session.withTransaction(async () => {
       const existing = await BlogRespectModel.findOne({
@@ -151,15 +172,19 @@ export async function setRespectDesiredState(params: {
       if (params.respecting) {
         if (!existing) {
           try {
-            await BlogRespectModel.create(
-              [{ userId: viewerOid, postId: params.postId }],
-              { session }
-            );
+            await BlogRespectModel.create([{ userId: viewerOid, postId: params.postId }], {
+              session,
+            });
+            newRespectEdge = true;
           } catch (e) {
             const err = e as { code?: number };
             if (err?.code !== 11000) throw e;
           }
-          await BlogPostModel.updateOne({ _id: params.postId }, { $inc: { respectCount: 1 } }, { session });
+          await BlogPostModel.updateOne(
+            { _id: params.postId },
+            { $inc: { respectCount: 1 } },
+            { session }
+          );
           await UserModel.updateOne(
             { _id: params.authorId },
             { $inc: { blogRespectReceivedCount: 1 } },
@@ -189,13 +214,19 @@ export async function setRespectDesiredState(params: {
         .lean();
       respecting = !!edgeAfter;
 
-      const p = await BlogPostModel.findById(params.postId).session(session).select('respectCount').lean();
+      const p = await BlogPostModel.findById(params.postId)
+        .session(session)
+        .select('respectCount')
+        .lean();
       respectCount = Math.max(0, p?.respectCount ?? 0);
-      const a = await UserModel.findById(params.authorId).session(session).select('blogRespectReceivedCount').lean();
+      const a = await UserModel.findById(params.authorId)
+        .session(session)
+        .select('blogRespectReceivedCount')
+        .lean();
       authorBlogRespectReceivedCount = Math.max(0, a?.blogRespectReceivedCount ?? 0);
     });
 
-    return { ok: true, respecting, respectCount, authorBlogRespectReceivedCount };
+    return { ok: true, respecting, respectCount, authorBlogRespectReceivedCount, newRespectEdge };
   } finally {
     await session.endSession();
   }

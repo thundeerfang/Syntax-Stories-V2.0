@@ -34,7 +34,11 @@ export async function fetchOperationalPing(signal?: AbortSignal): Promise<Operat
     });
     const end = globalThis.performance?.now() ?? Date.now();
     const latencyMs = Math.max(0, Math.round(end - start));
-    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; service?: string; t?: string };
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      service?: string;
+      t?: string;
+    };
     if (!res.ok || body.ok !== true) {
       return { ok: false, latencyMs, error: res.statusText || 'Request failed' };
     }

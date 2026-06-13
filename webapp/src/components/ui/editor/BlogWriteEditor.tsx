@@ -24,7 +24,13 @@ import { cn } from '@/lib/core/utils';
 import { coerceImageLayout } from '@/lib/blog/blogImageLayout';
 import { uploadMedia } from '@/api/upload';
 import { searchUnsplashPhotos, type UnsplashPhoto } from '@/api/unsplash';
-import { fetchRepoByUrl, fetchMyRepos, parseGithubRepoUrl, type GithubRepoListItem } from '@/api/github';
+import { Skeleton } from '@/components/ui/feedback/Skeleton';
+import {
+  fetchRepoByUrl,
+  fetchMyRepos,
+  parseGithubRepoUrl,
+  type GithubRepoListItem,
+} from '@/api/github';
 import type {
   CodePayload,
   ImageBlockLayout,
@@ -39,8 +45,12 @@ import type {
 import { coerceParagraphDoc } from '@/types/blog';
 import { normalizeVideoEmbedUrl, youtubeThumbnailUrl } from '@/lib/blog/videoEmbed';
 import { RichParagraphEditor } from './RichParagraphEditor';
-import { CodeBlockEditor, MermaidBlockEditor, ParagraphBlockHelpDialog, TableBlockEditor } from './_blogWriteEditorBlocks';
-
+import {
+  CodeBlockEditor,
+  MermaidBlockEditor,
+  ParagraphBlockHelpDialog,
+  TableBlockEditor,
+} from './_blogWriteEditorBlocks';
 
 export type BlockType =
   | 'paragraph'
@@ -99,10 +109,7 @@ export function createBlockInSection(type: BlockType, sectionId: string): Block 
   if (type === 'table') {
     const tp: TablePayload = {
       caption: undefined,
-      rows: [
-        ['Feature', 'Option A', 'Option B'],
-        [''],
-      ],
+      rows: [['Feature', 'Option A', 'Option B'], ['']],
     };
     return { id, type: 'table', sectionId, payload: tp };
   }
@@ -207,7 +214,9 @@ function HeadingBlockEditor({
               onClick={() => onUpdate({ ...payload, level: l })}
               className={cn(
                 'px-1.5 py-0.5 text-[9px] font-black uppercase  border',
-                level === l ? 'border-primary bg-primary/20 text-primary' : 'border-border bg-muted/30 hover:bg-muted/50 text-muted-foreground',
+                level === l
+                  ? 'border-primary bg-primary/20 text-primary'
+                  : 'border-border bg-muted/30 hover:bg-muted/50 text-muted-foreground'
               )}
             >
               H{l}
@@ -230,7 +239,7 @@ function HeadingBlockEditor({
         placeholder="Heading text..."
         className={cn(
           'w-full border-0 border-b border-border/40 bg-transparent focus:outline-none focus:border-primary/60 placeholder:text-muted-foreground',
-          sizeClass,
+          sizeClass
         )}
       />
     </div>
@@ -335,7 +344,7 @@ function UnsplashImageWithOverlays({
           /* Touch / small: keep controls usable without hover */
           'max-md:pointer-events-auto max-md:opacity-100',
           'md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100',
-          'focus-within:pointer-events-auto focus-within:opacity-100',
+          'focus-within:pointer-events-auto focus-within:opacity-100'
         )}
       >
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -359,7 +368,7 @@ function UnsplashImageWithOverlays({
                   'flex h-9 w-9 shrink-0 items-center justify-center border border-transparent transition-all',
                   layout === id
                     ? 'border-white/40 bg-primary text-primary-foreground shadow'
-                    : 'text-white/90 hover:border-white/20 hover:bg-white/10 hover:text-white',
+                    : 'text-white/90 hover:border-white/20 hover:bg-white/10 hover:text-white'
                 )}
               >
                 <Icon className="h-4 w-4" strokeWidth={2} />
@@ -379,7 +388,10 @@ function UnsplashImageWithOverlays({
           </button>
         </div>
         <div className="pointer-events-auto w-full pb-10 sm:pb-11">
-          <label htmlFor={captionId} className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/80">
+          <label
+            htmlFor={captionId}
+            className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/80"
+          >
             <Type className="h-3 w-3 opacity-80" aria-hidden />
             Caption
           </label>
@@ -451,7 +463,7 @@ function UploadedImageWithOverlays({
           'transition-all duration-200 ease-out',
           'max-md:pointer-events-auto max-md:opacity-100',
           'md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100',
-          'focus-within:pointer-events-auto focus-within:opacity-100',
+          'focus-within:pointer-events-auto focus-within:opacity-100'
         )}
       >
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -475,7 +487,7 @@ function UploadedImageWithOverlays({
                   'flex h-9 w-9 shrink-0 items-center justify-center border border-transparent transition-all',
                   layout === id
                     ? 'border-white/40 bg-primary text-primary-foreground shadow'
-                    : 'text-white/90 hover:border-white/20 hover:bg-white/10 hover:text-white',
+                    : 'text-white/90 hover:border-white/20 hover:bg-white/10 hover:text-white'
                 )}
               >
                 <Icon className="h-4 w-4" strokeWidth={2} />
@@ -507,7 +519,10 @@ function UploadedImageWithOverlays({
           </button>
         </div>
         <div className="pointer-events-auto w-full pb-4 sm:pb-5">
-          <label htmlFor={captionId} className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/80">
+          <label
+            htmlFor={captionId}
+            className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/80"
+          >
             <Type className="h-3 w-3 opacity-80" aria-hidden />
             Caption
           </label>
@@ -567,7 +582,7 @@ function ImageBlockEditor({
         setUploading(false);
       }
     },
-    [token, p, onUpdate],
+    [token, p, onUpdate]
   );
 
   const renderSelectedUploadedImage = (imageUrl: string) => {
@@ -581,7 +596,11 @@ function ImageBlockEditor({
         onRemove={onRemove}
         onReupload={() => inputRef.current?.click()}
         fieldId={fieldId}
-        imgClassName="h-full w-full object-cover object-center"
+        imgClassName={
+          layout === 'fullWidth'
+            ? 'h-full w-full object-contain object-center'
+            : 'h-full w-full object-cover object-center'
+        }
       />
     );
     if (layout === 'square') {
@@ -596,7 +615,7 @@ function ImageBlockEditor({
     if (layout === 'fullWidth') {
       return (
         <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow">
-          <div className="relative h-80 w-full min-w-0 sm:h-88 lg:h-104">{overlays}</div>
+          <div className="relative aspect-video w-full min-w-0 bg-background">{overlays}</div>
         </div>
       );
     }
@@ -637,7 +656,7 @@ function ImageBlockEditor({
         className={cn(
           'w-full border-2 border-dashed border-border  p-6 text-center cursor-pointer',
           'hover:bg-muted/20 transition-colors',
-          uploading && 'pointer-events-none opacity-70',
+          uploading && 'pointer-events-none opacity-70'
         )}
       >
         {uploading ? (
@@ -654,7 +673,9 @@ function ImageBlockEditor({
 }
 
 function videoSlotsFromPayload(payload: VideoEmbedPayload): string[] {
-  const v = (payload.videos ?? []).filter((s) => typeof s === 'string' && s.trim()).slice(0, VIDEO_EMBED_MAX);
+  const v = (payload.videos ?? [])
+    .filter((s) => typeof s === 'string' && s.trim())
+    .slice(0, VIDEO_EMBED_MAX);
   if (v.length > 0) return v.map((s) => s.trim());
   const u = payload.url?.trim(); // NOSONAR
   return u ? [u] : [''];
@@ -675,7 +696,7 @@ function normalizeSlotsToVideos(slots: string[]): string[] {
 function clampVideoEmbedSize(
   videoCount: number,
   s: VideoEmbedDisplaySize,
-  layout: VideoEmbedLayoutDirection,
+  layout: VideoEmbedLayoutDirection
 ): VideoEmbedDisplaySize {
   if (layout === 'column') return s;
   if (videoCount >= 3) return 'sm';
@@ -709,7 +730,7 @@ function VideoEmbedPreviewThumb({
       <div
         className={cn(
           'shrink-0 overflow-hidden border-2 border-border bg-black shadow ring-1 ring-black/20',
-          widthClass,
+          widthClass
         )}
       >
         <div className="relative aspect-video w-full">
@@ -733,10 +754,7 @@ function VideoEmbedPreviewThumb({
   }
   return (
     <div
-      className={cn(
-        'shrink-0 overflow-hidden border-2 border-border bg-black shadow',
-        widthClass,
-      )}
+      className={cn('shrink-0 overflow-hidden border-2 border-border bg-black shadow', widthClass)}
     >
       <iframe
         src={embedUrl}
@@ -762,13 +780,18 @@ function VideoEmbedBlockEditor({
 }>) {
   const fieldId = useId();
   const layout: VideoEmbedLayoutDirection = payload.layout === 'column' ? 'column' : 'row';
-  const size: VideoEmbedDisplaySize = payload.size === 'sm' || payload.size === 'lg' ? payload.size : 'md';
+  const size: VideoEmbedDisplaySize =
+    payload.size === 'sm' || payload.size === 'lg' ? payload.size : 'md';
 
   const [slots, setSlots] = useState<string[]>(() => videoSlotsFromPayload(payload));
   const [slotErrors, setSlotErrors] = useState<(string | undefined)[]>([]);
 
   const commitAll = useCallback(
-    (nextSlots: string[], nextLayout: VideoEmbedLayoutDirection, nextSize: VideoEmbedDisplaySize) => {
+    (
+      nextSlots: string[],
+      nextLayout: VideoEmbedLayoutDirection,
+      nextSize: VideoEmbedDisplaySize
+    ) => {
       const videos = normalizeSlotsToVideos(nextSlots);
       const layoutOut: VideoEmbedLayoutDirection = videos.length < 2 ? 'row' : nextLayout;
       const clampedSize = clampVideoEmbedSize(videos.length, nextSize, layoutOut);
@@ -779,7 +802,7 @@ function VideoEmbedBlockEditor({
         url: videos[0],
       });
     },
-    [onUpdate],
+    [onUpdate]
   );
 
   const handleSlotBlur = (index: number) => {
@@ -840,7 +863,7 @@ function VideoEmbedBlockEditor({
   const effectiveLayout: VideoEmbedLayoutDirection = previewCount < 2 ? 'row' : layout;
   const displaySize = useMemo(
     () => clampVideoEmbedSize(previewCount, size, effectiveLayout),
-    [previewCount, size, effectiveLayout],
+    [previewCount, size, effectiveLayout]
   );
 
   const sizeOptionDisabled = (id: VideoEmbedDisplaySize): boolean => {
@@ -881,20 +904,14 @@ function VideoEmbedBlockEditor({
   return (
     <BlockCard title="Video embed" icon={Film} onRemove={onRemove}>
       <div className="space-y-4">
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Add up to three links. YouTube watch URLs become embeds. Missing{' '}
-          <code className="border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">?v=</code> shows an error
-          until fixed.
-        </p>
-
         <div className="border-2 border-border bg-muted/25 p-3 shadow">
           <div className={cn('grid gap-4', showColumnLayout ? 'sm:grid-cols-2' : 'grid-cols-1')}>
             <div className="space-y-2">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Layout</span>
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Layout
+              </span>
               {showColumnLayout ? (
-                <div
-                  className="flex overflow-hidden border-2 border-border bg-card shadow"
-                >
+                <div className="flex overflow-hidden border-2 border-border bg-card shadow">
                   <button
                     type="button"
                     title="Side by side"
@@ -904,7 +921,7 @@ function VideoEmbedBlockEditor({
                       'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors',
                       layout === 'row'
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                     )}
                   >
                     <StretchHorizontal className="h-4 w-4" strokeWidth={2} />
@@ -920,7 +937,7 @@ function VideoEmbedBlockEditor({
                       'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors',
                       layout === 'column'
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                     )}
                   >
                     <StretchVertical className="h-4 w-4" strokeWidth={2} />
@@ -928,9 +945,7 @@ function VideoEmbedBlockEditor({
                   </button>
                 </div>
               ) : (
-                <div
-                  className="flex border-2 border-border bg-card shadow"
-                >
+                <div className="flex border-2 border-border bg-card shadow">
                   <div className="flex w-full flex-col items-center gap-1 bg-primary py-2.5 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
                     <StretchHorizontal className="h-4 w-4" strokeWidth={2} />
                     Row
@@ -943,9 +958,7 @@ function VideoEmbedBlockEditor({
               <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Preview size
               </span>
-              <div
-                className="flex overflow-hidden border-2 border-border bg-card shadow"
-              >
+              <div className="flex overflow-hidden border-2 border-border bg-card shadow">
                 {(
                   [
                     { id: 'sm' as const, label: 'S' },
@@ -955,42 +968,44 @@ function VideoEmbedBlockEditor({
                 ).map(({ id, label }, idx) => {
                   return (
                     <React.Fragment key={id}>
-                    {idx > 0 ? <span className="w-px shrink-0 bg-border" aria-hidden /> : null}
-                    <button
-                      type="button"
-                      aria-pressed={displaySize === id}
-                      disabled={sizeOptionDisabled(id)}
-                      title={(() => {
-                        let titleText: string | undefined;
-                        if (sizeOptionDisabled(id)) {
-                          if (previewCount >= 3) {
-                            titleText = 'Unavailable with three videos';
-                          } else {
-                            titleText = 'Unavailable with two videos';
+                      {idx > 0 ? <span className="w-px shrink-0 bg-border" aria-hidden /> : null}
+                      <button
+                        type="button"
+                        aria-pressed={displaySize === id}
+                        disabled={sizeOptionDisabled(id)}
+                        title={(() => {
+                          let titleText: string | undefined;
+                          if (sizeOptionDisabled(id)) {
+                            if (previewCount >= 3) {
+                              titleText = 'Unavailable with three videos';
+                            } else {
+                              titleText = 'Unavailable with two videos';
+                            }
                           }
-                        }
-                        return titleText;
-                      })()}
-                      onClick={() => {
-                        if (sizeOptionDisabled(id)) return;
-                        commitAll(slots, layout, id);
-                      }}
-                      className={cn(
-                        'min-w-0 flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-colors',
-                        displaySize === id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
-                        sizeOptionDisabled(id) &&
-                          'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground',
-                      )}
-                    >
-                      {label}
-                    </button>
+                          return titleText;
+                        })()}
+                        onClick={() => {
+                          if (sizeOptionDisabled(id)) return;
+                          commitAll(slots, layout, id);
+                        }}
+                        className={cn(
+                          'min-w-0 flex-1 py-2.5 text-[11px] font-bold uppercase tracking-widest transition-colors',
+                          displaySize === id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                          sizeOptionDisabled(id) &&
+                            'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground'
+                        )}
+                      >
+                        {label}
+                      </button>
                     </React.Fragment>
                   );
                 })}
               </div>
-              {sizeHint ? <p className="text-[10px] leading-snug text-muted-foreground">{sizeHint}</p> : null}
+              {sizeHint ? (
+                <p className="text-[10px] leading-snug text-muted-foreground">{sizeHint}</p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1034,7 +1049,9 @@ function VideoEmbedBlockEditor({
                   </button>
                 ) : null}
               </div>
-              {slotErrors[i] ? <p className="text-[10px] text-destructive leading-snug">{slotErrors[i]}</p> : null}
+              {slotErrors[i] ? (
+                <p className="text-[10px] text-destructive leading-snug">{slotErrors[i]}</p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -1060,11 +1077,15 @@ function VideoEmbedBlockEditor({
                 'flex min-h-20 gap-3 border-2 border-border bg-linear-to-b from-muted/50 to-muted/20 p-4 shadow',
                 effectiveLayout === 'row'
                   ? 'flex-row flex-wrap items-start justify-center content-center'
-                  : 'flex-col items-center justify-center',
+                  : 'flex-col items-center justify-center'
               )}
             >
               {previews.map((embedUrl, pi) => (
-                <VideoEmbedPreviewThumb key={`${embedUrl}-${pi}`} embedUrl={embedUrl} size={displaySize} />
+                <VideoEmbedPreviewThumb
+                  key={`${embedUrl}-${pi}`}
+                  embedUrl={embedUrl}
+                  size={displaySize}
+                />
               ))}
             </div>
           </div>
@@ -1098,7 +1119,14 @@ function GithubRepoBlockEditor({
   token: string | null;
   hasGithubLinked?: boolean;
 }>) {
-  const { owner = '', repo = '', url = '', description = '', avatarUrl = '', name: repoName = '' } = payload;
+  const {
+    owner = '',
+    repo = '',
+    url = '',
+    description = '',
+    avatarUrl = '',
+    name: repoName = '',
+  } = payload;
   const displayUrl = url || (owner && repo ? `https://github.com/${owner}/${repo}` : '');
   const isSelected = !!(displayUrl || (owner && repo));
 
@@ -1159,7 +1187,7 @@ function GithubRepoBlockEditor({
       });
       setMyRepos([]);
     },
-    [onUpdate],
+    [onUpdate]
   );
 
   // Selected: show only the GitHub card (avatar, repo name, owner, description, link)
@@ -1184,7 +1212,9 @@ function GithubRepoBlockEditor({
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-sm truncate">{title}</p>
             <p className="text-[11px] text-muted-foreground truncate">{by}</p>
-            {description && <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{description}</p>}
+            {description && (
+              <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{description}</p>
+            )}
           </div>
           <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
         </a>
@@ -1207,7 +1237,10 @@ function GithubRepoBlockEditor({
     <BlockCard title="GitHub repo" icon={GithubIcon} onRemove={onRemove}>
       <div className="space-y-3">
         <div>
-          <label htmlFor="github-repo-url-input" className="text-[9px] font-bold text-muted-foreground uppercase">
+          <label
+            htmlFor="github-repo-url-input"
+            className="text-[9px] font-bold text-muted-foreground uppercase"
+          >
             Repo URL
           </label>
           <div className="flex gap-2 mt-1">
@@ -1215,7 +1248,10 @@ function GithubRepoBlockEditor({
               id="github-repo-url-input"
               type="url"
               value={urlInput}
-              onChange={(e) => { setUrlInput(e.target.value); setFetchError(null); }}
+              onChange={(e) => {
+                setUrlInput(e.target.value);
+                setFetchError(null);
+              }}
               onKeyDown={(e) => e.key === 'Enter' && handleFetchByUrl()}
               placeholder="https://github.com/owner/repo"
               className="flex-1 bg-background border border-border p-2 text-xs focus:outline-none focus:border-primary font-mono"
@@ -1300,10 +1336,9 @@ function UnsplashBlockEditor({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UnsplashPhoto[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const hasUnsplashKey = !!process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY;
 
   const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) return;
+    if (searchQuery.trim().length <= 3) return;
     setSearching(true);
     setSearchError(null);
     try {
@@ -1333,7 +1368,7 @@ function UnsplashBlockEditor({
       setResults([]);
       setSearchQuery('');
     },
-    [onUpdate, photographer, layout, payload],
+    [onUpdate, photographer, layout, payload]
   );
 
   const renderSelectedImage = () => {
@@ -1348,7 +1383,11 @@ function UnsplashBlockEditor({
         onCaptionChange={(value) => onUpdate({ ...payload, caption: value })}
         onRemove={onRemove}
         fieldId={blockId}
-        imgClassName="h-full w-full object-cover object-center"
+        imgClassName={
+          layout === 'fullWidth'
+            ? 'h-full w-full object-contain object-center'
+            : 'h-full w-full object-cover object-center'
+        }
       />
     );
     if (layout === 'square') {
@@ -1363,7 +1402,7 @@ function UnsplashBlockEditor({
     if (layout === 'fullWidth') {
       return (
         <div className="min-w-0 w-full overflow-hidden border-2 border-border bg-muted/50 shadow">
-          <div className="relative h-80 w-full min-w-0 sm:h-88 lg:h-104">{overlays}</div>
+          <div className="relative aspect-video w-full min-w-0 bg-background">{overlays}</div>
         </div>
       );
     }
@@ -1385,54 +1424,54 @@ function UnsplashBlockEditor({
   return (
     <BlockCard title="Unsplash" icon={Camera} onRemove={onRemove}>
       <div className="space-y-3">
-        {hasUnsplashKey ? (
-          <>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search photos..."
-                className="flex-1 border-0 bg-muted/25 p-2 text-xs ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-primary/35"
-              />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Search photos..."
+            className="flex-1 border-0 bg-muted/25 p-2 text-xs ring-1 ring-border/40 focus:outline-none focus:ring-2 focus:ring-primary/35"
+          />
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={searching || searchQuery.trim().length <= 3}
+            className="rounded-none border-0 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase text-primary-foreground hover:brightness-110 disabled:opacity-50"
+          >
+            {searching ? '…' : 'Search'}
+          </button>
+        </div>
+        {searchError && <p className="text-[10px] text-destructive">{searchError}</p>}
+        {searching ? (
+          <div
+            className="grid grid-cols-4 gap-1.5 max-h-56 overflow-hidden border-0 bg-muted/15 p-1.5 ring-1 ring-border/30"
+            aria-busy
+            aria-label="Loading Unsplash photos"
+          >
+            {Array.from({ length: 12 }, (_, index) => (
+              <Skeleton key={`unsplash-sk-${index}`} className="aspect-square bg-muted/50" />
+            ))}
+          </div>
+        ) : results.length > 0 ? (
+          <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto border-0 bg-muted/15 p-1.5 ring-1 ring-border/30">
+            {results.map((photo) => (
               <button
+                key={photo.id}
                 type="button"
-                onClick={handleSearch}
-                disabled={searching || !searchQuery.trim()}
-                className="border-0 bg-primary px-3 py-1.5 text-[10px] font-bold uppercase text-primary-foreground hover:brightness-110 disabled:opacity-50"
+                onClick={() => selectPhoto(photo)}
+                onKeyDown={(e) => e.key === 'Enter' && selectPhoto(photo)}
+                className="aspect-square overflow-hidden border-0 ring-1 ring-border/40 hover:ring-primary/60 focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                {searching ? '…' : 'Search'}
+                <img
+                  src={photo.urls?.small ?? photo.urls?.thumb}
+                  alt={photo.alt_description ?? 'Unsplash'}
+                  className="w-full h-full object-cover"
+                />
               </button>
-            </div>
-            {searchError && (
-              <p className="text-[10px] text-destructive">{searchError}</p>
-            )}
-            {results.length > 0 && (
-              <div className="grid grid-cols-4 gap-1.5 max-h-56 overflow-y-auto border-0 bg-muted/15 p-1.5 ring-1 ring-border/30">
-                {results.map((photo) => (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    onClick={() => selectPhoto(photo)}
-                    onKeyDown={(e) => e.key === 'Enter' && selectPhoto(photo)}
-                    className="aspect-square overflow-hidden border-0 ring-1 ring-border/40 hover:ring-primary/60 focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <img
-                      src={photo.urls?.small ?? photo.urls?.thumb}
-                      alt={photo.alt_description ?? 'Unsplash'}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-[10px] text-muted-foreground">
-            Add <code className="border border-border bg-muted px-1">NEXT_PUBLIC_UNSPLASH_ACCESS_KEY</code> to .env.local to search photos.
-          </p>
-        )}
+            ))}
+          </div>
+        ) : null}
       </div>
     </BlockCard>
   );
@@ -1464,11 +1503,9 @@ export function BlogWriteEditor({
 }: Readonly<BlogWriteEditorProps>) {
   const updateBlock = useCallback(
     (id: string, payload: any) => {
-      onBlocksChange(
-        blocks.map((b) => (b.id === id ? { ...b, payload } : b)),
-      );
+      onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, payload } : b)));
     },
-    [blocks, onBlocksChange],
+    [blocks, onBlocksChange]
   );
 
   const removeBlock = useCallback(
@@ -1476,12 +1513,10 @@ export function BlogWriteEditor({
       const next = blocks.filter((b) => b.id !== id);
       onBlocksChange(next);
     },
-    [blocks, onBlocksChange],
+    [blocks, onBlocksChange]
   );
 
-  const visibleBlocks = blocks.filter(
-    (b) => (b.sectionId ?? activeSectionId) === activeSectionId,
-  );
+  const visibleBlocks = blocks.filter((b) => (b.sectionId ?? activeSectionId) === activeSectionId);
 
   /** Global index to insert *before* (equals `blocks.length` to append after last block in doc). */
   const appendSlotIndex = useMemo(() => {
@@ -1504,7 +1539,7 @@ export function BlogWriteEditor({
       reordered.splice(insertAt, 0, removed);
       onBlocksChange(reordered);
     },
-    [blocks, onBlocksChange],
+    [blocks, onBlocksChange]
   );
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -1535,7 +1570,7 @@ export function BlogWriteEditor({
       dropTargetIndexRef.current = overIndex;
       setDropTargetIndex(overIndex);
     },
-    [draggedIndex],
+    [draggedIndex]
   );
 
   const handleDragOverAppendZone = useCallback(
@@ -1547,7 +1582,7 @@ export function BlogWriteEditor({
       dropTargetIndexRef.current = appendSlotIndex;
       setDropTargetIndex(appendSlotIndex);
     },
-    [draggedIndex, appendSlotIndex],
+    [draggedIndex, appendSlotIndex]
   );
 
   const handleDropOnRow = useCallback(
@@ -1562,7 +1597,7 @@ export function BlogWriteEditor({
       setDropTargetIndex(null);
       moveBlock(fromIndex, toIndex);
     },
-    [moveBlock],
+    [moveBlock]
   );
 
   const handleDropOnAppendZone = useCallback(
@@ -1576,7 +1611,7 @@ export function BlogWriteEditor({
       setDropTargetIndex(null);
       moveBlock(fromIndex, appendSlotIndex);
     },
-    [moveBlock, appendSlotIndex],
+    [moveBlock, appendSlotIndex]
   );
 
   const blockListDropRef = useRef<HTMLDivElement>(null);
@@ -1599,7 +1634,7 @@ export function BlogWriteEditor({
       }
       onActiveBlockChange(null);
     },
-    [blocks, onActiveBlockChange],
+    [blocks, onActiveBlockChange]
   );
 
   if (visibleBlocks.length === 0) {
@@ -1748,7 +1783,7 @@ export function BlogWriteEditor({
               onDrop={(e) => handleDropOnRow(e, blockIndex)}
               className={cn(
                 'relative list-none flex items-start gap-2 group/drag  transition-all duration-150',
-                isDragging && 'opacity-50',
+                isDragging && 'opacity-50'
               )}
             >
               {isDropTarget && (
@@ -1778,7 +1813,9 @@ export function BlogWriteEditor({
       <div
         className={cn(
           'min-h-14  border-2 border-dashed transition-colors',
-          dropTargetIndex === appendSlotIndex ? 'border-primary bg-primary/10' : 'border-transparent hover:border-border/70',
+          dropTargetIndex === appendSlotIndex
+            ? 'border-primary bg-primary/10'
+            : 'border-transparent hover:border-border/70'
         )}
         onDragOver={handleDragOverAppendZone}
         onDrop={handleDropOnAppendZone}
@@ -1790,4 +1827,3 @@ export function BlogWriteEditor({
     </div>
   );
 }
-

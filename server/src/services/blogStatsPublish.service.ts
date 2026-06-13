@@ -68,4 +68,10 @@ export async function publishBlogPostStatsSnapshot(postId: mongoose.Types.Object
   } catch (e) {
     console.warn(JSON.stringify({ event: 'blog_stats_publish_failed', err: String(e) }));
   }
+
+  void import('./notifications/notificationMilestones.service.js').then(({ evaluatePostEngagementMilestones }) =>
+    evaluatePostEngagementMilestones(postId).catch((err) =>
+      console.warn('[notificationMilestones]', String(err))
+    )
+  );
 }

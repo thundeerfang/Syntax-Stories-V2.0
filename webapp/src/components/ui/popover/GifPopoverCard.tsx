@@ -1,11 +1,7 @@
 'use client';
 
-
 /** GIF-only hover preview: image only (border/background live on the read-only shell). */
-export function GifPopoverCard({
-  url,
-  onLoad,
-}: Readonly<{ url: string; onLoad?: () => void }>) {
+export function GifPopoverCard({ url, onLoad }: Readonly<{ url: string; onLoad?: () => void }>) {
   return (
     <img
       src={url}

@@ -11,27 +11,18 @@ import { useSearchDialogStore } from '@/store/searchDialog';
 import { Button, FireLottie, RocketLottie, blockShadowButtonClassNames } from '@/components/ui';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import { AccountDropdown } from './AccountDropdown';
+import { MAIN_SHELL_NAV_LINKS } from '@/lib/shell/mainNavLinks';
 import { cn } from '@/lib/core/utils';
-import { SHELL_NAV_INNER_CLASS, SHELL_RAIL_FROST_CLASS, SHELL_RAIL_FROST_STYLE } from '@/lib/shell/shellContentRail';
-import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
 import {
-  Sun,
-  Moon,
-  Menu,
-  X,
-  Search,
-  Command,
-  PenLine,
-} from 'lucide-react';
+  SHELL_NAV_INNER_CLASS,
+  SHELL_RAIL_FROST_CLASS,
+  SHELL_RAIL_FROST_STYLE,
+} from '@/lib/shell/shellContentRail';
+import { setWriteEditorSessionPostId } from '@/lib/blog/writeBlogSession';
+import { Sun, Moon, Menu, X, Search, Command, PenLine } from 'lucide-react';
 import { NavbarSkeleton } from '@/components/skeletons';
 
-
-const navLinks = [
-  { href: '/', label: 'HOME' },
-  { href: '/explore', label: 'EXPLORE' },
-  { href: '/trending', label: 'TRENDING' },
-  { href: '/about', label: 'ABOUT' },
-];
+const navLinks = MAIN_SHELL_NAV_LINKS;
 
 const BANNER_DISMISSED_KEY = 'syntax-stories-banner-dismissed';
 
@@ -61,7 +52,7 @@ export function Navbar() {
         0,
         window.scrollY,
         document.documentElement.scrollTop,
-        document.body.scrollTop,
+        document.body.scrollTop
       );
       /** Same pixel threshold on every route (long pages no longer require a full viewport of scroll). */
       const enterY = 56;
@@ -88,7 +79,10 @@ export function Navbar() {
 
     const sync = () => {
       const h = el.getBoundingClientRect().height;
-      document.documentElement.style.setProperty('--header-height', `${Math.round(h * 1000) / 1000}px`);
+      document.documentElement.style.setProperty(
+        '--header-height',
+        `${Math.round(h * 1000) / 1000}px`
+      );
     };
 
     sync();
@@ -109,7 +103,7 @@ export function Navbar() {
       ref={headerRef}
       className={cn(
         'w-full shrink-0 border-b-2 pt-[env(safe-area-inset-top,0px)] transition-[border-color] duration-300',
-        isPastViewport ? 'border-primary' : 'border-border',
+        isPastViewport ? 'border-primary' : 'border-border'
       )}
     >
       {/* Membership Banner */}
@@ -149,7 +143,11 @@ export function Navbar() {
               />
             </button>
             <Link href="/" className="shrink-0">
-              <img src="/svg/logo_hori.png" alt="Syntax Stories" className="h-6 w-auto object-contain sm:h-9" />
+              <img
+                src="/svg/logo_hori.png"
+                alt="Syntax Stories"
+                className="h-6 w-auto object-contain sm:h-9"
+              />
             </Link>
           </div>
 
@@ -183,9 +181,7 @@ export function Navbar() {
                     {label}
                   </span>
                   {/* Underline/Pill Effect */}
-                  {isActive && (
-                    <div className="absolute bottom-0 left-0 w-full h-1 bg-primary" />
-                  )}
+                  {isActive && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary" />}
                   <div className="absolute inset-0 bg-primary/5 translate-y-full group-hover:translate-y-0 transition-transform duration-200" />
                 </Link>
               );
@@ -201,7 +197,9 @@ export function Navbar() {
             >
               <div className="flex items-center gap-2 text-muted-foreground group-hover:text-foreground">
                 <Search className="h-4 w-4" strokeWidth={2.5} />
-                <span className="text-[11px] font-bold uppercase tracking-tight">Search Stories...</span>
+                <span className="text-[11px] font-bold uppercase tracking-tight">
+                  Search Stories...
+                </span>
               </div>
               <div className="flex items-center gap-1 border border-border bg-background px-1.5 py-0.5 text-[10px] font-black text-muted-foreground">
                 <Command className="h-2.5 w-2.5" /> K
@@ -224,7 +222,7 @@ export function Navbar() {
                   onClick={() => setWriteEditorSessionPostId(null)}
                   className={cn(
                     blockShadowButtonClassNames({ variant: 'primary', size: 'sm', shadow: 'sm' }),
-                    'px-2 py-1.5 sm:px-3 sm:py-2 no-underline',
+                    'px-2 py-1.5 sm:px-3 sm:py-2 no-underline'
                   )}
                   title="Write a blog post"
                 >

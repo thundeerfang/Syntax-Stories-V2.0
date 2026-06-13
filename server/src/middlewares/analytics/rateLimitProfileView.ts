@@ -5,7 +5,11 @@ import { redisKeys } from '../../shared/redis/keys.js';
 const LIMIT = 100;
 const WINDOW_SECONDS = 60;
 
-export async function rateLimitProfileView(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function rateLimitProfileView(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   const redis = getRedis();
   if (!redis) {
     next();
@@ -21,7 +25,12 @@ export async function rateLimitProfileView(req: Request, res: Response, next: Ne
       await redis.expire(key, WINDOW_SECONDS);
     }
     if (count > LIMIT) {
-      res.status(429).json({ success: false, message: 'Too many analytics events from this IP. Try again later.' });
+      res
+        .status(429)
+        .json({
+          success: false,
+          message: 'Too many analytics events from this IP. Try again later.',
+        });
       return;
     }
   } catch {
@@ -30,4 +39,3 @@ export async function rateLimitProfileView(req: Request, res: Response, next: Ne
 
   next();
 }
-

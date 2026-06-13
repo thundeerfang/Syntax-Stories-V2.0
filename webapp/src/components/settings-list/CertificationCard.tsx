@@ -15,7 +15,6 @@ import { cn } from '@/lib/core/utils';
 import { HoverCard } from '@/components/ui/popover';
 import { LinkPreviewCardContent } from '@/components/ui/popover';
 
-
 type MediaItem = { url: string; title?: string };
 
 const CERT_CARD_FOOTER_MARKS = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5'] as const;
@@ -74,7 +73,6 @@ export function CertificationCard({
     <div className="group relative ss-settings-card">
       {/* Industrial Frame - Fixed Position */}
       <div className="ss-card-border relative border-[3px] border-border bg-card">
-        
         {/* Hardware Corner Brackets */}
         <div className="absolute -top-[3px] -left-[3px] size-4 border-t-[3px] border-l-[3px] border-primary z-10" />
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-10" />
@@ -102,25 +100,34 @@ export function CertificationCard({
 
         {/* Main Interface Content */}
         <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10">
-          
           {/* Issuer Logo Display Screen — reduced size */}
           <div className="ss-card-logo-box relative size-12 shrink-0 border-2 border-border bg-background flex items-center justify-center overflow-hidden">
             {/* CRT Grid Effect */}
             <div className="absolute inset-0 opacity-[0.1] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:4px_4px]" />
-            
+
             {e.issuerLogo ? (
               <img
                 src={e.issuerLogo}
-                alt={e.issuerLogoAlt?.trim() || (e.issuingOrganization ? `${e.issuingOrganization} logo` : 'Issuer logo')}
+                alt={
+                  e.issuerLogoAlt?.trim() ||
+                  (e.issuingOrganization ? `${e.issuingOrganization} logo` : 'Issuer logo')
+                }
                 title={e.issuerLogoAlt?.trim() || undefined}
                 className="ss-card-logo-img size-full object-contain p-1 grayscale brightness-90 relative z-10"
                 onError={(ev) => {
                   (ev.target as HTMLImageElement).style.display = 'none';
-                  ev.currentTarget.parentElement?.querySelector('.cert-logo-fallback')?.classList.remove('hidden');
+                  ev.currentTarget.parentElement
+                    ?.querySelector('.cert-logo-fallback')
+                    ?.classList.remove('hidden');
                 }}
               />
             ) : null}
-            <span className={cn('cert-logo-fallback text-muted-foreground/30', e.issuerLogo && 'hidden')}>
+            <span
+              className={cn(
+                'cert-logo-fallback text-muted-foreground/30',
+                e.issuerLogo && 'hidden'
+              )}
+            >
               <Award className="size-5" />
             </span>
           </div>
@@ -210,7 +217,10 @@ export function CertificationCard({
                   {!skillsExpanded && remainingCount > 0 && (
                     <button
                       type="button"
-                      onClick={(ev) => { ev.stopPropagation(); setSkillsExpanded(true); }}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setSkillsExpanded(true);
+                      }}
                       className="ss-meta-pill inline-flex items-center gap-1 px-2 py-0.5 bg-muted/60 border border-border text-[9px] font-mono font-bold text-primary hover:bg-muted/80 transition-colors"
                       aria-label={`Show ${remainingCount} more skills`}
                     >
@@ -223,7 +233,10 @@ export function CertificationCard({
 
             {/* Description — two lines when collapsed; click outside to collapse */}
             {e.description && (
-              <div ref={descRef} className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5">
+              <div
+                ref={descRef}
+                className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5"
+              >
                 <button
                   type="button"
                   onClick={(ev) => {
@@ -232,7 +245,9 @@ export function CertificationCard({
                   }}
                   className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                   aria-expanded={isDescExpanded}
-                  aria-label={isDescExpanded ? 'Collapse description' : 'Expand to read full description'}
+                  aria-label={
+                    isDescExpanded ? 'Collapse description' : 'Expand to read full description'
+                  }
                 >
                   {isDescExpanded ? (
                     <div
@@ -257,7 +272,9 @@ export function CertificationCard({
             {/* Media Thumbnails */}
             {e.mediaItems && e.mediaItems.length > 0 && (
               <div className="pt-1 space-y-1.5">
-                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-[0.2em]">Attached_Media</p>
+                <p className="text-[8px] font-black uppercase text-muted-foreground tracking-[0.2em]">
+                  Attached_Media
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {e.mediaItems.slice(0, 3).map((m: MediaItem) => (
                     <button
@@ -268,7 +285,11 @@ export function CertificationCard({
                     >
                       <div className="ss-overlay absolute inset-0 bg-primary/5 opacity-0 z-10" />
                       {isImageUrl(m.url) ? (
-                        <img src={m.url} alt={m.title?.trim() || ''} className="size-full object-cover grayscale" />
+                        <img
+                          src={m.url}
+                          alt={m.title?.trim() || ''}
+                          className="size-full object-cover grayscale"
+                        />
                       ) : (
                         <Award className="size-3.5 text-muted-foreground" />
                       )}
@@ -284,7 +305,10 @@ export function CertificationCard({
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1 opacity-30">
             {CERT_CARD_FOOTER_MARKS.map((mark, i) => (
-              <div key={mark} className={cn('h-2 w-[1px] bg-foreground', i % 2 === 0 && 'w-[3px]')} />
+              <div
+                key={mark}
+                className={cn('h-2 w-[1px] bg-foreground', i % 2 === 0 && 'w-[3px]')}
+              />
             ))}
           </div>
           <span className="text-[9px] font-mono font-bold text-muted-foreground/40 tracking-[0.2em]">

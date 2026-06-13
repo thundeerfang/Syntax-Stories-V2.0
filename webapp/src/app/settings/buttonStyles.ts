@@ -18,5 +18,5 @@ export const settingsBtnBlockPrimarySm = blockShadowButtonClassNames({
 /** Avatar / compact primary icon button */
 export const settingsBtnIconFab = cn(
   blockShadowButtonClassNames({ variant: 'primary', shadow: 'sm' }),
-  '!gap-0 !p-0 size-7 min-h-0 shrink-0',
+  '!gap-0 !p-0 size-7 min-h-0 shrink-0'
 );

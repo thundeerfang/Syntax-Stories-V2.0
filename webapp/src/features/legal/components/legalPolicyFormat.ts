@@ -31,7 +31,7 @@ export function formatUtcPolicyCalendarDate(iso: string | null | undefined): str
 
 /** Single-line summary for `aria-label` / metadata. */
 export function formatLegalPolicyVersionMeta(
-  data: Pick<PublishedPolicyResponse, 'version' | 'publishedAt' | 'effectiveAt'>,
+  data: Pick<PublishedPolicyResponse, 'version' | 'publishedAt' | 'effectiveAt'>
 ): string {
   const published = formatUtcPolicyCalendarDate(data.publishedAt);
   let s = `Version ${data.version}`;
@@ -45,7 +45,7 @@ export function formatLegalPolicyVersionMeta(
 
 /** Stacked lines for the header version badge (version + dates). */
 export function getLegalPolicyVersionBadgeLines(
-  data: Pick<PublishedPolicyResponse, 'version' | 'publishedAt' | 'effectiveAt'>,
+  data: Pick<PublishedPolicyResponse, 'version' | 'publishedAt' | 'effectiveAt'>
 ): string[] {
   const lines: string[] = [`Version ${data.version}`];
   const published = formatUtcPolicyCalendarDate(data.publishedAt);

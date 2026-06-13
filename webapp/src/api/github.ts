@@ -23,8 +23,14 @@ export function parseGithubRepoUrl(url: string): { owner: string; repo: string }
 /** Fetch repo info by owner/repo (public API, no auth). */
 export async function fetchRepoInfo(owner: string, repo: string): Promise<GithubRepoInfo> {
   const base = getApiBase();
-  const r = await fetch(`${base}/api/github/repo-info/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
-  const data = (await r.json().catch(() => ({}))) as { success?: boolean; message?: string; repo?: GithubRepoInfo };
+  const r = await fetch(
+    `${base}/api/github/repo-info/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`
+  );
+  const data = (await r.json().catch(() => ({}))) as {
+    success?: boolean;
+    message?: string;
+    repo?: GithubRepoInfo;
+  };
   if (!r.ok) throw new Error(data.message ?? 'Failed to fetch repo');
   if (!data.repo) throw new Error('Invalid response');
   return data.repo;
@@ -43,7 +49,11 @@ export async function fetchMyRepos(accessToken: string): Promise<GithubRepoListI
   const r = await fetch(`${base}/api/github/repos`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  const data = (await r.json().catch(() => ({}))) as { success?: boolean; message?: string; repos?: GithubRepoListItem[] };
+  const data = (await r.json().catch(() => ({}))) as {
+    success?: boolean;
+    message?: string;
+    repos?: GithubRepoListItem[];
+  };
   if (!r.ok) throw new Error(data.message ?? 'Failed to fetch repos');
   return Array.isArray(data.repos) ? data.repos : [];
 }

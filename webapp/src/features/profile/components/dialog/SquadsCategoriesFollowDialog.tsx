@@ -14,7 +14,6 @@ import { FOLLOWED_CATEGORIES_CHANGED_EVENT } from '@/lib/feeds/followedCategorie
 import type { FollowedCategoryRow } from '@/features/profile/hooks/useProfileSquadsAndCategories';
 import { toast } from 'sonner';
 
-
 type Tab = 'squads' | 'categories';
 
 export type SquadsCategoriesFollowDialogProps = Readonly<{
@@ -126,7 +125,7 @@ export function SquadsCategoriesFollowDialog({
       (s) =>
         s.name.toLowerCase().includes(q) ||
         s.slug.toLowerCase().includes(q) ||
-        (s.description ?? '').toLowerCase().includes(q),
+        (s.description ?? '').toLowerCase().includes(q)
     );
   }, [localSquads, search]);
 
@@ -134,7 +133,7 @@ export function SquadsCategoriesFollowDialog({
     const q = search.trim().toLowerCase();
     if (!q) return localCategories;
     return localCategories.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q),
+      (c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q)
     );
   }, [localCategories, search]);
 
@@ -159,7 +158,9 @@ export function SquadsCategoriesFollowDialog({
   let listSection: React.ReactNode;
   if (loading) {
     listSection = (
-      <p className="text-[10px] font-bold text-muted-foreground uppercase text-center py-8">Loading...</p>
+      <p className="text-[10px] font-bold text-muted-foreground uppercase text-center py-8">
+        Loading...
+      </p>
     );
   } else if (activeTab === 'squads') {
     if (filteredSquads.length === 0) {
@@ -179,8 +180,16 @@ export function SquadsCategoriesFollowDialog({
             key={s._id}
             className="flex items-center gap-3 p-3 border-2 border-border bg-muted/5 hover:bg-muted/20 transition-colors"
           >
-            <Link href={squadHref} onClick={onClose} className="flex min-w-0 flex-1 items-center gap-3">
-              <img src={iconSrc} alt="" className="size-10 border-2 border-border shrink-0 object-cover" />
+            <Link
+              href={squadHref}
+              onClick={onClose}
+              className="flex min-w-0 flex-1 items-center gap-3"
+            >
+              <img
+                src={iconSrc}
+                alt=""
+                className="size-10 border-2 border-border shrink-0 object-cover"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-black uppercase truncate">{s.name}</p>
                 <p className="text-[9px] font-bold text-muted-foreground uppercase truncate">
@@ -277,7 +286,7 @@ export function SquadsCategoriesFollowDialog({
               'flex-1 py-3 font-black text-[10px] uppercase tracking-widest border-b-2 -mb-0.5 transition-colors',
               activeTab === 'squads'
                 ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
             Squads {localSquads.length}
@@ -289,7 +298,7 @@ export function SquadsCategoriesFollowDialog({
               'flex-1 py-3 font-black text-[10px] uppercase tracking-widest border-b-2 -mb-0.5 transition-colors',
               activeTab === 'categories'
                 ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
             Categories {followedCount}
