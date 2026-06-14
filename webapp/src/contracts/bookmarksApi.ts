@@ -6,32 +6,34 @@
 
 /** Curated folder emojis shown in the picker (no free-text emoji). */
 export const BOOKMARK_FOLDER_EMOJIS = [
-  '📚',
-  '🔖',
-  '💡',
-  '⭐',
-  '🎯',
-  '🚀',
-  '💻',
-  '📝',
-  '🎨',
-  '🎮',
-  '🏠',
-  '❤️',
-  '🔥',
-  '✨',
-  '📌',
-  '🗂️',
-  '🌟',
-  '💼',
-  '🧠',
-  '🔬',
-  '📖',
+  "📚",
+  "🔖",
+  "💡",
+  "⭐",
+  "🎯",
+  "🚀",
+  "💻",
+  "📝",
+  "🎨",
+  "🎮",
+  "🏠",
+  "❤️",
+  "🔥",
+  "✨",
+  "📌",
+  "🗂️",
+  "🌟",
+  "💼",
+  "🧠",
+  "🔬",
+  "📖",
 ] as const;
 
 export type BookmarkFolderEmoji = (typeof BOOKMARK_FOLDER_EMOJIS)[number];
 
-export function isAllowedBookmarkFolderEmoji(value: string): value is BookmarkFolderEmoji {
+export function isAllowedBookmarkFolderEmoji(
+  value: string,
+): value is BookmarkFolderEmoji {
   return (BOOKMARK_FOLDER_EMOJIS as readonly string[]).includes(value);
 }
 

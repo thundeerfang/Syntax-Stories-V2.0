@@ -1,1 +1,1 @@
-export { HashtagBadgeLink, type HashtagBadgeLinkProps } from './components/HashtagBadgeLink';
+export * from "@/components/tags";

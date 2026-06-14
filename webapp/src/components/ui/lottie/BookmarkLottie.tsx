@@ -1,36 +1,30 @@
-'use client';
-
-import { useCallback, useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
-
+"use client";
+import { useCallback, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 const DotLottieReact = dynamic(
-  () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false }
+  () => import("@lottiefiles/dotlottie-react").then((m) => m.DotLottieReact),
+  { ssr: false },
 );
-
 type DotLottieHandle = {
   play: () => void;
   pause: () => void;
   readonly isLoaded: boolean;
 };
-
 export interface BookmarkLottieProps {
   size?: number;
   play?: boolean;
 }
-
 const BOOKMARK_OVERSCAN = 1.52;
-
-export function BookmarkLottie({ play = false, size = 22 }: Readonly<BookmarkLottieProps>) {
+export function BookmarkLottie({
+  play = false,
+  size = 22,
+}: Readonly<BookmarkLottieProps>) {
   const instRef = useRef<DotLottieHandle | null>(null);
   const playRef = useRef(play);
-
   useEffect(() => {
     playRef.current = play;
   }, [play]);
-
   const innerPx = size * BOOKMARK_OVERSCAN;
-
   const syncInstance = useCallback(() => {
     const inst = instRef.current;
     if (!inst?.isLoaded) return false;
@@ -41,7 +35,6 @@ export function BookmarkLottie({ play = false, size = 22 }: Readonly<BookmarkLot
     }
     return true;
   }, []);
-
   useEffect(() => {
     let raf = 0;
     let tries = 0;
@@ -53,7 +46,6 @@ export function BookmarkLottie({ play = false, size = 22 }: Readonly<BookmarkLot
     run();
     return () => cancelAnimationFrame(raf);
   }, [play, syncInstance]);
-
   return (
     <span
       className="relative inline-flex shrink-0 pointer-events-none overflow-hidden bg-transparent"
@@ -64,8 +56,8 @@ export function BookmarkLottie({ play = false, size = 22 }: Readonly<BookmarkLot
         style={{
           width: innerPx,
           height: innerPx,
-          transform: 'translate(-50%, -50%)',
-          clipPath: 'inset(11%)',
+          transform: "translate(-50%, -50%)",
+          clipPath: "inset(11%)",
         }}
       >
         <DotLottieReact
@@ -86,7 +78,7 @@ export function BookmarkLottie({ play = false, size = 22 }: Readonly<BookmarkLot
           style={{
             width: innerPx,
             height: innerPx,
-            display: 'block',
+            display: "block",
           }}
           renderConfig={{ autoResize: true }}
         />

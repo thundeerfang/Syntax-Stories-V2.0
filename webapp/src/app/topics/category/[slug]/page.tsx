@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Compass, FileStack, Layers } from 'lucide-react';
-import { blogApi } from '@/api/blog';
-import { BlogCard } from '@/features/blog';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { Compass, FileStack, Layers } from "lucide-react";
+import { blogApi } from "@/api/blog";
+import { BlogCard } from "@/features/blog";
 import {
   RailFeedEmptyState,
   RailFeedErrorState,
@@ -14,22 +14,22 @@ import {
   RailCountPillPair,
   ShellPageIntroHeader,
   type RailSectionSubheaderSortProps,
-} from '@/components/layout';
-import { FollowingPostsGridSkeleton } from '@/components/skeletons';
-import { CategoryFollowButton } from '@/features/topics';
-import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
-import type { BlogTaxonomyRow } from '@/types/blog';
-import type { Post } from '@/types';
-import { useAuthStore } from '@/store/auth';
+} from "@/components/layout";
+import { FollowingPostsGridSkeleton } from "@/components/skeletons";
+import { CategoryFollowButton } from "@/features/topics";
+import { mapPublicFeedPostToPost } from "@/lib/blog/mapFeedPostToPost";
+import { shell } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
+import type { BlogTaxonomyRow } from "@/types/blog";
+import type { Post } from "@/types";
+import { useAuthStore } from "@/store/auth";
 
-type PostSort = 'newest' | 'oldest' | 'title-asc';
+type PostSort = "newest" | "oldest" | "title-asc";
 
-const CATEGORY_SORT_OPTIONS: RailSectionSubheaderSortProps['options'] = [
-  { value: 'newest', label: 'Newest first' },
-  { value: 'oldest', label: 'Oldest first' },
-  { value: 'title-asc', label: 'Title A–Z' },
+const CATEGORY_SORT_OPTIONS: RailSectionSubheaderSortProps["options"] = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "title-asc", label: "Title A–Z" },
 ];
 
 function displayCategoryTitle(slug: string, taxonomyName?: string): string {
@@ -39,19 +39,19 @@ function displayCategoryTitle(slug: string, taxonomyName?: string): string {
     .split(/[-_\s]+/)
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+    .join(" ");
 }
 
 function comparePosts(a: Post, b: Post, sort: PostSort): number {
   switch (sort) {
-    case 'oldest': {
+    case "oldest": {
       const ta = Date.parse(a.publishedAt) || 0;
       const tb = Date.parse(b.publishedAt) || 0;
       return ta - tb || a.title.localeCompare(b.title);
     }
-    case 'title-asc':
-      return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-    case 'newest':
+    case "title-asc":
+      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+    case "newest":
     default: {
       const ta = Date.parse(a.publishedAt) || 0;
       const tb = Date.parse(b.publishedAt) || 0;
@@ -65,17 +65,20 @@ export default function TopicsCategoryFeedPage() {
   const token = useAuthStore((s) => s.token);
   const params = useParams();
   const raw = params?.slug;
-  const categorySlug = typeof raw === 'string' ? decodeURIComponent(raw) : '';
+  const categorySlug = typeof raw === "string" ? decodeURIComponent(raw) : "";
   const [posts, setPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<BlogTaxonomyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [searchDebounced, setSearchDebounced] = useState('');
-  const [postSort, setPostSort] = useState<PostSort>('newest');
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [postSort, setPostSort] = useState<PostSort>("newest");
 
   useEffect(() => {
-    const t = window.setTimeout(() => setSearchDebounced(searchInput.trim().toLowerCase()), 280);
+    const t = window.setTimeout(
+      () => setSearchDebounced(searchInput.trim().toLowerCase()),
+      280,
+    );
     return () => window.clearTimeout(t);
   }, [searchInput]);
 
@@ -96,7 +99,7 @@ export default function TopicsCategoryFeedPage() {
       setPosts(rawPosts.map(mapPublicFeedPostToPost));
       setCategories(tax.categories ?? []);
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Could not load posts');
+      setErrorMsg(e instanceof Error ? e.message : "Could not load posts");
       setPosts([]);
       setCategories([]);
     } finally {
@@ -109,13 +112,16 @@ export default function TopicsCategoryFeedPage() {
   }, [load]);
 
   const taxonomyRow = useMemo(
-    () => categories.find((c) => c.slug.toLowerCase() === categorySlug.toLowerCase()),
-    [categories, categorySlug]
+    () =>
+      categories.find(
+        (c) => c.slug.toLowerCase() === categorySlug.toLowerCase(),
+      ),
+    [categories, categorySlug],
   );
 
   const displayTitle = useMemo(
     () => displayCategoryTitle(categorySlug, taxonomyRow?.name),
-    [categorySlug, taxonomyRow?.name]
+    [categorySlug, taxonomyRow?.name],
   );
 
   const totalIndexed = taxonomyRow?.postCount ?? posts.length;
@@ -126,7 +132,7 @@ export default function TopicsCategoryFeedPage() {
     if (q) {
       list = posts.filter((p) => {
         const hay =
-          `${p.title} ${p.excerpt} ${p.author?.name ?? ''} ${p.author?.username ?? ''}`.toLowerCase();
+          `${p.title} ${p.excerpt} ${p.author?.name ?? ""} ${p.author?.username ?? ""}`.toLowerCase();
         return hay.includes(q);
       });
     }
@@ -134,17 +140,19 @@ export default function TopicsCategoryFeedPage() {
   }, [posts, searchDebounced, postSort]);
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
+    <div className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}>
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
         <ShellPageIntroHeader
           breadcrumbItems={[
-            { href: '/', label: 'Home' },
-            { href: '/topics', label: 'Topics' },
+            { href: "/", label: "Home" },
+            { href: "/topics", label: "Topics" },
             { label: displayTitle },
           ]}
           description="Stories published in this taxonomy category across the community."
           descriptionEnd={
-            categorySlug ? <CategoryFollowButton slug={categorySlug} name={displayTitle} /> : null
+            categorySlug ? (
+              <CategoryFollowButton slug={categorySlug} name={displayTitle} />
+            ) : null
           }
           title={
             <h1 className="flex items-center gap-2 text-2xl font-black uppercase italic tracking-tighter text-foreground sm:text-3xl lg:text-4xl">
@@ -194,15 +202,15 @@ export default function TopicsCategoryFeedPage() {
               search={{
                 value: searchInput,
                 onChange: setSearchInput,
-                placeholder: 'Search posts…',
-                ariaLabel: 'Search posts in this category',
+                placeholder: "Search posts…",
+                ariaLabel: "Search posts in this category",
               }}
               sort={{
                 id: `topics-category-sort-${categorySlug}`,
                 value: postSort,
                 onChange: (v) => setPostSort(v as PostSort),
                 options: CATEGORY_SORT_OPTIONS,
-                placeholder: 'Sort',
+                placeholder: "Sort",
               }}
             />
 
@@ -216,10 +224,16 @@ export default function TopicsCategoryFeedPage() {
                   description="Nothing has been filed under this category on the public feed. Try another category or open the topics hub."
                   actions={[
                     {
-                      label: 'Browse topics',
-                      href: '/topics',
-                      variant: 'primary',
-                      icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+                      label: "Browse topics",
+                      href: "/topics",
+                      variant: "primary",
+                      icon: (
+                        <Compass
+                          className="size-4 shrink-0"
+                          strokeWidth={2.5}
+                          aria-hidden
+                        />
+                      ),
                     },
                   ]}
                 />
@@ -229,7 +243,12 @@ export default function TopicsCategoryFeedPage() {
                   variant="filter"
                   title="No matching posts"
                   description="Try a different search term or clear the filter."
-                  actions={[{ label: 'Clear search', onClick: () => setSearchInput('') }]}
+                  actions={[
+                    {
+                      label: "Clear search",
+                      onClick: () => setSearchInput(""),
+                    },
+                  ]}
                 />
               ) : (
                 <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">

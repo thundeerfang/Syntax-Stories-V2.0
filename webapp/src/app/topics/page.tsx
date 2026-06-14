@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Hash, Layers, Tags } from 'lucide-react';
-import { toast } from 'sonner';
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { Hash, Layers, Tags } from "lucide-react";
+import { toast } from "sonner";
 import {
   fetchCategoriesList,
   fetchTagsExplore,
   fetchTagsList,
   type TagExploreRow,
-} from '@/api/tagsExplore';
+} from "@/api/tagsExplore";
 import {
   RailCountPill,
   RailCountPillLoading,
@@ -21,24 +27,24 @@ import {
   ShellPageIntroHeader,
   type RailSectionSubheaderFilterProps,
   type RailSectionSubheaderSortProps,
-} from '@/components/layout';
-import { FeaturedCategoryCard } from '@/features/explore';
-import { RankCountPill } from '@/features/topics';
-import { HashtagBadgeLink } from '@/features/tags';
-import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
+} from "@/components/layout";
+import { FeaturedCategoryCard } from "@/features/explore";
+import { RankCountPill } from "@/features/topics";
+import { HashtagBadgeLink } from "@/features/tags";
+import { BlogApiConnectionError } from "@/lib/api/blogAuthFetch";
 import {
   FOLLOWED_CATEGORIES_CHANGED_EVENT,
   readFollowedCategorySlugs,
-} from '@/lib/feeds/followedCategoriesStorage';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
-import { useAuthStore } from '@/store/auth';
-import type { BlogTaxonomyRow } from '@/types/blog';
-import type { TagListSort, CategoryListSort } from '@contracts/tagsExploreApi';
+} from "@/lib/feeds/followedCategoriesStorage";
+import { shell } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
+import { useAuthStore } from "@/store/auth";
+import type { BlogTaxonomyRow } from "@/types/blog";
+import type { TagListSort, CategoryListSort } from "@contracts/tagsExploreApi";
 
 const DotLottieReact = dynamic(
-  () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false }
+  () => import("@lottiefiles/dotlottie-react").then((m) => m.DotLottieReact),
+  { ssr: false },
 );
 
 function toastApiError(e: unknown, fallback: string) {
@@ -49,7 +55,10 @@ function toastApiError(e: unknown, fallback: string) {
   toast.error(e instanceof Error && e.message ? e.message : fallback);
 }
 
-function HeaderDotLottie({ src, size }: Readonly<{ src: string; size: number }>) {
+function HeaderDotLottie({
+  src,
+  size,
+}: Readonly<{ src: string; size: number }>) {
   return (
     <span
       className="pointer-events-none inline-flex shrink-0 overflow-hidden"
@@ -59,7 +68,7 @@ function HeaderDotLottie({ src, size }: Readonly<{ src: string; size: number }>)
         src={src}
         loop
         autoplay
-        style={{ width: size, height: size, display: 'block' }}
+        style={{ width: size, height: size, display: "block" }}
         renderConfig={{ autoResize: true }}
       />
     </span>
@@ -67,25 +76,25 @@ function HeaderDotLottie({ src, size }: Readonly<{ src: string; size: number }>)
 }
 
 const tagLinkHoverClass =
-  'inline-flex max-w-full min-w-0 items-center  px-2.5 py-1 font-mono text-[12px] font-medium tracking-tight text-foreground transition-colors hover:bg-primary hover:text-primary-foreground';
+  "inline-flex max-w-full min-w-0 items-center  px-2.5 py-1 font-mono text-[12px] font-medium tracking-tight text-foreground transition-colors hover:bg-primary hover:text-primary-foreground";
 
-const TAG_SORT_OPTIONS: RailSectionSubheaderSortProps['options'] = [
-  { value: 'name-asc', label: 'Name A–Z' },
-  { value: 'name-desc', label: 'Name Z–A' },
-  { value: 'posts-desc', label: 'Most posts' },
-  { value: 'recent', label: 'Recently used' },
+const TAG_SORT_OPTIONS: RailSectionSubheaderSortProps["options"] = [
+  { value: "name-asc", label: "Name A–Z" },
+  { value: "name-desc", label: "Name Z–A" },
+  { value: "posts-desc", label: "Most posts" },
+  { value: "recent", label: "Recently used" },
 ];
 
-const CATEGORY_SORT_OPTIONS: RailSectionSubheaderSortProps['options'] = [
-  { value: 'name-asc', label: 'Name A–Z' },
-  { value: 'posts-desc', label: 'Most posts' },
+const CATEGORY_SORT_OPTIONS: RailSectionSubheaderSortProps["options"] = [
+  { value: "name-asc", label: "Name A–Z" },
+  { value: "posts-desc", label: "Most posts" },
 ];
 
-type CategoryListFilter = 'all' | 'followed';
+type CategoryListFilter = "all" | "followed";
 
-const CATEGORY_FILTER_OPTIONS: RailSectionSubheaderFilterProps['options'] = [
-  { value: 'all', label: 'All' },
-  { value: 'followed', label: 'Followed' },
+const CATEGORY_FILTER_OPTIONS: RailSectionSubheaderFilterProps["options"] = [
+  { value: "all", label: "All" },
+  { value: "followed", label: "Followed" },
 ];
 
 const CATEGORY_PAGE_SIZE = 6;
@@ -120,7 +129,7 @@ type TagsCacheEntry = {
 function categoriesQueryKey(
   filter: CategoryListFilter,
   sort: CategoryListSort,
-  q: string
+  q: string,
 ): string {
   return `${filter}|${sort}|${q}`;
 }
@@ -143,11 +152,19 @@ function TagListSkeleton({ count = 12 }: Readonly<{ count?: number }>) {
   );
 }
 
-function CategoryGridSkeleton({ count = CATEGORY_PAGE_SIZE }: Readonly<{ count?: number }>) {
+function CategoryGridSkeleton({
+  count = CATEGORY_PAGE_SIZE,
+}: Readonly<{ count?: number }>) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
+    <div
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      aria-hidden
+    >
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="min-h-[12rem] animate-pulse border-2 border-border bg-muted/40" />
+        <div
+          key={i}
+          className="min-h-[12rem] animate-pulse border-2 border-border bg-muted/40"
+        />
       ))}
     </div>
   );
@@ -175,13 +192,16 @@ function TagRankCard({
       </div>
       <ol className="mt-4 flex list-none flex-col gap-2.5 p-0">
         {shown.map((row, i) => (
-          <li key={row.slug} className="flex min-w-0 items-center gap-3 font-mono text-[13px]">
+          <li
+            key={row.slug}
+            className="flex min-w-0 items-center gap-3 font-mono text-[13px]"
+          >
             <span className="w-6 shrink-0 tabular-nums text-[12px] font-semibold text-muted-foreground">
               {i + 1}
             </span>
             <Link
               href={`/topics/${encodeURIComponent(row.slug)}`}
-              className={cn(tagLinkHoverClass, 'min-w-0 flex-1 text-[13px]')}
+              className={cn(tagLinkHoverClass, "min-w-0 flex-1 text-[13px]")}
             >
               <span className="block truncate">{row.name}</span>
             </Link>
@@ -225,13 +245,16 @@ function CategoryRankCard({
       </div>
       <ol className="mt-4 flex list-none flex-col gap-2.5 p-0">
         {shown.map((row, i) => (
-          <li key={row.slug} className="flex min-w-0 items-center gap-3 font-mono text-[13px]">
+          <li
+            key={row.slug}
+            className="flex min-w-0 items-center gap-3 font-mono text-[13px]"
+          >
             <span className="w-6 shrink-0 tabular-nums text-[12px] font-semibold text-muted-foreground">
               {i + 1}
             </span>
             <Link
               href={`/topics/category/${encodeURIComponent(row.slug)}`}
-              className={cn(tagLinkHoverClass, 'min-w-0 flex-1 text-[13px]')}
+              className={cn(tagLinkHoverClass, "min-w-0 flex-1 text-[13px]")}
             >
               <span className="block truncate">{row.name}</span>
             </Link>
@@ -258,7 +281,9 @@ export default function TopicsPage() {
 
   const [trending, setTrending] = useState<TagExploreRow[]>([]);
   const [popular, setPopular] = useState<TagExploreRow[]>([]);
-  const [popularCategories, setPopularCategories] = useState<BlogTaxonomyRow[]>([]);
+  const [popularCategories, setPopularCategories] = useState<BlogTaxonomyRow[]>(
+    [],
+  );
   const [rankCardsLoading, setRankCardsLoading] = useState(true);
 
   const [categories, setCategories] = useState<BlogTaxonomyRow[]>([]);
@@ -273,33 +298,42 @@ export default function TopicsPage() {
   const [tagsPagePending, setTagsPagePending] = useState(false);
   const [tagPage, setTagPage] = useState(0);
 
-  const [categorySearchInput, setCategorySearchInput] = useState('');
-  const [categorySearchDebounced, setCategorySearchDebounced] = useState('');
-  const [categorySort, setCategorySort] = useState<CategoryListSort>('name-asc');
-  const [categoryFilter, setCategoryFilter] = useState<CategoryListFilter>('all');
+  const [categorySearchInput, setCategorySearchInput] = useState("");
+  const [categorySearchDebounced, setCategorySearchDebounced] = useState("");
+  const [categorySort, setCategorySort] =
+    useState<CategoryListSort>("name-asc");
+  const [categoryFilter, setCategoryFilter] =
+    useState<CategoryListFilter>("all");
 
-  const [searchInput, setSearchInput] = useState('');
-  const [searchDebounced, setSearchDebounced] = useState('');
-  const [tagSort, setTagSort] = useState<TagListSort>('name-asc');
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [tagSort, setTagSort] = useState<TagListSort>("name-asc");
 
   const categoriesRequestIdRef = useRef(0);
   const tagsRequestIdRef = useRef(0);
-  const categoriesCacheRef = useRef<Map<string, CategoriesCacheEntry>>(new Map());
+  const categoriesCacheRef = useRef<Map<string, CategoriesCacheEntry>>(
+    new Map(),
+  );
   const tagsCacheRef = useRef<Map<string, TagsCacheEntry>>(new Map());
 
-  const applyCategoryPage = useCallback((entry: CategoriesCacheEntry, page: number) => {
-    if (entry.followedRows) {
-      const start = page * CATEGORY_PAGE_SIZE;
-      setCategories(entry.followedRows.slice(start, start + CATEGORY_PAGE_SIZE));
-      setCategoriesTotal(entry.followedRows.length);
-      return;
-    }
-    const rows = entry.pages.get(page);
-    if (rows) {
-      setCategories(rows);
-      setCategoriesTotal(entry.total);
-    }
-  }, []);
+  const applyCategoryPage = useCallback(
+    (entry: CategoriesCacheEntry, page: number) => {
+      if (entry.followedRows) {
+        const start = page * CATEGORY_PAGE_SIZE;
+        setCategories(
+          entry.followedRows.slice(start, start + CATEGORY_PAGE_SIZE),
+        );
+        setCategoriesTotal(entry.followedRows.length);
+        return;
+      }
+      const rows = entry.pages.get(page);
+      if (rows) {
+        setCategories(rows);
+        setCategoriesTotal(entry.total);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -324,7 +358,7 @@ export default function TopicsPage() {
       try {
         const [explore, popularCats] = await Promise.all([
           fetchTagsExplore(),
-          fetchCategoriesList({ offset: 0, limit: 10, sort: 'posts-desc' }),
+          fetchCategoriesList({ offset: 0, limit: 10, sort: "posts-desc" }),
         ]);
         if (cancelled) return;
         setTrending(explore.trending);
@@ -335,11 +369,11 @@ export default function TopicsPage() {
             name: c.name,
             postCount: c.postCount,
             description: c.description,
-          }))
+          })),
         );
       } catch (e) {
         if (!cancelled) {
-          toastApiError(e, 'Could not load topic rankings');
+          toastApiError(e, "Could not load topic rankings");
           setTrending([]);
           setPopular([]);
           setPopularCategories([]);
@@ -354,10 +388,14 @@ export default function TopicsPage() {
   }, []);
 
   const loadCategories = useCallback(async () => {
-    const queryKey = categoriesQueryKey(categoryFilter, categorySort, categorySearchDebounced);
+    const queryKey = categoriesQueryKey(
+      categoryFilter,
+      categorySort,
+      categorySearchDebounced,
+    );
     const cached = categoriesCacheRef.current.get(queryKey);
 
-    if (categoryFilter === 'followed') {
+    if (categoryFilter === "followed") {
       if (cached?.followedRows) {
         applyCategoryPage(cached, categoryPage);
         setCategoriesBootstrapping(false);
@@ -419,7 +457,7 @@ export default function TopicsPage() {
         applyCategoryPage(entry, categoryPage);
       } catch (e) {
         if (categoriesRequestIdRef.current !== requestId) return;
-        toastApiError(e, 'Could not load categories');
+        toastApiError(e, "Could not load categories");
         setCategories([]);
         setCategoriesTotal(0);
       } finally {
@@ -462,7 +500,10 @@ export default function TopicsPage() {
       if (categoriesRequestIdRef.current !== requestId) return;
 
       const rows = page.list.map(mapCategoryRow);
-      const entry: CategoriesCacheEntry = cached ?? { total: page.total, pages: new Map() };
+      const entry: CategoriesCacheEntry = cached ?? {
+        total: page.total,
+        pages: new Map(),
+      };
       entry.total = page.total;
       entry.pages.set(categoryPage, rows);
       categoriesCacheRef.current.set(queryKey, entry);
@@ -471,7 +512,7 @@ export default function TopicsPage() {
       setCategoriesTotal(page.total);
     } catch (e) {
       if (categoriesRequestIdRef.current !== requestId) return;
-      toastApiError(e, 'Could not load categories');
+      toastApiError(e, "Could not load categories");
       if (showBootstrap) {
         setCategories([]);
         setCategoriesTotal(0);
@@ -498,12 +539,19 @@ export default function TopicsPage() {
   useEffect(() => {
     const onFollowedChanged = () => {
       for (const key of categoriesCacheRef.current.keys()) {
-        if (key.startsWith('followed|')) categoriesCacheRef.current.delete(key);
+        if (key.startsWith("followed|")) categoriesCacheRef.current.delete(key);
       }
-      if (categoryFilter === 'followed') void loadCategories();
+      if (categoryFilter === "followed") void loadCategories();
     };
-    window.addEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, onFollowedChanged);
-    return () => window.removeEventListener(FOLLOWED_CATEGORIES_CHANGED_EVENT, onFollowedChanged);
+    window.addEventListener(
+      FOLLOWED_CATEGORIES_CHANGED_EVENT,
+      onFollowedChanged,
+    );
+    return () =>
+      window.removeEventListener(
+        FOLLOWED_CATEGORIES_CHANGED_EVENT,
+        onFollowedChanged,
+      );
   }, [categoryFilter, loadCategories]);
 
   const loadTags = useCallback(async () => {
@@ -540,7 +588,10 @@ export default function TopicsPage() {
       });
       if (tagsRequestIdRef.current !== requestId) return;
 
-      const entry: TagsCacheEntry = cached ?? { total: page.total, pages: new Map() };
+      const entry: TagsCacheEntry = cached ?? {
+        total: page.total,
+        pages: new Map(),
+      };
       entry.total = page.total;
       entry.pages.set(tagPage, page.list);
       tagsCacheRef.current.set(queryKey, entry);
@@ -549,7 +600,7 @@ export default function TopicsPage() {
       setTagsTotal(page.total);
     } catch (e) {
       if (tagsRequestIdRef.current !== requestId) return;
-      toastApiError(e, 'Could not load tags');
+      toastApiError(e, "Could not load tags");
       if (showBootstrap) {
         setTags([]);
         setTagsTotal(0);
@@ -566,7 +617,10 @@ export default function TopicsPage() {
     void loadTags();
   }, [loadTags]);
 
-  const categoryTotalPages = Math.max(1, Math.ceil(categoriesTotal / CATEGORY_PAGE_SIZE));
+  const categoryTotalPages = Math.max(
+    1,
+    Math.ceil(categoriesTotal / CATEGORY_PAGE_SIZE),
+  );
   const tagTotalPages = Math.max(1, Math.ceil(tagsTotal / TAG_PAGE_SIZE));
 
   useEffect(() => {
@@ -582,14 +636,14 @@ export default function TopicsPage() {
   }, [tagPage, tagTotalPages]);
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
+    <div className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}>
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
         <ShellPageIntroHeader
-          breadcrumbItems={[{ href: '/', label: 'Home' }, { label: 'Topics' }]}
+          breadcrumbItems={[{ href: "/", label: "Home" }, { label: "Topics" }]}
           description="Browse taxonomy categories and tags writers use — open a category for its post stream, or a tag."
           title={
             <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-              Explore{' '}
+              Explore{" "}
               <span className="text-primary underline decoration-4 underline-offset-4 sm:decoration-6 sm:underline-offset-6">
                 topics.
               </span>
@@ -600,7 +654,10 @@ export default function TopicsPage() {
         {rankCardsLoading ? (
           <div className="grid gap-4 md:grid-cols-3" aria-busy="true">
             {[0, 1, 2].map((k) => (
-              <div key={k} className="h-72 animate-pulse border-2 border-border bg-muted/40" />
+              <div
+                key={k}
+                className="h-72 animate-pulse border-2 border-border bg-muted/40"
+              />
             ))}
           </div>
         ) : (
@@ -608,18 +665,26 @@ export default function TopicsPage() {
             <TagRankCard
               title="Trending tags"
               rows={trending}
-              headerStart={<HeaderDotLottie src="/lottie/Fire.lottie" size={28} />}
+              headerStart={
+                <HeaderDotLottie src="/lottie/Fire.lottie" size={28} />
+              }
             />
             <TagRankCard
               title="Popular tags"
               rows={popular}
-              headerStart={<HeaderDotLottie src="/lottie/Tags.lottie" size={28} />}
+              headerStart={
+                <HeaderDotLottie src="/lottie/Tags.lottie" size={28} />
+              }
             />
             <CategoryRankCard
               title="Popular categories"
               rows={popularCategories}
               headerStart={
-                <Layers className="size-6 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
+                <Layers
+                  className="size-6 shrink-0 text-primary"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
               }
             />
           </div>
@@ -648,30 +713,30 @@ export default function TopicsPage() {
             search={{
               value: categorySearchInput,
               onChange: setCategorySearchInput,
-              placeholder: 'Search categories…',
-              ariaLabel: 'Search categories',
+              placeholder: "Search categories…",
+              ariaLabel: "Search categories",
               disabled: categoriesBootstrapping,
             }}
             sort={{
-              id: 'topics-all-categories-sort',
+              id: "topics-all-categories-sort",
               value: categorySort,
               onChange: (v) => {
                 setCategorySort(v as CategoryListSort);
                 setCategoryPage(0);
               },
               options: CATEGORY_SORT_OPTIONS,
-              placeholder: 'Sort',
+              placeholder: "Sort",
               disabled: categoriesBootstrapping,
             }}
             filter={{
-              id: 'topics-all-categories-filter',
+              id: "topics-all-categories-filter",
               value: categoryFilter,
               onChange: (v) => {
                 setCategoryFilter(v as CategoryListFilter);
                 setCategoryPage(0);
               },
               options: CATEGORY_FILTER_OPTIONS,
-              placeholder: 'Filter',
+              placeholder: "Filter",
               disabled: categoriesBootstrapping,
             }}
           />
@@ -684,7 +749,7 @@ export default function TopicsPage() {
                 title="No categories in taxonomy yet"
                 description="When staff publish taxonomy categories and writers file stories under them, they will show up here."
               />
-            ) : categoryFilter === 'followed' && categoriesTotal === 0 ? (
+            ) : categoryFilter === "followed" && categoriesTotal === 0 ? (
               <RailFeedEmptyState
                 icon={Layers}
                 title="No followed categories"
@@ -696,14 +761,19 @@ export default function TopicsPage() {
                 variant="filter"
                 title="No categories match your search"
                 description="Try a different keyword or clear the search field."
-                actions={[{ label: 'Clear search', onClick: () => setCategorySearchInput('') }]}
+                actions={[
+                  {
+                    label: "Clear search",
+                    onClick: () => setCategorySearchInput(""),
+                  },
+                ]}
               />
             ) : (
               <>
                 <div
                   className={cn(
-                    'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3',
-                    categoriesPagePending && 'pointer-events-none opacity-60'
+                    "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
+                    categoriesPagePending && "pointer-events-none opacity-60",
                   )}
                 >
                   {categories.map((c) => (
@@ -749,25 +819,28 @@ export default function TopicsPage() {
                   secondaryLabel={`${tagsTotal} matching`}
                 />
               ) : (
-                <RailCountPill count={tagsTotal} aria-label={`${tagsTotal} tags`} />
+                <RailCountPill
+                  count={tagsTotal}
+                  aria-label={`${tagsTotal} tags`}
+                />
               )
             }
             search={{
               value: searchInput,
               onChange: setSearchInput,
-              placeholder: 'Search tags…',
-              ariaLabel: 'Search tags',
+              placeholder: "Search tags…",
+              ariaLabel: "Search tags",
               disabled: tagsBootstrapping,
             }}
             sort={{
-              id: 'topics-all-tags-sort',
+              id: "topics-all-tags-sort",
               value: tagSort,
               onChange: (v) => {
                 setTagSort(v as TagListSort);
                 setTagPage(0);
               },
               options: TAG_SORT_OPTIONS,
-              placeholder: 'Sort',
+              placeholder: "Sort",
               disabled: tagsBootstrapping,
             }}
           />
@@ -786,14 +859,16 @@ export default function TopicsPage() {
                 variant="filter"
                 title="No tags match your search"
                 description="Try a different keyword or clear the search field."
-                actions={[{ label: 'Clear search', onClick: () => setSearchInput('') }]}
+                actions={[
+                  { label: "Clear search", onClick: () => setSearchInput("") },
+                ]}
               />
             ) : (
               <>
                 <div
                   className={cn(
-                    'flex flex-wrap gap-x-3 gap-y-2',
-                    tagsPagePending && 'pointer-events-none opacity-60'
+                    "flex flex-wrap gap-x-3 gap-y-2",
+                    tagsPagePending && "pointer-events-none opacity-60",
                   )}
                 >
                   {tags.map((t) => (

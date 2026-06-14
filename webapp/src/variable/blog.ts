@@ -1,0 +1,2 @@
+export const PROFILE_ACTIVITY_PREVIEW_LIMIT = 12;
+export const BLOG_TRASH_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;

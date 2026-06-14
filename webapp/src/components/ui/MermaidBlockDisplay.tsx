@@ -1,9 +1,7 @@
-'use client';
-
-import { useEffect, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import { useEffect, useId, useRef, useState } from "react";
+import { toast } from "sonner";
+import { cn } from "@/lib/core/utils";
 export function MermaidBlockDisplay({
   source,
   className,
@@ -11,34 +9,33 @@ export function MermaidBlockDisplay({
 }: Readonly<{
   source: string;
   className?: string;
-  /** When true, render errors inline only (no toast). */
   quiet?: boolean;
 }>) {
   const ref = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
   const toastedForSourceRef = useRef<string | null>(null);
-  const uid = useId().replace(/:/g, '');
-
+  const uid = useId().replace(/:/g, "");
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const trimmed = source.trim();
     if (!trimmed) {
-      el.innerHTML = '';
+      el.innerHTML = "";
       setErr(null);
       return;
     }
     let cancelled = false;
     void (async () => {
       try {
-        const mermaid = (await import('mermaid')).default;
+        const mermaid = (await import("mermaid")).default;
         mermaid.initialize({
           startOnLoad: false,
           theme:
-            typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
-              ? 'dark'
-              : 'default',
-          securityLevel: 'loose',
+            typeof document !== "undefined" &&
+            document.documentElement.classList.contains("dark")
+              ? "dark"
+              : "default",
+          securityLevel: "loose",
         });
         const id = `mermaid-${uid}-${Math.random().toString(36).slice(2, 9)}`;
         const { svg } = await mermaid.render(id, trimmed);
@@ -47,16 +44,18 @@ export function MermaidBlockDisplay({
         setErr(null);
       } catch (e) {
         if (cancelled) return;
-        const raw = e instanceof Error ? e.message : 'Invalid diagram';
+        const raw = e instanceof Error ? e.message : "Invalid diagram";
         const detail =
           raw.length > 160
             ? `${raw.slice(0, 160)}…`
             : `${raw} — Quote labels that contain spaces in the editor.`;
         setErr(detail);
-        el.innerHTML = '';
+        el.innerHTML = "";
         if (!quiet && toastedForSourceRef.current !== trimmed) {
           toastedForSourceRef.current = trimmed;
-          toast.error('Could not render a Mermaid diagram on this page.', { description: detail });
+          toast.error("Could not render a Mermaid diagram on this page.", {
+            description: detail,
+          });
         }
       }
     })();
@@ -64,18 +63,18 @@ export function MermaidBlockDisplay({
       cancelled = true;
     };
   }, [source, uid, quiet]);
-
   if (!source.trim()) return null;
-
   return (
-    <div className={cn('w-full overflow-x-auto', className)}>
+    <div className={cn("w-full overflow-x-auto", className)}>
       {err ? (
         <div className="space-y-2 py-2">
           <p className="font-mono text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Unable to render Mermaid
           </p>
           <details className="font-mono text-[10px] leading-relaxed text-muted-foreground">
-            <summary className="cursor-pointer select-none text-foreground/90">Details</summary>
+            <summary className="cursor-pointer select-none text-foreground/90">
+              Details
+            </summary>
             <p className="mt-2 text-destructive/90">{err}</p>
           </details>
         </div>

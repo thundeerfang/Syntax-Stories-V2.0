@@ -1,2 +1,8 @@
-/** @deprecated Import from `@/features/explore` instead. */
-export * from '@/features/explore';
+export {
+  ExploreSectionHeaderCard,
+  PanelSectionHeader,
+} from "./ExploreSectionHeaderCard";
+export {
+  FeaturedCategoryCard,
+  type FeaturedCategoryCardProps,
+} from "./FeaturedCategoryCard";

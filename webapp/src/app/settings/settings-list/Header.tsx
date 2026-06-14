@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { FolderGit2, Github, Plus, RefreshCw, Award } from 'lucide-react';
-import { BlockShadowButton } from '@/components/ui';
-import { cn } from '@/lib/core/utils';
-import { SettingsSectionHeading } from './SettingsSectionHeading';
+import React from "react";
+import { FolderGit2, Github, Plus, RefreshCw, Award } from "lucide-react";
+import { BlockShadowButton } from "@/components/ui";
+import { cn } from "@/lib/core/utils";
+import { SettingsSectionHeading } from "./SettingsSectionHeading";
 
-type HeaderVariant = 'certifications' | 'projects' | 'openSource';
+type HeaderVariant = "certifications" | "projects" | "openSource";
 
 type SettingsSectionHeaderProps = Readonly<{
   variant: HeaderVariant;
@@ -48,8 +48,8 @@ function HeaderWrapper({
   return (
     <header
       className={cn(
-        'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-6',
-        border && 'border-b-4 border-border mb-6'
+        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-6",
+        border && "border-b-4 border-border mb-6",
       )}
     >
       {children}
@@ -62,7 +62,7 @@ export function SettingsSectionHeader({
   onPrimaryAction,
   disabled,
 }: SettingsSectionHeaderProps) {
-  if (variant === 'certifications') {
+  if (variant === "certifications") {
     return (
       <HeaderWrapper>
         <SettingsSectionHeading
@@ -80,7 +80,7 @@ export function SettingsSectionHeader({
     );
   }
 
-  if (variant === 'projects') {
+  if (variant === "projects") {
     return (
       <HeaderWrapper>
         <SettingsSectionHeading
@@ -98,7 +98,7 @@ export function SettingsSectionHeader({
     );
   }
 
-  if (variant === 'openSource') {
+  if (variant === "openSource") {
     return (
       <HeaderWrapper>
         <SettingsSectionHeading

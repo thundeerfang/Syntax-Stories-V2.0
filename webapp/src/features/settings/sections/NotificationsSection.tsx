@@ -1,7 +1,6 @@
-'use client';
-
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
+"use client";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import {
   Award,
   Bell,
@@ -11,87 +10,83 @@ import {
   Tag,
   UserPlus,
   Users,
-} from 'lucide-react';
-import { cn } from '@/lib/core/utils';
-import { Switch } from '@/components/retroui/Switch';
-import { useAuthStore } from '@/store/auth';
+} from "lucide-react";
+import { cn } from "@/lib/core/utils";
+import { Switch } from "@/components/retroui/Switch";
+import { useAuthStore } from "@/store/auth";
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
   type NotificationPreferences,
-} from '@/api/notifications';
+} from "@/api/notifications";
 import {
   SettingsSectionHeading,
   SettingsTabPanel,
   SettingsTabRoot,
-} from '@/app/settings/settings-list/SettingsSectionHeading';
-
+} from "@/app/settings/settings-list/SettingsSectionHeading";
 type ToggleKey = keyof NotificationPreferences;
-
 type PrefItem = {
   key: ToggleKey;
   label: string;
   hint: string;
   icon: ReactNode;
 };
-
 const CATEGORY_PREFS: PrefItem[] = [
   {
-    key: 'milestonesEnabled',
-    label: 'Engagement milestones',
-    hint: 'Reposts, views, and respects at 100 / 500 / 1K.',
+    key: "milestonesEnabled",
+    label: "Engagement milestones",
+    hint: "Reposts, views, and respects at 100 / 500 / 1K.",
     icon: <Heart className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'achievementsEnabled',
-    label: 'Achievements',
-    hint: 'Badge unlocks, XP, and level-up alerts.',
+    key: "achievementsEnabled",
+    label: "Achievements",
+    hint: "Badge unlocks, XP, and level-up alerts.",
     icon: <Award className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'followingEnabled',
-    label: 'Following feed',
-    hint: 'New posts from people you follow.',
+    key: "followingEnabled",
+    label: "Following feed",
+    hint: "New posts from people you follow.",
     icon: <Users className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'categoriesEnabled',
-    label: 'Categories',
-    hint: 'Posts in categories you follow.',
+    key: "categoriesEnabled",
+    label: "Categories",
+    hint: "Posts in categories you follow.",
     icon: <Tag className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'tagsEnabled',
-    label: 'Topics & tags',
-    hint: 'Posts on topics you follow.',
+    key: "tagsEnabled",
+    label: "Topics & tags",
+    hint: "Posts on topics you follow.",
     icon: <Tag className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'squadsEnabled',
-    label: 'Squads',
-    hint: 'New squad posts and squad milestones.',
+    key: "squadsEnabled",
+    label: "Squads",
+    hint: "New squad posts and squad milestones.",
     icon: <Users className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'trendingEnabled',
-    label: 'Trending',
-    hint: 'When your posts hit the trending section.',
+    key: "trendingEnabled",
+    label: "Trending",
+    hint: "When your posts hit the trending section.",
     icon: <Flame className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'referralsEnabled',
-    label: 'Invites',
-    hint: 'When a friend accepts your invite.',
+    key: "referralsEnabled",
+    label: "Invites",
+    hint: "When a friend accepts your invite.",
     icon: <UserPlus className="size-4" strokeWidth={2.5} />,
   },
   {
-    key: 'settingsEnabled',
-    label: 'Account & settings',
-    hint: 'Profile, education, email, and settings changes.',
+    key: "settingsEnabled",
+    label: "Account & settings",
+    hint: "Profile, education, email, and settings changes.",
     icon: <Settings className="size-4" strokeWidth={2.5} />,
   },
 ];
-
 const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
   inAppEnabled: true,
   milestonesEnabled: true,
@@ -104,7 +99,6 @@ const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
   tagsEnabled: true,
   achievementsEnabled: true,
 };
-
 function NotificationPrefCard({
   item,
   checked,
@@ -119,14 +113,16 @@ function NotificationPrefCard({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 border-4 border-border bg-card p-4 pl-4 pr-4 shadow-sm transition-colors',
-        checked && 'border-primary/40 bg-primary/[0.03]'
+        "flex items-start gap-3 border-4 border-border bg-card p-4 pl-4 pr-4 shadow-sm transition-colors",
+        checked && "border-primary/40 bg-primary/[0.03]",
       )}
     >
       <div
         className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border shadow-sm',
-          checked ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground'
+          "flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border shadow-sm",
+          checked
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted/30 text-muted-foreground",
         )}
       >
         {item.icon}
@@ -142,11 +138,11 @@ function NotificationPrefCard({
       <div className="flex shrink-0 items-center gap-2 self-center">
         <span
           className={cn(
-            'text-[9px] font-black uppercase tracking-tighter',
-            checked ? 'text-primary' : 'text-muted-foreground'
+            "text-[9px] font-black uppercase tracking-tighter",
+            checked ? "text-primary" : "text-muted-foreground",
           )}
         >
-          {checked ? 'On' : 'Off'}
+          {checked ? "On" : "Off"}
         </span>
         <Switch
           checked={checked}
@@ -158,13 +154,11 @@ function NotificationPrefCard({
     </div>
   );
 }
-
 export function NotificationsSettingsContent() {
   const token = useAuthStore((s) => s.token);
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<ToggleKey | null>(null);
-
   const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
@@ -172,37 +166,35 @@ export function NotificationsSettingsContent() {
       const p = await fetchNotificationPreferences(token);
       setPrefs(p);
     } catch {
-      toast.error('Could not load notification preferences.');
+      toast.error("Could not load notification preferences.");
     } finally {
       setLoading(false);
     }
   }, [token]);
-
   useEffect(() => {
     void load();
   }, [load]);
-
   const patch = async (key: ToggleKey, value: boolean) => {
     if (!token || !prefs) return;
     setSavingKey(key);
     const prev = prefs;
     setPrefs({ ...prefs, [key]: value });
     try {
-      const updated = await updateNotificationPreferences(token, { [key]: value });
+      const updated = await updateNotificationPreferences(token, {
+        [key]: value,
+      });
       setPrefs(updated);
-      toast.success('Preference saved', { id: `notif-pref-${key}` });
+      toast.success("Preference saved", { id: `notif-pref-${key}` });
     } catch {
       setPrefs(prev);
-      toast.error('Could not save preference.');
+      toast.error("Could not save preference.");
     } finally {
       setSavingKey(null);
     }
   };
-
   const effectivePrefs = prefs ?? DEFAULT_NOTIFICATION_PREFS;
   const inAppOn = effectivePrefs.inAppEnabled;
   const prefsReady = prefs !== null && !loading;
-
   return (
     <SettingsTabRoot className="w-full min-w-0 -mr-6 pr-0 md:-mr-10">
       <SettingsSectionHeading
@@ -212,14 +204,15 @@ export function NotificationsSettingsContent() {
       />
 
       <SettingsTabPanel className="w-full min-w-0 pr-0">
-        {/* Master delivery */}
         <section className="border-4 border-border bg-card pl-4 pr-0 py-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pr-4">
             <div className="flex min-w-0 items-start gap-3">
               <div
                 className={cn(
-                  'flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border shadow-sm',
-                  inAppOn ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground'
+                  "flex h-9 w-9 shrink-0 items-center justify-center border-2 border-border shadow-sm",
+                  inAppOn
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/30 text-muted-foreground",
                 )}
               >
                 <Bell className="size-4" strokeWidth={2.5} />
@@ -236,16 +229,16 @@ export function NotificationsSettingsContent() {
             <div className="flex shrink-0 items-center gap-2 sm:pl-4">
               <span
                 className={cn(
-                  'text-[9px] font-black uppercase tracking-tighter',
-                  inAppOn ? 'text-primary' : 'text-muted-foreground'
+                  "text-[9px] font-black uppercase tracking-tighter",
+                  inAppOn ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                {inAppOn ? 'On' : 'Off'}
+                {inAppOn ? "On" : "Off"}
               </span>
               <Switch
                 checked={inAppOn}
                 disabled={!prefsReady || savingKey !== null}
-                onCheckedChange={(v) => void patch('inAppEnabled', v)}
+                onCheckedChange={(v) => void patch("inAppEnabled", v)}
                 aria-label="In-app alerts"
               />
             </div>
@@ -258,10 +251,10 @@ export function NotificationsSettingsContent() {
           </p>
           <div
             className={cn(
-              'grid w-full min-w-0 gap-3 pr-0',
-              '[grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))]',
-              'md:grid-cols-2',
-              !inAppOn && 'pointer-events-none opacity-50'
+              "grid w-full min-w-0 gap-3 pr-0",
+              "[grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))]",
+              "md:grid-cols-2",
+              !inAppOn && "pointer-events-none opacity-50",
             )}
             aria-disabled={!inAppOn}
           >

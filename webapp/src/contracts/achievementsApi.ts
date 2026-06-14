@@ -1,6 +1,11 @@
-export type AchievementCategory = 'engagement' | 'profile' | 'reading' | 'social' | 'meta';
+export type AchievementCategory =
+  | "engagement"
+  | "profile"
+  | "reading"
+  | "social"
+  | "meta";
 
-export type AchievementCelebrateAs = 'dialog';
+export type AchievementCelebrateAs = "dialog";
 
 export type AchievementUnlockDto = {
   id: string;
@@ -56,6 +61,9 @@ export type AchievementsPayload = {
 };
 
 export type AchievementUnlockStreamEvent =
-  | { type: 'connected'; userId: string }
-  | { type: 'unlock'; payload: { unlocks: AchievementUnlockDto[]; ts?: number } }
-  | { type: 'raw'; payload: unknown };
+  | { type: "connected"; userId: string }
+  | {
+      type: "unlock";
+      payload: { unlocks: AchievementUnlockDto[]; ts?: number };
+    }
+  | { type: "raw"; payload: unknown };

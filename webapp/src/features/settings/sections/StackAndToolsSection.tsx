@@ -1,53 +1,63 @@
-'use client';
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import { Monitor, Plus, X, Search, SearchX } from 'lucide-react';
-import { cn } from '@/lib/core/utils';
-import { STACK_AND_TOOLS_MAX } from '@/lib/profile/stackAndToolsLimits';
-import { STACK_TOOL_NAME_MAX, STACK_TOOL_NAME_MIN } from '@/lib/profile/profileLinkLimits';
-import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
-import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
-import { ConfirmDialog } from '@/components/ui/dialog';
-import { preloadTechStackItems, resolveTechStackIconSrc } from '@/lib/profile/skillIcons';
-import { SkillIconImage } from '@/components/ui/media';
-import { searchApi, type TechStackItem } from '@/api/search';
-import { useResolvedTechStack } from '@/hooks/useResolvedTechStack';
-import { SEARCH_DEBOUNCE_MS } from '@contracts/searchApi';
+"use client";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { Monitor, Plus, X, Search, SearchX } from "lucide-react";
+import { cn } from "@/lib/core/utils";
+import { STACK_AND_TOOLS_MAX } from "@/lib/profile/stackAndToolsLimits";
+import {
+  STACK_TOOL_NAME_MAX,
+  STACK_TOOL_NAME_MIN,
+} from "@/lib/profile/profileLinkLimits";
+import { BlockShadowButton } from "@/components/ui";
+import { useSettingsAuthSlice } from "@/hooks/useSettingsAuthSlice";
+import { ConfirmDialog } from "@/components/ui/dialog";
+import {
+  preloadTechStackItems,
+  resolveTechStackIconSrc,
+} from "@/lib/profile/skillIcons";
+import { SkillIconImage } from "@/components/ui/media";
+import { searchApi, type TechStackItem } from "@/api/search";
+import { useResolvedTechStack } from "@/hooks/useResolvedTechStack";
+import { SEARCH_DEBOUNCE_MS } from "@contracts/searchApi";
 import {
   SettingsSectionHeading,
   SettingsTabPanel,
   SettingsTabRoot,
-} from '@/app/settings/settings-list/SettingsSectionHeading';
-
+} from "@/app/settings/settings-list/SettingsSectionHeading";
 export function StackAndToolsContent() {
   const { user, updateProfile } = useSettingsAuthSlice();
   const [items, setItems] = useState<string[]>(() =>
-    (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX)
+    (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX),
   );
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-  const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
+  const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(
+    null,
+  );
   const [suggestions, setSuggestions] = useState<TechStackItem[]>([]);
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [knownItems, setKnownItems] = useState<Map<string, TechStackItem>>(() => new Map());
+  const [knownItems, setKnownItems] = useState<Map<string, TechStackItem>>(
+    () => new Map(),
+  );
   const searchCacheRef = useRef(new Map<string, TechStackItem[]>());
   const baseline = (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX);
   const itemsMatchBaseline = JSON.stringify(items) === JSON.stringify(baseline);
-  const serverDisplay = itemsMatchBaseline ? user?.stackAndToolsDisplay : undefined;
-  const resolvedItems = useResolvedTechStack(serverDisplay?.length ? [] : items);
+  const serverDisplay = itemsMatchBaseline
+    ? user?.stackAndToolsDisplay
+    : undefined;
+  const resolvedItems = useResolvedTechStack(
+    serverDisplay?.length ? [] : items,
+  );
   const badgeItems = serverDisplay?.length ? serverDisplay : resolvedItems;
   const atMax = items.length >= STACK_AND_TOOLS_MAX;
   const showSearchDropdown = open && input.trim().length >= 2 && !atMax;
-
   useEffect(() => {
     setItems((user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX));
   }, [user?.stackAndTools]);
-
   useEffect(() => {
     const map = new Map<string, TechStackItem>();
     for (const row of user?.stackAndToolsDisplay ?? []) {
@@ -55,16 +65,16 @@ export function StackAndToolsContent() {
     }
     setKnownItems(map);
   }, [user?.stackAndToolsDisplay]);
-
   useEffect(() => {
     preloadTechStackItems(badgeItems);
   }, [badgeItems]);
-
   useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedQuery(input.trim()), SEARCH_DEBOUNCE_MS);
+    const t = window.setTimeout(
+      () => setDebouncedQuery(input.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
     return () => window.clearTimeout(t);
   }, [input]);
-
   useEffect(() => {
     const q = debouncedQuery;
     if (q.length < 2) {
@@ -72,7 +82,6 @@ export function StackAndToolsContent() {
       setSearching(false);
       return;
     }
-
     const cacheKey = q.toLowerCase();
     const cached = searchCacheRef.current.get(cacheKey);
     if (cached) {
@@ -81,7 +90,6 @@ export function StackAndToolsContent() {
       setSearching(false);
       return;
     }
-
     let cancelled = false;
     setSearching(true);
     void searchApi.searchTechStack(q, 12).then((list) => {
@@ -91,12 +99,10 @@ export function StackAndToolsContent() {
       setSuggestions(list);
       setSearching(false);
     });
-
     return () => {
       cancelled = true;
     };
   }, [debouncedQuery]);
-
   const iconSrcForName = useCallback(
     (name: string, index: number) => {
       const fromBadge = badgeItems[index]?.iconUrl?.trim();
@@ -105,23 +111,24 @@ export function StackAndToolsContent() {
       if (known) return resolveTechStackIconSrc(known);
       return resolveTechStackIconSrc({ name });
     },
-    [badgeItems, knownItems]
+    [badgeItems, knownItems],
   );
-
   const addByName = (name: string, meta?: TechStackItem) => {
     const trimmed = name.trim().slice(0, STACK_TOOL_NAME_MAX);
     if (!trimmed) {
-      setInput('');
+      setInput("");
       setOpen(false);
       setHighlight(0);
       return;
     }
     if (items.length >= STACK_AND_TOOLS_MAX) {
-      toast.error(`You can add up to ${STACK_AND_TOOLS_MAX} languages and tools.`);
+      toast.error(
+        `You can add up to ${STACK_AND_TOOLS_MAX} languages and tools.`,
+      );
       return;
     }
     if (items.includes(trimmed)) {
-      setInput('');
+      setInput("");
       setOpen(false);
       setHighlight(0);
       return;
@@ -138,55 +145,55 @@ export function StackAndToolsContent() {
       preloadTechStackItems([{ name: trimmed }]);
     }
     toast.success(`${trimmed} added to arsenal.`);
-    setInput('');
+    setInput("");
     setOpen(false);
     setHighlight(0);
   };
-
   const selectSuggestion = (item: TechStackItem) => {
     addByName(item.name, item);
   };
-
   const handleSave = async () => {
     const baseline = (user?.stackAndTools ?? []).slice(0, STACK_AND_TOOLS_MAX);
     const next = items.slice(0, STACK_AND_TOOLS_MAX);
     if (JSON.stringify(next) === JSON.stringify(baseline)) {
-      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      toast.error("No changes to save.", { id: "syntax-no-changes" });
       return;
     }
     setSaving(true);
     try {
-      await updateProfile({ stackAndTools: next }, { section: 'stack' });
-      toast.success('Stack & Tools Synchronized.', { id: 'syntax-stack-success' });
+      await updateProfile({ stackAndTools: next }, { section: "stack" });
+      toast.success("Stack & Tools Synchronized.", {
+        id: "syntax-stack-success",
+      });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Sync failed.', { id: 'syntax-stack-error' });
+      toast.error(e instanceof Error ? e.message : "Sync failed.", {
+        id: "syntax-stack-error",
+      });
     } finally {
       setSaving(false);
     }
   };
-
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!showSearchDropdown || suggestions.length === 0) {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         const v = input.trim();
         if (v) addByName(v);
       }
       return;
     }
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlight((h) => (h < suggestions.length - 1 ? h + 1 : 0));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => (h > 0 ? h - 1 : suggestions.length - 1));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       selectSuggestion(suggestions[highlight]);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setOpen(false);
     }
   };
-
   return (
     <SettingsTabRoot>
       <SettingsSectionHeading
@@ -205,30 +212,39 @@ export function StackAndToolsContent() {
               {items.map((t, i) => {
                 const iconUrl = iconSrcForName(t, i);
                 return (
-                <motion.div
-                  key={t}
-                  layout
-                  initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
-                  className="group flex items-center gap-2 pl-2 pr-1 py-1 border-2 border-border bg-card shadow hover:border-primary transition-colors"
-                >
-                  <div className="size-5 shrink-0 flex items-center justify-center">
-                    {iconUrl ? (
-                      <SkillIconImage src={iconUrl} alt={t} />
-                    ) : (
-                      <Monitor className="size-3.5 text-muted-foreground" aria-hidden />
-                    )}
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider">{t}</span>
-                  <button
-                    type="button"
-                    onClick={() => setRemoveConfirmIndex(i)}
-                    className="ml-1 p-1 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  <motion.div
+                    key={t}
+                    layout
+                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{
+                      opacity: 0,
+                      scale: 0.8,
+                      transition: { duration: 0.15 },
+                    }}
+                    className="group flex items-center gap-2 pl-2 pr-1 py-1 border-2 border-border bg-card shadow hover:border-primary transition-colors"
                   >
-                    <X className="size-3" />
-                  </button>
-                </motion.div>
+                    <div className="size-5 shrink-0 flex items-center justify-center">
+                      {iconUrl ? (
+                        <SkillIconImage src={iconUrl} alt={t} />
+                      ) : (
+                        <Monitor
+                          className="size-3.5 text-muted-foreground"
+                          aria-hidden
+                        />
+                      )}
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider">
+                      {t}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setRemoveConfirmIndex(i)}
+                      className="ml-1 p-1 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </motion.div>
                 );
               })}
             </AnimatePresence>
@@ -256,10 +272,10 @@ export function StackAndToolsContent() {
           </label>
           <div
             className={cn(
-              'overflow-hidden  border-2 bg-background transition-colors',
+              "overflow-hidden  border-2 bg-background transition-colors",
               showSearchDropdown
-                ? 'border-primary ring-2 ring-primary/20'
-                : 'border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20'
+                ? "border-primary ring-2 ring-primary/20"
+                : "border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20",
             )}
           >
             <div className="group flex items-center">
@@ -284,7 +300,7 @@ export function StackAndToolsContent() {
                 placeholder={
                   atMax
                     ? `MAX ${STACK_AND_TOOLS_MAX} — REMOVE ONE TO ADD MORE`
-                    : 'e.g. React, TypeScript, Docker…'
+                    : "e.g. React, TypeScript, Docker…"
                 }
                 className="min-w-0 flex-1 bg-transparent py-2.5 pl-2 pr-3 text-sm font-medium outline-none placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -314,7 +330,8 @@ export function StackAndToolsContent() {
                         No matches found
                       </p>
                       <p className="text-[9px] text-muted-foreground">
-                        Press Enter to add &ldquo;{input.trim()}&rdquo; as a custom skill
+                        Press Enter to add &ldquo;{input.trim()}&rdquo; as a
+                        custom skill
                       </p>
                     </li>
                   ) : (
@@ -328,16 +345,18 @@ export function StackAndToolsContent() {
                           }}
                           onMouseEnter={() => setHighlight(i)}
                           className={cn(
-                            'w-full flex items-center gap-4 px-4 py-3 text-left transition-colors group/item',
+                            "w-full flex items-center gap-4 px-4 py-3 text-left transition-colors group/item",
                             i === highlight
-                              ? 'bg-primary text-primary-foreground'
-                              : 'hover:bg-muted/50'
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-muted/50",
                           )}
                         >
                           <div
                             className={cn(
-                              'size-10 p-1.5 border-2 shrink-0 bg-background',
-                              i === highlight ? 'border-primary-foreground' : 'border-border'
+                              "size-10 p-1.5 border-2 shrink-0 bg-background",
+                              i === highlight
+                                ? "border-primary-foreground"
+                                : "border-border",
                             )}
                           >
                             <SkillIconImage
@@ -351,10 +370,10 @@ export function StackAndToolsContent() {
                             </p>
                             <p
                               className={cn(
-                                'text-[9px] font-bold uppercase tracking-widest',
+                                "text-[9px] font-bold uppercase tracking-widest",
                                 i === highlight
-                                  ? 'text-primary-foreground/80'
-                                  : 'text-muted-foreground'
+                                  ? "text-primary-foreground/80"
+                                  : "text-muted-foreground",
                               )}
                             >
                               {item.category}
@@ -362,10 +381,10 @@ export function StackAndToolsContent() {
                           </div>
                           <Plus
                             className={cn(
-                              'size-4 shrink-0 transition-transform',
+                              "size-4 shrink-0 transition-transform",
                               i === highlight
-                                ? 'scale-110 rotate-0'
-                                : 'scale-100 opacity-0 group-hover/item:opacity-100'
+                                ? "scale-110 rotate-0"
+                                : "scale-100 opacity-0 group-hover/item:opacity-100",
                             )}
                           />
                         </button>
@@ -377,8 +396,8 @@ export function StackAndToolsContent() {
             </AnimatePresence>
           </div>
           <p className="text-[9px] text-muted-foreground">
-            {STACK_TOOL_NAME_MIN}–{STACK_TOOL_NAME_MAX} characters per skill (same limits as work
-            experience skills).
+            {STACK_TOOL_NAME_MIN}–{STACK_TOOL_NAME_MAX} characters per skill
+            (same limits as work experience skills).
           </p>
         </div>
 
@@ -387,19 +406,18 @@ export function StackAndToolsContent() {
             <span className="text-foreground tabular-nums">{items.length}</span>
             <span aria-hidden>/</span>
             <span className="tabular-nums">{STACK_AND_TOOLS_MAX}</span>
-            <span className="text-[9px] font-bold text-muted-foreground/80">modules</span>
+            <span className="text-[9px] font-bold text-muted-foreground/80">
+              modules
+            </span>
           </span>
-          <button
+          <BlockShadowButton
             type="button"
+            loading={saving}
+            className="px-6 py-2.5 text-[11px] tracking-widest"
             onClick={handleSave}
-            disabled={saving}
-            className={cn(
-              settingsBtnBlockPrimaryMd,
-              'px-6 py-2.5 text-[11px] tracking-widest disabled:opacity-60'
-            )}
           >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
+            Save changes
+          </BlockShadowButton>
         </div>
       </SettingsTabPanel>
 
@@ -407,7 +425,7 @@ export function StackAndToolsContent() {
         open={removeConfirmIndex !== null}
         onClose={() => setRemoveConfirmIndex(null)}
         title="DE-INITIALIZE MODULE?"
-        message={`Are you sure you want to remove ${removeConfirmIndex !== null ? items[removeConfirmIndex] : ''} from your tech stack?`}
+        message={`Are you sure you want to remove ${removeConfirmIndex !== null ? items[removeConfirmIndex] : ""} from your tech stack?`}
         confirmLabel="REMOVE"
         variant="danger"
         onConfirm={() => {

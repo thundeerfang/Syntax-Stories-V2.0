@@ -1,6 +1,5 @@
-'use client';
-
-import React, { useMemo } from 'react';
+"use client";
+import React, { useMemo } from "react";
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -10,35 +9,33 @@ import {
   Tooltip,
   ResponsiveContainer,
   type TooltipContentProps,
-} from 'recharts';
-
+} from "recharts";
 export interface AreaChartProps<T extends Record<string, unknown>> {
   data: T[];
   index: keyof T;
   categories: (keyof T)[];
-  /** Optional height in pixels */
   height?: number;
-  /** Show growth percentage from first to last value */
   showGrowth?: boolean;
-  /** Sparkline only: no axes, no grid, just the area curve */
   sparkline?: boolean;
 }
-
-const COLORS = ['var(--primary)', 'var(--accent)', 'var(--primary-hover)'];
-
-type TooltipPayloadItem = { name: string; value: number; dataKey: string; color: string };
+const COLORS = ["var(--primary)", "var(--accent)", "var(--primary-hover)"];
+type TooltipPayloadItem = {
+  name: string;
+  value: number;
+  dataKey: string;
+  color: string;
+};
 type ChartTooltipProps = {
   active?: boolean;
   payload?: readonly TooltipPayloadItem[] | TooltipPayloadItem[];
   label?: string | number;
   categoryLabel?: string | number;
 };
-
 function ChartTooltipContent({
   active,
   payload,
   label,
-  categoryLabel = 'Value',
+  categoryLabel = "Value",
 }: Readonly<ChartTooltipProps>) {
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value;
@@ -47,12 +44,12 @@ function ChartTooltipContent({
     <div
       className="px-3 py-2 border-2 border-border shadow font-sans"
       style={{
-        backgroundColor: 'var(--card)',
-        color: 'var(--foreground)',
-        fontSize: '11px',
+        backgroundColor: "var(--card)",
+        color: "var(--foreground)",
+        fontSize: "11px",
         fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
       }}
     >
       {label != null && <div style={{ marginBottom: 4 }}>{label}</div>}
@@ -62,10 +59,9 @@ function ChartTooltipContent({
     </div>
   );
 }
-
 function payloadValueToNumber(raw: unknown): number {
-  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
-  if (typeof raw === 'string') {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string") {
     const n = Number(raw);
     return Number.isFinite(n) ? n : 0;
   }
@@ -76,22 +72,20 @@ function payloadValueToNumber(raw: unknown): number {
   const n = Number(raw);
   return Number.isFinite(n) ? n : 0;
 }
-
 function createAreaChartTooltipContent(categoryLabel: string) {
   function RechartsAreaTooltip(props: TooltipContentProps) {
     const normalized: TooltipPayloadItem[] =
       props.payload?.map((entry) => ({
-        name: String(entry.name ?? entry.dataKey ?? ''),
+        name: String(entry.name ?? entry.dataKey ?? ""),
         value: payloadValueToNumber(entry.value),
-        dataKey: String(entry.dataKey ?? ''),
+        dataKey: String(entry.dataKey ?? ""),
         color:
-          typeof entry.color === 'string'
+          typeof entry.color === "string"
             ? entry.color
-            : typeof entry.fill === 'string'
+            : typeof entry.fill === "string"
               ? entry.fill
-              : '',
+              : "",
       })) ?? [];
-
     return (
       <ChartTooltipContent
         active={props.active}
@@ -101,10 +95,9 @@ function createAreaChartTooltipContent(categoryLabel: string) {
       />
     );
   }
-  RechartsAreaTooltip.displayName = 'RechartsAreaTooltip';
+  RechartsAreaTooltip.displayName = "RechartsAreaTooltip";
   return RechartsAreaTooltip;
 }
-
 export function AreaChart<T extends Record<string, unknown>>({
   data,
   index,
@@ -116,27 +109,28 @@ export function AreaChart<T extends Record<string, unknown>>({
   const firstVal = data[0]?.[categories[0]];
   const lastRow = data.at(-1);
   const lastVal = lastRow?.[categories[0]];
-  const numFirst = typeof firstVal === 'number' ? firstVal : 0;
-  const numLast = typeof lastVal === 'number' ? lastVal : 0;
+  const numFirst = typeof firstVal === "number" ? firstVal : 0;
+  const numLast = typeof lastVal === "number" ? lastVal : 0;
   let growthPct = 0;
   if (numFirst > 0) {
     growthPct = Math.round(((numLast - numFirst) / numFirst) * 100);
   } else if (numLast > 0) {
     growthPct = 100;
   }
-
-  const uniqueId = React.useId().replaceAll(':', '');
+  const uniqueId = React.useId().replaceAll(":", "");
   const category0Label = String(categories[0]);
   const TooltipContentComponent = useMemo(
     () => createAreaChartTooltipContent(category0Label),
-    [category0Label]
+    [category0Label],
   );
-
   if (sparkline) {
     return (
       <div className="w-full" style={{ minHeight: height }}>
         <ResponsiveContainer width="100%" height={height}>
-          <RechartsAreaChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
+          <RechartsAreaChart
+            data={data}
+            margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
+          >
             <defs>
               {categories.map((cat, i) => (
                 <linearGradient
@@ -147,14 +141,22 @@ export function AreaChart<T extends Record<string, unknown>>({
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
+                  <stop
+                    offset="0%"
+                    stopColor={COLORS[i % COLORS.length]}
+                    stopOpacity={0.35}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={COLORS[i % COLORS.length]}
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               ))}
             </defs>
             <Tooltip
               content={TooltipContentComponent}
-              cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+              cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
             />
             {categories.map((cat, i) => (
               <Area
@@ -172,19 +174,23 @@ export function AreaChart<T extends Record<string, unknown>>({
       </div>
     );
   }
-
   return (
     <div className="w-full">
       {showGrowth && (
         <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-          <span className={growthPct >= 0 ? 'text-primary' : 'text-destructive'}>
-            {growthPct >= 0 ? '+' : ''}
+          <span
+            className={growthPct >= 0 ? "text-primary" : "text-destructive"}
+          >
+            {growthPct >= 0 ? "+" : ""}
             {growthPct}% growth
           </span>
         </div>
       )}
       <ResponsiveContainer width="100%" height={height}>
-        <RechartsAreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+        <RechartsAreaChart
+          data={data}
+          margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+        >
           <defs>
             {categories.map((cat, i) => (
               <linearGradient
@@ -195,27 +201,39 @@ export function AreaChart<T extends Record<string, unknown>>({
                 x2="0"
                 y2="1"
               >
-                <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
+                <stop
+                  offset="0%"
+                  stopColor={COLORS[i % COLORS.length]}
+                  stopOpacity={0.4}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={COLORS[i % COLORS.length]}
+                  stopOpacity={0}
+                />
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="var(--border)"
+            vertical={false}
+          />
           <XAxis
             dataKey={String(index)}
-            tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-            axisLine={{ stroke: 'var(--border)' }}
+            tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+            axisLine={{ stroke: "var(--border)" }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+            tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))}
           />
           <Tooltip
             content={TooltipContentComponent}
-            cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+            cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
           />
           {categories.map((cat, i) => (
             <Area

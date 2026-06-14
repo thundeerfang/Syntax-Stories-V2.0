@@ -1,33 +1,39 @@
-'use client';
+"use client";
 
-import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import { Bookmark, Compass, FolderPlus, Search } from 'lucide-react';
-import { RetroSortDropdown } from '@/components/ui/retro';
-import { toast } from 'sonner';
-import { bookmarksApi, type BookmarkGroupRow } from '@/api/bookmarks';
-import { BlogCard } from '@/features/blog';
-import { RailFeedEmptyState, ShellPageIntroHeader, SignInRequiredPanel } from '@/components/layout';
-import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { Bookmark, Compass, FolderPlus, Search } from "lucide-react";
+import { RetroSortDropdown } from "@/components/ui/retro";
+import { toast } from "sonner";
+import { bookmarksApi, type BookmarkGroupRow } from "@/api/bookmarks";
+import { BlogCard } from "@/features/blog";
 import {
-  BookmarkFolderChip,
-} from '@/components/bookmarks/BookmarkFolderChip';
+  RailFeedEmptyState,
+  ShellPageIntroHeader,
+  SignInRequiredPanel,
+} from "@/components/layout";
+import {
+  FollowingPostsGridSkeleton,
+  FollowingToolbarSkeleton,
+} from "@/components/skeletons";
+import { BookmarkFolderChip } from "@/components/bookmarks/BookmarkFolderChip";
 import {
   BookmarkFolderFormDialog,
   type BookmarkFolderFormValues,
-} from '@/components/bookmarks/BookmarkFolderFormDialog';
-import { ConfirmDialog } from '@/components/ui/dialog';
-import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
-import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { useAuthStore } from '@/store/auth';
-import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
-import { cn } from '@/lib/core/utils';
-import type { Post } from '@/types';
+} from "@/components/bookmarks/BookmarkFolderFormDialog";
+import { BlockShadowButton, RetroFilterPill } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/dialog";
+import { BlogApiConnectionError } from "@/lib/api/blogAuthFetch";
+import { mapPublicFeedPostToPost } from "@/lib/blog/mapFeedPostToPost";
+import { shell } from "@/lib/styles";
+import { useAuthStore } from "@/store/auth";
+import { useRouteRestoreNonce } from "@/hooks/useRouteRestore";
+import { cn } from "@/lib/core/utils";
+import type { Post } from "@/types";
 
 const BOOKMARK_SORT_OPTIONS = [
-  { value: 'newest' as const, label: 'Newest saved', shortLabel: 'Newest' },
-  { value: 'oldest' as const, label: 'Oldest saved', shortLabel: 'Oldest' },
+  { value: "newest" as const, label: "Newest saved", shortLabel: "Newest" },
+  { value: "oldest" as const, label: "Oldest saved", shortLabel: "Oldest" },
 ];
 
 function toastApiError(e: unknown, fallback: string) {
@@ -40,7 +46,7 @@ function toastApiError(e: unknown, fallback: string) {
 
 export default function BookmarksPage() {
   const searchParams = useSearchParams();
-  const groupFromUrl = searchParams.get('group');
+  const groupFromUrl = searchParams.get("group");
 
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
@@ -48,38 +54,52 @@ export default function BookmarksPage() {
   const routeRestoreNonce = useRouteRestoreNonce();
 
   const [groups, setGroups] = useState<BookmarkGroupRow[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(() => Boolean(useAuthStore.getState().token));
+  const [groupsLoading, setGroupsLoading] = useState(() =>
+    Boolean(useAuthStore.getState().token),
+  );
   const [posts, setPosts] = useState<Post[]>([]);
-  const [postsLoading, setPostsLoading] = useState(() => Boolean(useAuthStore.getState().token));
+  const [postsLoading, setPostsLoading] = useState(() =>
+    Boolean(useAuthStore.getState().token),
+  );
 
-  const [selectedFilter, setSelectedFilter] = useState<'all' | string>('all');
-  const [searchInput, setSearchInput] = useState('');
-  const [searchDebounced, setSearchDebounced] = useState('');
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [selectedFilter, setSelectedFilter] = useState<"all" | string>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
-  const [folderDialogMode, setFolderDialogMode] = useState<'create' | 'edit'>('create');
+  const [folderDialogMode, setFolderDialogMode] = useState<"create" | "edit">(
+    "create",
+  );
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [folderForm, setFolderForm] = useState<BookmarkFolderFormValues>({
-    name: '',
-    emoji: '',
+    name: "",
+    emoji: "",
     makeDefault: false,
   });
   const [folderSubmitting, setFolderSubmitting] = useState(false);
 
   const [defaultConfirmOpen, setDefaultConfirmOpen] = useState(false);
-  const [pendingDefault, setPendingDefault] = useState<{ id: string; name: string } | null>(null);
+  const [pendingDefault, setPendingDefault] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [defaultConfirming, setDefaultConfirming] = useState(false);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<BookmarkGroupRow | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<BookmarkGroupRow | null>(
+    null,
+  );
   const [deleteConfirming, setDeleteConfirming] = useState(false);
 
   /** After first successful groups+posts cycle, only the grid shows a loading skeleton (folder bar stays). */
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setSearchDebounced(searchInput.trim()), 320);
+    const t = window.setTimeout(
+      () => setSearchDebounced(searchInput.trim()),
+      320,
+    );
     return () => window.clearTimeout(t);
   }, [searchInput]);
 
@@ -109,7 +129,7 @@ export default function BookmarksPage() {
       const { groups: g } = await bookmarksApi.listGroups(token);
       setGroups(g);
     } catch (e) {
-      toastApiError(e, 'Could not load folders');
+      toastApiError(e, "Could not load folders");
       setGroups([]);
     } finally {
       setGroupsLoading(false);
@@ -120,7 +140,7 @@ export default function BookmarksPage() {
     if (!token) return;
     setPostsLoading(true);
     try {
-      const groupParam = selectedFilter === 'all' ? undefined : selectedFilter;
+      const groupParam = selectedFilter === "all" ? undefined : selectedFilter;
       const { posts: raw } = await bookmarksApi.listBookmarkedPosts(token, {
         groupId: groupParam,
         q: searchDebounced || undefined,
@@ -129,7 +149,7 @@ export default function BookmarksPage() {
       });
       setPosts(raw.map(mapPublicFeedPostToPost));
     } catch (e) {
-      toastApiError(e, 'Could not load bookmarks');
+      toastApiError(e, "Could not load bookmarks");
       setPosts([]);
     } finally {
       setPostsLoading(false);
@@ -153,18 +173,18 @@ export default function BookmarksPage() {
   }, [token, loadPosts, routeRestoreNonce]);
 
   const openCreateFolder = useCallback(() => {
-    setFolderDialogMode('create');
+    setFolderDialogMode("create");
     setEditingGroupId(null);
-    setFolderForm({ name: '', emoji: '', makeDefault: false });
+    setFolderForm({ name: "", emoji: "", makeDefault: false });
     setFolderDialogOpen(true);
   }, []);
 
   const openEditFolder = useCallback((g: BookmarkGroupRow) => {
-    setFolderDialogMode('edit');
+    setFolderDialogMode("edit");
     setEditingGroupId(g._id);
     setFolderForm({
       name: g.name,
-      emoji: g.emoji ?? '',
+      emoji: g.emoji ?? "",
       makeDefault: false,
     });
     setFolderDialogOpen(true);
@@ -180,27 +200,29 @@ export default function BookmarksPage() {
     if (!token || !folderForm.name.trim()) return;
     setFolderSubmitting(true);
     try {
-      if (folderDialogMode === 'create') {
+      if (folderDialogMode === "create") {
         await bookmarksApi.createGroup(folderForm.name.trim(), token, {
           emoji: folderForm.emoji || undefined,
           makeDefault: folderForm.makeDefault,
         });
-        toast.success('Folder created');
+        toast.success("Folder created");
       } else if (editingGroupId) {
         await bookmarksApi.updateGroup(editingGroupId, token, {
           name: folderForm.name.trim(),
           emoji: folderForm.emoji,
         });
-        toast.success('Folder updated');
+        toast.success("Folder updated");
       }
       setFolderDialogOpen(false);
       setEditingGroupId(null);
-      setFolderForm({ name: '', emoji: '', makeDefault: false });
+      setFolderForm({ name: "", emoji: "", makeDefault: false });
       await loadGroups();
     } catch (e) {
       toastApiError(
         e,
-        folderDialogMode === 'create' ? 'Could not create folder' : 'Could not update folder'
+        folderDialogMode === "create"
+          ? "Could not create folder"
+          : "Could not update folder",
       );
     } finally {
       setFolderSubmitting(false);
@@ -224,14 +246,14 @@ export default function BookmarksPage() {
     setDeleteConfirming(true);
     try {
       await bookmarksApi.deleteGroup(pendingDelete._id, token);
-      if (selectedFilter === pendingDelete._id) setSelectedFilter('all');
+      if (selectedFilter === pendingDelete._id) setSelectedFilter("all");
       setDeleteConfirmOpen(false);
       setPendingDelete(null);
       await loadGroups();
       await loadPosts();
-      toast.success('Folder deleted');
+      toast.success("Folder deleted");
     } catch (e) {
-      toastApiError(e, 'Could not delete folder');
+      toastApiError(e, "Could not delete folder");
     } finally {
       setDeleteConfirming(false);
     }
@@ -258,7 +280,7 @@ export default function BookmarksPage() {
       setDefaultConfirmOpen(false);
       setPendingDefault(null);
     } catch (e) {
-      toastApiError(e, 'Could not update default folder');
+      toastApiError(e, "Could not update default folder");
     } finally {
       setDefaultConfirming(false);
     }
@@ -267,17 +289,23 @@ export default function BookmarksPage() {
   const showGate = isHydrated && (!token || !user);
 
   const showFullPageSkeleton =
-    !isHydrated || (Boolean(token && user) && !initialLoadDone && (groupsLoading || postsLoading));
+    !isHydrated ||
+    (Boolean(token && user) &&
+      !initialLoadDone &&
+      (groupsLoading || postsLoading));
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
+    <div className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}>
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
         <ShellPageIntroHeader
-          breadcrumbItems={[{ href: '/', label: 'Home' }, { label: 'Bookmarks' }]}
+          breadcrumbItems={[
+            { href: "/", label: "Home" },
+            { label: "Bookmarks" },
+          ]}
           description="Organize posts you save into folders. Pick a default folder — new bookmarks from feeds land there automatically."
           title={
             <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-              Your{' '}
+              Your{" "}
               <span className="text-primary underline decoration-4 underline-offset-4 sm:decoration-6 sm:underline-offset-6">
                 library.
               </span>
@@ -306,18 +334,13 @@ export default function BookmarksPage() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
                 <div className="flex min-w-0 flex-1 flex-col gap-3">
                   <div className="flex min-h-0 min-w-0 flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFilter('all')}
-                      className={cn(
-                        'shrink-0  border-2 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest transition-colors transition-transform active:translate-x-0.5 active:translate-y-0.5',
-                        selectedFilter === 'all'
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border bg-card text-foreground hover:bg-muted/60'
-                      )}
+                    <RetroFilterPill
+                      active={selectedFilter === "all"}
+                      onClick={() => setSelectedFilter("all")}
+                      className="px-3 active:translate-x-0.5 active:translate-y-0.5"
                     >
                       All saved
-                    </button>
+                    </RetroFilterPill>
                     {groups.map((g) => (
                       <BookmarkFolderChip
                         key={g._id}
@@ -330,14 +353,20 @@ export default function BookmarksPage() {
                         onDelete={() => openDeleteConfirm(g)}
                       />
                     ))}
-                    <button
+                    <BlockShadowButton
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={openCreateFolder}
-                      className="ml-auto inline-flex shrink-0 items-center gap-2 border-2 border-border bg-card px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest shadow hover:bg-muted/50"
+                      className="ml-auto shrink-0 gap-2"
                     >
-                      <FolderPlus className="size-4 shrink-0" strokeWidth={2.25} aria-hidden />
+                      <FolderPlus
+                        className="size-4 shrink-0"
+                        strokeWidth={2.25}
+                        aria-hidden
+                      />
                       Create folder
-                    </button>
+                    </BlockShadowButton>
                   </div>
                 </div>
 
@@ -376,7 +405,8 @@ export default function BookmarksPage() {
             >
               {postsLoading ? (
                 <FollowingPostsGridSkeleton />
-              ) : posts.length === 0 && (searchDebounced || selectedFilter !== 'all') ? (
+              ) : posts.length === 0 &&
+                (searchDebounced || selectedFilter !== "all") ? (
                 <RailFeedEmptyState
                   icon={Bookmark}
                   variant="filter"
@@ -384,10 +414,20 @@ export default function BookmarksPage() {
                   description="Try another search term, switch folders, or clear the filter."
                   actions={[
                     ...(searchDebounced
-                      ? [{ label: 'Clear search', onClick: () => setSearchInput('') }]
+                      ? [
+                          {
+                            label: "Clear search",
+                            onClick: () => setSearchInput(""),
+                          },
+                        ]
                       : []),
-                    ...(selectedFilter !== 'all'
-                      ? [{ label: 'All saved', onClick: () => setSelectedFilter('all') }]
+                    ...(selectedFilter !== "all"
+                      ? [
+                          {
+                            label: "All saved",
+                            onClick: () => setSelectedFilter("all"),
+                          },
+                        ]
                       : []),
                   ]}
                 />
@@ -398,10 +438,16 @@ export default function BookmarksPage() {
                   description="Save posts from your feed or open a story and tap Bookmark — they will show up here in your library."
                   actions={[
                     {
-                      label: 'Browse topics',
-                      href: '/topics',
-                      variant: 'primary',
-                      icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+                      label: "Browse topics",
+                      href: "/topics",
+                      variant: "primary",
+                      icon: (
+                        <Compass
+                          className="size-4 shrink-0"
+                          strokeWidth={2.5}
+                          aria-hidden
+                        />
+                      ),
                     },
                   ]}
                 />
@@ -456,9 +502,11 @@ export default function BookmarksPage() {
               submitting={folderSubmitting}
               values={folderForm}
               onClose={closeFolderDialog}
-              onChange={(patch) => setFolderForm((prev) => ({ ...prev, ...patch }))}
+              onChange={(patch) =>
+                setFolderForm((prev) => ({ ...prev, ...patch }))
+              }
               onSubmit={() => void handleFolderFormSubmit()}
-              showMakeDefault={folderDialogMode === 'create'}
+              showMakeDefault={folderDialogMode === "create"}
             />
           </>
         )}

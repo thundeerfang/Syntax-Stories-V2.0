@@ -1,22 +1,14 @@
-import type { ReactNode } from 'react';
-import { cn } from '@/lib/core/utils';
-import { Terminal } from 'lucide-react';
-
+import type { ReactNode } from "react";
+import { cn } from "@/lib/core/utils";
+import { Terminal } from "lucide-react";
 export type HeaderProps = {
-  /** Route / module id in the shell bar (e.g. `System.Contact_Active`) */
   systemLabel: string;
   title: ReactNode;
   description?: ReactNode;
-  /** Icon beside the title (e.g. message glyph) */
   titleIcon?: ReactNode;
-  /** Blinking “Account context” chip in the shell when signed in */
   showAccountContext?: boolean;
   className?: string;
 };
-
-/**
- * Page hero: shell bar + main column (no version badge; no side rail / scanlines).
- */
 export function Header({
   systemLabel,
   title,
@@ -28,9 +20,8 @@ export function Header({
   return (
     <header
       className={cn(
-        /* No default margin-top — keeps top border aligned with siblings in grids (e.g. contact + Logistics). */
-        'overflow-hidden border-4 border-border bg-card shadow',
-        className
+        "overflow-hidden border-4 border-border bg-card shadow",
+        className,
       )}
     >
       <div className="flex flex-wrap items-center gap-3 border-b-4 border-border bg-muted/40 px-4 py-3 sm:px-6">
@@ -51,7 +42,10 @@ export function Header({
 
         {showAccountContext ? (
           <div className="ml-auto flex items-center gap-2 border-2 border-primary/50 bg-primary/10 px-2.5 py-1.5">
-            <span className="size-2 shrink-0 animate-pulse bg-primary" aria-hidden />
+            <span
+              className="size-2 shrink-0 animate-pulse bg-primary"
+              aria-hidden
+            />
             <span className="font-mono text-[9px] font-black uppercase tracking-widest text-primary">
               Account context
             </span>

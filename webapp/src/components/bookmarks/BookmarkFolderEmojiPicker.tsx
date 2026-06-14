@@ -1,17 +1,14 @@
-'use client';
-
-import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
-import { BOOKMARK_FOLDER_EMOJIS } from '@contracts/bookmarksApi';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import { useEffect, useId, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { BOOKMARK_FOLDER_EMOJIS } from "@contracts/bookmarksApi";
+import { cn } from "@/lib/core/utils";
 type BookmarkFolderEmojiPickerProps = Readonly<{
   value: string;
   onChange: (emoji: string) => void;
   id?: string;
   disabled?: boolean;
 }>;
-
 export function BookmarkFolderEmojiPicker({
   value,
   onChange,
@@ -23,7 +20,6 @@ export function BookmarkFolderEmojiPicker({
   const id = idProp ?? autoId;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: MouseEvent) => {
@@ -31,12 +27,10 @@ export function BookmarkFolderEmojiPicker({
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open]);
-
-  const selectedLabel = value || 'None';
-
+  const selectedLabel = value || "None";
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -48,8 +42,8 @@ export function BookmarkFolderEmojiPicker({
         aria-controls={listboxId}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex w-full items-center justify-between gap-2 border-2 border-border bg-background px-3 py-2 font-mono text-xs outline-none ring-primary focus-visible:ring-2 disabled:opacity-50',
-          open && 'ring-2 ring-primary'
+          "flex w-full items-center justify-between gap-2 border-2 border-border bg-background px-3 py-2 font-mono text-xs outline-none ring-primary focus-visible:ring-2 disabled:opacity-50",
+          open && "ring-2 ring-primary",
         )}
       >
         <span className="flex items-center gap-2">
@@ -65,7 +59,10 @@ export function BookmarkFolderEmojiPicker({
           </span>
         </span>
         <ChevronDown
-          className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground transition-transform",
+            open && "rotate-180",
+          )}
           strokeWidth={2.25}
           aria-hidden
         />
@@ -83,12 +80,12 @@ export function BookmarkFolderEmojiPicker({
               role="option"
               aria-selected={!value}
               onClick={() => {
-                onChange('');
+                onChange("");
                 setOpen(false);
               }}
               className={cn(
-                'flex w-full items-center gap-2 px-2 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wide hover:bg-muted/60',
-                !value && 'bg-primary/10 text-primary'
+                "flex w-full items-center gap-2 px-2 py-1.5 text-left font-mono text-[10px] font-bold uppercase tracking-wide hover:bg-muted/60",
+                !value && "bg-primary/10 text-primary",
               )}
             >
               None
@@ -105,8 +102,8 @@ export function BookmarkFolderEmojiPicker({
                   setOpen(false);
                 }}
                 className={cn(
-                  'flex w-full items-center gap-2 px-2 py-1.5 text-left text-lg hover:bg-muted/60',
-                  value === emoji && 'bg-primary/10'
+                  "flex w-full items-center gap-2 px-2 py-1.5 text-left text-lg hover:bg-muted/60",
+                  value === emoji && "bg-primary/10",
                 )}
               >
                 <span aria-hidden>{emoji}</span>

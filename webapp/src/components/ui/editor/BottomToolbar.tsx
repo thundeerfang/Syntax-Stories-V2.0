@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from "react";
 import {
   AlignLeft,
   Braces,
@@ -9,19 +9,17 @@ import {
   Network,
   Table2,
   Type,
-} from 'lucide-react';
-import { GithubIcon } from '@/components/icons/SocialProviderIcons';
-import { cn } from '@/lib/core/utils';
-
+} from "lucide-react";
+import { GithubIcon } from "@/components/icons/SocialProviderIcons";
+import { cn } from "@/lib/core/utils";
 export interface BottomToolbarItem {
   id: string;
   label: string;
   icon: React.ElementType;
   description?: string;
   disabled?: boolean;
-  variant?: 'default' | 'primary';
+  variant?: "default" | "primary";
 }
-
 interface BottomToolbarProps {
   items?: BottomToolbarItem[];
   onItemClick: (id: string) => void;
@@ -30,74 +28,72 @@ interface BottomToolbarProps {
   maxWidthClassName?: string;
   className?: string;
 }
-
-// Default configuration used by the blog write editor (exported for sidebar Tools)
 export const DEFAULT_ITEMS: BottomToolbarItem[] = [
   {
-    id: 'paragraph',
-    label: 'Paragraph',
+    id: "paragraph",
+    label: "Paragraph",
     icon: AlignLeft,
-    description: 'Rich text block with markdown support for long-form writing.',
+    description: "Rich text block with markdown support for long-form writing.",
   },
   {
-    id: 'heading',
-    label: 'Sub-heading',
+    id: "heading",
+    label: "Sub-heading",
     icon: Type,
-    description: 'Sub-heading (H2 or H3) below the main title.',
+    description: "Sub-heading (H2 or H3) below the main title.",
   },
   {
-    id: 'partition',
-    label: 'Divider',
+    id: "partition",
+    label: "Divider",
     icon: Minus,
-    description: 'Visual separator to break your story into clear sections.',
+    description: "Visual separator to break your story into clear sections.",
   },
   {
-    id: 'code',
-    label: 'Code',
+    id: "code",
+    label: "Code",
     icon: Braces,
-    description: 'Paste a code snippet; language is auto-detected (override optional).',
+    description:
+      "Paste a code snippet; language is auto-detected (override optional).",
   },
   {
-    id: 'image',
-    label: 'Image block',
+    id: "image",
+    label: "Image block",
     icon: ImageIcon,
-    description: 'Upload an image; add an optional title for the caption and accessibility.',
+    description:
+      "Upload an image; add an optional title for the caption and accessibility.",
   },
   {
-    id: 'videoEmbed',
-    label: 'Video',
+    id: "videoEmbed",
+    label: "Video",
     icon: Film,
-    description: 'Embed videos from platforms like YouTube or Loom.',
+    description: "Embed videos from platforms like YouTube or Loom.",
   },
   {
-    id: 'githubRepo',
-    label: 'GitHub repo',
+    id: "githubRepo",
+    label: "GitHub repo",
     icon: GithubIcon,
-    description: 'Link a repository with a https://github.com/owner/repo URL.',
+    description: "Link a repository with a https://github.com/owner/repo URL.",
   },
   {
-    id: 'unsplashImage',
-    label: 'Unsplash',
+    id: "unsplashImage",
+    label: "Unsplash",
     icon: Camera,
-    description: 'Search beautiful photos from Unsplash and insert them as blocks.',
+    description:
+      "Search beautiful photos from Unsplash and insert them as blocks.",
   },
   {
-    id: 'table',
-    label: 'Table',
+    id: "table",
+    label: "Table",
     icon: Table2,
-    description: 'Build a grid (up to 20×5) for comparisons and structured data.',
+    description:
+      "Build a grid (up to 20×5) for comparisons and structured data.",
   },
   {
-    id: 'mermaidDiagram',
-    label: 'Mermaid',
+    id: "mermaidDiagram",
+    label: "Mermaid",
     icon: Network,
-    description: 'Architecture diagrams (graph TD, flowchart, sequence, …).',
+    description: "Architecture diagrams (graph TD, flowchart, sequence, …).",
   },
 ];
-
-/**
- * Compact toolbar item with an info card that appears on hover/focus.
- */
 const ToolbarItemCard = ({
   item,
   onClick,
@@ -106,7 +102,6 @@ const ToolbarItemCard = ({
   onClick: (id: string) => void;
 }>) => {
   const { id, label, icon: Icon, description, disabled } = item;
-
   return (
     <div className="relative group">
       <button
@@ -114,24 +109,22 @@ const ToolbarItemCard = ({
         disabled={disabled}
         onClick={() => onClick(id)}
         className={cn(
-          'flex items-center justify-center  border border-border bg-card h-8 w-8 text-[11px] font-semibold uppercase tracking-wide shadow',
-          'hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors',
-          'disabled:opacity-40 disabled:pointer-events-none'
+          "flex items-center justify-center  border border-border bg-card h-8 w-8 text-[11px] font-semibold uppercase tracking-wide shadow",
+          "hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors",
+          "disabled:opacity-40 disabled:pointer-events-none",
         )}
       >
         <Icon className="h-3.5 w-3.5" />
       </button>
 
-      {/* Hover preview card */}
       <div
         className={cn(
-          'pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64  border border-border bg-card text-left shadow',
-          'opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0',
-          'group-focus-within:opacity-100 group-focus-within:translate-y-0',
-          'transition-all duration-150 ease-out z-40 overflow-hidden'
+          "pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64  border border-border bg-card text-left shadow",
+          "opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0",
+          "group-focus-within:opacity-100 group-focus-within:translate-y-0",
+          "transition-all duration-150 ease-out z-40 overflow-hidden",
         )}
       >
-        {/* Header strip */}
         <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 border-b border-border/60">
           <div className="flex h-7 w-7 items-center justify-center border border-border bg-background">
             <Icon className="h-3.5 w-3.5 text-primary" />
@@ -144,38 +137,39 @@ const ToolbarItemCard = ({
           </div>
         </div>
 
-        {/* Body preview text */}
         {description && (
           <div className="px-3 py-2.5 text-[11px] leading-snug text-muted-foreground bg-card">
             {description}
           </div>
         )}
 
-        {/* Small caret */}
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rotate-45 border-l border-b border-border bg-card" />
       </div>
     </div>
   );
 };
-
 export function BottomToolbar({
   items,
   onItemClick,
-  label = 'Add block:',
-  isSidebarOpen = false, // kept for API compatibility (not used in inline layout)
-  maxWidthClassName = 'max-w-xl',
+  label = "Add block:",
+  isSidebarOpen = false,
+  maxWidthClassName = "max-w-xl",
   className,
 }: Readonly<BottomToolbarProps>) {
   const resolvedItems = items ?? DEFAULT_ITEMS;
-
   return (
-    <div className={cn('w-full', className)}>
-      <div className={cn('mx-auto w-full px-4 flex justify-center', maxWidthClassName)}>
+    <div className={cn("w-full", className)}>
+      <div
+        className={cn(
+          "mx-auto w-full px-4 flex justify-center",
+          maxWidthClassName,
+        )}
+      >
         <div
           className={cn(
-            'flex items-center justify-between gap-2 px-4 py-2',
-            ' border-b-4 border-border bg-card/98 shadow',
-            'backdrop-blur-sm'
+            "flex items-center justify-between gap-2 px-4 py-2",
+            " border-b-4 border-border bg-card/98 shadow",
+            "backdrop-blur-sm",
           )}
         >
           {label && (
@@ -185,7 +179,11 @@ export function BottomToolbar({
           )}
           <nav className="flex flex-wrap items-center gap-1.5 justify-end">
             {resolvedItems.map((item) => (
-              <ToolbarItemCard key={item.id} item={item} onClick={onItemClick} />
+              <ToolbarItemCard
+                key={item.id}
+                item={item}
+                onClick={onItemClick}
+              />
             ))}
           </nav>
         </div>

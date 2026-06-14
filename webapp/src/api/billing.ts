@@ -1,49 +1,48 @@
-import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
-
+import { resolvePublicApiBase } from "@/lib/api/publicApiBase";
 const base = () => resolvePublicApiBase();
-
 export type {
   BillingPaidPlanKey,
   BillingPlanCatalogItem,
   BillingPlanKey,
   BillingSubscriptionDto,
   BillingTransactionRow,
-} from '@contracts/billingApi';
+} from "@contracts/billingApi";
 import type {
   BillingPaidPlanKey,
   BillingPlanCatalogItem,
   BillingSubscriptionDto,
   BillingTransactionRow,
-} from '@contracts/billingApi';
-
+} from "@contracts/billingApi";
 function authHeaders(token: string): HeadersInit {
   return {
     Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
 }
-
 export async function fetchBillingPlans(): Promise<BillingPlanCatalogItem[]> {
-  const res = await fetch(`${base()}/api/billing/plans`, { credentials: 'include' });
+  const res = await fetch(`${base()}/api/billing/plans`, {
+    credentials: "include",
+  });
   const data = (await res.json().catch(() => ({}))) as {
     success?: boolean;
     plans?: BillingPlanCatalogItem[];
     message?: string;
   };
   if (!res.ok || !data.plans) {
-    throw new Error(data.message || 'Failed to load plans');
+    throw new Error(data.message || "Failed to load plans");
   }
   return data.plans;
 }
-
 export async function fetchBillingSubscription(
   token: string,
-  opts?: { forceSync?: boolean }
+  opts?: {
+    forceSync?: boolean;
+  },
 ): Promise<BillingSubscriptionDto> {
-  const q = opts?.forceSync ? '?forceSync=true' : '';
+  const q = opts?.forceSync ? "?forceSync=true" : "";
   const res = await fetch(`${base()}/api/billing/subscription${q}`, {
     headers: authHeaders(token),
-    credentials: 'include',
+    credentials: "include",
   });
   const data = (await res.json().catch(() => ({}))) as {
     success?: boolean;
@@ -51,19 +50,18 @@ export async function fetchBillingSubscription(
     message?: string;
   };
   if (!res.ok || !data.subscription) {
-    throw new Error(data.message || 'Failed to load subscription');
+    throw new Error(data.message || "Failed to load subscription");
   }
   return data.subscription;
 }
-
 export async function verifyCheckout(
   token: string,
-  sessionId: string
+  sessionId: string,
 ): Promise<BillingSubscriptionDto> {
   const res = await fetch(`${base()}/api/billing/verify-checkout`, {
-    method: 'POST',
+    method: "POST",
     headers: authHeaders(token),
-    credentials: 'include',
+    credentials: "include",
     body: JSON.stringify({ sessionId }),
   });
   const data = (await res.json().catch(() => ({}))) as {
@@ -72,19 +70,18 @@ export async function verifyCheckout(
     message?: string;
   };
   if (!res.ok || !data.subscription) {
-    throw new Error(data.message || 'Verify checkout failed');
+    throw new Error(data.message || "Verify checkout failed");
   }
   return data.subscription;
 }
-
 export async function createCheckoutSession(
   token: string,
-  planKey: BillingPaidPlanKey
+  planKey: BillingPaidPlanKey,
 ): Promise<string> {
   const res = await fetch(`${base()}/api/billing/checkout-session`, {
-    method: 'POST',
+    method: "POST",
     headers: authHeaders(token),
-    credentials: 'include',
+    credentials: "include",
     body: JSON.stringify({ planKey }),
   });
   const data = (await res.json().catch(() => ({}))) as {
@@ -93,16 +90,15 @@ export async function createCheckoutSession(
     message?: string;
   };
   if (!res.ok || !data.url) {
-    throw new Error(data.message || 'Could not start checkout');
+    throw new Error(data.message || "Could not start checkout");
   }
   return data.url;
 }
-
 export async function createPortalSession(token: string): Promise<string> {
   const res = await fetch(`${base()}/api/billing/portal-session`, {
-    method: 'POST',
+    method: "POST",
     headers: authHeaders(token),
-    credentials: 'include',
+    credentials: "include",
   });
   const data = (await res.json().catch(() => ({}))) as {
     success?: boolean;
@@ -110,21 +106,28 @@ export async function createPortalSession(token: string): Promise<string> {
     message?: string;
   };
   if (!res.ok || !data.url) {
-    throw new Error(data.message || 'Could not open billing portal');
+    throw new Error(data.message || "Could not open billing portal");
   }
   return data.url;
 }
-
 export async function fetchBillingTransactions(
   token: string,
   page = 1,
-  opts?: { sync?: boolean }
-): Promise<{ transactions: BillingTransactionRow[]; total: number }> {
-  const syncQ = opts?.sync ? '&sync=true' : '';
-  const res = await fetch(`${base()}/api/billing/transactions?page=${page}&limit=20${syncQ}`, {
-    headers: authHeaders(token),
-    credentials: 'include',
-  });
+  opts?: {
+    sync?: boolean;
+  },
+): Promise<{
+  transactions: BillingTransactionRow[];
+  total: number;
+}> {
+  const syncQ = opts?.sync ? "&sync=true" : "";
+  const res = await fetch(
+    `${base()}/api/billing/transactions?page=${page}&limit=20${syncQ}`,
+    {
+      headers: authHeaders(token),
+      credentials: "include",
+    },
+  );
   const data = (await res.json().catch(() => ({}))) as {
     success?: boolean;
     transactions?: BillingTransactionRow[];
@@ -132,7 +135,7 @@ export async function fetchBillingTransactions(
     message?: string;
   };
   if (!res.ok || !data.transactions) {
-    throw new Error(data.message || 'Failed to load transactions');
+    throw new Error(data.message || "Failed to load transactions");
   }
   return { transactions: data.transactions, total: data.total ?? 0 };
 }

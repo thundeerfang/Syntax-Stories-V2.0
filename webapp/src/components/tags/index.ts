@@ -1,2 +1,4 @@
-/** @deprecated Import from `@/features/tags` instead. */
-export * from '@/features/tags';
+export {
+  HashtagBadgeLink,
+  type HashtagBadgeLinkProps,
+} from "./HashtagBadgeLink";

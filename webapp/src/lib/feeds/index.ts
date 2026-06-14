@@ -1,2 +1,2 @@
-export * from './followedCategoriesStorage';
-export * from './categoryFollowActions';
+export * from "./followedCategoriesStorage";
+export * from "./categoryFollowActions";

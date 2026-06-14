@@ -1,5 +1,5 @@
-import { pickRouteSkeleton } from '@/lib/shell/routeSkeleton';
+import { pickRouteSkeleton } from "@/lib/shell/routeSkeleton";
 
 export default function FollowingLoading() {
-  return pickRouteSkeleton('/following');
+  return pickRouteSkeleton("/following");
 }

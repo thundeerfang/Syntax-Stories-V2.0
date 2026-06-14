@@ -1,0 +1,1 @@
+export const ENTITY_SEARCH_DEBOUNCE_MS = 300;

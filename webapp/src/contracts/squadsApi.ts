@@ -3,12 +3,12 @@
  * Keep in sync with `server/src/routes/squad.routes.ts`.
  */
 
-import type { PublicFeedPost } from '@/types/blog';
+import type { PublicFeedPost } from "@/types/blog";
 
-export type SquadVisibility = 'public' | 'private';
-export type SquadPostPolicy = 'all_members' | 'staff_only';
-export type SquadInvitePermission = 'all_members' | 'staff_only';
-export type SquadMemberRole = 'admin' | 'moderator' | 'member';
+export type SquadVisibility = "public" | "private";
+export type SquadPostPolicy = "all_members" | "staff_only";
+export type SquadInvitePermission = "all_members" | "staff_only";
+export type SquadMemberRole = "admin" | "moderator" | "member";
 
 export type SquadMemberContribution = {
   joinedAt: string;
@@ -17,16 +17,16 @@ export type SquadMemberContribution = {
 };
 
 export type SquadCategory =
-  | 'languages'
-  | 'web'
-  | 'ai'
-  | 'devops'
-  | 'mobile'
-  | 'game'
-  | 'career'
-  | 'open_source'
-  | 'devrel'
-  | 'devtools';
+  | "languages"
+  | "web"
+  | "ai"
+  | "devops"
+  | "mobile"
+  | "game"
+  | "career"
+  | "open_source"
+  | "devrel"
+  | "devtools";
 
 export type SquadMemberPreview = { username: string; profileImg: string };
 
@@ -63,7 +63,7 @@ export type SquadFeedSharedBy = {
 };
 
 export type SquadFeedRow = {
-  kind: 'authored' | 'shared';
+  kind: "authored" | "shared";
   item: PublicFeedPost;
   sharedAt?: string;
   sharedById?: string;

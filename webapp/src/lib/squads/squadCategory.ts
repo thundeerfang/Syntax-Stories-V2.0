@@ -4,4 +4,4 @@ export {
   isSquadCategory,
   SQUAD_CATEGORY_LABEL,
   squadCategoryLabel,
-} from '@syntax-stories/shared';
+} from "@syntax-stories/shared";

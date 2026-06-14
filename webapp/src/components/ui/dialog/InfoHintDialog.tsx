@@ -1,11 +1,9 @@
-'use client';
-
-import { useId, useState } from 'react';
-import type { ReactNode } from 'react';
-import { CircleHelp } from 'lucide-react';
-import { Dialog, DIALOG_Z_INDEX_STACKED } from './dialogs';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import { useId, useState } from "react";
+import type { ReactNode } from "react";
+import { CircleHelp } from "lucide-react";
+import { Dialog, DIALOG_Z_INDEX_STACKED } from "./dialogs";
+import { cn } from "@/lib/core/utils";
 export type InfoHintDialogProps = Readonly<{
   title: string;
   children: ReactNode;
@@ -13,26 +11,23 @@ export type InfoHintDialogProps = Readonly<{
   className?: string;
   closeLabel?: string;
 }>;
-
-/** Small (?) trigger that opens a centered info panel — same chrome as delete confirm (no top header / X). */
 export function InfoHintDialog({
   title,
   children,
   ariaLabel,
   className,
-  closeLabel = 'Close',
+  closeLabel = "Close",
 }: InfoHintDialogProps) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
-
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          'inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-primary',
-          className
+          "inline-flex size-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-primary",
+          className,
         )}
         aria-label={ariaLabel ?? `Learn more about ${title}`}
       >
@@ -69,8 +64,8 @@ export function InfoHintDialog({
               type="button"
               onClick={() => setOpen(false)}
               className={cn(
-                'mt-8 w-full border-2 border-primary bg-primary px-6 py-3.5 font-black text-xs uppercase tracking-widest text-primary-foreground shadow',
-                'transition-all hover:opacity-90 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
+                "mt-8 w-full border-2 border-primary bg-primary px-6 py-3.5 font-black text-xs uppercase tracking-widest text-primary-foreground shadow",
+                "transition-all hover:opacity-90 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
               )}
             >
               {closeLabel}

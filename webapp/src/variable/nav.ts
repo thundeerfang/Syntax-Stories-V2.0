@@ -1,0 +1,1 @@
+export const ACCOUNT_DROPDOWN_MENU_WIDTH_PX = 256;

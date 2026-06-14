@@ -1,23 +1,26 @@
-import { READ_HEATMAP_WINDOW_DAYS } from '@/lib/profile/readHeatmapConstants';
-
-export type HeatmapCell = { date: string; level: number };
-
+import { READ_HEATMAP_WINDOW_DAYS } from "@/lib/profile/readHeatmapConstants";
+export type HeatmapCell = {
+  date: string;
+  level: number;
+};
 function utcDayStringFromDate(d: Date): string {
   const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
-/** Compact heatmap cells for card export (last N UTC days). */
 export function buildHeatmapCells(
   activeDayBuckets: readonly string[] | null | undefined,
-  windowDays = READ_HEATMAP_WINDOW_DAYS
+  windowDays = READ_HEATMAP_WINDOW_DAYS,
 ): HeatmapCell[] {
   const active = new Set(activeDayBuckets ?? []);
   const anchor = new Date();
   const todayUtc = new Date(
-    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate())
+    Date.UTC(
+      anchor.getUTCFullYear(),
+      anchor.getUTCMonth(),
+      anchor.getUTCDate(),
+    ),
   );
   const cells: HeatmapCell[] = [];
   const days = Math.max(1, windowDays);
@@ -29,10 +32,11 @@ export function buildHeatmapCells(
   }
   return cells;
 }
-
-/** Derive UTC publish-day buckets from blog post timestamps. */
 export function publishDaysFromPosts(
-  posts: ReadonlyArray<{ createdAt?: string; updatedAt?: string }>
+  posts: ReadonlyArray<{
+    createdAt?: string;
+    updatedAt?: string;
+  }>,
 ): string[] {
   const days = new Set<string>();
   for (const post of posts) {

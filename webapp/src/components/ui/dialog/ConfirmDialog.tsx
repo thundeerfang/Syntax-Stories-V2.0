@@ -1,39 +1,31 @@
-'use client';
-
-import React, { useId, useRef } from 'react';
-import type { ReactNode } from 'react';
-import { AlertTriangle, Trash2 } from 'lucide-react';
-import { renderButtonChildren } from '../button';
-import { Dialog, DIALOG_Z_INDEX_STACKED } from './dialogs';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import React, { useId, useRef } from "react";
+import type { ReactNode } from "react";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { renderButtonChildren } from "../button";
+import { Dialog, DIALOG_Z_INDEX_STACKED } from "./dialogs";
+import { cn } from "@/lib/core/utils";
 export interface ConfirmDialogProps {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
-  /** Body copy (alias: `description`). */
   message?: ReactNode;
   description?: ReactNode;
   titleId?: string;
   confirmLabel: string;
   cancelLabel?: string;
   onConfirm: () => void | Promise<void>;
-  variant?: 'danger' | 'warning' | 'default';
-  /** Disables confirm while an action runs (alias: `confirming`). */
+  variant?: "danger" | "warning" | "default";
   loading?: boolean;
   confirming?: boolean;
-  /** When false, parent closes after async work (e.g. delete API). Default true. */
   closeOnConfirm?: boolean;
-  /** Single-action flows — hides cancel. Danger/warning default to no cancel (close via X). */
   hideCancel?: boolean;
   showCloseButton?: boolean;
   defaultFocusConfirm?: boolean;
   panelClassName?: string;
   children?: ReactNode;
 }
-
-type CenteredTone = 'danger' | 'warning';
-
+type CenteredTone = "danger" | "warning";
 const CENTERED_TONE: Record<
   CenteredTone,
   Readonly<{
@@ -45,26 +37,26 @@ const CENTERED_TONE: Record<
   }>
 > = {
   danger: {
-    panelBorder: 'border-destructive/35 dark:border-destructive/40',
+    panelBorder: "border-destructive/35 dark:border-destructive/40",
     gradient:
-      'from-destructive/20 via-destructive/10 to-card dark:from-destructive/25 dark:via-destructive/12 dark:to-card',
+      "from-destructive/20 via-destructive/10 to-card dark:from-destructive/25 dark:via-destructive/12 dark:to-card",
     iconWrap:
-      'border-destructive/40 bg-destructive/15 text-destructive shadow dark:border-destructive/50 dark:bg-destructive/20',
-    button: 'border-destructive bg-destructive text-destructive-foreground hover:brightness-110',
+      "border-destructive/40 bg-destructive/15 text-destructive shadow dark:border-destructive/50 dark:bg-destructive/20",
+    button:
+      "border-destructive bg-destructive text-destructive-foreground hover:brightness-110",
     Icon: Trash2,
   },
   warning: {
-    panelBorder: 'border-amber-500/45 dark:border-amber-400/50',
+    panelBorder: "border-amber-500/45 dark:border-amber-400/50",
     gradient:
-      'from-amber-400/30 via-amber-400/14 to-card dark:from-amber-500/22 dark:via-amber-500/11 dark:to-card',
+      "from-amber-400/30 via-amber-400/14 to-card dark:from-amber-500/22 dark:via-amber-500/11 dark:to-card",
     iconWrap:
-      'border-amber-500/55 bg-amber-400/25 text-amber-800 shadow dark:border-amber-400/60 dark:bg-amber-500/20 dark:text-amber-200',
+      "border-amber-500/55 bg-amber-400/25 text-amber-800 shadow dark:border-amber-400/60 dark:bg-amber-500/20 dark:text-amber-200",
     button:
-      'border-amber-600 bg-amber-500 text-amber-950 hover:brightness-105 dark:border-amber-400 dark:bg-amber-400 dark:text-amber-950',
+      "border-amber-600 bg-amber-500 text-amber-950 hover:brightness-105 dark:border-amber-400 dark:bg-amber-400 dark:text-amber-950",
     Icon: AlertTriangle,
   },
 };
-
 function CenteredConfirmLayout({
   tone,
   titleId,
@@ -88,13 +80,12 @@ function CenteredConfirmLayout({
 }>) {
   const styles = CENTERED_TONE[tone];
   const Icon = styles.Icon;
-
   return (
     <div className="flex flex-col items-center px-6 pb-6 pt-10 text-center sm:px-8 sm:pb-8 sm:pt-12">
       <span
         className={cn(
-          'flex size-16 shrink-0 items-center justify-center  border-2',
-          styles.iconWrap
+          "flex size-16 shrink-0 items-center justify-center  border-2",
+          styles.iconWrap,
         )}
         aria-hidden
       >
@@ -107,10 +98,14 @@ function CenteredConfirmLayout({
         {title}
       </h2>
       {body != null ? (
-        <p className="mt-3 max-w-[20rem] text-sm leading-relaxed text-muted-foreground">{body}</p>
+        <p className="mt-3 max-w-[20rem] text-sm leading-relaxed text-muted-foreground">
+          {body}
+        </p>
       ) : null}
       {children != null ? (
-        <div className="mt-3 max-w-[20rem] text-sm text-muted-foreground">{children}</div>
+        <div className="mt-3 max-w-[20rem] text-sm text-muted-foreground">
+          {children}
+        </div>
       ) : null}
       <button
         ref={confirmRef}
@@ -119,19 +114,18 @@ function CenteredConfirmLayout({
         disabled={busy}
         aria-busy={busy || undefined}
         className={cn(
-          'mt-8 w-full border-2 px-6 py-3.5 font-black text-xs uppercase tracking-widest',
-          'shadow transition-all',
-          'active:translate-x-0.5 active:translate-y-0.5 active:shadow-none',
-          'disabled:pointer-events-none disabled:opacity-60',
-          styles.button
+          "mt-8 w-full border-2 px-6 py-3.5 font-black text-xs uppercase tracking-widest",
+          "shadow transition-all",
+          "active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
+          "disabled:pointer-events-none disabled:opacity-60",
+          styles.button,
         )}
       >
-        {renderButtonChildren(busy, 'size-4', confirmLabel)}
+        {renderButtonChildren(busy, "size-4", confirmLabel)}
       </button>
     </div>
   );
 }
-
 function StandardConfirmLayout({
   titleId,
   title,
@@ -153,7 +147,7 @@ function StandardConfirmLayout({
   hideCancel: boolean;
   cancelLabel: string;
   confirmLabel: string;
-  variant: 'danger' | 'warning' | 'default';
+  variant: "danger" | "warning" | "default";
   busy: boolean;
   confirmRef: React.RefObject<HTMLButtonElement | null>;
   onClose: () => void;
@@ -162,15 +156,25 @@ function StandardConfirmLayout({
   return (
     <div className="flex flex-col gap-4">
       <div className="min-w-0 flex-1">
-        <h2 id={titleId} className="text-base font-black uppercase tracking-wide">
+        <h2
+          id={titleId}
+          className="text-base font-black uppercase tracking-wide"
+        >
           {title}
         </h2>
-        {body != null ? <p className="mt-2 text-sm text-muted-foreground">{body}</p> : null}
+        {body != null ? (
+          <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+        ) : null}
         {children != null ? (
           <div className="mt-3 text-sm text-muted-foreground">{children}</div>
         ) : null}
       </div>
-      <div className={cn('flex gap-3 pt-2', hideCancel ? 'justify-stretch' : 'justify-end')}>
+      <div
+        className={cn(
+          "flex gap-3 pt-2",
+          hideCancel ? "justify-stretch" : "justify-end",
+        )}
+      >
         {!hideCancel ? (
           <button
             type="button"
@@ -188,27 +192,23 @@ function StandardConfirmLayout({
           disabled={busy}
           aria-busy={busy || undefined}
           className={cn(
-            'px-5 py-2.5 border-2 font-black text-xs uppercase tracking-wide shadow active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50',
-            hideCancel && 'w-full',
-            'border-primary bg-primary text-primary-foreground hover:opacity-90'
+            "px-5 py-2.5 border-2 font-black text-xs uppercase tracking-wide shadow active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50",
+            hideCancel && "w-full",
+            "border-primary bg-primary text-primary-foreground hover:opacity-90",
           )}
         >
-          {renderButtonChildren(busy, 'size-3.5', confirmLabel)}
+          {renderButtonChildren(busy, "size-3.5", confirmLabel)}
         </button>
       </div>
     </div>
   );
 }
-
-function centeredToneFromVariant(variant: ConfirmDialogProps['variant']): CenteredTone | null {
-  if (variant === 'danger' || variant === 'warning') return variant;
+function centeredToneFromVariant(
+  variant: ConfirmDialogProps["variant"],
+): CenteredTone | null {
+  if (variant === "danger" || variant === "warning") return variant;
   return null;
 }
-
-/**
- * Shared confirmation dialog — danger (trash) and warning (continue) use centered icon + gradient;
- * default uses compact title + optional cancel.
- */
 export function ConfirmDialog({
   open,
   onClose,
@@ -217,9 +217,9 @@ export function ConfirmDialog({
   description,
   titleId: titleIdProp,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel = "Cancel",
   onConfirm,
-  variant = 'danger',
+  variant = "danger",
   loading = false,
   confirming = false,
   closeOnConfirm = true,
@@ -237,35 +237,41 @@ export function ConfirmDialog({
   const centeredTone = centeredToneFromVariant(variant);
   const isCenteredLayout = centeredTone != null;
   const hideCancel = hideCancelProp ?? isCenteredLayout;
-
   const handleConfirm = () => {
     void Promise.resolve(onConfirm()).then(() => {
       if (closeOnConfirm) onClose();
     });
   };
-
   React.useEffect(() => {
     if (open && defaultFocusConfirm && confirmRef.current) {
       const t = setTimeout(() => confirmRef.current?.focus(), 0);
       return () => clearTimeout(t);
     }
   }, [open, defaultFocusConfirm]);
-
-  const centeredStyles = centeredTone != null ? CENTERED_TONE[centeredTone] : null;
-
+  const centeredStyles =
+    centeredTone != null ? CENTERED_TONE[centeredTone] : null;
   return (
     <Dialog
       open={open}
       onClose={onClose}
       titleId={titleId}
-      panelClassName={cn('max-w-sm overflow-hidden', centeredStyles?.panelBorder, panelClassName)}
-      contentClassName={cn(isCenteredLayout ? 'p-0' : 'p-6')}
+      panelClassName={cn(
+        "max-w-sm overflow-hidden",
+        centeredStyles?.panelBorder,
+        panelClassName,
+      )}
+      contentClassName={cn(isCenteredLayout ? "p-0" : "p-6")}
       legacyCloseContentInset={!isCenteredLayout}
       showCloseButton={showCloseButton}
       zIndex={DIALOG_Z_INDEX_STACKED}
     >
       {isCenteredLayout && centeredTone != null ? (
-        <div className={cn('min-h-full w-full bg-gradient-to-b', centeredStyles!.gradient)}>
+        <div
+          className={cn(
+            "min-h-full w-full bg-gradient-to-b",
+            centeredStyles!.gradient,
+          )}
+        >
           <CenteredConfirmLayout
             tone={centeredTone}
             titleId={titleId}

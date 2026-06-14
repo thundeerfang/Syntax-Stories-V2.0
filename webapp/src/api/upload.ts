@@ -1,32 +1,29 @@
 function getApiBase(): string {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-  return base ? base.replace(/\/$/, '') : '';
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+  return base ? base.replace(/\/$/, "") : "";
 }
-
-export type { UploadResponse, CropArea } from '@contracts/uploadApi';
-import type { CropArea, UploadResponse } from '@contracts/uploadApi';
-
+export type { UploadResponse, CropArea } from "@contracts/uploadApi";
+import type { CropArea, UploadResponse } from "@contracts/uploadApi";
 export async function uploadAvatar(
   token: string,
   file: File,
   crop?: CropArea,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
 ): Promise<UploadResponse> {
   const base = getApiBase();
-  const url = base ? `${base}/api/upload/avatar` : '/api/upload/avatar';
+  const url = base ? `${base}/api/upload/avatar` : "/api/upload/avatar";
   const formData = new FormData();
-  formData.append('avatar', file);
+  formData.append("avatar", file);
   if (crop) {
-    formData.append('cropX', String(crop.x));
-    formData.append('cropY', String(crop.y));
-    formData.append('cropWidth', String(crop.width));
-    formData.append('cropHeight', String(crop.height));
+    formData.append("cropX", String(crop.x));
+    formData.append("cropY", String(crop.y));
+    formData.append("cropWidth", String(crop.width));
+    formData.append("cropHeight", String(crop.height));
   }
-
   return new Promise<UploadResponse>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
         onProgress(event.loaded / event.total);
@@ -36,42 +33,38 @@ export async function uploadAvatar(
       if (xhr.readyState !== 4) return;
       let data: UploadResponse = { success: false };
       try {
-        data = JSON.parse(xhr.responseText || '{}') as UploadResponse;
-      } catch {
-        // ignore parse error; handled below
-      }
+        data = JSON.parse(xhr.responseText || "{}") as UploadResponse;
+      } catch {}
       if (xhr.status >= 200 && xhr.status < 300 && data.success && data.url) {
         resolve(data);
       } else {
-        reject(new Error(data.message ?? xhr.statusText ?? 'Upload failed'));
+        reject(new Error(data.message ?? xhr.statusText ?? "Upload failed"));
       }
     };
-    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.onerror = () => reject(new Error("Network error during upload"));
     xhr.send(formData);
   });
 }
-
 export async function uploadCover(
   token: string,
   file: File,
   crop?: CropArea,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
 ): Promise<UploadResponse> {
   const base = getApiBase();
-  const url = base ? `${base}/api/upload/cover` : '/api/upload/cover';
+  const url = base ? `${base}/api/upload/cover` : "/api/upload/cover";
   const formData = new FormData();
-  formData.append('cover', file);
+  formData.append("cover", file);
   if (crop) {
-    formData.append('cropX', String(crop.x));
-    formData.append('cropY', String(crop.y));
-    formData.append('cropWidth', String(crop.width));
-    formData.append('cropHeight', String(crop.height));
+    formData.append("cropX", String(crop.x));
+    formData.append("cropY", String(crop.y));
+    formData.append("cropWidth", String(crop.width));
+    formData.append("cropHeight", String(crop.height));
   }
-
   return new Promise<UploadResponse>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
         onProgress(event.loaded / event.total);
@@ -81,42 +74,38 @@ export async function uploadCover(
       if (xhr.readyState !== 4) return;
       let data: UploadResponse = { success: false };
       try {
-        data = JSON.parse(xhr.responseText || '{}') as UploadResponse;
-      } catch {
-        // ignore parse error
-      }
+        data = JSON.parse(xhr.responseText || "{}") as UploadResponse;
+      } catch {}
       if (xhr.status >= 200 && xhr.status < 300 && data.success && data.url) {
         resolve(data);
       } else {
-        reject(new Error(data.message ?? xhr.statusText ?? 'Upload failed'));
+        reject(new Error(data.message ?? xhr.statusText ?? "Upload failed"));
       }
     };
-    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.onerror = () => reject(new Error("Network error during upload"));
     xhr.send(formData);
   });
 }
-
 export async function uploadMedia(
   token: string,
   file: File,
   crop?: CropArea,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
 ): Promise<UploadResponse> {
   const base = getApiBase();
-  const apiUrl = base ? `${base}/api/upload/media` : '/api/upload/media';
+  const apiUrl = base ? `${base}/api/upload/media` : "/api/upload/media";
   const formData = new FormData();
-  formData.append('media', file);
+  formData.append("media", file);
   if (crop) {
-    formData.append('cropX', String(crop.x));
-    formData.append('cropY', String(crop.y));
-    formData.append('cropWidth', String(crop.width));
-    formData.append('cropHeight', String(crop.height));
+    formData.append("cropX", String(crop.x));
+    formData.append("cropY", String(crop.y));
+    formData.append("cropWidth", String(crop.width));
+    formData.append("cropHeight", String(crop.height));
   }
-
   return new Promise<UploadResponse>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', apiUrl);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.open("POST", apiUrl);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
         onProgress(event.loaded / event.total);
@@ -126,44 +115,39 @@ export async function uploadMedia(
       if (xhr.readyState !== 4) return;
       let data: UploadResponse = { success: false };
       try {
-        data = JSON.parse(xhr.responseText || '{}') as UploadResponse;
-      } catch {
-        // ignore
-      }
+        data = JSON.parse(xhr.responseText || "{}") as UploadResponse;
+      } catch {}
       if (xhr.status >= 200 && xhr.status < 300 && data.success && data.url) {
         resolve(data);
       } else {
-        reject(new Error(data.message ?? xhr.statusText ?? 'Upload failed'));
+        reject(new Error(data.message ?? xhr.statusText ?? "Upload failed"));
       }
     };
-    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.onerror = () => reject(new Error("Network error during upload"));
     xhr.send(formData);
   });
 }
-
-/** Raster logos: send `crop` from the cropper. SVG uploads omit `crop` (server stores file as-is). */
 export async function uploadSettingsLogo(
   token: string,
   file: File,
-  kind: 'org-logo',
+  kind: "org-logo",
   crop: CropArea | undefined,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
 ): Promise<UploadResponse> {
   const base = getApiBase();
   const apiUrl = base ? `${base}/api/upload/${kind}` : `/api/upload/${kind}`;
   const formData = new FormData();
-  formData.append('logo', file);
+  formData.append("logo", file);
   if (crop) {
-    formData.append('cropX', String(crop.x));
-    formData.append('cropY', String(crop.y));
-    formData.append('cropWidth', String(crop.width));
-    formData.append('cropHeight', String(crop.height));
+    formData.append("cropX", String(crop.x));
+    formData.append("cropY", String(crop.y));
+    formData.append("cropWidth", String(crop.width));
+    formData.append("cropHeight", String(crop.height));
   }
-
   return new Promise<UploadResponse>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', apiUrl);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.open("POST", apiUrl);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
         onProgress(event.loaded / event.total);
@@ -173,17 +157,15 @@ export async function uploadSettingsLogo(
       if (xhr.readyState !== 4) return;
       let data: UploadResponse = { success: false };
       try {
-        data = JSON.parse(xhr.responseText || '{}') as UploadResponse;
-      } catch {
-        // ignore
-      }
+        data = JSON.parse(xhr.responseText || "{}") as UploadResponse;
+      } catch {}
       if (xhr.status >= 200 && xhr.status < 300 && data.success && data.url) {
         resolve(data);
       } else {
-        reject(new Error(data.message ?? xhr.statusText ?? 'Upload failed'));
+        reject(new Error(data.message ?? xhr.statusText ?? "Upload failed"));
       }
     };
-    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.onerror = () => reject(new Error("Network error during upload"));
     xhr.send(formData);
   });
 }

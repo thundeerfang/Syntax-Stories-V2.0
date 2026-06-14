@@ -1,9 +1,8 @@
-'use client';
-
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Compass, Repeat2 } from 'lucide-react';
-import { repostsApi } from '@/api/reposts';
-import { BlogCard } from '@/features/blog';
+"use client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Compass, Repeat2 } from "lucide-react";
+import { repostsApi } from "@/api/reposts";
+import { BlogCard } from "@/features/blog";
 import {
   RailFeedEmptyState,
   RailFeedErrorState,
@@ -13,42 +12,38 @@ import {
   RailCountPillPair,
   ShellPageIntroHeader,
   SignInRequiredPanel,
-  type RailSectionSubheaderSortProps,
-} from '@/components/layout';
-import { FollowingPostsGridSkeleton, FollowingToolbarSkeleton } from '@/components/skeletons';
-import { useAuthStore } from '@/store/auth';
-import { useRouteRestoreNonce } from '@/hooks/useRouteRestore';
-import { mapPublicFeedPostToPost } from '@/lib/blog/mapFeedPostToPost';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
-import type { Post } from '@/types';
-
-type RepostSort = 'newest' | 'oldest';
-
-const REPOST_SORT_OPTIONS: RailSectionSubheaderSortProps['options'] = [
-  { value: 'newest', label: 'Newest repost' },
-  { value: 'oldest', label: 'Oldest repost' },
-];
-
+} from "@/components/layout";
+import {
+  FollowingPostsGridSkeleton,
+  FollowingToolbarSkeleton,
+} from "@/components/skeletons";
+import { useAuthStore } from "@/store/auth";
+import { useRouteRestoreNonce } from "@/hooks/useRouteRestore";
+import { mapPublicFeedPostToPost } from "@/lib/blog/mapFeedPostToPost";
+import { REPOST_SORT_OPTIONS } from "@/lib/blog/repostsPage";
+import { shell } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
+import type { Post } from "@/types";
+type RepostSort = "newest" | "oldest";
 export default function RepostsPage() {
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const routeRestoreNonce = useRouteRestoreNonce();
-
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [searchDebounced, setSearchDebounced] = useState('');
-  const [repostSort, setRepostSort] = useState<RepostSort>('newest');
-
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [repostSort, setRepostSort] = useState<RepostSort>("newest");
   useEffect(() => {
-    const t = window.setTimeout(() => setSearchDebounced(searchInput.trim().toLowerCase()), 280);
+    const t = window.setTimeout(
+      () => setSearchDebounced(searchInput.trim().toLowerCase()),
+      280,
+    );
     return () => window.clearTimeout(t);
   }, [searchInput]);
-
   const loadPosts = useCallback(async () => {
     if (!token) return;
     setLoading(true);
@@ -60,40 +55,36 @@ export default function RepostsPage() {
       });
       setPosts(raw.map(mapPublicFeedPostToPost));
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Could not load reposts');
+      setErrorMsg(e instanceof Error ? e.message : "Could not load reposts");
       setPosts([]);
     } finally {
       setLoading(false);
       setInitialLoadDone(true);
     }
   }, [token, repostSort]);
-
   useEffect(() => {
     if (!isHydrated || !token || !user) return;
     void loadPosts();
   }, [isHydrated, token, user, loadPosts, routeRestoreNonce]);
-
   const filteredPosts = useMemo(() => {
     if (!searchDebounced) return posts;
     return posts.filter((p) => {
-      const hay = `${p.title} ${p.excerpt ?? ''}`.toLowerCase();
+      const hay = `${p.title} ${p.excerpt ?? ""}`.toLowerCase();
       return hay.includes(searchDebounced);
     });
   }, [posts, searchDebounced]);
-
   const showGate = isHydrated && (!token || !user);
   const showFullPageSkeleton =
     !isHydrated || (Boolean(token && user) && !initialLoadDone && loading);
-
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
+    <div className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}>
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
         <ShellPageIntroHeader
-          breadcrumbItems={[{ href: '/', label: 'Home' }, { label: 'Reposts' }]}
+          breadcrumbItems={[{ href: "/", label: "Home" }, { label: "Reposts" }]}
           description="Posts you have reposted to your profile. Share what resonates and revisit your curated stream anytime."
           title={
             <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-              Your{' '}
+              Your{" "}
               <span className="text-primary underline decoration-4 underline-offset-4 sm:decoration-6 sm:underline-offset-6">
                 reposts.
               </span>
@@ -137,15 +128,15 @@ export default function RepostsPage() {
               search={{
                 value: searchInput,
                 onChange: setSearchInput,
-                placeholder: 'Search reposts',
-                ariaLabel: 'Search your reposts',
+                placeholder: "Search reposts",
+                ariaLabel: "Search your reposts",
               }}
               sort={{
-                id: 'reposts-sort',
+                id: "reposts-sort",
                 value: repostSort,
                 onChange: (v) => setRepostSort(v as RepostSort),
                 options: REPOST_SORT_OPTIONS,
-                placeholder: 'Sort',
+                placeholder: "Sort",
               }}
             />
 
@@ -167,10 +158,16 @@ export default function RepostsPage() {
                   description="When you repost a story from the feed, it will show up here so you can revisit and share what resonates."
                   actions={[
                     {
-                      label: 'Browse topics',
-                      href: '/topics',
-                      variant: 'primary',
-                      icon: <Compass className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />,
+                      label: "Browse topics",
+                      href: "/topics",
+                      variant: "primary",
+                      icon: (
+                        <Compass
+                          className="size-4 shrink-0"
+                          strokeWidth={2.5}
+                          aria-hidden
+                        />
+                      ),
                     },
                   ]}
                 />
@@ -180,7 +177,12 @@ export default function RepostsPage() {
                   variant="filter"
                   title="No matching reposts"
                   description="Try a different search term or clear the filter."
-                  actions={[{ label: 'Clear search', onClick: () => setSearchInput('') }]}
+                  actions={[
+                    {
+                      label: "Clear search",
+                      onClick: () => setSearchInput(""),
+                    },
+                  ]}
                 />
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

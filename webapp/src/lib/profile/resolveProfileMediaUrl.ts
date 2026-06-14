@@ -1,19 +1,33 @@
-import { diceBearAvatarUrl } from '@/lib/core/diceBearAvatarUrl';
+import {
+  diceBearAvatarUrl,
+  isDiceBearStoredProfile,
+} from "@/lib/core/diceBearAvatarUrl";
+import { resolvePublicApiBase } from "@/lib/api/publicApiBase";
 
-/** Resolve profile/cover media paths for display and image export. */
-export function resolveProfileMediaUrl(raw: string | undefined, username?: string): string {
+export type ResolveProfileMediaUrlOptions = Readonly<{
+  fallbackSeed?: string;
+}>;
+
+export function resolveProfileMediaUrl(
+  raw: string | undefined,
+  seed?: string,
+  options?: ResolveProfileMediaUrlOptions,
+): string {
   const trimmed = raw?.trim();
-  const seed = username?.trim() || 'user';
-  const dicebear = diceBearAvatarUrl(seed);
-  if (!trimmed) return dicebear;
-  if (
-    trimmed.startsWith('http://') ||
-    trimmed.startsWith('https://') ||
-    trimmed.startsWith('data:')
-  ) {
+  const handle = seed?.trim() || options?.fallbackSeed || "user";
+
+  if (!trimmed || isDiceBearStoredProfile(trimmed)) {
+    return diceBearAvatarUrl(handle);
+  }
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    if (isDiceBearStoredProfile(trimmed)) {
+      return diceBearAvatarUrl(handle);
+    }
     return trimmed;
   }
-  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${base}${path}`;
+  if (trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+  const base = resolvePublicApiBase().replace(/\/$/, "");
+  return `${base}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
 }

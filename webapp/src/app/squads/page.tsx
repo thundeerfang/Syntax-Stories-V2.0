@@ -1,4 +1,4 @@
-import { SquadsBrowsePage } from '@/features/squads';
+import { SquadsBrowsePage } from "@/features/squads";
 
 export default function Page() {
   return <SquadsBrowsePage />;

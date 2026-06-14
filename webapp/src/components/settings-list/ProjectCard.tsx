@@ -1,6 +1,5 @@
-'use client';
-
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
 import {
   BookOpen,
   Calendar,
@@ -11,13 +10,14 @@ import {
   Trash2,
   Archive,
   Hash,
-} from 'lucide-react';
-import { cn } from '@/lib/core/utils';
-import { HoverCard } from '@/components/ui/popover';
-import { LinkPreviewCardContent } from '@/components/ui/popover';
-
-type MediaItem = { url: string; title?: string };
-
+} from "lucide-react";
+import { cn } from "@/lib/core/utils";
+import { HoverCard } from "@/components/ui/popover";
+import { LinkPreviewCardContent } from "@/components/ui/popover";
+type MediaItem = {
+  url: string;
+  title?: string;
+};
 type ProjectCardProps = Readonly<{
   project: any;
   index: number;
@@ -30,7 +30,6 @@ type ProjectCardProps = Readonly<{
   isImageUrl: (url: string) => boolean;
   hideActions?: boolean;
 }>;
-
 export function ProjectCard({
   project: e,
   index,
@@ -43,52 +42,47 @@ export function ProjectCard({
   isImageUrl,
   hideActions = false,
 }: ProjectCardProps) {
-  const pubStr = e.publicationDate ? formatMonthYear(e.publicationDate) : '';
-  let endStr = '';
+  const pubStr = e.publicationDate ? formatMonthYear(e.publicationDate) : "";
+  let endStr = "";
   if (e.endDate) endStr = formatMonthYear(e.endDate);
-  else if (e.ongoing) endStr = 'PRESENT';
-  const dateRange = [pubStr, endStr].filter(Boolean).join(' // ');
-  const isPub = e.type === 'publication';
+  else if (e.ongoing) endStr = "PRESENT";
+  const dateRange = [pubStr, endStr].filter(Boolean).join(" // ");
+  const isPub = e.type === "publication";
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-
   const projectStableKey = String(
-    e.title ?? e.publicationUrl ?? e.id ?? `project-${String(index)}`
+    e.title ?? e.publicationUrl ?? e.id ?? `project-${String(index)}`,
   );
-
   return (
     <div className="group relative ss-settings-card min-w-0 max-w-full overflow-hidden">
-      {/* Archive-style Industrial Frame */}
       <div className="ss-card-border relative border-[3px] border-border bg-card overflow-hidden">
-        {/* Hardware Corner Brackets */}
         <div className="absolute -top-[3px] -left-[3px] size-4 border-t-[3px] border-l-[3px] border-primary z-20" />
         <div className="absolute -bottom-[3px] -right-[3px] size-4 border-b-[3px] border-r-[3px] border-primary z-20" />
 
-        {/* Technical Header — reduced padding */}
         <div className="ss-card-header flex items-center justify-between border-b-[3px] border-border bg-muted/30 px-3 py-1.5 relative z-10 min-w-0">
           <div className="flex items-center gap-3 min-w-0 shrink">
             <Archive className="size-3.5 text-primary" />
             <span className="text-[10px] font-black font-mono tracking-widest text-foreground uppercase truncate">
-              {isPub ? 'PUB_ID' : 'PRJ_ID'}:{' '}
-              <span className="text-primary">#{String(index + 1).padStart(2, '0')}</span>
+              {isPub ? "PUB_ID" : "PRJ_ID"}:{" "}
+              <span className="text-primary">
+                #{String(index + 1).padStart(2, "0")}
+              </span>
             </span>
           </div>
 
-          {/* Type Badge - project or publication */}
           <div
             className={cn(
-              'px-2 py-0.5 border border-border text-[8px] font-black font-mono tracking-tighter uppercase',
-              isPub ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'
+              "px-2 py-0.5 border border-border text-[8px] font-black font-mono tracking-tighter uppercase",
+              isPub
+                ? "bg-primary text-primary-foreground"
+                : "bg-background text-muted-foreground",
             )}
           >
-            {isPub ? 'publication' : 'project'}
+            {isPub ? "publication" : "project"}
           </div>
         </div>
 
-        {/* Main Body */}
         <div className="p-3 flex flex-col md:flex-row gap-4 relative z-10 min-w-0">
-          {/* Content Type Icon Viewport — reduced size */}
           <div className="ss-card-logo-box relative size-12 shrink-0 border-2 border-border bg-background flex items-center justify-center overflow-hidden">
-            {/* CRT Grid Effect */}
             <div className="absolute inset-0 opacity-[0.1] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:4px_4px]" />
 
             {isPub ? (
@@ -102,7 +96,7 @@ export function ProjectCard({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1 min-w-0">
                 <h4 className="ss-card-title text-base font-black uppercase tracking-tighter text-foreground leading-tight truncate">
-                  {e.title || 'UNTITLED_ENTRY'}
+                  {e.title || "UNTITLED_ENTRY"}
                 </h4>
                 {e.publisher && (
                   <div className="flex items-center gap-2 min-w-0">
@@ -114,7 +108,6 @@ export function ProjectCard({
                 )}
               </div>
 
-              {/* Standard Action Buttons */}
               {!hideActions && (
                 <div className="flex gap-2">
                   <button
@@ -136,7 +129,6 @@ export function ProjectCard({
               )}
             </div>
 
-            {/* Technical Metadata Row */}
             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
               {dateRange && (
                 <div className="flex items-center gap-2 px-2 py-1 bg-muted border border-border text-[9px] font-mono font-bold text-muted-foreground shrink-0">
@@ -146,7 +138,11 @@ export function ProjectCard({
               )}
               {e.publicationUrl && (
                 <HoverCard
-                  content={<LinkPreviewCardContent domain={domainFromUrl(e.publicationUrl)} />}
+                  content={
+                    <LinkPreviewCardContent
+                      domain={domainFromUrl(e.publicationUrl)}
+                    />
+                  }
                   side="top"
                   align="start"
                   contentClassName="w-[280px] p-0 border-2 border-primary"
@@ -164,42 +160,53 @@ export function ProjectCard({
               )}
             </div>
 
-            {/* SUMMARY_LOG: 2 lines collapsed; click to expand with 4-line scroll */}
             {e.description && (
               <div className="bg-muted/20 border-l-2 border-primary/30 min-w-0 overflow-hidden flex flex-col pl-5 w-full">
                 <button
                   type="button"
                   onClick={(ev) => {
-                    if ((ev.target as HTMLElement).closest('.ss-card-desc-scroll')) return;
+                    if (
+                      (ev.target as HTMLElement).closest(".ss-card-desc-scroll")
+                    )
+                      return;
                     setIsSummaryExpanded((v) => !v);
                   }}
                   className="text-left w-full cursor-pointer flex flex-col overflow-hidden min-h-0"
                   aria-expanded={isSummaryExpanded}
                   aria-label={
-                    isSummaryExpanded ? 'Collapse summary' : 'Expand to read full summary'
+                    isSummaryExpanded
+                      ? "Collapse summary"
+                      : "Expand to read full summary"
                   }
                 >
                   {isSummaryExpanded ? (
                     <div
                       className="ss-card-desc-scroll min-h-0 overflow-y-auto pr-1.5 py-2 max-h-[4.5rem] leading-snug"
-                      style={{ scrollbarGutter: 'stable' }}
+                      style={{ scrollbarGutter: "stable" }}
                     >
                       <p className="text-[11px] font-medium text-muted-foreground break-words break-all">
-                        <span className="text-primary font-bold mr-2 shrink-0">SUMMARY_LOG:</span>
-                        <span className="break-words break-all">{e.description}</span>
+                        <span className="text-primary font-bold mr-2 shrink-0">
+                          SUMMARY_LOG:
+                        </span>
+                        <span className="break-words break-all">
+                          {e.description}
+                        </span>
                       </p>
                     </div>
                   ) : (
                     <p className="text-[11px] font-medium text-muted-foreground leading-snug break-words break-all line-clamp-2 [line-height:1.375rem] py-1.5">
-                      <span className="text-primary font-bold mr-2 shrink-0">SUMMARY_LOG:</span>
-                      <span className="break-words break-all">{e.description}</span>
+                      <span className="text-primary font-bold mr-2 shrink-0">
+                        SUMMARY_LOG:
+                      </span>
+                      <span className="break-words break-all">
+                        {e.description}
+                      </span>
                     </p>
                   )}
                 </button>
               </div>
             )}
 
-            {/* Media Thumbnails */}
             {e.mediaItems && e.mediaItems.length > 0 && (
               <div className="pt-1">
                 <div className="flex flex-wrap gap-1.5">
@@ -213,7 +220,7 @@ export function ProjectCard({
                       {isImageUrl(m.url) ? (
                         <img
                           src={m.url}
-                          alt={m.title?.trim() || ''}
+                          alt={m.title?.trim() || ""}
                           className="size-full object-cover"
                         />
                       ) : (
@@ -227,7 +234,6 @@ export function ProjectCard({
           </div>
         </div>
 
-        {/* Footer Hardware Deco — reduced padding */}
         <div className="border-t-2 border-border bg-muted/10 px-3 py-1 flex justify-between items-center">
           <div className="flex gap-1.5 items-center">
             <div className="h-2 w-8 bg-muted-foreground/10 overflow-hidden">
@@ -238,7 +244,7 @@ export function ProjectCard({
             </span>
           </div>
           <span className="text-[9px] font-mono font-bold text-muted-foreground/30">
-            PRJ_TYPE: {isPub ? 'STATIONARY' : 'ITERATIVE'}
+            PRJ_TYPE: {isPub ? "STATIONARY" : "ITERATIVE"}
           </span>
         </div>
       </div>

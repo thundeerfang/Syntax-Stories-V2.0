@@ -1,69 +1,62 @@
-'use client';
-
-import * as React from 'react';
-import { Building2, Loader2 } from 'lucide-react';
-import { Label } from './Label';
-import { cn } from '@/lib/core/utils';
-import type { EntityOption } from '@/lib/core/entityOption';
-import { getLogoUrl } from '@/lib/core/entityOption';
-import { useDropdown } from '@/components/ui/dropdown';
-
-const DEBOUNCE_MS = 300;
-
-const ENTITY_SEARCH_LISTBOX_CLASS =
-  'absolute z-50 mt-1 w-full  border-2 border-border bg-card shadow overflow-hidden max-h-60 overflow-y-auto';
-
-const ENTITY_OPTION_BTN_CLASS =
-  'w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm font-medium hover:bg-muted/50 transition-colors border-b border-border last:border-b-0';
-
+"use client";
+import * as React from "react";
+import { Building2, Loader2 } from "lucide-react";
+import { Label } from "./Label";
+import { cn } from "@/lib/core/utils";
+import type { EntityOption } from "@/lib/core/entityOption";
+import { getLogoUrl } from "@/lib/core/entityOption";
+import { useDropdown } from "@/components/ui/dropdown";
+import { entitySearch } from "@/lib/styles";
+import { ENTITY_SEARCH_DEBOUNCE_MS } from "@/variable";
 function EntitySearchSuggestionsListbox({
   listboxId,
   children,
-}: Readonly<{ listboxId: string; children: React.ReactNode }>) {
+}: Readonly<{
+  listboxId: string;
+  children: React.ReactNode;
+}>) {
   return (
-    <ul id={listboxId} className={ENTITY_SEARCH_LISTBOX_CLASS} role="listbox">
+    <ul id={listboxId} className={entitySearch.listbox} role="listbox">
       {children}
     </ul>
-  ); // NOSONAR S6819 S6842
+  );
 }
-
 function EntityComboboxOptionButton({
   onSelect,
   children,
-}: Readonly<{ onSelect: () => void; children: React.ReactNode }>) {
+}: Readonly<{
+  onSelect: () => void;
+  children: React.ReactNode;
+}>) {
   return (
     <button
       type="button"
       role="option"
       aria-selected={false}
       onClick={onSelect}
-      className={ENTITY_OPTION_BTN_CLASS}
+      className={entitySearch.optionBtn}
     >
       {children}
     </button>
-  ); // NOSONAR S6819
+  );
 }
-
 export interface EntitySearchInputProps {
   id: string;
   label: string;
   placeholder?: string;
   value: string;
   onChange: (name: string) => void;
-  /** When user selects a suggestion with a domain, call this (e.g. to set companyDomain) */
   onDomainSelect?: (domain: string) => void;
-  /** Sync: (query) => EntityOption[]. Async: (query) => Promise<EntityOption[]> for API-backed search. */
   searchOptions: (query: string) => EntityOption[] | Promise<EntityOption[]>;
   error?: string;
   disabled?: boolean;
   className?: string;
   maxLength?: number;
 }
-
 export function EntitySearchInput({
   id,
   label,
-  placeholder = 'Type to search...',
+  placeholder = "Type to search...",
   value,
   onChange,
   onDomainSelect,
@@ -75,13 +68,12 @@ export function EntitySearchInput({
 }: Readonly<EntitySearchInputProps>) {
   const listboxId = React.useId();
   const { open, setOpen, close, rootRef: containerRef } = useDropdown();
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState("");
   const [suggestions, setSuggestions] = React.useState<EntityOption[]>([]);
   const [loading, setLoading] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = React.useRef(0);
-
   React.useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const run = () => {
@@ -105,7 +97,7 @@ export function EntitySearchInput({
         });
     };
     if (!query.trim()) {
-      const emptyResult = searchOptions('');
+      const emptyResult = searchOptions("");
       if (Array.isArray(emptyResult)) {
         setSuggestions(emptyResult);
         setLoading(false);
@@ -120,33 +112,32 @@ export function EntitySearchInput({
       }
       return;
     }
-    debounceRef.current = setTimeout(run, DEBOUNCE_MS);
+    debounceRef.current = setTimeout(run, ENTITY_SEARCH_DEBOUNCE_MS);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, searchOptions]);
-
   const handleSelect = (opt: EntityOption) => {
     onChange(opt.name);
     onDomainSelect?.(opt.domain);
     close();
-    setQuery('');
+    setQuery("");
   };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     onChange(v);
     setQuery(v);
     setOpen(true);
   };
-
   const handleFocus = () => {
     setQuery(value);
     setOpen(true);
   };
-
   return (
-    <div ref={containerRef} className={cn('grid w-full items-center gap-1.5 min-w-0', className)}>
+    <div
+      ref={containerRef}
+      className={cn("grid w-full items-center gap-1.5 min-w-0", className)}
+    >
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
         <input
@@ -161,11 +152,12 @@ export function EntitySearchInput({
           placeholder={placeholder}
           autoComplete="off"
           className={cn(
-            'w-full  border-2 border-border bg-background px-3 py-2.5 text-sm font-medium',
-            'placeholder:text-muted-foreground/70',
-            'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            error && 'border-destructive focus:border-destructive focus:ring-destructive/20'
+            "w-full  border-2 border-border bg-background px-3 py-2.5 text-sm font-medium",
+            "placeholder:text-muted-foreground/70",
+            "focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            error &&
+              "border-destructive focus:border-destructive focus:ring-destructive/20",
           )}
           aria-invalid={!!error}
           aria-expanded={open}
@@ -195,15 +187,16 @@ export function EntitySearchInput({
     </div>
   );
 }
-
 function EntityOptionRow({
   option,
   onSelect,
-}: Readonly<{ option: EntityOption; onSelect: () => void }>) {
+}: Readonly<{
+  option: EntityOption;
+  onSelect: () => void;
+}>) {
   const logoUrl = getLogoUrl(option.domain);
   const [imgError, setImgError] = React.useState(false);
   const showDefault = !logoUrl || imgError;
-
   return (
     <li>
       <EntityComboboxOptionButton onSelect={onSelect}>

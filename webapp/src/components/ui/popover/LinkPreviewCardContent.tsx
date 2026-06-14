@@ -1,35 +1,30 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import { ExternalLink, Globe } from 'lucide-react';
-
+"use client";
+import React, { useEffect, useState } from "react";
+import { ExternalLink, Globe } from "lucide-react";
 function normalizeDomain(domain: string | undefined): string {
-  if (!domain?.trim()) return '';
+  if (!domain?.trim()) return "";
   const t = domain.trim();
-  /** Keep explicit http(s) so previews match the link the user saved. */
   if (/^https?:\/\//i.test(t)) {
-    return t.replace(/\/$/, '');
+    return t.replace(/\/$/, "");
   }
-  const d = t.replace(/^\/+/, '').replace(/\/$/, '');
-  return d ? `https://${d}` : '';
+  const d = t.replace(/^\/+/, "").replace(/\/$/, "");
+  return d ? `https://${d}` : "";
 }
-
-const MICROLINK_API = 'https://api.microlink.io';
-
+const MICROLINK_API = "https://api.microlink.io";
 export interface LinkPreviewCardContentProps {
   domain: string;
   title?: string;
 }
-
-/** Link preview card: header opens in new tab; body shows screenshot preview via Microlink API. */
-export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCardContentProps>) {
+export function LinkPreviewCardContent({
+  domain,
+  title,
+}: Readonly<LinkPreviewCardContentProps>) {
   const url = normalizeDomain(domain);
-  const displayDomain = domain.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+  const displayDomain = domain.replace(/^https?:\/\//i, "").replace(/\/$/, "");
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
-
   useEffect(() => {
     if (!url) {
       setLoading(false);
@@ -47,7 +42,7 @@ export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCa
       .then((data) => {
         if (cancelled) return;
         const src = data?.data?.screenshot?.url;
-        if (src && typeof src === 'string') setScreenshotUrl(src);
+        if (src && typeof src === "string") setScreenshotUrl(src);
         else setFailed(true);
       })
       .catch(() => {
@@ -60,7 +55,6 @@ export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCa
       cancelled = true;
     };
   }, [url]);
-
   return (
     <div className="p-0 overflow-hidden">
       <a
@@ -71,7 +65,10 @@ export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCa
         onClick={(e) => e.stopPropagation()}
       >
         {faviconError || !displayDomain ? (
-          <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <Globe
+            className="size-4 shrink-0 text-muted-foreground"
+            aria-hidden
+          />
         ) : (
           <img
             src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(displayDomain)}&sz=32`}
@@ -81,12 +78,14 @@ export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCa
           />
         )}
         <div className="min-w-0 flex-1">
-          {title && <p className="text-xs font-black truncate leading-tight">{title}</p>}
+          {title && (
+            <p className="text-xs font-black truncate leading-tight">{title}</p>
+          )}
           <p
             className={
               title
-                ? 'text-[10px] font-bold text-muted-foreground truncate leading-tight'
-                : 'text-xs font-bold truncate leading-tight'
+                ? "text-[10px] font-bold text-muted-foreground truncate leading-tight"
+                : "text-xs font-bold truncate leading-tight"
             }
           >
             {displayDomain}
@@ -123,7 +122,9 @@ export function LinkPreviewCardContent({ domain, title }: Readonly<LinkPreviewCa
         )}
         {!loading && failed && (
           <div className="p-4 flex flex-col items-center justify-center gap-2 absolute inset-0 bg-muted/20">
-            <p className="text-[10px] text-muted-foreground text-center">Preview unavailable</p>
+            <p className="text-[10px] text-muted-foreground text-center">
+              Preview unavailable
+            </p>
             <a
               href={url}
               target="_blank"

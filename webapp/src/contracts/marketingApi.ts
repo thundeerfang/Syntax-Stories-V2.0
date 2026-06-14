@@ -10,4 +10,4 @@ export type {
   AboutTeamMember as MarketingTeamMember,
   AboutCta as MarketingCta,
   AboutPageContent as AboutMarketingPage,
-} from '@/lib/marketing/aboutPage.types';
+} from "@/lib/marketing/aboutPage.types";

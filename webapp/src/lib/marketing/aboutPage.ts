@@ -1,6 +1,5 @@
-import { ABOUT_PAGE_SEED } from './aboutPage.seed';
-import type { AboutPageContent } from './aboutPage.types';
-
+import { ABOUT_PAGE_SEED } from "./aboutPage.seed";
+import type { AboutPageContent } from "./aboutPage.types";
 export type {
   AboutHero,
   AboutJourneyItem,
@@ -9,11 +8,8 @@ export type {
   AboutTeamMember,
   AboutCta,
   AboutPageContent,
-} from './aboutPage.types';
-
+} from "./aboutPage.types";
 export { ABOUT_PAGE_SEED };
-
-/** Frozen static About page payload (frontend-only). */
 export function getAboutPageContent(): AboutPageContent {
   return ABOUT_PAGE_SEED;
 }

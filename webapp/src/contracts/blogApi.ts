@@ -4,14 +4,14 @@
  * Keep in sync with `server/src/routes/blog.routes.ts`.
  */
 
-import type { BlogTaxonomyRow, PublicFeedSquad } from '@/types/blog';
+import type { BlogTaxonomyRow, PublicFeedSquad } from "@/types/blog";
 
 export interface CreatePostPayload {
   title: string;
   summary?: string;
   content: string;
   thumbnailUrl?: string;
-  status?: 'draft' | 'published';
+  status?: "draft" | "published";
   category?: string;
   tags?: string[];
   language?: string;
@@ -25,7 +25,7 @@ export interface BlogPostResponse {
   summary?: string;
   content: string;
   thumbnailUrl?: string;
-  status: 'draft' | 'published';
+  status: "draft" | "published";
   createdAt: string;
   updatedAt: string;
   squadId?: string;

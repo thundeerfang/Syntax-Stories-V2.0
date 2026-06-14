@@ -1,4 +1,4 @@
-import { ContactPageSkeletonInner } from '@/components/skeletons';
+import { ContactPageSkeletonInner } from "@/components/skeletons";
 
 export default function ContactLoading() {
   return <ContactPageSkeletonInner />;

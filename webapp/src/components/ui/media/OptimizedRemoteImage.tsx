@@ -1,12 +1,9 @@
-'use client';
-
-import Image from 'next/image';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import Image from "next/image";
+import { cn } from "@/lib/core/utils";
 type Props = Readonly<{
   src: string;
   alt: string;
-  /** Optional native tooltip (same text as alt when used from upload dialog). */
   title?: string;
   blurDataUrl?: string | null;
   className?: string;
@@ -16,11 +13,6 @@ type Props = Readonly<{
   sizes?: string;
   priority?: boolean;
 }>;
-
-/**
- * Uses `next/image` with blur placeholder when `blurDataUrl` is set (e.g. from Sharp on upload).
- * Falls back to `<img>` for non-http(s) sources or when no blur is available.
- */
 export function OptimizedRemoteImage({
   src,
   alt,
@@ -33,23 +25,21 @@ export function OptimizedRemoteImage({
   sizes,
   priority,
 }: Props) {
-  const isRemote = src.startsWith('http://') || src.startsWith('https://');
+  const isRemote = src.startsWith("http://") || src.startsWith("https://");
   const useNextBlur = Boolean(blurDataUrl && isRemote);
-
   if (!useNextBlur) {
     return (
       <img
         src={src}
         alt={alt}
         title={title}
-        className={cn(fill && 'absolute inset-0 h-full w-full', className)}
+        className={cn(fill && "absolute inset-0 h-full w-full", className)}
         width={width}
         height={height}
         decoding="async"
       />
     );
   }
-
   if (fill) {
     return (
       <Image
@@ -57,15 +47,14 @@ export function OptimizedRemoteImage({
         alt={alt}
         title={title}
         fill
-        className={cn('object-cover', className)}
+        className={cn("object-cover", className)}
         sizes={sizes}
         placeholder="blur"
-        blurDataURL={blurDataUrl ?? ''}
+        blurDataURL={blurDataUrl ?? ""}
         priority={priority}
       />
     );
   }
-
   if (width == null || height == null) {
     return (
       <img
@@ -78,7 +67,6 @@ export function OptimizedRemoteImage({
       />
     );
   }
-
   return (
     <Image
       src={src}
@@ -89,7 +77,7 @@ export function OptimizedRemoteImage({
       className={className}
       sizes={sizes}
       placeholder="blur"
-      blurDataURL={blurDataUrl ?? ''}
+      blurDataURL={blurDataUrl ?? ""}
       priority={priority}
     />
   );

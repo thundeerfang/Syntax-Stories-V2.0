@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   BarChart2,
   Users,
@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Activity,
   Zap,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -21,18 +21,23 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts';
-import { analyticsApi, type ProfileOverviewMetrics, type ProfileTimePoint } from '@/api/analytics';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { cn } from '@/lib/core/utils';
-import { AnalyticsPageSkeletonInner } from '@/components/skeletons';
+} from "recharts";
+import { RetroFilterPill } from "@/components/ui/button";
+import {
+  analyticsApi,
+  type ProfileOverviewMetrics,
+  type ProfileTimePoint,
+} from "@/api/analytics";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { AnalyticsPageSkeletonInner } from "@/components/skeletons";
 
-type TabId = 'overview' | 'content' | 'audience';
+type TabId = "overview" | "content" | "audience";
 
 export default function ProfileAnalyticsPage() {
   const { user, shouldBlock } = useRequireAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
-  const [overviewMetrics, setOverviewMetrics] = useState<ProfileOverviewMetrics | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [overviewMetrics, setOverviewMetrics] =
+    useState<ProfileOverviewMetrics | null>(null);
   const [timeSeries, setTimeSeries] = useState<ProfileTimePoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +58,10 @@ export default function ProfileAnalyticsPage() {
 
   const chartData = useMemo(() => {
     return timeSeries.map((p) => ({
-      name: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      name: new Date(p.date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
       views: p.views,
       rawDate: p.date,
     }));
@@ -85,31 +93,31 @@ export default function ProfileAnalyticsPage() {
 
           <nav className="flex border-2 border-border bg-muted/10 p-1 gap-1 self-start md:self-center">
             {[
-              { id: 'overview', label: 'Overview', icon: BarChart2 },
-              { id: 'content', label: 'Content_Engagement', icon: FileText },
-              { id: 'audience', label: 'Audience_Intel', icon: Globe },
+              { id: "overview", label: "Overview", icon: BarChart2 },
+              { id: "content", label: "Content_Engagement", icon: FileText },
+              { id: "audience", label: "Audience_Intel", icon: Globe },
             ].map((tab) => (
-              <button
+              <RetroFilterPill
                 key={tab.id}
+                type="button"
+                active={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id as TabId)}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all',
-                  activeTab === tab.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
-                )}
+                className="px-4"
               >
-                <tab.icon className="size-3.5" />
+                <tab.icon className="size-3.5" aria-hidden />
                 {tab.label}
-              </button>
+              </RetroFilterPill>
             ))}
           </nav>
         </div>
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {['sk-a', 'sk-b', 'sk-c', 'sk-d', 'sk-e', 'sk-f'].map((id) => (
-              <div key={id} className="h-32 border-4 border-border bg-card animate-pulse" />
+            {["sk-a", "sk-b", "sk-c", "sk-d", "sk-e", "sk-f"].map((id) => (
+              <div
+                key={id}
+                className="h-32 border-4 border-border bg-card animate-pulse"
+              />
             ))}
           </div>
         ) : (
@@ -169,8 +177,12 @@ export default function ProfileAnalyticsPage() {
                       key={i}
                       className="text-[10px] border-l-2 border-primary pl-2 py-1 flex justify-between gap-2"
                     >
-                      <span className="text-muted-foreground">User_Entry_{i}024</span>
-                      <span className="text-primary font-bold">PROFILE_VIEW</span>
+                      <span className="text-muted-foreground">
+                        User_Entry_{i}024
+                      </span>
+                      <span className="text-primary font-bold">
+                        PROFILE_VIEW
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -179,7 +191,7 @@ export default function ProfileAnalyticsPage() {
 
             {/* RIGHT COLUMN: MAIN CHART & SUB-STATS (8 COLS) */}
             <div className="lg:col-span-8 space-y-6">
-              {activeTab === 'overview' ? (
+              {activeTab === "overview" ? (
                 <>
                   {/* Performance Chart Card */}
                   <div className="border-4 border-border bg-card p-6 shadow relative">
@@ -190,9 +202,23 @@ export default function ProfileAnalyticsPage() {
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData}>
                           <defs>
-                            <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                            <linearGradient
+                              id="colorViews"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="var(--primary)"
+                                stopOpacity={0.3}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="var(--primary)"
+                                stopOpacity={0}
+                              />
                             </linearGradient>
                           </defs>
                           <CartesianGrid
@@ -204,12 +230,20 @@ export default function ProfileAnalyticsPage() {
                             dataKey="name"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fontSize: 10, fontWeight: 900, fill: 'currentColor' }}
+                            tick={{
+                              fontSize: 10,
+                              fontWeight: 900,
+                              fill: "currentColor",
+                            }}
                           />
                           <YAxis
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fontSize: 10, fontWeight: 900, fill: 'currentColor' }}
+                            tick={{
+                              fontSize: 10,
+                              fontWeight: 900,
+                              fill: "currentColor",
+                            }}
                           />
                           <Tooltip content={<CustomTooltip />} />
                           <Area
@@ -228,8 +262,16 @@ export default function ProfileAnalyticsPage() {
                   {/* Secondary Metrics Row */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <MiniCard icon={Monitor} label="Desktop" value="68%" />
-                    <MiniCard icon={Globe} label="Referrers" value="GitHub, X" />
-                    <MiniCard icon={ShieldCheck} label="Verification" value="Verified" />
+                    <MiniCard
+                      icon={Globe}
+                      label="Referrers"
+                      value="GitHub, X"
+                    />
+                    <MiniCard
+                      icon={ShieldCheck}
+                      label="Verification"
+                      value="Verified"
+                    />
                   </div>
                 </>
               ) : (
@@ -238,10 +280,12 @@ export default function ProfileAnalyticsPage() {
                   <div className="size-16 bg-muted border-4 border-border flex items-center justify-center mb-4">
                     <Lock className="size-8 text-muted-foreground" />
                   </div>
-                  <h3 className="text-xl font-black uppercase italic italic">Module_Locked</h3>
+                  <h3 className="text-xl font-black uppercase italic italic">
+                    Module_Locked
+                  </h3>
                   <p className="text-sm text-muted-foreground max-w-xs mt-2 font-medium">
-                    Content analytics and Audience psychographics are currently being compiled for
-                    your account.
+                    Content analytics and Audience psychographics are currently
+                    being compiled for your account.
                   </p>
                 </div>
               )}
@@ -268,7 +312,11 @@ function MiniCard({
   icon: Icon,
   label,
   value,
-}: Readonly<{ icon: React.ComponentType<{ className?: string }>; label: string; value: string }>) {
+}: Readonly<{
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}>) {
   return (
     <div className="border-4 border-border bg-card p-4 flex items-center gap-4 hover:border-primary transition-colors">
       <div className="size-10 bg-muted border-2 border-border flex items-center justify-center shrink-0">
@@ -323,7 +371,9 @@ function CustomTooltip({
         </p>
         <div className="flex items-center gap-2">
           <span className="text-lg font-black italic">{row.value}</span>
-          <span className="text-[10px] font-bold uppercase text-muted-foreground">Hits</span>
+          <span className="text-[10px] font-bold uppercase text-muted-foreground">
+            Hits
+          </span>
         </div>
       </div>
     );

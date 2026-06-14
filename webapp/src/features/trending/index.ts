@@ -1,1 +1,1 @@
-export { TrendingPage } from './pages/TrendingPage';
+export { TrendingPage } from "./pages/TrendingPage";

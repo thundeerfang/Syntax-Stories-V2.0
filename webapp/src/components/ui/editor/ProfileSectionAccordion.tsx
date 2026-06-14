@@ -1,64 +1,55 @@
-'use client';
-
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Award,
-  FolderGit2,
-  Code2,
-  ChevronRight,
-  Wrench,
-} from 'lucide-react';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Award, FolderGit2, Code2, ChevronRight, Wrench } from "lucide-react";
+import { cn } from "@/lib/core/utils";
 export type ProfileSectionVariant =
-  | 'certification'
-  | 'project'
-  | 'openSource'
-  | 'mySetup';
-
+  | "certification"
+  | "project"
+  | "openSource"
+  | "mySetup";
 const VARIANT_CONFIG: Record<
   ProfileSectionVariant,
-  { icon: React.ComponentType<{ className?: string }>; title: string; borderColor?: string }
+  {
+    icon: React.ComponentType<{
+      className?: string;
+    }>;
+    title: string;
+    borderColor?: string;
+  }
 > = {
   certification: {
     icon: Award,
-    title: 'Certifications',
-    borderColor: 'border-l-amber-500',
+    title: "Certifications",
+    borderColor: "border-l-amber-500",
   },
   project: {
     icon: FolderGit2,
-    title: 'Projects',
-    borderColor: 'border-l-blue-500',
+    title: "Projects",
+    borderColor: "border-l-blue-500",
   },
   openSource: {
     icon: Code2,
-    title: 'Open Source',
-    borderColor: 'border-l-violet-500',
+    title: "Open Source",
+    borderColor: "border-l-violet-500",
   },
   mySetup: {
     icon: Wrench,
-    title: 'My Setup',
-    borderColor: 'border-l-primary',
+    title: "My Setup",
+    borderColor: "border-l-primary",
   },
 };
-
 export interface ProfileSectionAccordionProps {
   variant: ProfileSectionVariant;
-  /** Override default title for this variant */
   title?: string;
-  /** Optional subtitle, e.g. count "3 entries" */
   subtitle?: React.ReactNode;
   defaultOpen?: boolean;
-  /** Controlled: when provided with onOpenChange, parent controls open state (e.g. only one open at a time) */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
   children: React.ReactNode;
-  /** Optional add/settings link slot (e.g. "Add" button) – rendered in header when provided */
   headerAction?: React.ReactNode;
 }
-
 export function ProfileSectionAccordion({
   variant,
   title: titleProp,
@@ -71,9 +62,9 @@ export function ProfileSectionAccordion({
   headerAction,
 }: Readonly<ProfileSectionAccordionProps>) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  const isControlled = controlledOpen !== undefined && onOpenChange !== undefined;
+  const isControlled =
+    controlledOpen !== undefined && onOpenChange !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
-
   const handleToggle = () => {
     if (isControlled) {
       onOpenChange(!open);
@@ -84,15 +75,14 @@ export function ProfileSectionAccordion({
   const config = VARIANT_CONFIG[variant];
   const Icon = config.icon;
   const title = titleProp ?? config.title;
-
   return (
-    <div className={cn('retro-card-lg overflow-hidden', className)}>
+    <div className={cn("retro-card-lg overflow-hidden", className)}>
       <button
         type="button"
         onClick={handleToggle}
         className={cn(
-          'flex w-full items-center justify-between gap-3 border-b-4 border-border bg-muted/20 px-4 py-3 text-left transition-colors hover:bg-muted/30',
-          undefined
+          "flex w-full items-center justify-between gap-3 border-b-4 border-border bg-muted/20 px-4 py-3 text-left transition-colors hover:bg-muted/30",
+          undefined,
         )}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -114,8 +104,8 @@ export function ProfileSectionAccordion({
           {headerAction}
           <ChevronRight
             className={cn(
-              'size-4 text-muted-foreground transition-transform duration-300 ease-out',
-              open && 'rotate-90'
+              "size-4 text-muted-foreground transition-transform duration-300 ease-out",
+              open && "rotate-90",
             )}
           />
         </div>
@@ -124,7 +114,7 @@ export function ProfileSectionAccordion({
         {open && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"

@@ -1,7 +1,6 @@
-import type { SearchGroupKey, SearchHit } from '@contracts/searchApi';
-import { SEARCH_GROUP_LABELS } from '@contracts/searchApi';
-import { SearchHitRow } from './SearchHitRow';
-
+import type { SearchGroupKey, SearchHit } from "@contracts/searchApi";
+import { SEARCH_GROUP_LABELS } from "@contracts/searchApi";
+import { SearchHitRow } from "./SearchHitRow";
 export function SearchGroupSection({
   groupKey,
   hits,

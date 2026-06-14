@@ -1,6 +1,5 @@
-'use client';
-
-import type { LucideIcon } from 'lucide-react';
+"use client";
+import type { LucideIcon } from "lucide-react";
 import {
   Award,
   Bell,
@@ -13,9 +12,8 @@ import {
   TrendingUp,
   UserPlus,
   Users,
-} from 'lucide-react';
-import type { NotificationIcon } from '@contracts/notificationsApi';
-
+} from "lucide-react";
+import type { NotificationIcon } from "@contracts/notificationsApi";
 const ICON_MAP: Record<NotificationIcon, LucideIcon> = {
   bell: Bell,
   repeat: Repeat2,
@@ -24,13 +22,14 @@ const ICON_MAP: Record<NotificationIcon, LucideIcon> = {
   tag: Tag,
   users: Users,
   trending: TrendingUp,
-  'user-plus': UserPlus,
+  "user-plus": UserPlus,
   settings: Settings,
   mail: Mail,
   award: Award,
 };
-
-export function notificationIconComponent(icon: NotificationIcon | undefined): LucideIcon {
+export function notificationIconComponent(
+  icon: NotificationIcon | undefined,
+): LucideIcon {
   if (icon && ICON_MAP[icon]) return ICON_MAP[icon];
   return Bell;
 }

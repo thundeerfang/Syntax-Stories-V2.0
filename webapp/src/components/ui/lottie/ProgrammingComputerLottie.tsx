@@ -1,31 +1,28 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import { cn } from "@/lib/core/utils";
 const DotLottieReact = dynamic(
-  () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false }
+  () => import("@lottiefiles/dotlottie-react").then((m) => m.DotLottieReact),
+  { ssr: false },
 );
-
-const LOTTIE_SRC = '/lottie/Programming%20Computer.lottie';
-
+const LOTTIE_SRC = "/lottie/Programming%20Computer.lottie";
 export interface ProgrammingComputerLottieProps {
   play?: boolean;
   autoplay?: boolean;
   size?: number;
   className?: string;
 }
-
 export function ProgrammingComputerLottie({
   play = false,
   autoplay = true,
   size = 128,
   className,
 }: Readonly<ProgrammingComputerLottieProps>) {
-  const dotLottieRef = useRef<{ play: () => void; pause: () => void } | null>(null);
-
+  const dotLottieRef = useRef<{
+    play: () => void;
+    pause: () => void;
+  } | null>(null);
   useEffect(() => {
     if (!dotLottieRef.current) return;
     if (autoplay || play) {
@@ -34,10 +31,9 @@ export function ProgrammingComputerLottie({
       dotLottieRef.current.pause();
     }
   }, [play, autoplay]);
-
   return (
     <span
-      className={cn('pointer-events-none inline-flex shrink-0', className)}
+      className={cn("pointer-events-none inline-flex shrink-0", className)}
       style={{ width: size, height: size }}
       aria-hidden
     >

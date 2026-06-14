@@ -7,7 +7,7 @@ module.exports = {
         'Shared components/ must not import features/ (use feature-shim barrels during migration).',
       severity: 'error',
       from: {
-        path: '^src/components/(?!blog/|profile/|squads/|explore/|topics/|tags/|legal/|connectivity/|auth/)',
+        path: '^src/components/(?!blog/|profile/|squads/|explore/|topics/|tags/|legal/|connectivity/|auth/|achievements/|platform/|settings/)',
       },
       to: { path: '^src/features/' },
     },
@@ -16,7 +16,7 @@ module.exports = {
       comment: 'Shared components/ must not import app/ routes.',
       severity: 'error',
       from: {
-        path: '^src/components/(?!blog/|profile/|squads/|explore/|topics/|tags/|legal/|connectivity/|auth/)',
+        path: '^src/components/(?!blog/|profile/|squads/|explore/|topics/|tags/|legal/|connectivity/|auth/|achievements/|platform/|settings/)',
       },
       to: { path: '^src/app/' },
     },

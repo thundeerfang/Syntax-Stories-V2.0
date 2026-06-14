@@ -1,0 +1,2 @@
+export const TRENDING_AUTOPLAY_MS = 7000;
+export const TRENDING_STACK_DEPTH = 5;

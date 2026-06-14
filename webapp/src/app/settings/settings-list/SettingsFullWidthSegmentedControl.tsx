@@ -4,4 +4,4 @@ export {
   type SegmentOption as SettingsSegmentOption,
   MetricCard as SettingsMetricCard,
   type MetricCardProps as SettingsMetricCardProps,
-} from '@/components/ui/layout';
+} from "@/components/ui/layout";

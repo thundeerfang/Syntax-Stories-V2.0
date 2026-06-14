@@ -1,17 +1,13 @@
-'use client';
-
-import { useDropzone, type Accept } from 'react-dropzone';
-import { toast } from 'sonner';
-import { cn } from '@/lib/core/utils';
-
-/** Raster images accepted by `/api/upload` image routes. */
+"use client";
+import { useDropzone, type Accept } from "react-dropzone";
+import { toast } from "sonner";
+import { cn } from "@/lib/core/utils";
 export const IMAGE_ACCEPT_RASTER: Accept = {
-  'image/jpeg': ['.jpg', '.jpeg'],
-  'image/png': ['.png'],
-  'image/gif': ['.gif'],
-  'image/webp': ['.webp'],
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/png": [".png"],
+  "image/gif": [".gif"],
+  "image/webp": [".webp"],
 };
-
 export type ImageDropzoneProps = {
   disabled?: boolean;
   maxSizeBytes: number;
@@ -21,7 +17,6 @@ export type ImageDropzoneProps = {
   dragActiveClassName?: string;
   children: React.ReactNode;
 };
-
 export function ImageDropzone({
   disabled,
   maxSizeBytes,
@@ -32,7 +27,6 @@ export function ImageDropzone({
   children,
 }: Readonly<ImageDropzoneProps>) {
   const maxMb = Math.max(1, Math.round(maxSizeBytes / (1024 * 1024)));
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept,
     maxSize: maxSizeBytes,
@@ -44,19 +38,23 @@ export function ImageDropzone({
     },
     onDropRejected: (rejections) => {
       const code = rejections[0]?.errors[0]?.code;
-      if (code === 'file-too-large') {
+      if (code === "file-too-large") {
         toast.error(`Image must be under ${maxMb}MB.`);
-      } else if (code === 'file-invalid-type') {
-        toast.error('Please use a supported image type (JPEG, PNG, GIF, WebP).');
+      } else if (code === "file-invalid-type") {
+        toast.error(
+          "Please use a supported image type (JPEG, PNG, GIF, WebP).",
+        );
       } else {
-        toast.error('Could not use this file.');
+        toast.error("Could not use this file.");
       }
     },
   });
-
   return (
-    <div {...getRootProps()} className={cn(className, isDragActive && dragActiveClassName)}>
-      <input {...getInputProps({ className: 'sr-only' })} />
+    <div
+      {...getRootProps()}
+      className={cn(className, isDragActive && dragActiveClassName)}
+    >
+      <input {...getInputProps({ className: "sr-only" })} />
       {children}
     </div>
   );

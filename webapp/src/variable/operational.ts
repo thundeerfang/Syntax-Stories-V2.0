@@ -1,0 +1,2 @@
+export const OPERATIONAL_POLL_MS = 12000;
+export const OPERATIONAL_FETCH_TIMEOUT_MS = 8000;

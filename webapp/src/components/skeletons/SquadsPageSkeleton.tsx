@@ -1,11 +1,8 @@
-'use client';
-
-import { FollowingPostsGridSkeleton } from './PageSkeletons';
-import { SkBar, SkBlock, SkGradientFill } from './primitives';
-import { SQUAD_DISCOVER_CARD_GRID_CLASS } from '@/lib/squads/squadDiscoverCardLayout';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import { FollowingPostsGridSkeleton } from "./PageSkeletons";
+import { SkBar, SkBlock, SkGradientFill } from "./primitives";
+import { shell, squads } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
 function SquadCardSkeletonTile() {
   return (
     <div
@@ -31,12 +28,18 @@ function SquadCardSkeletonTile() {
     </div>
   );
 }
-
-export function SquadsPageBrowseSkeleton({ className }: Readonly<{ className?: string }>) {
+export function SquadsPageBrowseSkeleton({
+  className,
+}: Readonly<{
+  className?: string;
+}>) {
   return (
-    <div className={cn('flex w-full min-w-0 flex-col gap-4', className)} aria-hidden>
+    <div
+      className={cn("flex w-full min-w-0 flex-col gap-4", className)}
+      aria-hidden
+    >
       <div className="min-w-0 flex-1 space-y-3">
-        <ul className={SQUAD_DISCOVER_CARD_GRID_CLASS}>
+        <ul className={squads.discoverCardGrid}>
           {Array.from({ length: 8 }, (_, i) => `sq-sk-${i}`).map((id) => (
             <li key={id} className="flex min-h-0">
               <SquadCardSkeletonTile />
@@ -47,12 +50,10 @@ export function SquadsPageBrowseSkeleton({ className }: Readonly<{ className?: s
     </div>
   );
 }
-
-/** `/squads/[slug]` — banner header, feed grid (matches `SquadDetailPage`). */
 export function SquadDetailPageSkeleton() {
   return (
     <div
-      className={cn(SHELL_CONTENT_RAIL_CLASS, 'relative min-h-0 flex-1')}
+      className={cn(shell.contentRail, "relative min-h-0 flex-1")}
       aria-busy="true"
       aria-label="Loading squad"
     >
@@ -83,7 +84,7 @@ export function SquadDetailPageSkeleton() {
                   <SkBar className="h-2 w-16" />
                   <SkBar className="h-2 w-14" />
                   <div className="flex -space-x-1.5">
-                    {['fp-0', 'fp-1', 'fp-2'].map((id) => (
+                    {["fp-0", "fp-1", "fp-2"].map((id) => (
                       <SkBlock
                         key={id}
                         className="size-7 animate-pulse border-2 border-border bg-muted/30"
@@ -108,8 +109,6 @@ export function SquadDetailPageSkeleton() {
     </div>
   );
 }
-
-/** Rail toolbar (left tabs + search/sort) + grid — matches squads page chrome. */
 export function SquadsPageContentSkeleton() {
   return (
     <div className="w-full space-y-4" aria-hidden>

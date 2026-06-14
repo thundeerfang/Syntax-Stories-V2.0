@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthDialogStore } from '@/store/authDialog';
-import { useAuthStore } from '@/store/auth';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthDialogStore } from "@/store/authDialog";
+import { useAuthStore } from "@/store/auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -12,11 +12,16 @@ export default function SignupPage() {
   const isHydrated = useAuthStore((s) => s.isHydrated);
 
   useEffect(() => {
-    if (typeof globalThis.window === 'undefined') return;
-    const ref = new URLSearchParams(globalThis.window.location.search).get('ref')?.trim();
+    if (typeof globalThis.window === "undefined") return;
+    const ref = new URLSearchParams(globalThis.window.location.search)
+      .get("ref")
+      ?.trim();
     if (!ref) return;
     try {
-      globalThis.sessionStorage?.setItem('pendingReferralCode', ref.toUpperCase());
+      globalThis.sessionStorage?.setItem(
+        "pendingReferralCode",
+        ref.toUpperCase(),
+      );
     } catch {
       /* ignore */
     }
@@ -25,11 +30,11 @@ export default function SignupPage() {
   useEffect(() => {
     if (!isHydrated) return;
     if (token) {
-      router.replace('/');
+      router.replace("/");
       return;
     }
-    open('signup');
-    router.replace('/');
+    open("signup");
+    router.replace("/");
   }, [isHydrated, token, open, router]);
   return null;
 }

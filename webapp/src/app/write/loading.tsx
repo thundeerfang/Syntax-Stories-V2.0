@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { BlogWritePageSkeletonInner } from '@/components/skeletons';
+import { BlogWritePageSkeletonInner } from "@/components/skeletons";
 
 export default function WriteLoading() {
   return <BlogWritePageSkeletonInner />;

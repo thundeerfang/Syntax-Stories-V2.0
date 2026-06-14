@@ -3,8 +3,8 @@
  * Runtime client: `webapp/src/api/auth.ts`. Keep in sync with server auth module.
  */
 
-import type { AchievementsPayload } from './achievementsApi';
-import type { TechStackItem } from './referenceApi';
+import type { AchievementsPayload } from "./achievementsApi";
+import type { TechStackItem } from "./referenceApi";
 
 export interface CertificationItem {
   certId?: string;
@@ -24,8 +24,8 @@ export interface CertificationItem {
 }
 
 export interface ProjectItem {
-  type?: 'project' | 'publication';
-  source?: 'github';
+  type?: "project" | "publication";
+  source?: "github";
   repoFullName?: string;
   repoId?: number;
   title?: string;
@@ -94,7 +94,7 @@ export interface AuthUser {
   createdAt?: string;
   profileVersion?: number;
   profileUpdatedAt?: string;
-  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
+  blogStreakMode?: "daily" | "weekly" | "monthly";
 }
 
 export type AccountUser = {
@@ -130,7 +130,7 @@ export type AccountUser = {
   createdAt?: string;
   profileVersion?: number;
   profileUpdatedAt?: string;
-  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
+  blogStreakMode?: "daily" | "weekly" | "monthly";
 };
 
 export type AccountResponseJson = {
@@ -172,6 +172,6 @@ export type UpdateProfilePayload = Partial<{
   isXAccount: boolean;
   isAppleAccount: boolean;
   isDiscordAccount: boolean;
-  blogStreakMode: 'daily' | 'weekly' | 'monthly';
+  blogStreakMode: "daily" | "weekly" | "monthly";
   expectedProfileVersion: number;
 }>;

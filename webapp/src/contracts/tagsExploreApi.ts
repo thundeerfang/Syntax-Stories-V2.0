@@ -17,9 +17,9 @@ export interface TagsExploreResponse {
   recent: TagExploreRow[];
 }
 
-export type TagListSort = 'name-asc' | 'name-desc' | 'posts-desc' | 'recent';
+export type TagListSort = "name-asc" | "name-desc" | "posts-desc" | "recent";
 
-export type CategoryListSort = 'name-asc' | 'posts-desc';
+export type CategoryListSort = "name-asc" | "posts-desc";
 
 export interface PaginatedTagsResponse {
   success: boolean;

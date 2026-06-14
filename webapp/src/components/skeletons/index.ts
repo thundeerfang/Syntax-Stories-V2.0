@@ -1,4 +1,4 @@
-export { SkBlock, SkBar, SkGradientFill } from './primitives';
+export { SkBlock, SkBar, SkGradientFill } from "./primitives";
 export {
   HomePageSkeletonInner,
   HomeHeroSkeleton,
@@ -37,10 +37,10 @@ export {
   TrendingPageSkeletonInner,
   InvitePageSkeletonInner,
   AchievementsPageSkeletonInner,
-} from './PageSkeletons';
+} from "./PageSkeletons";
 export {
   SquadDetailPageSkeleton,
   SquadsPageBrowseSkeleton,
   SquadsPageContentSkeleton,
-} from './SquadsPageSkeleton';
-export { RouteLoadingSkeleton } from './RouteLoadingSkeleton';
+} from "./SquadsPageSkeleton";
+export { RouteLoadingSkeleton } from "./RouteLoadingSkeleton";

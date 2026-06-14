@@ -1,27 +1,21 @@
-'use client';
-
-/** Squads featured discover — owned by features/squads (thin route: app/squads/featured/page.tsx). */
-
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import { squadsApi, type SquadSummary } from '@/api/squads';
-import { ExploreSectionHeaderCard } from '@/features/explore';
-import { SquadDiscoverCard } from '../components/SquadDiscoverCard';
-import { SquadDirectoryCard } from '../components/SquadDirectoryCard';
+"use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { squadsApi, type SquadSummary } from "@/api/squads";
+import { ExploreSectionHeaderCard } from "@/features/explore";
+import { SquadDiscoverCard, SquadDirectoryCard } from "@/components/squads";
 import {
   type SquadCategory,
   SQUAD_CATEGORIES,
   squadCategoryLabel,
-} from '@/lib/squads/squadCategory';
-import { SQUAD_DISCOVER_CARD_SLIDE_CLASS } from '@/lib/squads/squadDiscoverCardLayout';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
-import { useAuthStore } from '@/store/auth';
-import { useAuthDialogStore } from '@/store/authDialog';
-import { toast } from 'sonner';
-
+} from "@/lib/squads/squadCategory";
+import { retro, shell, squads as squadUi } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
+import { useAuthStore } from "@/store/auth";
+import { useAuthDialogStore } from "@/store/authDialog";
+import { toast } from "sonner";
 function getScrollStridePx(scroller: HTMLDivElement): number {
   const a = scroller.children.item(0) as HTMLElement | null;
   const b = scroller.children.item(1) as HTMLElement | null;
@@ -29,7 +23,6 @@ function getScrollStridePx(scroller: HTMLDivElement): number {
   if (a) return a.offsetWidth;
   return 0;
 }
-
 type SquadCategoryLaneRowProps = Readonly<{
   category: SquadCategory;
   squads: SquadSummary[];
@@ -39,8 +32,6 @@ type SquadCategoryLaneRowProps = Readonly<{
   onEditSquad?: (s: SquadSummary) => void;
   token: string | null;
 }>;
-
-/** “Squad lane · {Category}” horizontal row; View all → category detail page. */
 function SquadCategoryLaneRow({
   category,
   squads,
@@ -52,16 +43,13 @@ function SquadCategoryLaneRow({
 }: SquadCategoryLaneRowProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const n = squads.length;
-
   const scrollByStep = (dir: -1 | 1) => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * getScrollStridePx(el), behavior: 'smooth' });
+    el.scrollBy({ left: dir * getScrollStridePx(el), behavior: "smooth" });
   };
-
   const label = squadCategoryLabel(category);
   const seeAllHref = `/squads/${encodeURIComponent(category)}`;
-
   return (
     <section className="group space-y-4">
       <ExploreSectionHeaderCard
@@ -99,15 +87,15 @@ function SquadCategoryLaneRow({
           className="ss-scrollbar-hide flex flex-nowrap gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth"
         >
           {squads.map((s) => (
-            <div key={s._id} className={SQUAD_DISCOVER_CARD_SLIDE_CLASS}>
+            <div key={s._id} className={squadUi.discoverCardSlide}>
               <SquadDirectoryCard
                 squad={s}
                 isMember={isMember(s)}
-                isAdmin={s.viewerRole === 'admin'}
+                isAdmin={s.viewerRole === "admin"}
                 joinBusy={joinBusySlug === s.slug}
                 onJoin={onJoin}
                 onEditSquad={
-                  token && s.viewerRole === 'admin' && onEditSquad
+                  token && s.viewerRole === "admin" && onEditSquad
                     ? () => onEditSquad(s)
                     : undefined
                 }
@@ -119,25 +107,20 @@ function SquadCategoryLaneRow({
     </section>
   );
 }
-
-const RETRO_SHADOW_SM =
-  'shadow active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all';
-
 function NavChip({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href}
       className={cn(
-        'relative shrink-0  border-2 border-border bg-background px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest',
-        'text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground',
-        RETRO_SHADOW_SM
+        "relative shrink-0  border-2 border-border bg-background px-3 py-2 font-mono text-[10px] font-black uppercase tracking-widest",
+        "text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground",
+        retro.shadowPress,
       )}
     >
       {label}
     </Link>
   );
 }
-
 type SquadsDiscoverFeaturedRailProps = Readonly<{
   squads: SquadSummary[];
   loading: boolean;
@@ -145,11 +128,6 @@ type SquadsDiscoverFeaturedRailProps = Readonly<{
   joinBusySlug: string | null;
   onJoin: (slug: string) => void | boolean | Promise<void | boolean>;
 }>;
-
-/**
- * Featured + Elite Squads Network + category badges + horizontal featured cards.
- * Used on `/squads/featured` above the per-category squad lane rows.
- */
 function SquadsDiscoverFeaturedRail({
   squads,
   loading,
@@ -157,16 +135,17 @@ function SquadsDiscoverFeaturedRail({
   joinBusySlug,
   onJoin,
 }: SquadsDiscoverFeaturedRailProps) {
-  /** All public squads, largest first — rail scrolls horizontally (not one full-viewport slide). */
   const items = useMemo(
     () =>
       [...squads]
-        .filter((s) => s.visibility === 'public')
-        .sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name)),
-    [squads]
+        .filter((s) => s.visibility === "public")
+        .sort(
+          (a, b) =>
+            b.memberCount - a.memberCount || a.name.localeCompare(b.name),
+        ),
+    [squads],
   );
   const scrollerRef = useRef<HTMLDivElement>(null);
-
   if (loading) {
     return (
       <div
@@ -176,7 +155,6 @@ function SquadsDiscoverFeaturedRail({
       />
     );
   }
-
   return (
     <section className="relative isolate mb-20 w-full overflow-visible border-2 border-border bg-card sm:mb-24">
       <div
@@ -193,11 +171,15 @@ function SquadsDiscoverFeaturedRail({
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                'flex size-11 shrink-0 items-center justify-center border-2 border-primary bg-background text-primary sm:size-12',
-                RETRO_SHADOW_SM
+                "flex size-11 shrink-0 items-center justify-center border-2 border-primary bg-background text-primary sm:size-12",
+                retro.shadowPress,
               )}
             >
-              <Sparkles className="size-5 sm:size-6" strokeWidth={2.25} aria-hidden />
+              <Sparkles
+                className="size-5 sm:size-6"
+                strokeWidth={2.25}
+                aria-hidden
+              />
             </div>
             <div className="min-w-0">
               <h1 className="font-mono text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
@@ -213,18 +195,33 @@ function SquadsDiscoverFeaturedRail({
             <button
               type="button"
               aria-label="Scroll featured squads left"
-              onClick={() => scrollerRef.current?.scrollBy({ left: -400, behavior: 'smooth' })}
+              onClick={() =>
+                scrollerRef.current?.scrollBy({
+                  left: -400,
+                  behavior: "smooth",
+                })
+              }
               className="border-r-2 border-border p-2.5 text-foreground transition-colors hover:bg-primary/15 hover:text-primary"
             >
-              <ChevronLeft className="size-5 sm:size-6" strokeWidth={2.25} aria-hidden />
+              <ChevronLeft
+                className="size-5 sm:size-6"
+                strokeWidth={2.25}
+                aria-hidden
+              />
             </button>
             <button
               type="button"
               aria-label="Scroll featured squads right"
-              onClick={() => scrollerRef.current?.scrollBy({ left: 400, behavior: 'smooth' })}
+              onClick={() =>
+                scrollerRef.current?.scrollBy({ left: 400, behavior: "smooth" })
+              }
               className="p-2.5 text-foreground transition-colors hover:bg-primary/15 hover:text-primary"
             >
-              <ChevronRight className="size-5 sm:size-6" strokeWidth={2.25} aria-hidden />
+              <ChevronRight
+                className="size-5 sm:size-6"
+                strokeWidth={2.25}
+                aria-hidden
+              />
             </button>
           </div>
         </div>
@@ -246,9 +243,9 @@ function SquadsDiscoverFeaturedRail({
       <div
         ref={scrollerRef}
         className={cn(
-          'ss-scrollbar-hide pointer-events-auto absolute inset-x-0 bottom-0 z-20',
-          'flex w-full snap-x snap-mandatory scroll-smooth gap-3 overflow-x-auto px-3 pb-1 pt-1 sm:gap-4 sm:px-4 md:px-6',
-          'translate-y-1/2'
+          "ss-scrollbar-hide pointer-events-auto absolute inset-x-0 bottom-0 z-20",
+          "flex w-full snap-x snap-mandatory scroll-smooth gap-3 overflow-x-auto px-3 pb-1 pt-1 sm:gap-4 sm:px-4 md:px-6",
+          "translate-y-1/2",
         )}
       >
         {items.length === 0 ? (
@@ -260,8 +257,8 @@ function SquadsDiscoverFeaturedRail({
             <div
               key={squad._id}
               className={cn(
-                SQUAD_DISCOVER_CARD_SLIDE_CLASS,
-                'flex items-end justify-center self-stretch'
+                squadUi.discoverCardSlide,
+                "flex items-end justify-center self-stretch",
               )}
             >
               <SquadDiscoverCard
@@ -277,27 +274,24 @@ function SquadsDiscoverFeaturedRail({
     </section>
   );
 }
-
 const FETCH_LIMIT = 200;
-
-function mergeCatalog(publicSquads: SquadSummary[], mine: SquadSummary[]): SquadSummary[] {
+function mergeCatalog(
+  publicSquads: SquadSummary[],
+  mine: SquadSummary[],
+): SquadSummary[] {
   const byId = new Map<string, SquadSummary>();
   for (const s of publicSquads) byId.set(s._id, s);
   for (const s of mine) byId.set(s._id, s);
   return [...byId.values()];
 }
-
-/** `/squads/featured`: featured rail + squad lane rows. */
 export function SquadsFeaturedPage() {
   const router = useRouter();
   const token = useAuthStore((s) => s.token);
   const openAuth = useAuthDialogStore((s) => s.open);
-
   const [publicSquads, setPublicSquads] = useState<SquadSummary[]>([]);
   const [mine, setMine] = useState<SquadSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [joinBusySlug, setJoinBusySlug] = useState<string | null>(null);
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -308,43 +302,42 @@ export function SquadsFeaturedPage() {
       setPublicSquads(pub.squads);
       setMine(m.squads);
     } catch {
-      toast.error('Sync failed');
+      toast.error("Sync failed");
     } finally {
       setLoading(false);
     }
   }, [token]);
-
   useEffect(() => {
     void load();
   }, [load]);
-
-  const merged = useMemo(() => mergeCatalog(publicSquads, mine), [publicSquads, mine]);
+  const merged = useMemo(
+    () => mergeCatalog(publicSquads, mine),
+    [publicSquads, mine],
+  );
   const isMember = useCallback((s: SquadSummary) => s.viewerRole != null, []);
-
   const handleJoin = async (slug: string): Promise<boolean> => {
     if (!token) {
-      openAuth('login');
+      openAuth("login");
       return false;
     }
     setJoinBusySlug(slug);
     try {
       await squadsApi.join(slug, token);
-      toast.success('Joined');
+      toast.success("Joined");
       await load();
       return true;
     } catch (e) {
-      toast.error('Action failed');
+      toast.error("Action failed");
       throw e;
     } finally {
       setJoinBusySlug(null);
     }
   };
-
   return (
     <div
       className={cn(
-        SHELL_CONTENT_RAIL_CLASS,
-        'flex min-h-0 flex-1 flex-col gap-10 overflow-visible pb-24 md:gap-12'
+        shell.contentRail,
+        "flex min-h-0 flex-1 flex-col gap-10 overflow-visible pb-24 md:gap-12",
       )}
     >
       <SquadsDiscoverFeaturedRail
@@ -358,7 +351,9 @@ export function SquadsFeaturedPage() {
       {!loading ? (
         <div className="space-y-24 pt-12">
           {SQUAD_CATEGORIES.map((c) => {
-            const items = merged.filter((s) => s.category === c && s.visibility === 'public');
+            const items = merged.filter(
+              (s) => s.category === c && s.visibility === "public",
+            );
             if (items.length === 0) return null;
             return (
               <SquadCategoryLaneRow
@@ -368,7 +363,9 @@ export function SquadsFeaturedPage() {
                 isMember={isMember}
                 joinBusySlug={joinBusySlug}
                 onJoin={handleJoin}
-                onEditSquad={(s) => router.push(`/squads/${encodeURIComponent(s.slug)}`)}
+                onEditSquad={(s) =>
+                  router.push(`/squads/${encodeURIComponent(s.slug)}`)
+                }
                 token={token}
               />
             );

@@ -1,25 +1,18 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Users, UserPlus } from 'lucide-react';
-import { followApi, type PublicProfileUser } from '@/api/follow';
-import { SparkLottie, StreakFireLottie } from '@/components/ui/lottie';
-
+"use client";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { Users, UserPlus } from "lucide-react";
+import { followApi, type PublicProfileUser } from "@/api/follow";
+import { SparkLottie, StreakFireLottie } from "@/components/ui/lottie";
+import { resolveProfileMediaUrl } from "@/lib/profile/resolveProfileMediaUrl";
 const profileCache = new Map<string, PublicProfileUser>();
-
-/** Fixed width for profile hover surfaces (matches squad popover). */
 export const PROFILE_POPOVER_CARD_WIDTH_PX = 260;
-
 export type ProfilePopoverCardProps = Readonly<{
   username: string;
   initialFullName?: string;
   initialProfileImg?: string;
-  /** When set, the card is a single clickable surface (e.g. public blog originator hover). */
   profileHref?: string;
 }>;
-
-/** Profile hover card — banner, avatar, handle, follower counts. */
 export function ProfilePopoverCard({
   username,
   initialFullName,
@@ -27,12 +20,11 @@ export function ProfilePopoverCard({
   profileHref,
 }: ProfilePopoverCardProps) {
   const [user, setUser] = useState<PublicProfileUser | null>(
-    () => profileCache.get(username) ?? null
+    () => profileCache.get(username) ?? null,
   );
   const [loading, setLoading] = useState(() => !profileCache.has(username));
   const [followersCount, setFollowersCount] = useState<number | null>(null);
   const [followingCount, setFollowingCount] = useState<number | null>(null);
-
   useEffect(() => {
     if (!username.trim()) return;
     const cached = profileCache.get(username);
@@ -68,30 +60,30 @@ export function ProfilePopoverCard({
       cancelled = true;
     };
   }, [username]);
-
   const display: PublicProfileUser = user ?? {
-    id: '',
+    id: "",
     username,
     fullName: initialFullName?.trim() || username,
     profileImg: initialProfileImg?.trim() || undefined,
     coverBanner: undefined,
   };
-
-  const avatarSrc =
-    display.profileImg?.trim() ||
-    (username
-      ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`
-      : '');
-
+  const avatarSrc = username
+    ? resolveProfileMediaUrl(display.profileImg, username)
+    : "";
   let coverBannerEl: React.ReactNode;
   if (loading && !user) {
     coverBannerEl = <div className="h-full w-full animate-pulse bg-muted" />;
   } else if (display.coverBanner) {
-    coverBannerEl = <img src={display.coverBanner} alt="" className="h-full w-full object-cover" />;
+    coverBannerEl = (
+      <img
+        src={display.coverBanner}
+        alt=""
+        className="h-full w-full object-cover"
+      />
+    );
   } else {
     coverBannerEl = <div className="h-full w-full gradient-auto" />;
   }
-
   const inner = (
     <>
       <div className="relative">
@@ -112,9 +104,11 @@ export function ProfilePopoverCard({
       </div>
       <div className="px-3 pb-2.5 pt-7">
         <p className="line-clamp-2 text-left text-[11px] font-black uppercase leading-tight tracking-tight text-foreground">
-          {loading && !user ? '…' : display.fullName || username}
+          {loading && !user ? "…" : display.fullName || username}
         </p>
-        <p className="mt-0.5 text-left font-mono text-[10px] text-primary">@{username}</p>
+        <p className="mt-0.5 text-left font-mono text-[10px] text-primary">
+          @{username}
+        </p>
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
           <span
             className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground"
@@ -144,7 +138,10 @@ export function ProfilePopoverCard({
               className="inline-flex items-center gap-1 font-mono text-[9px] font-bold text-foreground"
               title="Following"
             >
-              <UserPlus className="size-3.5 shrink-0 text-primary" aria-hidden />
+              <UserPlus
+                className="size-3.5 shrink-0 text-primary"
+                aria-hidden
+              />
               {followingCount}
             </span>
           )}
@@ -152,7 +149,6 @@ export function ProfilePopoverCard({
       </div>
     </>
   );
-
   if (profileHref) {
     return (
       <Link
@@ -163,6 +159,9 @@ export function ProfilePopoverCard({
       </Link>
     );
   }
-
-  return <div className="w-[260px] border-2 border-border bg-card shadow">{inner}</div>;
+  return (
+    <div className="w-[260px] border-2 border-border bg-card shadow">
+      {inner}
+    </div>
+  );
 }

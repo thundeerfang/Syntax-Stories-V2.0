@@ -30,8 +30,6 @@
   --color-destructive-foreground: var(--destructive-foreground);
 }
 
-/* Settings: primary actions use `BlockShadowButton` styles via `settings/buttonStyles.ts`. */
-
 html {
   color-scheme: light dark;
   /* Sticky navbar + in-page anchors: keep focused targets out from under the chrome. */
@@ -136,6 +134,323 @@ altcha-widget {
 
 @utility retro-metric-card {
   @apply min-w-0 border-2 border-border bg-muted/10 p-4 shadow;
+}
+
+@utility retro-border {
+  @apply border-2 border-border;
+}
+
+@utility retro-border-thick {
+  @apply border-[3px] border-border;
+}
+
+@utility retro-shadow-press {
+  @apply shadow transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none;
+}
+
+@utility retro-shadow-blog-card {
+  @apply shadow-[4px_4px_0_0_var(--border)];
+}
+
+@utility retro-shadow-offset-lg {
+  @apply shadow-[8px_8px_0_0_var(--border)];
+}
+
+@utility dashboard-content-outer {
+  @apply relative mx-auto w-full min-w-0 max-w-[min(100%,87.5rem)] shrink-0;
+}
+
+@utility dashboard-content-pad {
+  @apply px-4 md:px-8;
+}
+
+@utility shell-nav-inner {
+  @apply mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-8;
+}
+
+@utility shell-content-rail {
+  @apply mx-auto w-full max-w-[90rem] pr-4 pt-2 pb-4 pl-7 sm:pr-6 sm:pt-3 sm:pb-5 sm:pl-9 lg:pr-8 lg:pt-3 lg:pb-6 lg:pl-11;
+}
+
+@utility shell-content-measure {
+  @apply mx-auto w-full max-w-[min(88rem,100%)];
+}
+
+@utility blog-feed-grid {
+  @apply grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 sm:gap-3 md:gap-4 lg:grid-cols-3 lg:gap-4;
+}
+
+@utility blog-feed-grid-item {
+  @apply flex min-h-0;
+}
+
+@utility blog-rail-card {
+  @apply border-2 border-border bg-card p-4 shadow;
+}
+
+@utility blog-author-card {
+  @apply border border-dashed border-border bg-background p-4;
+}
+
+@utility blog-social-icon-btn {
+  @apply inline-flex size-10 items-center justify-center border-2 border-border bg-background text-foreground shadow-none transition-colors hover:border-primary hover:text-primary;
+}
+
+@utility blog-card-action-btn {
+  @apply relative inline-flex h-9 w-9 min-h-9 min-w-9 shrink-0 items-center justify-center self-center border-0 bg-transparent p-1.5 transition-colors duration-150 ease-out hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-55;
+}
+
+@utility blog-card-icon-wrap {
+  @apply relative flex size-[22px] shrink-0 items-center justify-center self-center;
+}
+
+@utility explore-section-header-card {
+  @apply w-full border-2 border-border bg-card p-4 shadow sm:p-5;
+}
+
+@utility explore-category-card-frame {
+  @apply retro-card flex h-full min-h-[12rem] flex-col p-4 sm:p-5;
+}
+
+@utility explore-spotlight-body-slot {
+  @apply mt-4 min-h-[2.75rem] max-w-xl;
+}
+
+@utility explore-spotlight-title {
+  @apply mt-5 line-clamp-2 font-mono text-3xl font-black uppercase leading-none tracking-tighter text-white sm:text-5xl md:text-6xl;
+  text-shadow:
+    0 0 32px color-mix(in srgb, var(--primary) 80%, transparent),
+    0 0 12px color-mix(in srgb, var(--primary) 55%, transparent),
+    2px 2px 0 var(--primary),
+    1px 1px 0 rgba(0, 0, 0, 0.9);
+}
+
+@utility explore-spotlight-nav-btn {
+  @apply !size-11 !min-h-11 !min-w-11 !border-border !bg-white !p-0 !text-primary hover:!bg-white hover:!text-primary hover:!opacity-90 active:translate-x-0 active:translate-y-0 active:shadow-none;
+}
+
+@utility corner-icon-btn {
+  @apply !size-9 !min-h-9 !min-w-9 shrink-0 !p-0 active:translate-x-0 active:translate-y-0 active:shadow-none;
+}
+
+@utility corner-icon-btn-join {
+  @apply corner-icon-btn !border-border !bg-white !text-primary hover:!bg-white hover:!text-primary hover:!opacity-90;
+}
+
+@utility corner-icon-btn-open {
+  @apply corner-icon-btn !border-primary !bg-primary !text-white hover:!bg-primary hover:!text-white hover:!opacity-90;
+}
+
+@utility hero-stat-item {
+  @apply inline-flex items-center gap-1 font-mono text-[11px] font-black tabular-nums text-white/95 sm:text-xs;
+}
+
+@utility profile-section-add-btn {
+  @apply flex items-center gap-1 border-2 border-border bg-card px-2 py-0.5 text-[10px] font-black uppercase shadow transition-all hover:text-primary active:translate-x-0.5 active:shadow-none;
+}
+
+@utility rail-pagination-nav-btn {
+  @apply inline-flex size-9 shrink-0 items-center justify-center border-2 border-border bg-card text-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40;
+}
+
+@utility rail-pagination-page-btn {
+  @apply inline-flex size-9 shrink-0 items-center justify-center border-2 font-mono text-[10px] font-black tabular-nums transition-colors;
+}
+
+@utility rail-count-pill-size {
+  @apply size-8 min-h-8 min-w-8 rounded-full px-0;
+}
+
+@utility docs-page-min-height {
+  @apply min-h-[calc(100vh-var(--header-height))];
+}
+
+@utility sidebar-drawer-frame {
+  @apply absolute left-0 top-full z-40 flex shrink-0 flex-col border-r-2 border-border;
+}
+
+@utility sidebar-drawer-geometry {
+  @apply h-[calc(100dvh-100%)] max-h-[calc(100dvh-100%)] min-h-0;
+}
+
+@utility blog-article-full-bleed {
+  @apply -mx-3 w-[calc(100%+1.5rem)] max-w-none sm:-mx-4 sm:w-[calc(100%+2rem)] lg:-mx-5 lg:w-[calc(100%+2.5rem)];
+}
+
+@utility blog-square-embed-max {
+  @apply w-full max-w-xl shrink-0;
+}
+
+@utility blog-landscape-embed-max {
+  @apply w-full max-w-2xl shrink-0;
+}
+
+@utility blog-raster-img-cover {
+  @apply absolute inset-0 h-full w-full object-cover object-center;
+}
+
+@utility blog-raster-img-full-bleed {
+  @apply block h-auto w-full max-w-none object-cover object-center;
+}
+
+@utility about-pillar-card-dark {
+  @apply border-4 border-border bg-foreground text-background shadow-[8px_8px_0_0_var(--primary)];
+}
+
+@utility about-pillar-card-default {
+  @apply border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)];
+}
+
+@utility about-pillar-card-primary {
+  @apply border-4 border-border bg-primary text-primary-foreground shadow-[8px_8px_0_0_var(--border)];
+}
+
+@utility about-badge {
+  @apply inline-block border-2 border-border bg-primary font-black uppercase text-primary-foreground shadow;
+}
+
+@utility about-stat-card {
+  @apply border-4 border-border bg-card text-center shadow;
+}
+
+@utility about-section-card {
+  @apply border-4 border-border bg-card p-6 shadow-[8px_8px_0_0_var(--border)] sm:p-8 md:p-10;
+}
+
+@utility about-tech-tile {
+  @apply flex h-full min-h-0 flex-col items-center justify-center border-2 border-border bg-background p-3 text-center shadow-[4px_4px_0_0_var(--border)] sm:p-4;
+}
+
+@utility about-cta-section {
+  @apply border-4 border-border bg-primary text-primary-foreground shadow-[8px_8px_0_0_var(--border)] sm:shadow-[12px_12px_0_0_var(--border)];
+}
+
+@utility about-mobile-app-card {
+  @apply w-full max-w-[17.5rem] overflow-hidden border-4 border-border bg-card shadow-[8px_8px_0_0_var(--border)];
+}
+
+@utility squad-discover-card-slide {
+  @apply flex-none shrink-0 snap-start snap-always w-[min(22.5rem,calc(100vw-2rem))];
+}
+
+@utility squad-discover-card-grid {
+  @apply flex w-full flex-wrap justify-items-center gap-4;
+}
+
+@utility legal-icon-tile-base {
+  @apply flex shrink-0 items-center justify-center border-2 border-border bg-card shadow;
+}
+
+@utility legal-icon-tile-toc {
+  @apply legal-icon-tile-base size-9;
+}
+
+@utility legal-icon-tile-header {
+  @apply legal-icon-tile-base size-10;
+}
+
+@utility legal-toc-strip {
+  @apply shrink-0 border-b-4 border-border bg-muted/35 px-4 py-4 sm:px-6;
+}
+
+@utility legal-toc-nav-pad {
+  @apply min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5;
+}
+
+@utility legal-toc-title {
+  @apply font-mono text-xs font-black uppercase tracking-[0.18em] text-foreground;
+}
+
+@utility legal-toc-sub {
+  @apply mt-1 max-w-[14rem] text-[11px] font-medium leading-snug tracking-wide text-muted-foreground;
+}
+
+@utility legal-toc-list {
+  @apply flex flex-col gap-1;
+}
+
+@utility legal-toc-link {
+  @apply block border-2 border-transparent px-2.5 py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground transition-all hover:border-border hover:bg-card hover:text-foreground hover:shadow active:translate-x-px active:translate-y-px active:shadow-none;
+}
+
+@utility legal-action-panel {
+  @apply border-2 border-dashed border-border bg-muted/10 p-5 shadow sm:p-6;
+}
+
+@utility legal-action-kicker {
+  @apply font-mono text-[10px] font-black uppercase tracking-[0.2em] text-primary;
+}
+
+@utility legal-action-title {
+  @apply mt-1 text-lg font-black tracking-tight text-foreground sm:text-xl;
+}
+
+@utility legal-action-body {
+  @apply mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground;
+}
+
+@utility legal-action-cta-row {
+  @apply mt-5 flex flex-wrap gap-3;
+}
+
+@utility legal-version-badge {
+  @apply flex shrink-0 flex-col gap-1 border-2 border-border bg-muted/50 px-3 py-2.5 shadow sm:px-4;
+}
+
+@utility legal-version-badge-line-primary {
+  @apply font-mono text-[11px] font-black uppercase leading-tight tracking-wide text-foreground tabular-nums;
+}
+
+@utility legal-version-badge-line-muted {
+  @apply font-mono text-[10px] font-bold uppercase leading-snug tracking-wide text-muted-foreground tabular-nums;
+}
+
+@utility legal-main-body-pad {
+  @apply px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10;
+}
+
+@utility legal-route-header-wrap {
+  @apply w-full shrink-0 px-4 py-5 sm:px-8;
+}
+
+@utility legal-header-summary {
+  @apply mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground;
+}
+
+@utility legal-mono-kicker {
+  @apply font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground;
+}
+
+@utility legal-mono-page-title {
+  @apply mt-1 font-mono text-xl font-black uppercase tracking-tight text-foreground sm:text-2xl;
+}
+
+@utility legal-mono-aside {
+  @apply max-w-md font-mono text-[10px] font-bold uppercase leading-relaxed tracking-wide text-muted-foreground sm:text-right;
+}
+
+@utility legal-unavailable-title {
+  @apply text-2xl font-black tracking-tight text-foreground;
+}
+
+@utility legal-unavailable-body {
+  @apply text-sm leading-relaxed text-muted-foreground;
+}
+
+@utility legal-inline-code {
+  @apply border border-border bg-muted px-1.5 py-0.5 font-mono text-xs;
+}
+
+@utility legal-card-section-rule {
+  @apply mt-10 border-t-4 border-dashed border-border pt-10;
+}
+
+@utility legal-primary-cta {
+  @apply inline-flex min-h-[2.75rem] items-center justify-center gap-2 border-2 border-primary bg-primary px-5 py-2.5 text-xs font-black uppercase tracking-widest text-primary-foreground shadow transition-all hover:opacity-95 active:translate-x-px active:translate-y-px active:shadow-none disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility legal-muted-inline {
+  @apply text-sm leading-relaxed text-muted-foreground;
 }
 
 /* Theme transition app-wide so dark/light switch is smooth on every page */
@@ -534,6 +849,33 @@ html * {
 .sidebar-drawer {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  width: 52px;
+  min-width: 52px;
+  transition:
+    width 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sidebar-drawer[data-sidebar-expanded='true'] {
+  width: 240px;
+  min-width: 240px;
+}
+
+.shell-main-offset {
+  margin-left: 52px;
+  width: calc(100% - 52px);
+  transition:
+    margin-left 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.shell-layout[data-sidebar-expanded='true'] .shell-main-offset {
+  margin-left: 240px;
+  width: calc(100% - 240px);
+}
+
+.sidebar-drawer-content-panel {
+  transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sidebar-drawer::-webkit-scrollbar {

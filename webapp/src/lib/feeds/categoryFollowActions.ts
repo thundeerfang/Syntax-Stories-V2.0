@@ -1,10 +1,9 @@
-import { blogApi } from '@/api/blog';
+import { blogApi } from "@/api/blog";
 import {
   toggleFollowedCategorySlug,
   writeFollowedCategorySlugs,
   readFollowedCategorySlugs,
-} from '@/lib/feeds/followedCategoriesStorage';
-
+} from "@/lib/feeds/followedCategoriesStorage";
 export {
   FOLLOWED_CATEGORIES_CHANGED_EVENT,
   canSyncCategoryFollowState,
@@ -14,19 +13,16 @@ export {
   writeFollowedCategorySlugs,
   toggleFollowedCategorySlug,
   shouldHandleFollowedCategoriesEvent,
-} from '@/lib/feeds/followedCategoriesStorage';
-
-/** Toggle category follow — persists to localStorage and server when signed in. */
+} from "@/lib/feeds/followedCategoriesStorage";
 export async function toggleCategoryFollowWithSync(
   slug: string,
   userId: string | null | undefined,
-  token: string | null | undefined
+  token: string | null | undefined,
 ): Promise<boolean> {
   if (!token || !userId?.trim()) {
     return false;
   }
   const nowFollowing = toggleFollowedCategorySlug(slug, userId);
-
   try {
     if (nowFollowing) {
       await blogApi.followCategory(slug, token);
@@ -39,11 +35,9 @@ export async function toggleCategoryFollowWithSync(
     throw e;
   }
 }
-
-/** Pull server follows into localStorage (after sync-up). */
 export async function refreshFollowedCategoriesFromServer(
   userId: string | null | undefined,
-  token: string | null | undefined
+  token: string | null | undefined,
 ): Promise<void> {
   if (!token || !userId?.trim()) return;
   const localSlugs = readFollowedCategorySlugs(userId);

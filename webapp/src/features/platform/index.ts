@@ -1,1 +1,1 @@
-export { StorageGate } from './components/StorageGate';
+export * from "@/components/platform";

@@ -1,0 +1,1 @@
+export const EXPLORE_CATEGORY_FACE_SLOTS = 4;

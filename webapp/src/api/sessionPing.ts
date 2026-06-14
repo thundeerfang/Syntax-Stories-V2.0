@@ -1,16 +1,14 @@
-import { resolvePublicApiBase } from '@/lib/api/publicApiBase';
-import { blogAuthFetch } from '@/lib/api/blogAuthFetch';
-
+import { resolvePublicApiBase } from "@/lib/api/publicApiBase";
+import { blogAuthFetch } from "@/lib/api/blogAuthFetch";
 const base = () => resolvePublicApiBase();
-
-/**
- * GET /api/webhooks/session/ping — verifies Bearer token after reload; optional companion to silent refresh.
- */
-export async function sessionPing(accessToken: string): Promise<{ ok: boolean; userId?: string }> {
+export async function sessionPing(accessToken: string): Promise<{
+  ok: boolean;
+  userId?: string;
+}> {
   const r = await blogAuthFetch(
     `${base()}/api/webhooks/session/ping`,
-    { method: 'GET' },
-    accessToken
+    { method: "GET" },
+    accessToken,
   );
   const data = (await r.json().catch(() => ({}))) as {
     ok?: boolean;

@@ -1,42 +1,47 @@
-'use client';
-
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import { Monitor, Wrench, ImagePlus, ExternalLink, Pencil, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/core/utils';
-import { settingsBtnBlockPrimaryMd } from '@/app/settings/buttonStyles';
-import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
-import { ImageUploadCropDialog } from '@/components/upload';
-import { uploadMedia } from '@/api/upload';
-import { uploadResponseAlt } from '@/lib/media/uploadImageMeta';
-import { type SetupItem as MySetupItem } from '@/app/settings/settings-list/MySetupCard';
+"use client";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import {
+  Monitor,
+  Wrench,
+  ImagePlus,
+  ExternalLink,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { cn } from "@/lib/core/utils";
+import { BlockShadowButton } from "@/components/ui";
+import { useSettingsAuthSlice } from "@/hooks/useSettingsAuthSlice";
+import { ImageUploadCropDialog } from "@/components/upload";
+import { uploadMedia } from "@/api/upload";
+import { uploadResponseAlt } from "@/lib/media/uploadImageMeta";
+import { type SetupItem as MySetupItem } from "@/app/settings/settings-list/MySetupCard";
 import {
   SettingsSectionHeading,
   SettingsTabPanel,
   SettingsTabRoot,
-} from '@/app/settings/settings-list/SettingsSectionHeading';
-
+} from "@/app/settings/settings-list/SettingsSectionHeading";
 export function MySetupContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
-  const [items, setItems] = useState<MySetupItem[]>((user as any)?.mySetup ?? []);
+  const [items, setItems] = useState<MySetupItem[]>(
+    (user as any)?.mySetup ?? [],
+  );
   const [saving, setSaving] = useState(false);
-  const [draftLabel, setDraftLabel] = useState('');
-  const [draftProductUrl, setDraftProductUrl] = useState('');
-  const [draftImageUrl, setDraftImageUrl] = useState('');
-  const [draftImageAlt, setDraftImageAlt] = useState('');
+  const [draftLabel, setDraftLabel] = useState("");
+  const [draftProductUrl, setDraftProductUrl] = useState("");
+  const [draftImageUrl, setDraftImageUrl] = useState("");
+  const [draftImageAlt, setDraftImageAlt] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-
-  const canSaveDraft = Boolean(draftLabel.trim()) && Boolean(draftImageUrl.trim());
-
+  const canSaveDraft =
+    Boolean(draftLabel.trim()) && Boolean(draftImageUrl.trim());
   const normalizeUrl = (raw: string) => {
-    const v = (raw ?? '').trim();
-    if (!v) return '';
+    const v = (raw ?? "").trim();
+    if (!v) return "";
     if (/^https?:\/\//i.test(v)) return v;
     return `https://${v}`;
   };
-
   const onAddOrUpdate = async () => {
     if (!canSaveDraft) return;
     const nextItem = {
@@ -48,38 +53,46 @@ export function MySetupContent() {
     if (editIndex !== null && items[editIndex]) {
       const e = items[editIndex];
       const same =
-        nextItem.label === (e.label ?? '').trim() &&
-        nextItem.imageUrl === (e.imageUrl ?? '').trim() &&
-        nextItem.productUrl === normalizeUrl(e.productUrl ?? '').slice(0, 500) &&
-        (nextItem.imageAlt ?? '') === ((e as { imageAlt?: string }).imageAlt ?? '').trim();
+        nextItem.label === (e.label ?? "").trim() &&
+        nextItem.imageUrl === (e.imageUrl ?? "").trim() &&
+        nextItem.productUrl ===
+          normalizeUrl(e.productUrl ?? "").slice(0, 500) &&
+        (nextItem.imageAlt ?? "") ===
+          (
+            (
+              e as {
+                imageAlt?: string;
+              }
+            ).imageAlt ?? ""
+          ).trim();
       if (same) {
-        toast.error('No changes to save.', { id: 'syntax-no-changes' });
+        toast.error("No changes to save.", { id: "syntax-no-changes" });
         return;
       }
     }
     const next = [...items];
     if (editIndex !== null) next[editIndex] = nextItem;
     else next.push(nextItem);
-
     setSaving(true);
     try {
-      await updateProfile({ mySetup: next.slice(0, 5) } as any, { section: 'setup' });
+      await updateProfile({ mySetup: next.slice(0, 5) } as any, {
+        section: "setup",
+      });
       setItems(next.slice(0, 5));
-      setDraftLabel('');
-      setDraftImageUrl('');
-      setDraftImageAlt('');
-      setDraftProductUrl('');
+      setDraftLabel("");
+      setDraftImageUrl("");
+      setDraftImageAlt("");
+      setDraftProductUrl("");
       setEditIndex(null);
-      toast.success('My Setup updated.', { id: 'syntax-setup-success' });
+      toast.success("My Setup updated.", { id: "syntax-setup-success" });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update setup.', {
-        id: 'syntax-setup-error',
+      toast.error(e instanceof Error ? e.message : "Failed to update setup.", {
+        id: "syntax-setup-error",
       });
     } finally {
       setSaving(false);
     }
   };
-
   return (
     <SettingsTabRoot>
       <SettingsSectionHeading
@@ -124,7 +137,11 @@ export function MySetupContent() {
                 <div className="size-10 border-2 border-primary overflow-hidden">
                   <img
                     src={draftImageUrl}
-                    alt={draftImageAlt.trim() || draftLabel.trim() || 'Component preview'}
+                    alt={
+                      draftImageAlt.trim() ||
+                      draftLabel.trim() ||
+                      "Component preview"
+                    }
                     title={draftImageAlt.trim() || undefined}
                     className="size-full object-cover"
                   />
@@ -133,7 +150,9 @@ export function MySetupContent() {
                 <ImagePlus className="size-5 text-muted-foreground group-hover:text-primary" />
               )}
               <span className="text-[10px] font-black uppercase tracking-widest">
-                {draftImageUrl ? 'Replace Component Image' : 'Upload Component Image'}
+                {draftImageUrl
+                  ? "Replace Component Image"
+                  : "Upload Component Image"}
               </span>
             </button>
 
@@ -144,10 +163,10 @@ export function MySetupContent() {
                 type="button"
                 onClick={() => {
                   setEditIndex(null);
-                  setDraftLabel('');
-                  setDraftImageUrl('');
-                  setDraftImageAlt('');
-                  setDraftProductUrl('');
+                  setDraftLabel("");
+                  setDraftImageUrl("");
+                  setDraftImageAlt("");
+                  setDraftProductUrl("");
                 }}
                 className="text-[10px] font-black uppercase tracking-widest underline underline-offset-4 hover:text-primary"
               >
@@ -155,17 +174,17 @@ export function MySetupContent() {
               </button>
             )}
 
-            <button
+            <BlockShadowButton
               type="button"
-              disabled={!canSaveDraft || (items.length >= 5 && editIndex === null)}
+              disabled={
+                !canSaveDraft || (items.length >= 5 && editIndex === null)
+              }
+              loading={saving}
+              className="w-full md:w-auto px-10 py-3 text-xs tracking-widest"
               onClick={onAddOrUpdate}
-              className={cn(
-                settingsBtnBlockPrimaryMd,
-                'w-full md:w-auto px-10 py-3 text-xs tracking-widest'
-              )}
             >
-              {saving ? 'PROCESSING...' : editIndex !== null ? 'Updating Changes' : 'Save Changes'}
-            </button>
+              {editIndex !== null ? "Updating Changes" : "Save Changes"}
+            </BlockShadowButton>
           </div>
 
           <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -182,8 +201,20 @@ export function MySetupContent() {
                   <div className="aspect-video relative overflow-hidden border-b-4 border-border">
                     <img
                       src={it.imageUrl}
-                      alt={(it as { imageAlt?: string }).imageAlt?.trim() || it.label}
-                      title={(it as { imageAlt?: string }).imageAlt?.trim() || undefined}
+                      alt={
+                        (
+                          it as {
+                            imageAlt?: string;
+                          }
+                        ).imageAlt?.trim() || it.label
+                      }
+                      title={
+                        (
+                          it as {
+                            imageAlt?: string;
+                          }
+                        ).imageAlt?.trim() || undefined
+                      }
                       className="size-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                     />
                     <div className="absolute top-2 left-2 px-2 py-1 bg-background/90 text-foreground border border-border text-[8px] font-black tracking-widest">
@@ -191,7 +222,9 @@ export function MySetupContent() {
                     </div>
                   </div>
                   <div className="p-4">
-                    <h4 className="text-sm font-black uppercase truncate">{it.label}</h4>
+                    <h4 className="text-sm font-black uppercase truncate">
+                      {it.label}
+                    </h4>
                     <div className="flex items-center gap-4 mt-4">
                       <button
                         type="button"
@@ -199,8 +232,14 @@ export function MySetupContent() {
                           setEditIndex(idx);
                           setDraftLabel(it.label);
                           setDraftImageUrl(it.imageUrl);
-                          setDraftImageAlt((it as { imageAlt?: string }).imageAlt ?? '');
-                          setDraftProductUrl(it.productUrl || '');
+                          setDraftImageAlt(
+                            (
+                              it as {
+                                imageAlt?: string;
+                              }
+                            ).imageAlt ?? "",
+                          );
+                          setDraftProductUrl(it.productUrl || "");
                         }}
                         className="p-2 border-2 border-border hover:bg-muted transition-colors"
                       >
@@ -211,14 +250,18 @@ export function MySetupContent() {
                         onClick={() => {
                           const next = items.filter((_, i) => i !== idx);
                           setSaving(true);
-                          updateProfile({ mySetup: next } as any, { section: 'setup' })
+                          updateProfile({ mySetup: next } as any, {
+                            section: "setup",
+                          })
                             .then(() => {
                               setItems(next);
-                              toast.success('Component removed.');
+                              toast.success("Component removed.");
                             })
                             .catch((e) => {
                               toast.error(
-                                e instanceof Error ? e.message : 'Failed to remove component.'
+                                e instanceof Error
+                                  ? e.message
+                                  : "Failed to remove component.",
                               );
                             })
                             .finally(() => setSaving(false));
@@ -260,7 +303,9 @@ export function MySetupContent() {
         onClose={() => setUploadOpen(false)}
         titleId="my-setup-component-crop"
         title="Component image"
-        titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
+        titleIcon={
+          <ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />
+        }
         subtitle="16∶9 crop · max 5 MB · uploads when you mount the component."
         subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
         maxSizeBytes={5 * 1024 * 1024}
@@ -268,12 +313,12 @@ export function MySetupContent() {
         cropMinHeightClass="min-h-[12rem] h-48"
         confirmLabel="Use image"
         onConfirm={async (file) => {
-          if (!token) throw new Error('Not signed in.');
+          if (!token) throw new Error("Not signed in.");
           const data = await uploadMedia(token, file);
-          if (!data.url) throw new Error(data.message ?? 'Upload failed');
+          if (!data.url) throw new Error(data.message ?? "Upload failed");
           setDraftImageUrl(data.url);
-          setDraftImageAlt(uploadResponseAlt(data) ?? '');
-          toast.success('Image ready.');
+          setDraftImageAlt(uploadResponseAlt(data) ?? "");
+          toast.success("Image ready.");
         }}
       />
     </SettingsTabRoot>

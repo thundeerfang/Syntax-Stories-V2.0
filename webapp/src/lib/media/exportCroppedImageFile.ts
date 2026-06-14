@@ -1,42 +1,44 @@
-import type { Area } from 'react-easy-crop';
-
+import type { Area } from "react-easy-crop";
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to load image'));
+    img.onerror = () => reject(new Error("Failed to load image"));
     img.src = src;
   });
 }
-
-function pickOutputMime(originalType: string): { mime: string; ext: string; quality?: number } {
-  if (originalType === 'image/png') return { mime: 'image/png', ext: 'png' };
-  if (originalType === 'image/webp') return { mime: 'image/webp', ext: 'webp', quality: 0.9 };
-  return { mime: 'image/jpeg', ext: 'jpg', quality: 0.92 };
+function pickOutputMime(originalType: string): {
+  mime: string;
+  ext: string;
+  quality?: number;
+} {
+  if (originalType === "image/png") return { mime: "image/png", ext: "png" };
+  if (originalType === "image/webp")
+    return { mime: "image/webp", ext: "webp", quality: 0.9 };
+  return { mime: "image/jpeg", ext: "jpg", quality: 0.92 };
 }
-
-/** Match `react-easy-crop` helpers (not exported from package entry). */
 function getRadianAngle(degreeValue: number): number {
   return (degreeValue * Math.PI) / 180;
 }
-
 function rotateSize(
   width: number,
   height: number,
-  rotation: number
-): { width: number; height: number } {
+  rotation: number,
+): {
+  width: number;
+  height: number;
+} {
   const rotRad = getRadianAngle(rotation);
   return {
-    width: Math.abs(Math.cos(rotRad) * width) + Math.abs(Math.sin(rotRad) * height),
-    height: Math.abs(Math.sin(rotRad) * width) + Math.abs(Math.cos(rotRad) * height),
+    width:
+      Math.abs(Math.cos(rotRad) * width) + Math.abs(Math.sin(rotRad) * height),
+    height:
+      Math.abs(Math.sin(rotRad) * width) + Math.abs(Math.cos(rotRad) * height),
   };
 }
-
 function clamp255(n: number): number {
   return Math.min(255, Math.max(0, Math.round(n)));
 }
-
-/** -100…100 each; 0 = neutral. */
 export type ImageEditAdjustments = {
   brightness: number;
   contrast: number;
@@ -44,7 +46,6 @@ export type ImageEditAdjustments = {
   shadows: number;
   highlights: number;
 };
-
 export const NEUTRAL_IMAGE_ADJUSTMENTS: ImageEditAdjustments = {
   brightness: 0,
   contrast: 0,
@@ -52,17 +53,15 @@ export const NEUTRAL_IMAGE_ADJUSTMENTS: ImageEditAdjustments = {
   shadows: 0,
   highlights: 0,
 };
-
 export type ExportCroppedImageOptions = {
-  /** Degrees; must match `react-easy-crop` `rotation` prop. */
   rotation?: number;
   adjustments?: Partial<ImageEditAdjustments>;
 };
-
-function mergeAdjustments(partial?: Partial<ImageEditAdjustments>): ImageEditAdjustments {
+function mergeAdjustments(
+  partial?: Partial<ImageEditAdjustments>,
+): ImageEditAdjustments {
   return { ...NEUTRAL_IMAGE_ADJUSTMENTS, ...partial };
 }
-
 function hasAdjustments(a: ImageEditAdjustments): boolean {
   return (
     a.brightness !== 0 ||
@@ -72,31 +71,25 @@ function hasAdjustments(a: ImageEditAdjustments): boolean {
     a.highlights !== 0
   );
 }
-
-/**
- * CSS `filter` for live preview in the crop UI (approximates the canvas export, not pixel-identical).
- * Returns `undefined` when all adjustments are neutral.
- */
-export function imageAdjustmentsPreviewFilter(adj: ImageEditAdjustments): string | undefined {
+export function imageAdjustmentsPreviewFilter(
+  adj: ImageEditAdjustments,
+): string | undefined {
   if (!hasAdjustments(adj)) return undefined;
   const b = 100 + adj.brightness + adj.shadows * 0.22 - adj.highlights * 0.18;
   const c = 100 + adj.contrast + adj.sharpness * 0.2;
   const brightnessPct = Math.min(200, Math.max(0, b));
   const contrastPct = Math.min(200, Math.max(1, c));
   const sharpExtra =
-    adj.sharpness > 0 ? ` saturate(${100 + Math.min(20, adj.sharpness * 0.15)}%)` : '';
+    adj.sharpness > 0
+      ? ` saturate(${100 + Math.min(20, adj.sharpness * 0.15)}%)`
+      : "";
   return `brightness(${brightnessPct}%) contrast(${contrastPct}%)${sharpExtra}`;
 }
-
-/**
- * Draw cropped region into `target`. When `rotation === 0`, `pixelCrop` is in original image space.
- * When rotated, `pixelCrop` is in the rotated bounding-box space (same as `react-easy-crop` output).
- */
 function drawCroppedToCanvas(
   img: HTMLImageElement,
   pixelCrop: Area,
   rotation: number,
-  target: HTMLCanvasElement
+  target: HTMLCanvasElement,
 ): CanvasRenderingContext2D {
   const iw = img.naturalWidth;
   const ih = img.naturalHeight;
@@ -104,9 +97,8 @@ function drawCroppedToCanvas(
   const h = Math.max(1, Math.round(pixelCrop.height));
   target.width = w;
   target.height = h;
-  const ctx = target.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D not available');
-
+  const ctx = target.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D not available");
   if (!rotation) {
     ctx.drawImage(
       img,
@@ -117,23 +109,20 @@ function drawCroppedToCanvas(
       0,
       0,
       w,
-      h
+      h,
     );
     return ctx;
   }
-
   const bbox = rotateSize(iw, ih, rotation);
-  const inner = document.createElement('canvas');
+  const inner = document.createElement("canvas");
   inner.width = Math.max(1, Math.ceil(bbox.width));
   inner.height = Math.max(1, Math.ceil(bbox.height));
-  const ictx = inner.getContext('2d');
-  if (!ictx) throw new Error('Canvas 2D not available');
-
+  const ictx = inner.getContext("2d");
+  if (!ictx) throw new Error("Canvas 2D not available");
   ictx.translate(inner.width / 2, inner.height / 2);
   ictx.rotate(getRadianAngle(rotation));
   ictx.translate(-iw / 2, -ih / 2);
   ictx.drawImage(img, 0, 0);
-
   ctx.drawImage(
     inner,
     Math.round(pixelCrop.x),
@@ -143,31 +132,32 @@ function drawCroppedToCanvas(
     0,
     0,
     w,
-    h
+    h,
   );
   return ctx;
 }
-
-/** Brightness/contrast via canvas filter (percent). */
 function applyBrightnessContrast(
   source: HTMLCanvasElement,
   target: HTMLCanvasElement,
   brightnessPct: number,
-  contrastPct: number
+  contrastPct: number,
 ): CanvasRenderingContext2D {
   target.width = source.width;
   target.height = source.height;
-  const ctx = target.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D not available');
+  const ctx = target.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D not available");
   const b = Math.min(200, Math.max(0, 100 + brightnessPct));
   const c = Math.min(200, Math.max(1, 100 + contrastPct));
   ctx.filter = `brightness(${b}%) contrast(${c}%)`;
   ctx.drawImage(source, 0, 0);
-  ctx.filter = 'none';
+  ctx.filter = "none";
   return ctx;
 }
-
-function applyShadowsHighlights(data: ImageData, shadows: number, highlights: number): void {
+function applyShadowsHighlights(
+  data: ImageData,
+  shadows: number,
+  highlights: number,
+): void {
   if (!shadows && !highlights) return;
   const d = data.data;
   const sh = shadows / 100;
@@ -191,8 +181,6 @@ function applyShadowsHighlights(data: ImageData, shadows: number, highlights: nu
     }
   }
 }
-
-/** High-pass style sharpen; `amount` 0–100. */
 function applySharpen(data: ImageData, amount: number): void {
   if (amount <= 0) return;
   const w = data.width;
@@ -218,71 +206,60 @@ function applySharpen(data: ImageData, amount: number): void {
     }
   }
 }
-
 function applyAdjustmentsPipeline(
   sourceCanvas: HTMLCanvasElement,
-  adj: ImageEditAdjustments
+  adj: ImageEditAdjustments,
 ): HTMLCanvasElement {
   if (!hasAdjustments(adj)) return sourceCanvas;
-
   let work = sourceCanvas;
   let bcCanvas: HTMLCanvasElement | null = null;
   if (adj.brightness !== 0 || adj.contrast !== 0) {
-    bcCanvas = document.createElement('canvas');
+    bcCanvas = document.createElement("canvas");
     applyBrightnessContrast(work, bcCanvas, adj.brightness, adj.contrast);
     work = bcCanvas;
   }
-
   if (adj.shadows === 0 && adj.highlights === 0 && adj.sharpness === 0) {
     return work;
   }
-
-  const ctx = work.getContext('2d');
+  const ctx = work.getContext("2d");
   if (!ctx) return work;
   const imageData = ctx.getImageData(0, 0, work.width, work.height);
   applyShadowsHighlights(imageData, adj.shadows, adj.highlights);
   applySharpen(imageData, adj.sharpness);
-  const out = document.createElement('canvas');
+  const out = document.createElement("canvas");
   out.width = work.width;
   out.height = work.height;
-  const octx = out.getContext('2d');
+  const octx = out.getContext("2d");
   if (!octx) return work;
   octx.putImageData(imageData, 0, 0);
   return out;
 }
-
-/**
- * Renders `pixelCrop` from an image source into a new raster file (browser canvas).
- * Use after `react-easy-crop` reports `croppedAreaPixels` (and the same `rotation` you pass to `<Cropper />`).
- */
 export async function exportCroppedImageFile(
   imageSrc: string,
   pixelCrop: Area,
   originalFile: File,
-  options?: ExportCroppedImageOptions
+  options?: ExportCroppedImageOptions,
 ): Promise<File> {
   const img = await loadImage(imageSrc);
   const rotation = options?.rotation ?? 0;
   const adj = mergeAdjustments(options?.adjustments);
-
-  const cropped = document.createElement('canvas');
+  const cropped = document.createElement("canvas");
   drawCroppedToCanvas(img, pixelCrop, rotation, cropped);
-
   const finalCanvas = applyAdjustmentsPipeline(cropped, adj);
-
-  const { mime, ext, quality } = pickOutputMime(originalFile.type || 'image/jpeg');
+  const { mime, ext, quality } = pickOutputMime(
+    originalFile.type || "image/jpeg",
+  );
   const blob = await new Promise<Blob>((resolve, reject) => {
     finalCanvas.toBlob(
       (b) => {
         if (b) resolve(b);
-        else reject(new Error('Could not encode image'));
+        else reject(new Error("Could not encode image"));
       },
       mime,
-      quality
+      quality,
     );
   });
-
-  const base = (originalFile.name || 'image').replace(/\.[^/.]+$/, '');
-  const safeBase = base.replace(/[^\w.-]+/g, '_').slice(0, 80) || 'image';
+  const base = (originalFile.name || "image").replace(/\.[^/.]+$/, "");
+  const safeBase = base.replace(/[^\w.-]+/g, "_").slice(0, 80) || "image";
   return new File([blob], `${safeBase}-cropped.${ext}`, { type: mime });
 }

@@ -1,5 +1,5 @@
-import { pickRouteSkeleton } from '@/lib/shell/routeSkeleton';
+import { pickRouteSkeleton } from "@/lib/shell/routeSkeleton";
 
 export default function BookmarksLoading() {
-  return pickRouteSkeleton('/bookmarks');
+  return pickRouteSkeleton("/bookmarks");
 }

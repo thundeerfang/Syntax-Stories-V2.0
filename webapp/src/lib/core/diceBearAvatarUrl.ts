@@ -1,7 +1,5 @@
-/** DiceBear avatar URL with solid background harmonized to seed (API fallback when no stored image). */
-
 function seedToBackgroundHex(seed: string): string {
-  const s = seed.trim() || 'user';
+  const s = seed.trim() || "user";
   let h = 0;
   for (let i = 0; i < s.length; i += 1) {
     h = (h * 31 + s.charCodeAt(i)) >>> 0;
@@ -9,7 +7,6 @@ function seedToBackgroundHex(seed: string): string {
   const hue = h % 360;
   const sat = 42 + ((h >> 8) % 22);
   const light = 78 + ((h >> 16) % 14);
-
   const ss = sat / 100;
   const ll = light / 100;
   const c = (1 - Math.abs(2 * ll - 1)) * ss;
@@ -40,27 +37,36 @@ function seedToBackgroundHex(seed: string): string {
   const toHex = (n: number) =>
     Math.max(0, Math.min(255, Math.round(n)))
       .toString(16)
-      .padStart(2, '0');
+      .padStart(2, "0");
   return `${toHex((r + m) * 255)}${toHex((g + m) * 255)}${toHex((b + m) * 255)}`;
 }
 
+export type DiceBearStyle =
+  | "avataaars"
+  | "adventurer"
+  | "initials"
+  | "shapes";
+
 export function diceBearAvatarUrl(
   seed: string,
-  style: 'avataaars' | 'adventurer' | 'initials' = 'avataaars'
+  style: DiceBearStyle = "avataaars",
 ): string {
-  const s = seed.trim() || 'user';
+  const s = seed.trim() || "user";
   const params = new URLSearchParams({
     seed: s,
     backgroundColor: seedToBackgroundHex(s),
-    backgroundType: 'solid',
+    backgroundType: "solid",
   });
   return `https://api.dicebear.com/7.x/${style}/svg?${params.toString()}`;
 }
 
-/** Stored profile images are often DiceBear SVG data URIs (opaque background when saved via server). */
+export function diceBearSquadIconUrl(slug: string): string {
+  return diceBearAvatarUrl(slug.trim() || "squad", "shapes");
+}
+
 export function isDiceBearStoredProfile(raw: string | undefined): boolean {
-  const t = raw?.trim() ?? '';
+  const t = raw?.trim() ?? "";
   if (!t) return false;
-  if (t.startsWith('data:image/svg+xml')) return true;
-  return t.includes('dicebear.com');
+  if (t.startsWith("data:image/svg+xml")) return true;
+  return t.includes("dicebear.com");
 }

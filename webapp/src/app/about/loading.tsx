@@ -1,9 +1,9 @@
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
+import { shell } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
 
 export default function AboutLoading() {
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'animate-pulse space-y-16 py-8')}>
+    <div className={cn(shell.contentRail, "animate-pulse space-y-16 pb-16")}>
       <div className="h-12 w-48 bg-muted" />
       <div className="h-24 max-w-3xl bg-muted" />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
