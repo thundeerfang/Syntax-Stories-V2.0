@@ -1,20 +1,20 @@
-import type { Types } from 'mongoose';
-import { createClient } from 'redis';
-import { redisKeys } from '../shared/redis/keys.js';
-import { previousUtcCalendarDay, streakUtcDayBucket } from '../streak/calendarUtc.js';
+import type { Types } from "mongoose";
+import { createClient } from "redis";
+import { redisKeys } from "../shared/redis/keys.js";
+import {
+  previousUtcCalendarDay,
+  streakUtcDayBucket,
+} from "../streak/calendarUtc.js";
 type RedisClient = ReturnType<typeof createClient>;
-
-export type AnchoredDailyDisplay = { current: number; longest: number };
-
-/**
- * Map unanchored HASH fields to profile-style daily counts (same anchor as `computeDailyStreak`).
- * Returns null if inputs are unusable.
- */
+export type AnchoredDailyDisplay = {
+  current: number;
+  longest: number;
+};
 export function anchorDailyStreakDisplayFromHash(
   lastDay: string,
   currentUnanchored: number,
   longestUnanchored: number,
-  now: Date
+  now: Date,
 ): AnchoredDailyDisplay | null {
   if (!lastDay || !/^\d{4}-\d{2}-\d{2}$/.test(lastDay)) return null;
   const todayB = streakUtcDayBucket(now);
@@ -27,29 +27,23 @@ export function anchorDailyStreakDisplayFromHash(
   }
   return { current, longest: longestUnanchored };
 }
-
-/**
- * Redis-first daily streak for profile when HASH is present and not behind Mongo max `dayBucket`.
- */
 export async function tryAnchoredDailyReadStreakFromRedis(
   redis: RedisClient,
   readerId: Types.ObjectId,
   mongoMaxDayBucket: string | null,
-  now = new Date()
+  now = new Date(),
 ): Promise<AnchoredDailyDisplay | null> {
   const hashKey = redisKeys.readStreak.dailyHash(String(readerId));
   const [lastDayRaw, curRaw, lngRaw] = await Promise.all([
-    redis.hGet(hashKey, 'lastDay'),
-    redis.hGet(hashKey, 'current'),
-    redis.hGet(hashKey, 'longest'),
+    redis.hGet(hashKey, "lastDay"),
+    redis.hGet(hashKey, "current"),
+    redis.hGet(hashKey, "longest"),
   ]);
-  const lastDay = lastDayRaw ? lastDayRaw : '';
+  const lastDay = lastDayRaw ? lastDayRaw : "";
   if (!lastDay) return null;
-
   if (mongoMaxDayBucket && lastDay < mongoMaxDayBucket) {
     return null;
   }
-
   const currentU = Number(curRaw) || 0;
   const longestU = Number(lngRaw) || 0;
   return anchorDailyStreakDisplayFromHash(lastDay, currentU, longestU, now);

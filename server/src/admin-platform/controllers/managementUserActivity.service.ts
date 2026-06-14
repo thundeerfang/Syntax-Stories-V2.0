@@ -1,24 +1,18 @@
-import type mongoose from 'mongoose';
-import { BlogPostModel } from '../../models/BlogPost.js';
-import { BlogCommentModel } from '../../models/BlogComment.js';
-import { BlogRepostModel } from '../../models/BlogRepost.js';
-import { BlogRespectModel } from '../../models/BlogRespect.js';
-import { BlogBookmarkModel } from '../../models/BlogBookmark.js';
-import type { IUser } from '../../models/User.js';
-import { toUserOAuthDto } from './managementUsers.mapper.js';
-
+import type mongoose from "mongoose";
+import { BlogPostModel } from "../../models/BlogPost.js";
+import { BlogCommentModel } from "../../models/BlogComment.js";
+import { BlogRepostModel } from "../../models/BlogRepost.js";
+import { BlogRespectModel } from "../../models/BlogRespect.js";
+import { BlogBookmarkModel } from "../../models/BlogBookmark.js";
+import type { IUser } from "../../models/User.js";
+import { toUserOAuthDto } from "./managementUsers.mapper.js";
+import { NOT_DELETED_FILTER } from "../../shared/db/notDeleted.js";
 const RECENT_LIMIT = 48;
-
-function notDeletedPostFilter(): Record<string, unknown> {
-  return { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
-}
-
 function iso(d: Date | undefined | null): string | null {
   if (!d) return null;
   const t = new Date(d);
   return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
-
 type PostLean = {
   _id: mongoose.Types.ObjectId;
   title: string;
@@ -31,21 +25,23 @@ type PostLean = {
   updatedAt?: Date;
   thumbnailUrl?: string;
 };
-
 type PopulatedPostLean = {
   _id: mongoose.Types.ObjectId;
   title?: string;
   slug?: string;
   deletedAt?: Date | null;
-  authorId?: { username?: string } | mongoose.Types.ObjectId;
+  authorId?:
+    | {
+        username?: string;
+      }
+    | mongoose.Types.ObjectId;
 };
-
 function postSummary(p: PostLean) {
   return {
     id: String(p._id),
     title: p.title,
     slug: p.slug,
-    status: p.status as 'draft' | 'published',
+    status: p.status as "draft" | "published",
     publishedAt: iso(p.publishedAt),
     respectCount: p.respectCount ?? 0,
     viewCount: p.viewCount ?? 0,
@@ -54,48 +50,50 @@ function postSummary(p: PostLean) {
     thumbnailUrl: p.thumbnailUrl ?? null,
   };
 }
-
 function engagementFromPost(
   post: PopulatedPostLean | null | undefined,
   createdAt: Date | undefined,
-  extra?: { textPreview?: string; commentId?: string }
+  extra?: {
+    textPreview?: string;
+    commentId?: string;
+  },
 ) {
   if (!post || post.deletedAt) return null;
   const author =
-    post.authorId && typeof post.authorId === 'object' && 'username' in post.authorId
-      ? String(post.authorId.username ?? '')
-      : '';
+    post.authorId &&
+    typeof post.authorId === "object" &&
+    "username" in post.authorId
+      ? String(post.authorId.username ?? "")
+      : "";
   return {
     postId: String(post._id),
-    postTitle: post.title ?? 'Untitled',
-    postSlug: post.slug ?? '',
+    postTitle: post.title ?? "Untitled",
+    postSlug: post.slug ?? "",
     postAuthorUsername: author,
     createdAt: iso(createdAt),
     ...extra,
   };
 }
-
 export function resolveEmailVerificationForAdmin(user: IUser): {
   emailVerified: boolean;
   emailVerifiedEffective: boolean;
-  emailVerificationSource: 'verified' | 'oauth' | 'unverified';
+  emailVerificationSource: "verified" | "oauth" | "unverified";
   oauthProviderLabels: string[];
 } {
   const oauth = toUserOAuthDto(user);
   const labels: string[] = [];
-  if (oauth.isGoogleAccount) labels.push('Google');
-  if (oauth.isGitAccount) labels.push('GitHub');
-  if (oauth.isFacebookAccount) labels.push('Facebook');
-  if (oauth.isXAccount) labels.push('X');
-  if (oauth.isAppleAccount) labels.push('Apple');
-  if (oauth.isDiscordAccount) labels.push('Discord');
-  if (oauth.isTwitchAccount) labels.push('Twitch');
-
+  if (oauth.isGoogleAccount) labels.push("Google");
+  if (oauth.isGitAccount) labels.push("GitHub");
+  if (oauth.isFacebookAccount) labels.push("Facebook");
+  if (oauth.isXAccount) labels.push("X");
+  if (oauth.isAppleAccount) labels.push("Apple");
+  if (oauth.isDiscordAccount) labels.push("Discord");
+  if (oauth.isTwitchAccount) labels.push("Twitch");
   if (user.emailVerified) {
     return {
       emailVerified: true,
       emailVerifiedEffective: true,
-      emailVerificationSource: 'verified',
+      emailVerificationSource: "verified",
       oauthProviderLabels: labels,
     };
   }
@@ -103,24 +101,22 @@ export function resolveEmailVerificationForAdmin(user: IUser): {
     return {
       emailVerified: false,
       emailVerifiedEffective: true,
-      emailVerificationSource: 'oauth',
+      emailVerificationSource: "oauth",
       oauthProviderLabels: labels,
     };
   }
   return {
     emailVerified: false,
     emailVerifiedEffective: false,
-    emailVerificationSource: 'unverified',
+    emailVerificationSource: "unverified",
     oauthProviderLabels: labels,
   };
 }
-
 export async function loadAdminUserActivity(userId: mongoose.Types.ObjectId) {
   const authorFilter = {
     authorId: userId,
-    ...notDeletedPostFilter(),
+    ...NOT_DELETED_FILTER,
   };
-
   const [
     recentPosts,
     publishedCount,
@@ -138,19 +134,19 @@ export async function loadAdminUserActivity(userId: mongoose.Types.ObjectId) {
       .sort({ updatedAt: -1 })
       .limit(RECENT_LIMIT)
       .select(
-        'title slug status publishedAt respectCount viewCount commentCount updatedAt thumbnailUrl'
+        "title slug status publishedAt respectCount viewCount commentCount updatedAt thumbnailUrl",
       )
       .lean(),
-    BlogPostModel.countDocuments({ ...authorFilter, status: 'published' }),
-    BlogPostModel.countDocuments({ ...authorFilter, status: 'draft' }),
+    BlogPostModel.countDocuments({ ...authorFilter, status: "published" }),
+    BlogPostModel.countDocuments({ ...authorFilter, status: "draft" }),
     BlogCommentModel.countDocuments({ userId }),
     BlogCommentModel.find({ userId })
       .sort({ createdAt: -1 })
       .limit(RECENT_LIMIT)
       .populate({
-        path: 'postId',
-        select: 'title slug deletedAt authorId',
-        populate: { path: 'authorId', select: 'username' },
+        path: "postId",
+        select: "title slug deletedAt authorId",
+        populate: { path: "authorId", select: "username" },
       })
       .lean(),
     BlogRepostModel.countDocuments({ userId }),
@@ -158,9 +154,9 @@ export async function loadAdminUserActivity(userId: mongoose.Types.ObjectId) {
       .sort({ createdAt: -1 })
       .limit(RECENT_LIMIT)
       .populate({
-        path: 'postId',
-        select: 'title slug deletedAt authorId',
-        populate: { path: 'authorId', select: 'username' },
+        path: "postId",
+        select: "title slug deletedAt authorId",
+        populate: { path: "authorId", select: "username" },
       })
       .lean(),
     BlogRespectModel.countDocuments({ userId }),
@@ -168,9 +164,9 @@ export async function loadAdminUserActivity(userId: mongoose.Types.ObjectId) {
       .sort({ createdAt: -1 })
       .limit(RECENT_LIMIT)
       .populate({
-        path: 'postId',
-        select: 'title slug deletedAt authorId',
-        populate: { path: 'authorId', select: 'username' },
+        path: "postId",
+        select: "title slug deletedAt authorId",
+        populate: { path: "authorId", select: "username" },
       })
       .lean(),
     BlogBookmarkModel.countDocuments({ userId }),
@@ -178,36 +174,37 @@ export async function loadAdminUserActivity(userId: mongoose.Types.ObjectId) {
       .sort({ createdAt: -1 })
       .limit(RECENT_LIMIT)
       .populate({
-        path: 'postId',
-        select: 'title slug deletedAt authorId',
-        populate: { path: 'authorId', select: 'username' },
+        path: "postId",
+        select: "title slug deletedAt authorId",
+        populate: { path: "authorId", select: "username" },
       })
       .lean(),
   ]);
-
   const comments = recentComments
     .map((c) => {
       const post = c.postId as PopulatedPostLean | null;
-      const preview = c.text?.trim().slice(0, 160) ?? '';
+      const preview = c.text?.trim().slice(0, 160) ?? "";
       return engagementFromPost(post, c.createdAt, {
         textPreview: preview.length > 0 ? preview : undefined,
         commentId: String(c._id),
       });
     })
     .filter(Boolean);
-
   const reposts = recentReposts
-    .map((r) => engagementFromPost(r.postId as PopulatedPostLean | null, r.createdAt))
+    .map((r) =>
+      engagementFromPost(r.postId as PopulatedPostLean | null, r.createdAt),
+    )
     .filter(Boolean);
-
   const respects = recentRespects
-    .map((r) => engagementFromPost(r.postId as PopulatedPostLean | null, r.createdAt))
+    .map((r) =>
+      engagementFromPost(r.postId as PopulatedPostLean | null, r.createdAt),
+    )
     .filter(Boolean);
-
   const bookmarks = recentBookmarks
-    .map((b) => engagementFromPost(b.postId as PopulatedPostLean | null, b.createdAt))
+    .map((b) =>
+      engagementFromPost(b.postId as PopulatedPostLean | null, b.createdAt),
+    )
     .filter(Boolean);
-
   return {
     counts: {
       postsPublished: publishedCount,

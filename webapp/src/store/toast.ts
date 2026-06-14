@@ -1,8 +1,6 @@
-'use client';
-
-import { create } from 'zustand';
-import type { AlertStatus } from '@/components/retroui/Alert';
-
+"use client";
+import { create } from "zustand";
+import type { AlertStatus } from "@/components/retroui/Alert";
 export type ToastItem = {
   id: string;
   status: AlertStatus;
@@ -10,22 +8,22 @@ export type ToastItem = {
   duration?: number;
   createdAt: number;
 };
-
 type ToastState = {
   toasts: ToastItem[];
-  add: (opts: { status: AlertStatus; title: string; duration?: number }) => void;
+  add: (opts: {
+    status: AlertStatus;
+    title: string;
+    duration?: number;
+  }) => void;
   remove: (id: string) => void;
   success: (title: string, duration?: number) => void;
   info: (title: string, duration?: number) => void;
   error: (title: string, duration?: number) => void;
   warning: (title: string, duration?: number) => void;
 };
-
 let idCounter = 0;
 const genId = () => `toast-${++idCounter}-${Date.now()}`;
-
 const DEFAULT_DURATION = 5000;
-
 export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
   add: (opts) => {
@@ -46,8 +44,10 @@ export const useToastStore = create<ToastState>((set, get) => ({
     }
   },
   remove: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-  success: (title, duration) => get().add({ status: 'success', title, duration }),
-  info: (title, duration) => get().add({ status: 'info', title, duration }),
-  error: (title, duration) => get().add({ status: 'error', title, duration }),
-  warning: (title, duration) => get().add({ status: 'warning', title, duration }),
+  success: (title, duration) =>
+    get().add({ status: "success", title, duration }),
+  info: (title, duration) => get().add({ status: "info", title, duration }),
+  error: (title, duration) => get().add({ status: "error", title, duration }),
+  warning: (title, duration) =>
+    get().add({ status: "warning", title, duration }),
 }));

@@ -1,24 +1,14 @@
-'use client';
-
-import * as React from 'react';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import * as React from "react";
+import { cn } from "@/lib/core/utils";
 export interface ToggleProps extends Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
-  'onChange'
+  "onChange"
 > {
-  /** Controlled pressed state */
   pressed?: boolean;
-  /** Uncontrolled default */
   defaultPressed?: boolean;
-  /** When pressed state changes (controlled use) */
   onPressedChange?: (pressed: boolean) => void;
 }
-
-/**
- * Single toggle button with retro neomorphism style.
- * Use for one on/off state, or use two Toggles side-by-side for a two-option switch (e.g. Project | Publication).
- */
 export const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
   (
     {
@@ -30,41 +20,38 @@ export const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
       onClick,
       ...props
     },
-    ref
+    ref,
   ) => {
     const [uncontrolled, setUncontrolled] = React.useState(defaultPressed);
     const isControlled = controlledPressed !== undefined;
     const pressed = isControlled ? controlledPressed : uncontrolled;
-
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       const next = !pressed;
       if (!isControlled) setUncontrolled(next);
       onPressedChange?.(next);
       onClick?.(e);
     };
-
     return (
       <button
         ref={ref}
         type="button"
         aria-pressed={pressed}
-        data-state={pressed ? 'on' : 'off'}
+        data-state={pressed ? "on" : "off"}
         onClick={handleClick}
         className={cn(
-          'inline-flex items-center justify-center gap-1.5 border-2 border-border font-bold text-[10px] uppercase tracking-wide transition-all',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
-          'disabled:pointer-events-none disabled:opacity-50',
-          // Neomorphism: unpressed = soft raised, pressed = inset / filled
-          !pressed && 'bg-muted/40 text-muted-foreground shadow hover:bg-muted/60',
-          pressed && 'bg-primary text-primary-foreground border-primary shadow',
-          className
+          "inline-flex items-center justify-center gap-1.5 border-2 border-border font-bold text-[10px] uppercase tracking-wide transition-all",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
+          "disabled:pointer-events-none disabled:opacity-50",
+          !pressed &&
+            "bg-muted/40 text-muted-foreground shadow hover:bg-muted/60",
+          pressed && "bg-primary text-primary-foreground border-primary shadow",
+          className,
         )}
         {...props}
       >
         {children}
       </button>
     );
-  }
+  },
 );
-
-Toggle.displayName = 'Toggle';
+Toggle.displayName = "Toggle";

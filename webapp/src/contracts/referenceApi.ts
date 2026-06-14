@@ -3,7 +3,7 @@
  * Keep in sync with `server/src/routes/reference.routes.ts`.
  */
 
-export type ReferenceEntityKind = 'company' | 'school' | 'organization';
+export type ReferenceEntityKind = "company" | "school" | "organization";
 
 export interface EntityOption {
   name: string;
@@ -11,16 +11,16 @@ export interface EntityOption {
 }
 
 export type TechStackCategory =
-  | 'Frontend'
-  | 'Backend'
-  | 'Mobile'
-  | 'Database'
-  | 'DevOps'
-  | 'Cloud'
-  | 'Library'
-  | 'Tool'
-  | 'Language'
-  | 'Design';
+  | "Frontend"
+  | "Backend"
+  | "Mobile"
+  | "Database"
+  | "DevOps"
+  | "Cloud"
+  | "Library"
+  | "Tool"
+  | "Language"
+  | "Design";
 
 export interface TechStackItem {
   name: string;

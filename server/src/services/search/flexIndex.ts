@@ -1,20 +1,15 @@
-import type { SearchHit, SearchIndexDoc } from './search.types.js';
-import { indexDocToHit } from './searchTaxonomy.service.js';
-
-type IndexKind = 'tags' | 'categories' | 'squads' | 'features';
-
-/** In-memory prefix/substring filter on warm Redis index docs (<5ms for ~5k rows). */
+import type { SearchHit, SearchIndexDoc } from "./search.types.js";
+import { indexDocToHit } from "./searchTaxonomy.service.js";
+type IndexKind = "tags" | "categories" | "squads" | "features";
 export function searchFlexIndex(
   _kind: IndexKind,
   docs: SearchIndexDoc[],
   q: string,
-  limit: number
+  limit: number,
 ): SearchHit[] {
   if (docs.length === 0) return [];
-
   const needle = q.toLowerCase();
   const tokens = needle.split(/\s+/).filter(Boolean);
-
   const scored = docs
     .map((doc) => {
       const label = doc.label.toLowerCase();
@@ -30,10 +25,6 @@ export function searchFlexIndex(
     })
     .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score || (b.doc.rank ?? 0) - (a.doc.rank ?? 0));
-
   return scored.slice(0, limit).map((row) => indexDocToHit(row.doc));
 }
-
-export function invalidateFlexSearchBundles(): void {
-  // no-op — kept for index rebuild hook compatibility
-}
+export function invalidateFlexSearchBundles(): void {}

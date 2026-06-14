@@ -4,8 +4,7 @@
 
 This document maps `webapp/src/components`, flags **single-use** files that should be folded into their parent page or parent component, and lists **shared** primitives that should stay separate.
 
-> **Generated from import analysis** (May 2026). Re-run the audit after large refactors:
-> `node scripts/audit-component-usage.mjs` (script described in §7).
+> **Generated from import analysis** (May 2026). Re-run after large refactors: `npm run arch:check` or [knip](https://github.com/webpro/knip) for unused exports.
 
 ---
 
@@ -251,16 +250,9 @@ After each batch: run `npm run lint` and smoke-test the affected route.
 
 ---
 
-## 7. Audit script (optional)
+## 7. Re-audit after refactors
 
-Save as `webapp/scripts/audit-component-usage.mjs` and run from `webapp/`:
-
-```js
-// Counts importers per file under src/components (excludes index barrels).
-// Prints PAGE_ONLY, SINGLE_PARENT, and SHARED (3+) lists.
-```
-
-Use the same logic as the analysis that produced this doc (import path `@/…` + exported symbol names).
+Use **`npm run arch:check`** (dependency-cruiser + eslint) for layer violations, or **[knip](https://github.com/webpro/knip)** for unused exports and dead files. For single-use component detection, grep importers per file under `src/components` (same approach as the analysis that produced this doc).
 
 ---
 

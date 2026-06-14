@@ -12,7 +12,6 @@ import '../../services/upload_api.dart';
 import '../../state/auth_state.dart';
 import '../../theme/app_color_tokens.dart';
 import '../../utils/gallery_image_picker.dart';
-import '../../utils/upload_image_alt.dart';
 import '../../utils/upload_image_formats.dart';
 import '../../utils/user_message_case.dart';
 
@@ -39,10 +38,9 @@ class ImageUploadCropDialog extends StatefulWidget {
     );
   }
 
-  /// My Setup component image — returns the uploaded media URL.
-  static Future<String?> showSetupComponent(BuildContext context) async {
-    final result = await showAssetUpload(context, ImageUploadKind.setupComponent);
-    return result?.url;
+  /// My Setup component image — returns the uploaded media URL and alt text.
+  static Future<ImageUploadAssetResult?> showSetupComponent(BuildContext context) async {
+    return showAssetUpload(context, ImageUploadKind.setupComponent);
   }
 
   /// Company / school logos and work media — returns URL and optional alt from file name.
@@ -85,7 +83,7 @@ class _ImageUploadCropDialogState extends State<ImageUploadCropDialog> {
         setState(() => _error = formatUserMessage(formatError));
         return;
       }
-    } else if (_kind != ImageUploadKind.workMedia) {
+    } else {
       final formatError = validateProfileRasterUploadImage(bytes, fileName: result.fileName);
       if (formatError != null) {
         setState(() => _error = formatUserMessage(formatError));
@@ -116,6 +114,7 @@ class _ImageUploadCropDialogState extends State<ImageUploadCropDialog> {
       final err = await context.read<AuthState>().uploadProfileImage(
             kind: _kind,
             imageBytes: cropped,
+            originalFileName: _pickedFileName,
           );
 
       if (!mounted) return;
@@ -154,13 +153,10 @@ class _ImageUploadCropDialogState extends State<ImageUploadCropDialog> {
         kind: _kind,
         accessToken: token,
         bytes: cropped,
+        filename: _pickedFileName,
       );
       if (!mounted) return;
-      final imageAlt = _kind == ImageUploadKind.companyLogo ||
-              _kind == ImageUploadKind.schoolLogo ||
-              _kind == ImageUploadKind.orgLogo
-          ? logoAltFromChosenFileName(_pickedFileName, maxLength: 120)
-          : null;
+      final imageAlt = result.imageAlt;
       Navigator.of(context).pop(ImageUploadAssetResult(url: result.url, imageAlt: imageAlt));
     } catch (e) {
       if (!mounted) return;

@@ -1,1 +1,1 @@
-export { default } from '@/features/settings';
+export { default } from "@/features/settings";

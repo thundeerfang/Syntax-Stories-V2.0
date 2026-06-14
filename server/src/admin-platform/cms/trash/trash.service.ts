@@ -1,46 +1,42 @@
-import mongoose from 'mongoose';
-import type { Request } from 'express';
-import { BlogPostModel } from '../../../models/BlogPost.js';
-import { UserModel } from '../../../models/User.js';
-import { NOT_DELETED_FILTER } from '../../../shared/db/notDeleted.js';
-import { AuditAction } from '../../../shared/audit/events.js';
-import { writeAuditLog } from '../../../shared/audit/auditLog.js';
-
-const BLOG_SOFT_DELETE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-const SLUG_MAX_LEN = 320;
-
+import mongoose from "mongoose";
+import type { Request } from "express";
+import { BlogPostModel } from "../../../models/BlogPost.js";
+import { UserModel } from "../../../models/User.js";
+import { NOT_DELETED_FILTER } from "../../../shared/db/notDeleted.js";
+import { AuditAction } from "../../../shared/audit/events.js";
+import { writeAuditLog } from "../../../shared/audit/auditLog.js";
+import { SEVEN_DAYS_MS } from "../../../constants/durations.js";
+import { BLOG_LIMITS } from "@syntax-stories/shared";
+const SLUG_MAX_LEN = BLOG_LIMITS.slugMaxLen;
 function slugify(text: string): string {
   return (
     text
       .trim()
       .toLowerCase()
-      .replaceAll(/\s+/g, '-')
-      .replaceAll(/[^\w-]/g, '')
-      .replaceAll(/-+/g, '-')
-      .replaceAll(/^-+/g, '')
-      .replaceAll(/-+$/g, '')
-      .slice(0, 200) || 'post'
+      .replaceAll(/\s+/g, "-")
+      .replaceAll(/[^\w-]/g, "")
+      .replaceAll(/-+/g, "-")
+      .replaceAll(/^-+/g, "")
+      .replaceAll(/-+$/g, "")
+      .slice(0, 200) || "post"
   );
 }
-
 function slugWithCollisionSuffix(base: string, attempt: number): string {
   if (attempt <= 0) return base.slice(0, SLUG_MAX_LEN);
   const suf = `-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const room = SLUG_MAX_LEN - suf.length;
   return `${base.slice(0, Math.max(1, room))}${suf}`;
 }
-
 export class TrashServiceError extends Error {
   constructor(
     public status: number,
     message: string,
-    public code?: string
+    public code?: string,
   ) {
     super(message);
-    this.name = 'TrashServiceError';
+    this.name = "TrashServiceError";
   }
 }
-
 export async function listBlogTrash(page: number, pageSize: number) {
   const skip = Math.max(0, (page - 1) * pageSize);
   const q = { deletedAt: { $ne: null, $exists: true } };
@@ -49,7 +45,11 @@ export async function listBlogTrash(page: number, pageSize: number) {
       .sort({ deletedAt: -1 })
       .skip(skip)
       .limit(pageSize)
-      .populate({ path: 'authorId', select: 'username fullName email', model: 'users' })
+      .populate({
+        path: "authorId",
+        select: "username fullName email",
+        model: "users",
+      })
       .lean(),
     BlogPostModel.countDocuments(q),
   ]);
@@ -71,7 +71,6 @@ export async function listBlogTrash(page: number, pageSize: number) {
   });
   return { data, total, page, pageSize };
 }
-
 export async function listUserTrash(page: number, pageSize: number) {
   const skip = Math.max(0, (page - 1) * pageSize);
   const q = { isActive: false };
@@ -80,12 +79,14 @@ export async function listUserTrash(page: number, pageSize: number) {
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(pageSize)
-      .select('_id email username fullName updatedAt')
+      .select("_id email username fullName updatedAt")
       .lean(),
     UserModel.countDocuments(q),
   ]);
   const data = rows.map((r) => {
-    const u = r as typeof r & { updatedAt?: Date };
+    const u = r as typeof r & {
+      updatedAt?: Date;
+    };
     return {
       _id: String(r._id),
       email: r.email,
@@ -96,24 +97,25 @@ export async function listUserTrash(page: number, pageSize: number) {
   });
   return { data, total, page, pageSize };
 }
-
 export async function restoreBlogPostAsAdmin(
   postId: string,
   actorId: string,
-  req: Request
+  req: Request,
 ): Promise<void> {
   if (!mongoose.Types.ObjectId.isValid(postId)) {
-    throw new TrashServiceError(400, 'Invalid post id');
+    throw new TrashServiceError(400, "Invalid post id");
   }
   const doc = await BlogPostModel.findById(postId);
   if (!doc?.deletedAt) {
-    throw new TrashServiceError(404, 'Post not found or not in trash');
+    throw new TrashServiceError(404, "Post not found or not in trash");
   }
   const del = doc.deletedAt;
-  if (del.getTime() < Date.now() - BLOG_SOFT_DELETE_RETENTION_MS) {
-    throw new TrashServiceError(410, 'Post is outside the recoverable trash window');
+  if (del.getTime() < Date.now() - SEVEN_DAYS_MS) {
+    throw new TrashServiceError(
+      410,
+      "Post is outside the recoverable trash window",
+    );
   }
-
   let nextSlug = doc.slug;
   const clash = await BlogPostModel.findOne({
     _id: { $ne: doc._id },
@@ -121,7 +123,7 @@ export async function restoreBlogPostAsAdmin(
     slug: doc.slug,
     ...NOT_DELETED_FILTER,
   })
-    .select('_id')
+    .select("_id")
     .lean();
   if (clash) {
     const base = slugify(doc.title);
@@ -132,7 +134,7 @@ export async function restoreBlogPostAsAdmin(
         slug: cand,
         ...NOT_DELETED_FILTER,
       })
-        .select('_id')
+        .select("_id")
         .lean();
       if (!c2) {
         nextSlug = cand;
@@ -140,41 +142,38 @@ export async function restoreBlogPostAsAdmin(
       }
     }
   }
-
   doc.deletedAt = undefined;
   doc.deletedById = undefined;
   doc.slug = nextSlug;
-  doc.status = 'published';
+  doc.status = "published";
   await doc.save();
-
   void writeAuditLog(req, AuditAction.ADMIN_BLOG_RESTORED, {
     actorId,
-    targetType: 'blog_post',
+    targetType: "blog_post",
     targetId: postId,
     metadata: { slug: nextSlug },
   });
 }
-
 export async function restoreUserAsAdmin(
   userId: string,
   actorId: string,
-  req: Request
+  req: Request,
 ): Promise<void> {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    throw new TrashServiceError(400, 'Invalid user id');
+    throw new TrashServiceError(400, "Invalid user id");
   }
   const u = await UserModel.findById(userId);
   if (!u) {
-    throw new TrashServiceError(404, 'User not found');
+    throw new TrashServiceError(404, "User not found");
   }
   if (u.isActive) {
-    throw new TrashServiceError(400, 'User is already active');
+    throw new TrashServiceError(400, "User is already active");
   }
   u.isActive = true;
   await u.save();
   void writeAuditLog(req, AuditAction.ADMIN_USER_RESTORED, {
     actorId,
-    targetType: 'user',
+    targetType: "user",
     targetId: userId,
   });
 }

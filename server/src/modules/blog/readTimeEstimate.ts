@@ -1,19 +1,24 @@
-/** ~200 wpm is a common blog default (skimming vs deep read varies). */
 const WORDS_PER_MINUTE = 200;
-
 function collectTextFromProseDoc(node: unknown, out: string[]): void {
-  if (node == null || typeof node !== 'object') return;
-  const n = node as { type?: string; text?: string; content?: unknown[] };
-  if (typeof n.text === 'string' && n.text) out.push(n.text);
+  if (node == null || typeof node !== "object") return;
+  const n = node as {
+    type?: string;
+    text?: string;
+    content?: unknown[];
+  };
+  if (typeof n.text === "string" && n.text) out.push(n.text);
   if (Array.isArray(n.content)) {
     for (const c of n.content) collectTextFromProseDoc(c, out);
   }
 }
-
-function appendBlockText(type: string, payload: Record<string, unknown>, chunks: string[]): void {
+function appendBlockText(
+  type: string,
+  payload: Record<string, unknown>,
+  chunks: string[],
+): void {
   switch (type) {
-    case 'paragraph': {
-      const text = typeof payload.text === 'string' ? payload.text : '';
+    case "paragraph": {
+      const text = typeof payload.text === "string" ? payload.text : "";
       if (text.trim()) {
         chunks.push(text);
         break;
@@ -21,39 +26,42 @@ function appendBlockText(type: string, payload: Record<string, unknown>, chunks:
       if (payload.doc) {
         const fromDoc: string[] = [];
         collectTextFromProseDoc(payload.doc, fromDoc);
-        if (fromDoc.length) chunks.push(fromDoc.join(' '));
+        if (fromDoc.length) chunks.push(fromDoc.join(" "));
       }
       break;
     }
-    case 'heading': {
-      if (typeof payload.text === 'string' && payload.text.trim()) chunks.push(payload.text);
+    case "heading": {
+      if (typeof payload.text === "string" && payload.text.trim())
+        chunks.push(payload.text);
       break;
     }
-    case 'code': {
-      if (typeof payload.code === 'string' && payload.code.trim()) chunks.push(payload.code);
+    case "code": {
+      if (typeof payload.code === "string" && payload.code.trim())
+        chunks.push(payload.code);
       break;
     }
     default:
       break;
   }
 }
-
-/** Plain-ish word count from block JSON + HTML-ish summary fallback. */
 export function estimateReadMinutesFromBlogFields(
   content: string | undefined,
-  summary: string
+  summary: string,
 ): number {
   const chunks: string[] = [];
-  if (content && typeof content === 'string' && content.trim()) {
+  if (content && typeof content === "string" && content.trim()) {
     try {
       const parsed = JSON.parse(content) as unknown;
       if (Array.isArray(parsed)) {
         for (const b of parsed) {
-          if (!b || typeof b !== 'object' || Array.isArray(b)) continue;
-          const block = b as { type?: string; payload?: unknown };
-          const t = typeof block.type === 'string' ? block.type : '';
+          if (!b || typeof b !== "object" || Array.isArray(b)) continue;
+          const block = b as {
+            type?: string;
+            payload?: unknown;
+          };
+          const t = typeof block.type === "string" ? block.type : "";
           const pl = block.payload;
-          if (pl && typeof pl === 'object' && !Array.isArray(pl)) {
+          if (pl && typeof pl === "object" && !Array.isArray(pl)) {
             appendBlockText(t, pl as Record<string, unknown>, chunks);
           }
         }
@@ -62,12 +70,11 @@ export function estimateReadMinutesFromBlogFields(
       chunks.push(content);
     }
   }
-
-  const body = chunks.join(' ').trim();
+  const body = chunks.join(" ").trim();
   const summaryPlain = summary
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
   const plain = body || summaryPlain;
   const words = plain.split(/\s+/).filter((w) => w.length > 0).length;

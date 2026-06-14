@@ -1,21 +1,20 @@
-'use client';
-
-import type { ReactNode } from 'react';
-import { Loader2 } from 'lucide-react';
-import { Skeleton, SkillIconSkeleton } from '@/components/ui/feedback';
-import { SkBar, SkBlock, SkGradientFill } from './primitives';
-import { profileCardSkeletonKeys } from './constants';
-import { cn } from '@/lib/core/utils';
-import { BLOG_FEED_GRID_CLASS, BLOG_FEED_GRID_ITEM_CLASS } from '@/lib/blog/blogFeedGrid';
+"use client";
+import type { ReactNode } from "react";
+import { Loader2 } from "lucide-react";
+import { Skeleton, SkillIconSkeleton } from "@/components/ui/feedback";
+import { SkBar, SkBlock, SkGradientFill } from "./primitives";
+import { profileCardSkeletonKeys } from "./constants";
+import { cn } from "@/lib/core/utils";
 import {
-  SHELL_CONTENT_MEASURE_CLASS,
-  SHELL_CONTENT_RAIL_CLASS,
-  SHELL_NAV_INNER_CLASS,
-} from '@/lib/shell/shellContentRail';
-import { SQUAD_DISCOVER_CARD_SLIDE_CLASS } from '@/lib/squads/squadDiscoverCardLayout';
-
-/** Profile accordion entry placeholder (work, education, certs, etc.). */
-export function ProfileCardSkeleton(props: Readonly<{ lines?: number }>) {
+  BLOG_FEED_GRID_CLASS,
+  BLOG_FEED_GRID_ITEM_CLASS,
+} from "@/lib/styles/blog";
+import { dashboard, layout, shell, squads } from "@/lib/styles";
+export function ProfileCardSkeleton(
+  props: Readonly<{
+    lines?: number;
+  }>,
+) {
   const lines = props.lines ?? 3;
   const keys = profileCardSkeletonKeys(lines);
   return (
@@ -30,17 +29,22 @@ export function ProfileCardSkeleton(props: Readonly<{ lines?: number }>) {
     </div>
   );
 }
-
-const DASHBOARD_OUTER = 'relative mx-auto w-full min-w-0 max-w-[min(100%,87.5rem)] shrink-0';
-const DASHBOARD_PAD = 'px-4 md:px-8';
-
-/** Hero swiper placeholder — dots, edition badge, and bottom content blocks. */
-export function HomeHeroSkeleton({ inline = false }: Readonly<{ inline?: boolean }>) {
+export function HomeHeroSkeleton({
+  inline = false,
+}: Readonly<{
+  inline?: boolean;
+}>) {
   const inner = (
     <div className="relative h-[480px] w-full overflow-hidden bg-muted/20 md:h-[560px]">
-      <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-1.5" aria-hidden>
-        {['dot-a', 'dot-b', 'dot-c', 'dot-d'].map((id) => (
-          <SkBlock key={id} className="size-3 shrink-0 border-2 border-border/50 bg-muted/35" />
+      <div
+        className="absolute left-4 top-4 z-10 flex flex-wrap gap-1.5"
+        aria-hidden
+      >
+        {["dot-a", "dot-b", "dot-c", "dot-d"].map((id) => (
+          <SkBlock
+            key={id}
+            className="size-3 shrink-0 border-2 border-border/50 bg-muted/35"
+          />
         ))}
       </div>
       <SkBlock
@@ -68,7 +72,7 @@ export function HomeHeroSkeleton({ inline = false }: Readonly<{ inline?: boolean
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {['stat-a', 'stat-b', 'stat-c'].map((id) => (
+            {["stat-a", "stat-b", "stat-c"].map((id) => (
               <SkBar key={id} className="h-3 w-10 shrink-0" />
             ))}
           </div>
@@ -80,16 +84,20 @@ export function HomeHeroSkeleton({ inline = false }: Readonly<{ inline?: boolean
     return <div aria-hidden>{inner}</div>;
   }
   return (
-    <div className="w-full min-w-0 overflow-hidden border-2 border-border bg-card" aria-hidden>
+    <div
+      className="w-full min-w-0 overflow-hidden border-2 border-border bg-card"
+      aria-hidden
+    >
       {inner}
     </div>
   );
 }
-
-/** Library section title row (icon + label). */
 export function HomeLibraryHeaderSkeleton() {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3" aria-hidden>
+    <div
+      className="flex flex-wrap items-center justify-between gap-3"
+      aria-hidden
+    >
       <div className="flex items-center gap-2">
         <SkBlock className="size-5 shrink-0 border border-border/50 bg-primary/20" />
         <SkBar className="h-6 w-[4.75rem]" />
@@ -97,8 +105,6 @@ export function HomeLibraryHeaderSkeleton() {
     </div>
   );
 }
-
-/** Library filter pills — neutral bars, not faux interactive buttons. */
 export function HomeLibraryPillsSkeleton() {
   return (
     <div className="-mx-1 flex gap-2 overflow-hidden px-1 pb-1" aria-hidden>
@@ -108,18 +114,24 @@ export function HomeLibraryPillsSkeleton() {
     </div>
   );
 }
-
-/** Home dashboard (hero + library grid) — used by `/` and route loading. */
 export function HomePageSkeletonInner() {
   return (
-    <div className="w-full min-w-0 max-w-full overflow-x-hidden" aria-busy="true">
-      <div className={cn(DASHBOARD_OUTER, 'pt-8 md:pt-10')}>
-        <div className={DASHBOARD_PAD}>
+    <div
+      className="w-full min-w-0 max-w-full overflow-x-hidden"
+      aria-busy="true"
+    >
+      <div className={cn(dashboard.contentOuter, "pt-8 md:pt-10")}>
+        <div className={dashboard.contentPad}>
           <HomeHeroSkeleton />
         </div>
       </div>
-      <div className={cn(DASHBOARD_OUTER, 'py-10 md:py-12')}>
-        <section className={cn('min-w-0 max-w-full space-y-4 overflow-x-hidden', DASHBOARD_PAD)}>
+      <div className={cn(dashboard.contentOuter, "py-10 md:py-12")}>
+        <section
+          className={cn(
+            "min-w-0 max-w-full space-y-4 overflow-x-hidden",
+            dashboard.contentPad,
+          )}
+        >
           <HomeLibraryHeaderSkeleton />
           <HomeLibraryPillsSkeleton />
           <FollowingPostsGridSkeleton count={6} />
@@ -128,11 +140,11 @@ export function HomePageSkeletonInner() {
     </div>
   );
 }
-
-/** Lightweight placeholder rows — no accent colors or heavy chrome. */
 function ProfileAccordionRowSk({
   showHeaderAction = true,
-}: Readonly<{ showHeaderAction?: boolean }>) {
+}: Readonly<{
+  showHeaderAction?: boolean;
+}>) {
   return (
     <div className="overflow-hidden border border-border/50 bg-muted/5">
       <div className="flex w-full items-center justify-between gap-2 border-b border-border/40 px-3 py-2.5">
@@ -158,14 +170,13 @@ function ProfileAccordionRowSk({
     </div>
   );
 }
-
-export type ProfilePageSkeletonVariant = 'owner' | 'public';
-
+export type ProfilePageSkeletonVariant = "owner" | "public";
 function ProfileRightColumnSkeleton({
   variant,
-}: Readonly<{ variant: ProfilePageSkeletonVariant }>) {
-  const isOwner = variant === 'owner';
-
+}: Readonly<{
+  variant: ProfilePageSkeletonVariant;
+}>) {
+  const isOwner = variant === "owner";
   if (!isOwner) {
     return (
       <>
@@ -222,7 +233,7 @@ function ProfileRightColumnSkeleton({
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            {['l1', 'l2', 'l3', 'l4'].map((k) => (
+            {["l1", "l2", "l3", "l4"].map((k) => (
               <SkBlock
                 key={k}
                 className="size-11 animate-pulse border-2 border-border bg-card shadow"
@@ -233,7 +244,6 @@ function ProfileRightColumnSkeleton({
       </>
     );
   }
-
   return (
     <>
       <div className="flex items-center justify-between border-4 border-border bg-card p-4 shadow">
@@ -265,8 +275,11 @@ function ProfileRightColumnSkeleton({
         <SkBar className="h-2 w-full max-w-xs" />
         <SkBlock className="flex min-h-[3rem] w-full animate-pulse items-center justify-between border-2 border-border bg-muted/30 p-3" />
         <div className="flex flex-wrap justify-center gap-3 pt-1">
-          {['x1', 'x2', 'x3', 'x4'].map((k) => (
-            <SkBlock key={k} className="size-10 animate-pulse border-2 border-border bg-muted/30" />
+          {["x1", "x2", "x3", "x4"].map((k) => (
+            <SkBlock
+              key={k}
+              className="size-10 animate-pulse border-2 border-border bg-muted/30"
+            />
           ))}
         </div>
       </div>
@@ -280,7 +293,7 @@ function ProfileRightColumnSkeleton({
           <SkBlock className="h-8 w-36 animate-pulse border-2 border-border shadow" />
         </div>
         <div className="mb-3 flex flex-wrap gap-2">
-          {['m1', 'm2', 'm3'].map((k) => (
+          {["m1", "m2", "m3"].map((k) => (
             <SkBlock
               key={k}
               className="h-7 w-28 animate-pulse border-2 border-border bg-muted/40"
@@ -343,7 +356,7 @@ function ProfileRightColumnSkeleton({
         <div className="space-y-3 pt-2">
           <SkBar className="h-2 w-32" />
           <div className="grid grid-cols-3 gap-2">
-            {['p', 'q', 'r'].map((k) => (
+            {["p", "q", "r"].map((k) => (
               <SkBlock
                 key={k}
                 className="border-2 border-border bg-card p-2 text-center shadow animate-pulse"
@@ -402,35 +415,30 @@ function ProfileRightColumnSkeleton({
     </>
   );
 }
-
-/** `/profile` (owner) and `/u/[username]` (public) — mirrors real page layout and section order. */
 export function ProfilePageSkeletonInner({
-  variant = 'owner',
-}: Readonly<{ variant?: ProfilePageSkeletonVariant }>) {
-  const isOwner = variant === 'owner';
-
+  variant = "owner",
+}: Readonly<{
+  variant?: ProfilePageSkeletonVariant;
+}>) {
+  const isOwner = variant === "owner";
   return (
     <div
       className={cn(
-        'min-h-screen w-full py-6 font-sans text-foreground md:py-8',
-        isOwner && 'ss-profile-readonly'
+        "min-h-screen w-full py-6 font-sans text-foreground md:py-8",
+        isOwner && "ss-profile-readonly",
       )}
     >
-      <div className={SHELL_CONTENT_RAIL_CLASS}>
+      <div className={shell.contentRail}>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          {/* LEFT — matches lg:col-span-8 space-y-8 */}
           <div className="space-y-8 lg:col-span-8">
-            {/* HEADER */}
             <section className="overflow-hidden border-4 border-border bg-card shadow">
-              {/* Cover: pulse only the fill — keep border fully opaque so it does not show through the avatar */}
               <div className="relative h-48 w-full shrink-0 border-b-4 border-border bg-muted/25">
-                <div className="absolute inset-0 animate-pulse bg-muted/35" aria-hidden />
+                <div
+                  className="absolute inset-0 animate-pulse bg-muted/35"
+                  aria-hidden
+                />
               </div>
               <div className="relative bg-card px-6 pb-8 pt-24 md:pt-32">
-                {/*
-                Avatar: solid bg + z-index so the cover bottom border never reads "inside" the box.
-                Do not put animate-pulse on this node — pulse opacity would reveal the line behind.
-              */}
                 <div
                   className="absolute -top-14 left-6 z-20 size-28 border-4 border-border bg-card shadow md:size-36"
                   aria-hidden
@@ -440,8 +448,8 @@ export function ProfilePageSkeletonInner({
                 <div className="flex flex-col gap-4">
                   <div
                     className={cn(
-                      'flex flex-col justify-between gap-4 md:items-start',
-                      isOwner ? 'md:flex-row' : 'md:flex-row md:items-end'
+                      "flex flex-col justify-between gap-4 md:items-start",
+                      isOwner ? "md:flex-row" : "md:flex-row md:items-end",
                     )}
                   >
                     <div className="space-y-2">
@@ -461,11 +469,14 @@ export function ProfilePageSkeletonInner({
                       </div>
                     )}
                   </div>
-                  {/* Bio — opaque panel + bg strip behind chip (matches real page) so the top border is not visible through the chip */}
+
                   <div className="relative z-0 mt-2 border-2 border-primary bg-card p-6 pt-8">
                     <div className="absolute -top-3 left-6 z-[2] inline-flex items-end bg-card px-2 pb-px">
                       <div className="relative h-6 w-36 border-2 border-primary bg-primary/15">
-                        <div className="absolute inset-0 animate-pulse bg-primary/10" aria-hidden />
+                        <div
+                          className="absolute inset-0 animate-pulse bg-primary/10"
+                          aria-hidden
+                        />
                       </div>
                     </div>
                     <div
@@ -483,19 +494,23 @@ export function ProfilePageSkeletonInner({
                       aria-hidden
                     />
                   </div>
-                  {/* Stats — owner: dashed gray strip; public: dashed border strip + dividers */}
+
                   <div
                     className={cn(
-                      'mt-8 flex flex-wrap border-4 border-dashed bg-muted/5 p-4',
-                      isOwner ? 'gap-6 border-gray-300 dark:border-border' : 'gap-3 border-border'
+                      "mt-8 flex flex-wrap border-4 border-dashed bg-muted/5 p-4",
+                      isOwner
+                        ? "gap-6 border-gray-300 dark:border-border"
+                        : "gap-3 border-border",
                     )}
                   >
-                    {['a', 'b', 'c', 'd', 'e'].map((id, i) => (
+                    {["a", "b", "c", "d", "e"].map((id, i) => (
                       <div
                         key={id}
                         className={cn(
-                          'flex items-center gap-2',
-                          !isOwner && i < 4 && 'border-r-2 border-border/50 pr-4'
+                          "flex items-center gap-2",
+                          !isOwner &&
+                            i < 4 &&
+                            "border-r-2 border-border/50 pr-4",
                         )}
                       >
                         <SkBlock className="size-6 shrink-0 animate-pulse border-2 border-border" />
@@ -520,7 +535,7 @@ export function ProfilePageSkeletonInner({
                   <SkBlock className="h-9 w-28 animate-pulse border-2 border-border" />
                 </div>
                 <div className="flex flex-wrap gap-1 border-b-2 border-border pb-2">
-                  {['Published', 'Drafts', 'Deleted'].map((label) => (
+                  {["Published", "Drafts", "Deleted"].map((label) => (
                     <SkBlock
                       key={label}
                       className="h-9 min-w-[5.5rem] animate-pulse border-2 border-border px-3"
@@ -539,8 +554,11 @@ export function ProfilePageSkeletonInner({
               <section className="space-y-4 border-4 border-border bg-card p-4 shadow">
                 <SkBar className="h-3 w-36" />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {['pb1', 'pb2', 'pb3', 'pb4'].map((k) => (
-                    <div key={k} className="overflow-hidden border-2 border-border bg-card shadow">
+                  {["pb1", "pb2", "pb3", "pb4"].map((k) => (
+                    <div
+                      key={k}
+                      className="overflow-hidden border-2 border-border bg-card shadow"
+                    >
                       <SkBlock className="aspect-[16/10] w-full animate-pulse border-b-2 border-border" />
                       <div className="space-y-2 p-3">
                         <SkBar className="h-2 max-w-[200px] w-[78%]" />
@@ -552,7 +570,6 @@ export function ProfilePageSkeletonInner({
               </section>
             )}
 
-            {/* Activity */}
             <section className="space-y-4 border-4 border-border bg-card p-4 shadow">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -565,10 +582,13 @@ export function ProfilePageSkeletonInner({
               </div>
               <div className="flex gap-1 border-b-4 border-border pb-3">
                 {(isOwner
-                  ? (['Posts', 'Replies', 'Repost'] as const)
-                  : (['Posts', 'Repost'] as const)
+                  ? (["Posts", "Replies", "Repost"] as const)
+                  : (["Posts", "Repost"] as const)
                 ).map((t) => (
-                  <SkBlock key={t} className="h-10 flex-1 animate-pulse border-2 border-border" />
+                  <SkBlock
+                    key={t}
+                    className="h-10 flex-1 animate-pulse border-2 border-border"
+                  />
                 ))}
               </div>
               <div className="border-4 border-dashed border-border bg-muted/5 p-4 sm:p-6">
@@ -590,7 +610,6 @@ export function ProfilePageSkeletonInner({
               </div>
             ) : null}
 
-            {/* Stack & Tools | My Setup */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <section className="space-y-4 border-4 border-border bg-card p-4 shadow">
                 <div className="flex items-center justify-between gap-2 border-b-2 border-border px-2 pb-3 md:px-0">
@@ -603,7 +622,7 @@ export function ProfilePageSkeletonInner({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2 py-1">
-                  {['s1', 's2', 's3', 's4', 's5'].map((k) => (
+                  {["s1", "s2", "s3", "s4", "s5"].map((k) => (
                     <SkBlock
                       key={k}
                       className="h-11 w-[7.5rem] animate-pulse border-2 border-border bg-muted/10 shadow"
@@ -622,7 +641,7 @@ export function ProfilePageSkeletonInner({
                   ) : null}
                 </div>
                 <div className="flex gap-3 overflow-hidden py-1">
-                  {['u1', 'u2'].map((k) => (
+                  {["u1", "u2"].map((k) => (
                     <div
                       key={k}
                       className="w-[240px] shrink-0 overflow-hidden border-2 border-border bg-muted/10 shadow"
@@ -638,15 +657,16 @@ export function ProfilePageSkeletonInner({
               </section>
             </div>
 
-            {/* Section list — same count as live accordions, minimal chrome */}
             <div className="space-y-2.5">
               {Array.from({ length: 5 }, (_, i) => (
-                <ProfileAccordionRowSk key={`profile-acc-sk-${i}`} showHeaderAction={isOwner} />
+                <ProfileAccordionRowSk
+                  key={`profile-acc-sk-${i}`}
+                  showHeaderAction={isOwner}
+                />
               ))}
             </div>
           </div>
 
-          {/* RIGHT — lg:col-span-4 space-y-6 */}
           <div className="space-y-6 lg:col-span-4">
             <ProfileRightColumnSkeleton variant={variant} />
           </div>
@@ -655,12 +675,10 @@ export function ProfilePageSkeletonInner({
     </div>
   );
 }
-
-/** `/profile/analytics` */
 export function AnalyticsPageSkeletonInner() {
   return (
     <div className="min-h-screen w-full bg-background py-6 font-sans md:py-8">
-      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'space-y-6')}>
+      <div className={cn(shell.contentRail, "space-y-6")}>
         <div className="flex flex-col justify-between gap-4 border-b-4 border-border pb-6 md:flex-row md:items-center">
           <div className="flex items-center gap-4">
             <SkBlock className="size-12 shrink-0 animate-pulse border-4 border-border" />
@@ -670,14 +688,17 @@ export function AnalyticsPageSkeletonInner() {
             </div>
           </div>
           <div className="flex gap-1 border-2 border-border bg-muted/10 p-1 self-start">
-            {['t1', 't2', 't3'].map((id) => (
+            {["t1", "t2", "t3"].map((id) => (
               <SkBlock key={id} className="h-10 w-28 animate-pulse" />
             ))}
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => `m-${i}`).map((id) => (
-            <SkBlock key={id} className="h-28 border-2 border-border animate-pulse" />
+            <SkBlock
+              key={id}
+              className="h-28 border-2 border-border animate-pulse"
+            />
           ))}
         </div>
         <SkBlock className="h-72 w-full border-2 border-border animate-pulse" />
@@ -689,14 +710,12 @@ export function AnalyticsPageSkeletonInner() {
     </div>
   );
 }
-
-/** `/blogs/write` — mirrors top bar + left tools + centre draft + right publish (light placeholders). */
 export function BlogWritePageSkeletonInner() {
   return (
     <div
       className={cn(
-        'flex h-screen max-h-screen min-h-0 flex-col overflow-hidden border-2 border-border bg-background font-mono text-foreground shadow',
-        SHELL_CONTENT_RAIL_CLASS
+        "flex h-screen max-h-screen min-h-0 flex-col overflow-hidden border-2 border-border bg-background font-mono text-foreground shadow",
+        shell.contentRail,
       )}
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b-2 border-border bg-card py-2">
@@ -711,14 +730,16 @@ export function BlogWritePageSkeletonInner() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Left — block tools (lg only, same as live shell) */}
         <aside className="hidden w-[280px] shrink-0 flex-col border-r border-border/50 bg-muted/5 px-3 py-3 lg:flex">
           <p className="mb-2 text-[8px] font-bold uppercase tracking-widest text-muted-foreground">
             Tools
           </p>
           <div className="space-y-1.5">
             {Array.from({ length: 6 }, (_, i) => `tw-${i}`).map((id) => (
-              <div key={id} className="flex items-center gap-2 border border-transparent px-2 py-1">
+              <div
+                key={id}
+                className="flex items-center gap-2 border border-transparent px-2 py-1"
+              >
                 <SkBlock className="size-3.5 shrink-0 border-0 bg-muted/40" />
                 <SkBar className="h-1.5 flex-1 max-w-[9rem]" />
               </div>
@@ -730,7 +751,6 @@ export function BlogWritePageSkeletonInner() {
           <SkBlock className="h-16 w-full border border-border/40 bg-muted/10" />
         </aside>
 
-        {/* Centre — title + summary + body */}
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden border-border/50 lg:border-x">
           <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
             <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -757,7 +777,6 @@ export function BlogWritePageSkeletonInner() {
           </div>
         </main>
 
-        {/* Right — publish + assets */}
         <aside className="hidden w-[300px] shrink-0 flex-col border-l border-border/50 bg-card/40 px-4 py-3 lg:flex">
           <p className="mb-2 text-[8px] font-bold uppercase tracking-widest text-muted-foreground">
             Publish
@@ -775,49 +794,84 @@ export function BlogWritePageSkeletonInner() {
     </div>
   );
 }
-
-/** Matches `PublicBlogPostPage` loading UI — use in route `loading.tsx` + client fetch state. */
 export function BlogPostPageSkeletonInner() {
   return (
     <div className="public-blog-post-page flex min-h-screen flex-col bg-background text-foreground">
       <div
         className={cn(
-          SHELL_CONTENT_RAIL_CLASS,
-          'relative flex-1 !overflow-visible py-6 md:py-10 xl:py-6'
+          shell.contentRail,
+          "relative flex-1 !overflow-visible py-6 md:py-10 xl:py-6",
         )}
       >
         <div className="w-full border-2 border-border bg-transparent">
           <div className="px-3 py-6 sm:px-4 lg:px-5 md:py-10">
             <div className="mb-8 flex flex-wrap gap-3">
-              <div className="h-8 w-40 animate-pulse bg-muted sm:h-9" aria-hidden />
-              <div className="h-8 w-32 animate-pulse bg-muted/70 sm:h-9" aria-hidden />
+              <div
+                className="h-8 w-40 animate-pulse bg-muted sm:h-9"
+                aria-hidden
+              />
+              <div
+                className="h-8 w-32 animate-pulse bg-muted/70 sm:h-9"
+                aria-hidden
+              />
             </div>
             <div className="mb-10 space-y-3 md:space-y-4">
-              <div className="h-10 w-full max-w-4xl animate-pulse bg-muted md:h-14" aria-hidden />
-              <div className="h-10 w-[92%] max-w-3xl animate-pulse bg-muted md:h-14" aria-hidden />
-              <div className="h-10 w-[64%] max-w-2xl animate-pulse bg-muted md:h-14" aria-hidden />
+              <div
+                className="h-10 w-full max-w-4xl animate-pulse bg-muted md:h-14"
+                aria-hidden
+              />
+              <div
+                className="h-10 w-[92%] max-w-3xl animate-pulse bg-muted md:h-14"
+                aria-hidden
+              />
+              <div
+                className="h-10 w-[64%] max-w-2xl animate-pulse bg-muted md:h-14"
+                aria-hidden
+              />
             </div>
             <div className="border-l-4 border-primary/25 bg-muted/10 p-6 md:p-8">
-              <div className="mb-4 h-3 w-36 animate-pulse bg-muted/80" aria-hidden />
+              <div
+                className="mb-4 h-3 w-36 animate-pulse bg-muted/80"
+                aria-hidden
+              />
               <div className="space-y-2">
-                <div className="h-2.5 w-full animate-pulse bg-muted" aria-hidden />
-                <div className="h-2.5 w-full animate-pulse bg-muted" aria-hidden />
-                <div className="h-2.5 w-[78%] animate-pulse bg-muted" aria-hidden />
+                <div
+                  className="h-2.5 w-full animate-pulse bg-muted"
+                  aria-hidden
+                />
+                <div
+                  className="h-2.5 w-full animate-pulse bg-muted"
+                  aria-hidden
+                />
+                <div
+                  className="h-2.5 w-[78%] animate-pulse bg-muted"
+                  aria-hidden
+                />
               </div>
             </div>
             <div className="mt-8 flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase text-muted-foreground">
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
+              <Loader2
+                className="h-4 w-4 shrink-0 animate-spin text-primary"
+                aria-hidden
+              />
               Initializing_Stream…
             </div>
           </div>
           <div className="px-3 py-6 sm:px-4 lg:px-5 md:py-10">
-            <div className={cn('space-y-3', SHELL_CONTENT_MEASURE_CLASS)}>
+            <div className={cn("space-y-3", shell.contentMeasure)}>
               {Array.from({ length: 10 }, (_, i) => (
                 <div
                   key={`blog-post-sk-${i}`}
                   className="h-2.5 animate-pulse bg-muted"
                   style={{
-                    width: i % 4 === 0 ? '100%' : i % 4 === 1 ? '96%' : i % 4 === 2 ? '88%' : '72%',
+                    width:
+                      i % 4 === 0
+                        ? "100%"
+                        : i % 4 === 1
+                          ? "96%"
+                          : i % 4 === 2
+                            ? "88%"
+                            : "72%",
                   }}
                   aria-hidden
                 />
@@ -829,20 +883,19 @@ export function BlogPostPageSkeletonInner() {
     </div>
   );
 }
-
 type DialogPanelSkeletonProps = {
-  /** Shown above structural placeholders (e.g. OAuth status). */
   statusLine?: ReactNode;
   className?: string;
 };
-
-/** Matches `FormDialog` / `Dialog` proportions: header tile + title, form rows, footer actions. */
-export function DialogPanelSkeleton({ statusLine, className }: Readonly<DialogPanelSkeletonProps>) {
+export function DialogPanelSkeleton({
+  statusLine,
+  className,
+}: Readonly<DialogPanelSkeletonProps>) {
   return (
     <div
       className={cn(
-        'flex w-full max-w-lg flex-col overflow-hidden  border-2 border-border bg-card shadow',
-        className
+        "flex w-full max-w-lg flex-col overflow-hidden  border-2 border-border bg-card shadow",
+        className,
       )}
     >
       <header className="flex items-end gap-3 border-b-2 border-border bg-muted/20 px-4 py-3 sm:gap-4">
@@ -879,15 +932,14 @@ export function DialogPanelSkeleton({ statusLine, className }: Readonly<DialogPa
     </div>
   );
 }
-
-const DOCS_PAGE_MIN = 'min-h-[calc(100vh-var(--header-height))]';
-
-/** Matches `docs/layout` chrome: frame, sidebar rail, breadcrumb strip, prose blocks. */
 export function DocsPageSkeletonInner() {
   return (
-    <div className={`flex w-full flex-col ${DOCS_PAGE_MIN}`}>
+    <div className={cn("flex w-full flex-col", layout.docsPageMinHeight)}>
       <div
-        className={`mx-auto flex w-full max-w-[1440px] flex-1 flex-col border-4 border-border bg-card shadow ${DOCS_PAGE_MIN}`}
+        className={cn(
+          "mx-auto flex w-full max-w-[1440px] flex-1 flex-col border-4 border-border bg-card shadow",
+          layout.docsPageMinHeight,
+        )}
       >
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           <aside className="hidden w-72 shrink-0 flex-col gap-4 border-border bg-card/50 p-4 lg:flex lg:border-r-4">
@@ -930,11 +982,9 @@ export function DocsPageSkeletonInner() {
     </div>
   );
 }
-
-/** Matches contact page: rail, two-column grid, form card + sidebar card. */
 export function ContactPageSkeletonInner() {
   return (
-    <div className={`${SHELL_CONTENT_RAIL_CLASS} py-8 pb-24 md:py-12`}>
+    <div className={`${shell.contentRail} py-8 pb-24 md:py-12`}>
       <div className="w-full space-y-8">
         <div className="grid items-start gap-8 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] xl:gap-12">
           <div className="space-y-8">
@@ -987,7 +1037,6 @@ export function ContactPageSkeletonInner() {
     </div>
   );
 }
-
 export function SettingsSidebarSkeleton({ itemCount }: { itemCount: number }) {
   return (
     <div className="space-y-4">
@@ -999,23 +1048,26 @@ export function SettingsSidebarSkeleton({ itemCount }: { itemCount: number }) {
         </div>
       </div>
       <div className="space-y-2 border-4 border-border bg-card p-3 shadow">
-        {Array.from({ length: itemCount }, (_, idx) => `nav-skeleton-${idx + 1}`).map(
-          (itemId, i) => (
-            <div key={itemId} className="flex items-center gap-3 px-1 py-1.5">
-              <SkBlock className="size-4 shrink-0 animate-pulse" />
-              <SkBar style={{ width: `${45 + ((i * 11) % 41)}%` }} />
-            </div>
-          )
-        )}
+        {Array.from(
+          { length: itemCount },
+          (_, idx) => `nav-skeleton-${idx + 1}`,
+        ).map((itemId, i) => (
+          <div key={itemId} className="flex items-center gap-3 px-1 py-1.5">
+            <SkBlock className="size-4 shrink-0 animate-pulse" />
+            <SkBar style={{ width: `${45 + ((i * 11) % 41)}%` }} />
+          </div>
+        ))}
       </div>
     </div>
   );
 }
-
-/** Settings → Stack & Tools section (section switch + route loading). */
-export function StackToolsSettingsSkeleton({ className }: { className?: string }) {
+export function StackToolsSettingsSkeleton({
+  className,
+}: {
+  className?: string;
+}) {
   return (
-    <div className={cn('space-y-5', className)} aria-hidden>
+    <div className={cn("space-y-5", className)} aria-hidden>
       <div className="space-y-2">
         <SkBar className="h-6 w-44" />
         <SkBar className="h-3 w-full max-w-lg" />
@@ -1024,7 +1076,7 @@ export function StackToolsSettingsSkeleton({ className }: { className?: string }
         <div className="space-y-2">
           <SkBar className="h-2 w-28" />
           <div className="flex flex-wrap gap-2">
-            {['a', 'b', 'c'].map((k) => (
+            {["a", "b", "c"].map((k) => (
               <div key={k} className="flex h-8 items-center gap-2 bg-card px-2">
                 <SkillIconSkeleton className="size-5 shrink-0" />
                 <SkBar className="h-2 w-12" />
@@ -1045,10 +1097,9 @@ export function StackToolsSettingsSkeleton({ className }: { className?: string }
     </div>
   );
 }
-
 export function SettingsContentSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('space-y-8', className)}>
+    <div className={cn("space-y-8", className)}>
       <div className="space-y-3">
         <SkBar className="h-6 w-[40%]" />
         <SkBar className="h-3 w-[65%]" />
@@ -1090,12 +1141,14 @@ export function SettingsContentSkeleton({ className }: { className?: string }) {
     </div>
   );
 }
-
-/** Settings grid — for route `loading` and auth gate (inside main content). */
-export function SettingsPageSkeletonInner({ navItems = 18 }: { navItems?: number }) {
+export function SettingsPageSkeletonInner({
+  navItems = 18,
+}: {
+  navItems?: number;
+}) {
   return (
     <div className="min-h-screen font-sans text-foreground">
-      <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 md:py-12')}>
+      <div className={cn(shell.contentRail, "py-8 md:py-12")}>
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[256px_1fr]">
           <aside className="mx-auto w-full max-w-[256px] overflow-hidden lg:mx-0">
             <SettingsSidebarSkeleton itemCount={navItems} />
@@ -1110,8 +1163,6 @@ export function SettingsPageSkeletonInner({ navItems = 18 }: { navItems?: number
     </div>
   );
 }
-
-/** Toolbar — matches `RailSectionSubheader` with left writer buttons + search on following page. */
 export function FollowingToolbarSkeleton() {
   return (
     <div
@@ -1126,12 +1177,10 @@ export function FollowingToolbarSkeleton() {
           />
         ))}
       </div>
-      <SkBlock className="h-[42px] w-36 shrink-0 border-2 border-border bg-muted/15 sm:w-44" />
+      <SkBlock className="h-[42px] w-[12.5rem] shrink-0 border-2 border-border bg-muted/15 sm:w-[16.5rem]" />
     </div>
   );
 }
-
-/** Blog-card–shaped tiles (matches `BlogCard` weight). */
 function FollowingBlogCardSkeletonTile() {
   return (
     <div className="flex min-h-0 w-full flex-col overflow-hidden border-[3px] border-border bg-card text-card-foreground">
@@ -1155,7 +1204,7 @@ function FollowingBlogCardSkeletonTile() {
               <SkBar className="h-2 w-20" />
             </div>
             <div className="ml-auto flex shrink-0 gap-1.5" aria-hidden>
-              {['eng-a', 'eng-b', 'eng-c', 'eng-d'].map((id) => (
+              {["eng-a", "eng-b", "eng-c", "eng-d"].map((id) => (
                 <SkBar key={id} className="size-9 shrink-0" />
               ))}
             </div>
@@ -1165,11 +1214,13 @@ function FollowingBlogCardSkeletonTile() {
     </div>
   );
 }
-
 export function FollowingPostsGridSkeleton({
   count = 6,
   className,
-}: Readonly<{ count?: number; className?: string }>) {
+}: Readonly<{
+  count?: number;
+  className?: string;
+}>) {
   return (
     <ul className={cn(BLOG_FEED_GRID_CLASS, className)} aria-hidden>
       {Array.from({ length: count }, (_, i) => `fp-${i}`).map((id) => (
@@ -1180,11 +1231,12 @@ export function FollowingPostsGridSkeleton({
     </ul>
   );
 }
-
-/** Intro row placeholders — aligns with `ShellPageIntroHeader` spacing. */
 export function FollowingIntroSkeleton() {
   return (
-    <header className="flex w-full flex-col items-start space-y-3 md:space-y-4" aria-hidden>
+    <header
+      className="flex w-full flex-col items-start space-y-3 md:space-y-4"
+      aria-hidden
+    >
       <SkBlock className="h-10 w-full max-w-md animate-pulse border-2 border-border bg-card shadow" />
       <div className="w-full space-y-2">
         <SkBar className="h-8 w-full max-w-[18rem] sm:h-10" />
@@ -1197,14 +1249,17 @@ export function FollowingIntroSkeleton() {
     </header>
   );
 }
-
-/** Full rail layout for following, bookmarks, reposts, and similar feed pages. */
 export function FollowingPageContentSkeleton({
   showIntro = false,
-}: Readonly<{ showIntro?: boolean }>) {
+}: Readonly<{
+  showIntro?: boolean;
+}>) {
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
-      <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8" aria-busy="true">
+    <div className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}>
+      <div
+        className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8"
+        aria-busy="true"
+      >
         {showIntro ? <FollowingIntroSkeleton /> : null}
         <FollowingToolbarSkeleton />
         <section aria-label="Loading posts" className="min-w-0">
@@ -1214,8 +1269,6 @@ export function FollowingPageContentSkeleton({
     </div>
   );
 }
-
-/** Horizontal blog-card swiper — explore buffer rail & trending lanes. */
 export function CompactBlogPostsSwiperSkeleton({
   slideCount = 3,
   showToolbar = true,
@@ -1227,7 +1280,7 @@ export function CompactBlogPostsSwiperSkeleton({
 }>) {
   return (
     <div
-      className={cn('relative flex w-full min-w-0 flex-col', className)}
+      className={cn("relative flex w-full min-w-0 flex-col", className)}
       aria-busy="true"
       aria-hidden
     >
@@ -1243,7 +1296,10 @@ export function CompactBlogPostsSwiperSkeleton({
       ) : null}
       <div className="flex flex-nowrap gap-3 overflow-hidden pb-2">
         {Array.from({ length: slideCount }, (_, i) => `sw-${i}`).map((id) => (
-          <div key={id} className="w-[22rem] shrink-0 sm:w-[23rem] md:w-[24rem]">
+          <div
+            key={id}
+            className="w-[22rem] shrink-0 sm:w-[23rem] md:w-[24rem]"
+          >
             <FollowingBlogCardSkeletonTile />
           </div>
         ))}
@@ -1251,12 +1307,14 @@ export function CompactBlogPostsSwiperSkeleton({
     </div>
   );
 }
-
-/** Explore spotlight carousel block. */
 export function ExploreSpotlightSkeleton() {
   return (
-    <section className="relative w-full min-w-0" aria-busy="true" aria-label="Loading spotlight">
-      <div className="relative flex min-h-[min(48vh,380px)] w-full flex-col justify-end overflow-hidden border-2 border-border shadow md:min-h-[360px]">
+    <section
+      className="relative w-full min-w-0"
+      aria-busy="true"
+      aria-label="Loading spotlight"
+    >
+      <div className="relative flex h-[min(40vh,320px)] w-full flex-col justify-end overflow-hidden border-2 border-border shadow md:h-[300px]">
         <SkGradientFill className="absolute inset-0" />
         <div className="relative z-10 flex flex-col justify-end p-6 md:p-10">
           <SkBar className="h-6 w-28 bg-primary-foreground/20" />
@@ -1268,8 +1326,6 @@ export function ExploreSpotlightSkeleton() {
     </section>
   );
 }
-
-/** Trending stacked hero — front card + peeking back stack. */
 export function TrendingStackedHeroSkeleton() {
   return (
     <section
@@ -1296,8 +1352,6 @@ export function TrendingStackedHeroSkeleton() {
     </section>
   );
 }
-
-/** One trending category lane (subheader + swiper). */
 export function TrendingCategoryLaneSkeleton() {
   return (
     <div className="min-w-0 space-y-3" aria-hidden>
@@ -1312,35 +1366,34 @@ export function TrendingCategoryLaneSkeleton() {
     </div>
   );
 }
-
-/** Full `/trending` page layout. */
 export function TrendingPageSkeletonInner() {
   return (
     <div
       className={cn(
-        SHELL_CONTENT_RAIL_CLASS,
-        'flex min-h-0 flex-1 flex-col gap-10 pb-10 md:gap-12 md:pb-14'
+        shell.contentRail,
+        "flex min-h-0 flex-1 flex-col gap-10 pb-10 md:gap-12 md:pb-14",
       )}
       aria-busy="true"
     >
       <FollowingIntroSkeleton />
       <TrendingStackedHeroSkeleton />
-      <section className="min-w-0 space-y-10" aria-label="Loading category lanes">
-        {['tr-lane-0', 'tr-lane-1', 'tr-lane-2'].map((id) => (
+      <section
+        className="min-w-0 space-y-10"
+        aria-label="Loading category lanes"
+      >
+        {["tr-lane-0", "tr-lane-1", "tr-lane-2"].map((id) => (
           <TrendingCategoryLaneSkeleton key={id} />
         ))}
       </section>
     </div>
   );
 }
-
-/** Single squad discover card placeholder. */
 export function ExploreSquadCardSkeleton() {
   return (
     <div
       className={cn(
-        SQUAD_DISCOVER_CARD_SLIDE_CLASS,
-        'h-[17.5rem] shrink-0 overflow-hidden border-[3px] border-border bg-background shadow'
+        squads.discoverCardSlide,
+        "h-[17.5rem] shrink-0 overflow-hidden border-[3px] border-border bg-background shadow",
       )}
       aria-hidden
     >
@@ -1348,8 +1401,11 @@ export function ExploreSquadCardSkeleton() {
       <div className="relative -mt-14 space-y-2 px-4 pb-3 md:px-5">
         <SkBlock className="size-12 border-[3px] bg-muted/30 md:size-16" />
         <div className="flex -space-x-2 pl-14 md:pl-[4.5rem]">
-          {['sq-m0', 'sq-m1', 'sq-m2'].map((id) => (
-            <SkBlock key={id} className="size-7 border-2 border-background bg-muted/40" />
+          {["sq-m0", "sq-m1", "sq-m2"].map((id) => (
+            <SkBlock
+              key={id}
+              className="size-7 border-2 border-background bg-muted/40"
+            />
           ))}
         </div>
         <SkBar className="mt-2 h-5 w-[72%]" />
@@ -1358,9 +1414,11 @@ export function ExploreSquadCardSkeleton() {
     </div>
   );
 }
-
-/** Horizontal top-squads rail on explore. */
-export function ExploreTopSquadsSkeleton({ count = 6 }: Readonly<{ count?: number }>) {
+export function ExploreTopSquadsSkeleton({
+  count = 6,
+}: Readonly<{
+  count?: number;
+}>) {
   return (
     <div
       className="ss-scrollbar-hide flex w-full min-w-0 flex-nowrap gap-4 overflow-x-hidden pb-1"
@@ -1373,7 +1431,6 @@ export function ExploreTopSquadsSkeleton({ count = 6 }: Readonly<{ count?: numbe
     </div>
   );
 }
-
 export function ExploreHotTagsSkeleton() {
   return (
     <div className="flex flex-wrap gap-2" aria-hidden>
@@ -1383,31 +1440,36 @@ export function ExploreHotTagsSkeleton() {
     </div>
   );
 }
-
-/** Sector category tile — compact inline member row like live cards. */
-export function ExploreSectorCategoryCardSkeleton({ hero = false }: Readonly<{ hero?: boolean }>) {
+export function ExploreSectorCategoryCardSkeleton({
+  hero = false,
+}: Readonly<{
+  hero?: boolean;
+}>) {
   return (
     <div
       className={cn(
-        'relative min-h-[220px] overflow-hidden border-2 border-border shadow',
-        hero ? 'md:col-span-2 md:min-h-[260px]' : 'bg-muted/20'
+        "relative min-h-[220px] overflow-hidden border-2 border-border shadow",
+        hero ? "md:col-span-2 md:min-h-[260px]" : "bg-muted/20",
       )}
       aria-hidden
     >
       {hero ? <SkGradientFill className="absolute inset-0" /> : null}
       <div
         className={cn(
-          'relative z-10 p-8 pb-8 pt-10 pr-24 sm:pr-28',
-          hero && 'text-primary-foreground'
+          "relative z-10 p-8 pb-8 pt-10 pr-24 sm:pr-28",
+          hero && "text-primary-foreground",
         )}
       >
-        <SkBar className={cn('h-8 w-2/3', hero && 'h-10 w-3/4')} />
+        <SkBar className={cn("h-8 w-2/3", hero && "h-10 w-3/4")} />
         <SkBar className="mt-4 h-14 w-full max-w-xs" />
         <SkBar className="mt-5 h-10 w-32" />
         <div className="mt-4 flex items-center gap-2">
           <div className="flex -space-x-1.5">
-            {['ex-av-0', 'ex-av-1', 'ex-av-2'].map((id) => (
-              <SkBlock key={id} className="size-6 border-2 border-background bg-muted/45" />
+            {["ex-av-0", "ex-av-1", "ex-av-2"].map((id) => (
+              <SkBlock
+                key={id}
+                className="size-6 border-2 border-background bg-muted/45"
+              />
             ))}
           </div>
           <SkBar className="h-2.5 w-16" />
@@ -1416,7 +1478,6 @@ export function ExploreSectorCategoryCardSkeleton({ hero = false }: Readonly<{ h
     </div>
   );
 }
-
 export function ExploreSectorGridSkeleton() {
   return (
     <div
@@ -1425,18 +1486,19 @@ export function ExploreSectorGridSkeleton() {
       aria-label="Loading sectors"
     >
       <ExploreSectorCategoryCardSkeleton hero />
-      {['ex-cat-1', 'ex-cat-2', 'ex-cat-3', 'ex-cat-4'].map((id) => (
+      {["ex-cat-1", "ex-cat-2", "ex-cat-3", "ex-cat-4"].map((id) => (
         <ExploreSectorCategoryCardSkeleton key={id} />
       ))}
     </div>
   );
 }
-
-/** Full `/explore` page layout. */
 export function ExplorePageSkeletonInner() {
   return (
     <div
-      className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col gap-10 md:gap-12')}
+      className={cn(
+        shell.contentRail,
+        "flex min-h-0 flex-1 flex-col gap-10 md:gap-12",
+      )}
       aria-busy="true"
     >
       <FollowingIntroSkeleton />
@@ -1455,7 +1517,10 @@ export function ExplorePageSkeletonInner() {
           </div>
         </div>
         <div className="flex min-h-0 flex-col lg:col-span-2">
-          <CompactBlogPostsSwiperSkeleton slideCount={3} className="h-full min-h-0 flex-1" />
+          <CompactBlogPostsSwiperSkeleton
+            slideCount={3}
+            className="h-full min-h-0 flex-1"
+          />
         </div>
       </section>
       <section className="space-y-4" aria-label="Loading sector categories">
@@ -1465,13 +1530,11 @@ export function ExplorePageSkeletonInner() {
     </div>
   );
 }
-
 function StatCardSkeleton() {
   return (
     <SkBlock className="h-[7.25rem] animate-pulse border-4 border-border bg-card shadow" />
   );
 }
-
 function AchievementCardSkeletonTile() {
   return (
     <SkBlock className="flex h-[13.5rem] animate-pulse flex-col border-2 border-border bg-card p-4 shadow sm:p-5">
@@ -1486,7 +1549,6 @@ function AchievementCardSkeletonTile() {
     </SkBlock>
   );
 }
-
 function InviteRosterRowSkeleton() {
   return (
     <li className="flex items-center gap-3 border-b-2 border-border/60 px-4 py-3 last:border-b-0">
@@ -1500,11 +1562,12 @@ function InviteRosterRowSkeleton() {
     </li>
   );
 }
-
-/** `/invite` — intro, share panel, stats aside, referral roster. */
 export function InvitePageSkeletonInner() {
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')} aria-busy="true">
+    <div
+      className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}
+      aria-busy="true"
+    >
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
         <FollowingIntroSkeleton />
 
@@ -1562,11 +1625,12 @@ export function InvitePageSkeletonInner() {
     </div>
   );
 }
-
-/** `/achievements` — intro, stats row, badge catalog grid. */
 export function AchievementsPageSkeletonInner() {
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')} aria-busy="true">
+    <div
+      className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}
+      aria-busy="true"
+    >
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
         <FollowingIntroSkeleton />
 
@@ -1606,12 +1670,10 @@ export function AchievementsPageSkeletonInner() {
     </div>
   );
 }
-
-/** Structural placeholder for `Navbar` before client mount (matches h-16 row + borders). */
 export function NavbarSkeleton() {
   return (
     <header className="w-full border-b-2 border-border bg-background/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
-      <div className={cn('flex h-16 items-center gap-4', SHELL_NAV_INNER_CLASS)}>
+      <div className={cn("flex h-16 items-center gap-4", shell.navInner)}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Skeleton className="size-10 shrink-0 border-2 border-border/60 bg-muted/50" />
           <Skeleton className="h-7 w-28 shrink-0 sm:h-9 sm:w-36" />
@@ -1636,50 +1698,39 @@ export function NavbarSkeleton() {
     </header>
   );
 }
-
 export function SidebarSkeleton() {
   return (
     <aside
-      className="fixed bottom-0 left-0 z-20 flex w-60 flex-col overflow-hidden border-r-2 border-border bg-background"
-      style={{ top: 'calc(var(--header-height) - 1px)' }}
+      className={cn(
+        "sidebar-drawer absolute left-0 top-full z-40 flex w-[52px] min-w-[52px] shrink-0 flex-col border-r-2 border-border",
+        "h-[calc(100dvh-100%)] max-h-[calc(100dvh-100%)] min-h-0 isolate",
+      )}
       aria-hidden
     >
-      <div className="border-b-2 border-border p-4">
-        <Skeleton className="h-10 w-full" />
-      </div>
-      <nav className="flex-1 space-y-6 p-4">
-        <ul className="space-y-1">
-          {[1, 2, 3, 4].map((i) => (
-            <li key={i}>
-              <Skeleton className="h-9 w-full" />
-            </li>
+      <div
+        aria-hidden
+        className={cn(
+          shell.railFrost,
+          "pointer-events-none absolute inset-0 z-0",
+        )}
+        style={shell.railFrostStyle}
+      />
+      <div className="relative z-[1] flex h-full min-h-0 flex-col items-center gap-1.5 px-1 py-3">
+        <Skeleton className="mb-1 size-10 shrink-0 border-2 border-border/60" />
+        <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-1.5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton
+              key={i}
+              className="size-10 shrink-0 rounded-none border-2 border-border/50"
+            />
           ))}
-        </ul>
-        <div className="space-y-3">
-          <Skeleton className="mx-3 h-3 w-24" />
-          <ul className="space-y-1">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <li key={i}>
-                <Skeleton className="h-8 w-full" />
-              </li>
-            ))}
-          </ul>
         </div>
-        <div className="space-y-3">
-          <Skeleton className="mx-3 h-3 w-28" />
-          <ul className="space-y-1">
-            {[1, 2, 3].map((i) => (
-              <li key={i}>
-                <Skeleton className="h-8 w-full" />
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+        <Skeleton className="size-10 shrink-0 border-2 border-border/50" />
+        <Skeleton className="size-10 shrink-0 border-2 border-border/50" />
+      </div>
     </aside>
   );
 }
-
 export function FooterSkeleton() {
   return (
     <footer className="border-t-2 border-border bg-background py-6 sm:py-8">

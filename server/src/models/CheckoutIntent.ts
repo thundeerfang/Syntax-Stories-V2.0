@@ -1,7 +1,6 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
-export type PaidPlanKey = 'pro' | 'proplus' | 'ultra';
-
+import mongoose, { Schema, Document, Model } from "mongoose";
+import { PAID_PLAN_KEYS, type PaidPlanKey } from "../variable/constants.js";
+export type { PaidPlanKey };
 export interface ICheckoutIntent extends Document {
   stripeCheckoutSessionId: string;
   userId: mongoose.Types.ObjectId;
@@ -10,17 +9,25 @@ export interface ICheckoutIntent extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
 const CheckoutIntentSchema = new Schema<ICheckoutIntent>(
   {
-    stripeCheckoutSessionId: { type: String, required: true, unique: true, index: true },
-    userId: { type: Schema.Types.ObjectId, ref: 'users', required: true, index: true },
-    planKey: { type: String, enum: ['pro', 'proplus', 'ultra'], required: true },
+    stripeCheckoutSessionId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      required: true,
+      index: true,
+    },
+    planKey: { type: String, enum: [...PAID_PLAN_KEYS], required: true },
     expiresAt: { type: Date, required: true, index: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
 export const CheckoutIntentModel: Model<ICheckoutIntent> =
   mongoose.models?.checkout_intents ??
-  mongoose.model<ICheckoutIntent>('checkout_intents', CheckoutIntentSchema);
+  mongoose.model<ICheckoutIntent>("checkout_intents", CheckoutIntentSchema);

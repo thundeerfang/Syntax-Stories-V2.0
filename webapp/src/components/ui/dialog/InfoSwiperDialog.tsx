@@ -1,37 +1,27 @@
-'use client';
-
-import { useCallback, useEffect, useId, useState } from 'react';
-import type { ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, UsersRound } from 'lucide-react';
-import { Dialog } from './dialogs';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import { useCallback, useEffect, useId, useState } from "react";
+import type { ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, UsersRound } from "lucide-react";
+import { Dialog } from "./dialogs";
+import { cn } from "@/lib/core/utils";
 export type InfoSwiperSlide = {
   id: string;
   title: string;
-  /** Supporting copy under the headline. */
   body?: ReactNode;
-  /** Replace the default hero illustration for this slide. */
   hero?: ReactNode;
 };
-
 export type InfoSwiperDialogProps = Readonly<{
   open: boolean;
   onClose: () => void;
-  /** Must be non-empty; typically 3 slides. */
   slides: InfoSwiperSlide[];
-  /** Stable id for `aria-labelledby` (first slide title id). */
   titleId?: string;
   closeLabel?: string;
-  /** Label on the first step primary button. Default `Start`. */
   startLabel?: string;
   nextLabel?: string;
   doneLabel?: string;
-  /** Optional class on the panel (merged with defaults). */
   panelClassName?: string;
 }>;
-
 function DefaultHero() {
   return (
     <div className="relative mx-auto flex size-[7.5rem] shrink-0 items-center justify-center">
@@ -43,9 +33,13 @@ function DefaultHero() {
         className="relative flex size-[4.5rem] items-center justify-center bg-white/20 backdrop-blur-[2px]"
         aria-hidden
       >
-        <UsersRound className="size-10 text-white shadow" strokeWidth={2} aria-hidden />
+        <UsersRound
+          className="size-10 text-white shadow"
+          strokeWidth={2}
+          aria-hidden
+        />
       </div>
-      {/* Decorative “orbit” chips — abstract stand-ins for member avatars */}
+
       <span
         className="absolute -right-1 top-2 size-9 border-2 border-white/80 bg-gradient-to-br from-amber-200 to-orange-300 shadow"
         aria-hidden
@@ -61,44 +55,37 @@ function DefaultHero() {
     </div>
   );
 }
-
-/**
- * Informational dialog with a simple step swiper (no extra dependency).
- * Layout: hero strip, dark body, footer — similar in spirit to confirm dialogs but for onboarding / tips.
- */
 export function InfoSwiperDialog({
   open,
   onClose,
   slides,
   titleId: titleIdProp,
-  closeLabel = 'Close',
-  startLabel = 'Start',
-  nextLabel = 'Next',
-  doneLabel = 'Done',
+  closeLabel = "Close",
+  startLabel = "Start",
+  nextLabel = "Next",
+  doneLabel = "Done",
   panelClassName,
 }: InfoSwiperDialogProps) {
-  const reactId = useId().replaceAll(':', '');
+  const reactId = useId().replaceAll(":", "");
   const baseTitleId = titleIdProp ?? `info-swiper-title-${reactId}`;
   const [index, setIndex] = useState(0);
-
   useEffect(() => {
     if (open) setIndex(0);
   }, [open]);
-
   const last = slides.length - 1;
   const safeIndex = slides.length === 0 ? 0 : Math.min(index, last);
   const slide = slides[safeIndex];
   const isLast = safeIndex >= last;
-
   const goNext = useCallback(() => {
     if (isLast) onClose();
     else setIndex((i) => Math.min(i + 1, last));
   }, [isLast, last, onClose]);
-
   if (slides.length === 0) return null;
-
-  const primaryLabel = isLast ? doneLabel : safeIndex === 0 ? startLabel : nextLabel;
-
+  const primaryLabel = isLast
+    ? doneLabel
+    : safeIndex === 0
+      ? startLabel
+      : nextLabel;
   return (
     <Dialog
       open={open}
@@ -108,12 +95,11 @@ export function InfoSwiperDialog({
       closeOnBackdropClick
       closeOnEscape
       panelClassName={cn(
-        'max-w-lg overflow-hidden -3xl border-2 border-violet-500 bg-black p-0 text-white shadow',
-        panelClassName
+        "max-w-lg overflow-hidden -3xl border-2 border-violet-500 bg-black p-0 text-white shadow",
+        panelClassName,
       )}
       contentClassName="p-0 flex flex-col max-h-[min(90vh,640px)]"
     >
-      {/* Hero — purple strip + custom close (matches onboarding reference) */}
       <div className="relative shrink-0 bg-gradient-to-b from-violet-600 to-violet-700 px-6 pb-8 pt-10">
         <button
           type="button"
@@ -123,10 +109,11 @@ export function InfoSwiperDialog({
         >
           <X className="size-5" strokeWidth={2.5} aria-hidden />
         </button>
-        <div className="flex justify-center pt-1">{slide?.hero ?? <DefaultHero />}</div>
+        <div className="flex justify-center pt-1">
+          {slide?.hero ?? <DefaultHero />}
+        </div>
       </div>
 
-      {/* Body */}
       <div className="min-h-0 flex-1 overflow-y-auto bg-black px-6 py-8">
         <span id={baseTitleId} className="sr-only">
           Information, step {safeIndex + 1} of {slides.length}: {slide?.title}
@@ -153,10 +140,9 @@ export function InfoSwiperDialog({
         </AnimatePresence>
       </div>
 
-      {/* Footer */}
       <div
         className={cn(
-          'flex shrink-0 items-center gap-3 border-t border-white/10 bg-zinc-950 px-5 py-4 sm:px-6'
+          "flex shrink-0 items-center gap-3 border-t border-white/10 bg-zinc-950 px-5 py-4 sm:px-6",
         )}
       >
         <button
@@ -166,14 +152,18 @@ export function InfoSwiperDialog({
         >
           {closeLabel}
         </button>
-        <div className="flex flex-1 justify-center gap-2" role="tablist" aria-label="Slide">
+        <div
+          className="flex flex-1 justify-center gap-2"
+          role="tablist"
+          aria-label="Slide"
+        >
           {slides.map((s, i) => (
             <span
               key={s.id}
               role="presentation"
               className={cn(
-                'h-2 w-2  transition-colors',
-                i === safeIndex ? 'bg-white' : 'bg-zinc-600'
+                "h-2 w-2  transition-colors",
+                i === safeIndex ? "bg-white" : "bg-zinc-600",
               )}
             />
           ))}

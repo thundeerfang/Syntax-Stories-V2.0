@@ -1,12 +1,6 @@
-'use client';
-
-import { useShallow } from 'zustand/react/shallow';
-import { useAuthStore } from '@/store/auth';
-
-/**
- * Narrow auth slice for settings profile sections: avoids re-renders when unrelated
- * store fields change (e.g. twoFactor, isLoading).
- */
+"use client";
+import { useShallow } from "zustand/react/shallow";
+import { useAuthStore } from "@/store/auth";
 export function useSettingsAuthSlice() {
   return useAuthStore(
     useShallow((s) => ({
@@ -14,6 +8,6 @@ export function useSettingsAuthSlice() {
       updateProfile: s.updateProfile,
       refreshUser: s.refreshUser,
       token: s.token,
-    }))
+    })),
   );
 }

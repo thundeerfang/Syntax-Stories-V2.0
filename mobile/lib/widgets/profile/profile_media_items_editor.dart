@@ -31,9 +31,12 @@ class ProfileMediaItemsEditor extends StatefulWidget {
 class _ProfileMediaItemsEditorState extends State<ProfileMediaItemsEditor> {
   Future<void> _uploadMedia() async {
     if (widget.disabled || widget.items.length >= widget.maxItems) return;
-    final result = await ImageUploadCropDialog.showAssetUpload(context, ImageUploadKind.workMedia);
+    final result = await ImageUploadCropDialog.showAssetUpload(context, ImageUploadKind.setupComponent);
     if (result == null || result.url.isEmpty || !mounted) return;
-    widget.onChanged([...widget.items, ProfileMediaItem(url: result.url)]);
+    widget.onChanged([
+      ...widget.items,
+      ProfileMediaItem(url: result.url, title: result.imageAlt),
+    ]);
     setState(() {});
   }
 

@@ -1,22 +1,18 @@
-'use client';
-
-import type { ComponentType } from 'react';
-import { useToastStore } from '@/store/toast';
-import { Alert } from '@/components/retroui/Alert';
-import { cn } from '@/lib/core/utils';
-import { CheckCircle, Info, X, AlertCircle } from 'lucide-react';
-
+"use client";
+import type { ComponentType } from "react";
+import { useToastStore } from "@/store/toast";
+import { Alert } from "@/components/retroui/Alert";
+import { cn } from "@/lib/core/utils";
+import { CheckCircle, Info, X, AlertCircle } from "lucide-react";
 const statusIcons = {
   success: CheckCircle,
   info: Info,
   error: X,
   warning: AlertCircle,
 };
-
 export function ToastContainer() {
   const toasts = useToastStore((s) => s.toasts);
   const remove = useToastStore((s) => s.remove);
-
   return (
     <div
       className="fixed bottom-4 right-4 z-[100] flex flex-col gap-3 max-w-sm w-full pointer-events-none"
@@ -37,32 +33,34 @@ export function ToastContainer() {
     </div>
   );
 }
-
 const retroStatusStyles: Record<string, string> = {
-  success: 'border-2 border-border bg-card text-foreground border-green-600 dark:border-green-500',
-  info: 'border-2 border-border bg-card text-foreground border-primary',
-  error: 'border-2 border-border bg-card text-foreground border-destructive',
-  warning: 'border-2 border-border bg-card text-foreground border-amber-600 dark:border-amber-500',
+  success:
+    "border-2 border-border bg-card text-foreground border-green-600 dark:border-green-500",
+  info: "border-2 border-border bg-card text-foreground border-primary",
+  error: "border-2 border-border bg-card text-foreground border-destructive",
+  warning:
+    "border-2 border-border bg-card text-foreground border-amber-600 dark:border-amber-500",
 };
-
 function ToastItem({
   status,
   title,
   onDismiss,
   Icon,
 }: Readonly<{
-  status: 'success' | 'info' | 'error' | 'warning';
+  status: "success" | "info" | "error" | "warning";
   title: string;
   onDismiss: () => void;
-  Icon: ComponentType<{ className?: string }>;
+  Icon: ComponentType<{
+    className?: string;
+  }>;
 }>) {
   return (
     <div className="pointer-events-auto">
       <Alert
         status={status}
         className={cn(
-          'relative flex items-center gap-3 pr-10  shadow bg-card',
-          retroStatusStyles[status]
+          "relative flex items-center gap-3 pr-10  shadow bg-card",
+          retroStatusStyles[status],
         )}
       >
         <Icon className="h-5 w-5 shrink-0" />

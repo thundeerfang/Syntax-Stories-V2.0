@@ -1,7 +1,8 @@
-import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
-import { verifyToken } from '../../../middlewares/auth/index.js';
-import { cmsAdminGate } from '../../rbac/middleware/cmsAdminGate.js';
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import { RATE_LIMITS } from "../../../config/rateLimits.js";
+import { verifyToken } from "../../../middlewares/auth/index.js";
+import { cmsAdminGate } from "../../rbac/middleware/cmsAdminGate.js";
 import {
   adminBootstrapPolicies,
   adminGetPolicy,
@@ -16,47 +17,43 @@ import {
   postAccept,
   postAcceptIntent,
   postDataDeletionRequest,
-} from './legal.handlers.js';
-
+} from "./legal.handlers.js";
 const publicRead = rateLimit({
-  windowMs: 60_000,
-  max: 120,
+  ...RATE_LIMITS.legalPublicRead,
   standardHeaders: true,
   legacyHeaders: false,
 });
-
 const userWrite = rateLimit({
-  windowMs: 60_000,
-  max: 60,
+  ...RATE_LIMITS.legalUserWrite,
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-/** Admin CMS — editors poll list/revision endpoints frequently. */
 const adminWrite = rateLimit({
-  windowMs: 60_000,
-  max: 200,
+  ...RATE_LIMITS.legalAdminWrite,
   standardHeaders: true,
   legacyHeaders: false,
 });
-
 export const legalPublicRouter = Router();
-legalPublicRouter.get('/policies/:kind', publicRead, getPublishedPolicyByKind);
-
+legalPublicRouter.get("/policies/:kind", publicRead, getPublishedPolicyByKind);
 export const legalUserRouter = Router();
 legalUserRouter.use(verifyToken, userWrite);
-legalUserRouter.post('/accept-intent', postAcceptIntent);
-legalUserRouter.post('/accept', postAccept);
-legalUserRouter.get('/me/status', getMeLegalStatus);
-legalUserRouter.post('/data-deletion-requests', postDataDeletionRequest);
-legalUserRouter.get('/data-deletion-requests', listMyDeletionRequests);
-
+legalUserRouter.post("/accept-intent", postAcceptIntent);
+legalUserRouter.post("/accept", postAccept);
+legalUserRouter.get("/me/status", getMeLegalStatus);
+legalUserRouter.post("/data-deletion-requests", postDataDeletionRequest);
+legalUserRouter.get("/data-deletion-requests", listMyDeletionRequests);
 export const legalAdminRouter = Router();
-legalAdminRouter.use(...cmsAdminGate('legal:manage'), adminWrite);
-legalAdminRouter.get('/policies', adminListPolicies);
-legalAdminRouter.post('/policies/bootstrap', adminBootstrapPolicies);
-legalAdminRouter.get('/policies/:policyId/revisions/:revisionId', adminGetRevision);
-legalAdminRouter.delete('/policies/:policyId/revisions/:revisionId', adminDeleteRevision);
-legalAdminRouter.get('/policies/:policyId/revisions', adminListRevisions);
-legalAdminRouter.get('/policies/:policyId', adminGetPolicy);
-legalAdminRouter.patch('/policies/:policyId', adminPatchPolicy);
+legalAdminRouter.use(...cmsAdminGate("legal:manage"), adminWrite);
+legalAdminRouter.get("/policies", adminListPolicies);
+legalAdminRouter.post("/policies/bootstrap", adminBootstrapPolicies);
+legalAdminRouter.get(
+  "/policies/:policyId/revisions/:revisionId",
+  adminGetRevision,
+);
+legalAdminRouter.delete(
+  "/policies/:policyId/revisions/:revisionId",
+  adminDeleteRevision,
+);
+legalAdminRouter.get("/policies/:policyId/revisions", adminListRevisions);
+legalAdminRouter.get("/policies/:policyId", adminGetPolicy);
+legalAdminRouter.patch("/policies/:policyId", adminPatchPolicy);

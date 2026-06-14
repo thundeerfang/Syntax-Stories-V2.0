@@ -1,12 +1,12 @@
-/**
- * Compact relative time for comment badges (e.g. `3h`, `5d`, `12d`).
- */
-export function formatShortRelativeTime(iso: string | Date, nowMs = Date.now()): string {
-  const t = typeof iso === 'string' ? Date.parse(iso) : iso.getTime();
-  if (!Number.isFinite(t)) return '—';
+export function formatShortRelativeTime(
+  iso: string | Date,
+  nowMs = Date.now(),
+): string {
+  const t = typeof iso === "string" ? Date.parse(iso) : iso.getTime();
+  if (!Number.isFinite(t)) return "—";
   const diff = Math.max(0, nowMs - t);
   const sec = Math.floor(diff / 1000);
-  if (sec < 45) return 'now';
+  if (sec < 45) return "now";
   const min = Math.floor(sec / 60);
   if (min < 60) return `${min}m`;
   const hr = Math.floor(min / 60);

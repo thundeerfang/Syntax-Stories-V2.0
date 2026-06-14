@@ -1,18 +1,22 @@
-import { profileRepository } from './profile.repository.js';
-
-/** Assigns `certId` / `certValType` when missing (certifications section). */
+import { profileRepository } from "./profile.repository.js";
 export async function normalizeCertifications(
   userId: string,
-  updates: Record<string, unknown>
+  updates: Record<string, unknown>,
 ): Promise<void> {
   const certifications = updates.certifications as
-    | Array<{ certId?: string; certValType?: string; [k: string]: unknown }>
+    | Array<{
+        certId?: string;
+        certValType?: string;
+        [k: string]: unknown;
+      }>
     | undefined;
   if (!Array.isArray(certifications) || certifications.length === 0) return;
-
-  const current = await profileRepository.findLeanByIdSelect(userId, 'certifications');
+  const current = await profileRepository.findLeanByIdSelect(
+    userId,
+    "certifications",
+  );
   const existingIds = (current?.certifications ?? [])
-    .map((c: { certId?: string }) => (c.certId ?? '').trim())
+    .map((c: { certId?: string }) => (c.certId ?? "").trim())
     .filter(Boolean)
     .map((id) => Number.parseInt(id, 10))
     .filter((n) => !Number.isNaN(n));
@@ -20,9 +24,8 @@ export async function normalizeCertifications(
   const year = new Date().getFullYear();
   const yearSuffix = String(year).slice(-2);
   const baseValType = `A-${yearSuffix}`;
-
   for (const cert of certifications) {
-    const id = (cert.certId ?? '').trim();
+    const id = (cert.certId ?? "").trim();
     if (id) {
       const n = Number.parseInt(id, 10);
       if (!Number.isNaN(n) && n >= nextNum) nextNum = n + 1;

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useUIStore } from '@/store/ui';
+import { useEffect } from "react";
+import { useUIStore } from "@/store/ui";
 
 /**
  * Opens the global feedback dialog (same as the floating “Feedback” control).
@@ -17,9 +17,9 @@ export default function FeedbackPage() {
   return (
     <div className="mx-auto max-w-lg px-4 py-20 text-center">
       <p className="text-sm font-medium text-muted-foreground">
-        The feedback form should appear in a dialog. Use the{' '}
-        <span className="text-foreground">Feedback</span> button at the bottom-right if it did not
-        open.
+        The feedback form should appear in a dialog. Use the{" "}
+        <span className="text-foreground">Feedback</span> button at the
+        bottom-right if it did not open.
       </p>
     </div>
   );

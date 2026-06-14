@@ -1,9 +1,7 @@
 import 'certification_item.dart';
-import 'education_item.dart';
 import 'project_item.dart';
 import 'setup_item.dart';
 import 'tech_stack_item.dart';
-import 'work_experience_item.dart';
 import '../utils/blog_streak_limits.dart';
 
 class UserSummary {
@@ -23,8 +21,6 @@ class UserSummary {
     List<String>? stackAndTools,
     List<TechStackItem>? stackAndToolsDisplay,
     List<SetupItem>? mySetup,
-    List<WorkExperienceItem>? workExperiences,
-    List<EducationItem>? education,
     List<CertificationItem>? certifications,
     List<ProjectItem>? projects,
     bool? isGoogleAccount,
@@ -37,8 +33,6 @@ class UserSummary {
   })  : _stackAndTools = stackAndTools,
         _stackAndToolsDisplay = stackAndToolsDisplay,
         _mySetup = mySetup,
-        _workExperiences = workExperiences,
-        _education = education,
         _certifications = certifications,
         _projects = projects,
         _isGoogleAccount = isGoogleAccount,
@@ -63,8 +57,6 @@ class UserSummary {
   final List<String>? _stackAndTools;
   final List<TechStackItem>? _stackAndToolsDisplay;
   final List<SetupItem>? _mySetup;
-  final List<WorkExperienceItem>? _workExperiences;
-  final List<EducationItem>? _education;
   final List<CertificationItem>? _certifications;
   final List<ProjectItem>? _projects;
   final bool? _isGoogleAccount;
@@ -103,10 +95,6 @@ class UserSummary {
 
   List<SetupItem> get mySetup => _mySetup ?? const [];
 
-  List<WorkExperienceItem> get workExperiences => _workExperiences ?? const [];
-
-  List<EducationItem> get education => _education ?? const [];
-
   List<CertificationItem> get certifications => _certifications ?? const [];
 
   List<ProjectItem> get projects => _projects ?? const [];
@@ -141,8 +129,6 @@ class UserSummary {
       stackAndTools: _stringList(json['stackAndTools']),
       stackAndToolsDisplay: _techStackItems(json['stackAndToolsDisplay']),
       mySetup: _setupItems(json['mySetup']),
-      workExperiences: _parseWorkExperiences(json['workExperiences']),
-      education: _parseEducationItems(json['education']),
       certifications: _parseCertificationItems(json['certifications']),
       projects: _parseProjectItems(json['projects']),
       isGoogleAccount: json['isGoogleAccount'] == true,
@@ -161,24 +147,6 @@ class UserSummary {
         .whereType<Map<String, dynamic>>()
         .map(SetupItem.fromJson)
         .where((item) => item.label.isNotEmpty && item.imageUrl.isNotEmpty)
-        .toList();
-  }
-
-  static List<WorkExperienceItem> _parseWorkExperiences(dynamic value) {
-    if (value is! List) return const [];
-    return value
-        .whereType<Map<String, dynamic>>()
-        .map(WorkExperienceItem.fromJson)
-        .where((item) => item.jobTitle.isNotEmpty && item.company.isNotEmpty)
-        .toList();
-  }
-
-  static List<EducationItem> _parseEducationItems(dynamic value) {
-    if (value is! List) return const [];
-    return value
-        .whereType<Map<String, dynamic>>()
-        .map(EducationItem.fromJson)
-        .where((item) => item.school.isNotEmpty && item.degree.isNotEmpty)
         .toList();
   }
 

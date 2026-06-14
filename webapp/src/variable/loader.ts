@@ -1,0 +1,2 @@
+export const GLOBAL_LOADER_MIN_SHOW_MS = 5000;
+export const GLOBAL_LOADER_FADE_MS = 300;

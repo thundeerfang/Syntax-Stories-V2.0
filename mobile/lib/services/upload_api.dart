@@ -9,10 +9,19 @@ import 'auth_api.dart';
 import 'auth_retry.dart';
 
 class UploadResult {
-  const UploadResult({required this.url, this.blurDataUrl});
+  const UploadResult({
+    required this.url,
+    this.blurDataUrl,
+    this.title,
+    this.alt,
+  });
 
   final String url;
   final String? blurDataUrl;
+  final String? title;
+  final String? alt;
+
+  String? get imageAlt => (alt ?? title)?.trim().isNotEmpty == true ? (alt ?? title)!.trim() : null;
 }
 
 /// Multipart uploads — mirrors webapp `src/api/upload.ts`.
@@ -51,7 +60,7 @@ class UploadApi {
     );
   }
 
-  /// `POST /api/upload/media` — setup component and work media (cropped on client).
+  /// `POST /api/upload/media` — setup component and profile media (cropped on client).
   Future<UploadResult> uploadMedia({
     required String accessToken,
     required List<int> bytes,
@@ -66,46 +75,21 @@ class UploadApi {
     );
   }
 
-  Future<UploadResult> uploadCompanyLogo({
-    required String accessToken,
-    required List<int> bytes,
-    String filename = 'company-logo.jpg',
-  }) {
-    return _uploadRaster(
-      path: '/api/upload/company-logo',
-      field: 'logo',
-      accessToken: accessToken,
-      bytes: bytes,
-      filename: filename,
-    );
-  }
-
-  Future<UploadResult> uploadSchoolLogo({
-    required String accessToken,
-    required List<int> bytes,
-    String filename = 'school-logo.jpg',
-  }) {
-    return _uploadRaster(
-      path: '/api/upload/school-logo',
-      field: 'logo',
-      accessToken: accessToken,
-      bytes: bytes,
-      filename: filename,
-    );
-  }
-
   Future<UploadResult> uploadForKind({
     required ImageUploadKind kind,
     required String accessToken,
     required List<int> bytes,
+    String? filename,
   }) {
-    final filename = _resolveUploadFilename(bytes, kind.defaultFilename);
+    final resolved = filename?.trim().isNotEmpty == true
+        ? filename!.trim()
+        : kind.defaultFilename;
     return _uploadRaster(
       path: kind.uploadPath,
       field: kind.formField,
       accessToken: accessToken,
       bytes: bytes,
-      filename: filename,
+      filename: resolved,
     );
   }
 
@@ -168,6 +152,8 @@ class UploadApi {
         return UploadResult(
           url: url,
           blurDataUrl: data['blurDataUrl'] as String?,
+          title: data['title'] as String?,
+          alt: data['alt'] as String?,
         );
       } on AuthApiException {
         rethrow;

@@ -1,143 +1,77 @@
-'use client';
+"use client";
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   Monitor,
   Users,
   Wrench,
-  Terminal,
   Activity,
   ChevronRight,
   Globe,
-  Copy,
-  Check,
   ExternalLink,
-  Link2,
-} from 'lucide-react';
-import { followApi, type ReadStreakPayload, type PublicProfileUser } from '@/api/follow';
-import { analyticsApi } from '@/api/analytics';
-import { useAuthStore } from '@/store/auth';
+} from "lucide-react";
+import {
+  followApi,
+  type ReadStreakPayload,
+  type PublicProfileUser,
+} from "@/api/follow";
+import { analyticsApi } from "@/api/analytics";
+import { useAuthStore } from "@/store/auth";
+import { useRouteRestoreNonce } from "@/hooks/useRouteRestore";
 import {
   FollowersFollowingDialog,
   MediaFullViewDialog,
   ProfileSquadsCategoriesCard,
-} from '@/features/profile';
-import { cn } from '@/lib/core/utils';
-import { toast } from 'sonner';
-import { StackToolsBadgeList } from '@/features/profile/components/StackToolsBadgeList';
-import { ProfileSectionAccordion, type ProfileSectionVariant } from '@/components/ui/editor';
-import { WorkExperienceCard } from '@/components/settings-list/WorkExperienceCard';
-import { EducationCard } from '@/components/settings-list/EducationCard';
-import { CertificationCard } from '@/components/settings-list/CertificationCard';
-import { ProjectCard } from '@/components/settings-list/ProjectCard';
-import { OpenSourceCard } from '@/components/settings-list/OpenSourceCard';
-import { SparkLottie, StreakFireLottie, WalletLottie, TestAccountLottie } from '@/components/ui';
-import { AreaChart } from '@/components/retroui';
-import { ProfileHeatmap } from '@/features/profile';
-import { HoverCard } from '@/components/ui/popover';
-import { LinkPreviewCardContent } from '@/components/ui/popover';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { PROFILE_PUBLIC_SOCIAL_BTN } from '@/lib/profile/profilePublicCard';
-import { ProfileActivityBlogList, profileBlogsPageHref } from '@/features/blog';
-import { ProfilePageSkeletonInner } from '@/components/skeletons';
-import { formatJoinedDate, markdownBioToHtml } from '@/lib/profile/profileDisplay';
-import { formatMonthYearShort } from '@/lib/profile/dateLabels';
+} from "@/features/profile";
+import { toast } from "sonner";
+import { StackToolsBadgeList } from "@/components/profile";
+import {
+  SparkLottie,
+  StreakFireLottie,
+  TestAccountLottie,
+} from "@/components/ui";
+import { AreaChart } from "@/components/retroui";
+import { ProfileActivityTabs, ProfileHeatmap } from "@/features/profile";
+import type { ActivityTab } from "@/lib/profile/profilePageHelpers";
+import { HoverCard } from "@/components/ui/popover";
+import { LinkPreviewCardContent } from "@/components/ui/popover";
+import { shell } from "@/lib/styles";
+import {
+  BlockShadowButton,
+  FollowToggleButton,
+  RetroIconLink,
+} from "@/components/ui/button";
+import {
+  ProfileActivityBlogList,
+  ProfileActivitySwiperNav,
+  profileBlogsPageHref,
+} from "@/features/blog";
+import type { CompactBlogPostsSwiperHandle } from "@/features/blog";
+import { ProfilePageSkeletonInner } from "@/components/skeletons";
+import {
+  formatJoinedDate,
+  isPlaceholderProfileBio,
+  markdownBioToHtml,
+} from "@/lib/profile/profileDisplay";
+import { formatMonthYearShort } from "@/lib/profile/dateLabels";
 import {
   GithubIcon,
   InstagramIcon,
   LinkedinIcon,
   YoutubeIcon,
-} from '@/components/icons/SocialProviderIcons';
-import { ProfileCardSkeleton } from '@/components/skeletons';
-
-function isImageUrl(url: string): boolean {
-  return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url);
-}
-
-function domainFromUrl(url: string): string {
-  const u = (url ?? '').trim();
-  if (!u) return '';
-  try {
-    const withProto = /^https?:\/\//i.test(u) ? u : `https://${u}`;
-    return new URL(withProto).host;
-  } catch {
-    return u.replaceAll(/^https?:\/\//gi, '').split('/')[0] || u;
-  }
-}
-
-function normalizeDomain(domain: string | undefined): string {
-  if (!domain?.trim()) return '';
-  const d = domain
-    .trim()
-    .replaceAll(/^https?:\/\//gi, '')
-    .replaceAll(/\/$/g, '');
-  return d ? `https://${d}` : '';
-}
-
-function locationWithoutType(location: string | undefined): string {
-  if (!location?.trim()) return '';
-  return location
-    .trim()
-    .replaceAll(/\s*\([^)]+\)/g, '')
-    .replaceAll(/\s+/g, ' ')
-    .trim();
-}
-
-function entriesCountSubtitle(count: number): string | undefined {
-  if (count <= 0) return undefined;
-  return count === 1 ? `${count} entry` : `${count} entries`;
-}
-
-function reposCountSubtitle(count: number): string | undefined {
-  if (count <= 0) return undefined;
-  return count === 1 ? `${count} repo` : `${count} repos`;
-}
-
-function minVisibleAfterOpen(variant: ProfileSectionVariant, prior: number | undefined): number {
-  const floor = variant === 'openSource' || variant === 'mySetup' ? 2 : 1;
-  return Math.max(prior ?? floor, floor);
-}
-
-function workExperienceListKey(e: Record<string, unknown>): string {
-  const id = e.id ?? e.workId;
-  if (typeof id === 'string' && id.length > 0) return `we-${id}`;
-  const company = typeof e.company === 'string' ? e.company : '';
-  const start = typeof e.startDate === 'string' ? e.startDate : '';
-  const title = typeof e.title === 'string' ? e.title : '';
-  return `we-${company}-${start}-${title}`.replaceAll(/\s+/g, '-');
-}
-
-function educationListKey(e: Record<string, unknown>): string {
-  const id = e.eduId ?? e.id;
-  if (typeof id === 'string' && id.length > 0) return `edu-${id}`;
-  const school = typeof e.school === 'string' ? e.school : '';
-  const start = typeof e.startDate === 'string' ? e.startDate : '';
-  return `edu-${school}-${start}`.replaceAll(/\s+/g, '-');
-}
-
-function certificationListKey(c: Record<string, unknown>): string {
-  const id = c.certId ?? c.id;
-  if (typeof id === 'string' && id.length > 0) return `cert-${id}`;
-  const name = typeof c.name === 'string' ? c.name : '';
-  const org = typeof c.issuingOrganization === 'string' ? c.issuingOrganization : '';
-  return `cert-${name}-${org}`.replaceAll(/\s+/g, '-');
-}
-
-function projectListKey(p: Record<string, unknown>): string {
-  const id = p.id ?? p._id;
-  if (typeof id === 'string' && id.length > 0) return `proj-${id}`;
-  const title = typeof p.title === 'string' ? p.title : '';
-  const url = typeof p.publicationUrl === 'string' ? p.publicationUrl : '';
-  return `proj-${title}-${url}`.replaceAll(/\s+/g, '-');
-}
-
-function openSourceListKey(item: Record<string, unknown>): string {
-  const repo = typeof item.repoFullName === 'string' ? item.repoFullName : '';
-  const url = typeof item.publicationUrl === 'string' ? item.publicationUrl : '';
-  return `os-${repo || url || 'item'}`.replaceAll(/\s+/g, '-');
-}
+} from "@/components/icons/SocialProviderIcons";
+import { resolveProfileMediaUrl } from "@/lib/profile/resolveProfileMediaUrl";
+import {
+  ProfilePortfolioAccordions,
+  ProfileShareUrlCopyRow,
+} from "@/components/profile";
+import {
+  buildOpenSourceList,
+  buildProfileProjects,
+} from "@/lib/profile/profilePortfolioData";
+import { useProfileAccordionSections } from "@/hooks/useProfileAccordionSections";
+import { useProfileShareUrl } from "@/hooks/useProfileShareUrl";
 
 type PublicProfileFollowCtaProps = Readonly<{
   isSelf: boolean;
@@ -164,35 +98,18 @@ function PublicProfileFollowCta({
   const loginHref = `/login?next=${loginNext}`;
   if (!token) {
     return (
-      <Link
-        href={loginHref}
-        className={cn(
-          'inline-flex items-center justify-center px-6 py-2.5 border-2 font-black text-[10px] uppercase tracking-widest shrink-0 shadow active:shadow-none transition-all',
-          'border-primary bg-primary text-primary-foreground hover:opacity-90'
-        )}
-      >
+      <BlockShadowButton href={loginHref} variant="primary" size="sm">
         Follow
-      </Link>
+      </BlockShadowButton>
     );
   }
-  let followLabel: string;
-  if (followLoading) followLabel = '…';
-  else if (following) followLabel = 'Following';
-  else followLabel = 'Follow';
   return (
-    <button
-      type="button"
-      disabled={followLoading}
+    <FollowToggleButton
+      isFollowing={following}
       onClick={onFollowClick}
-      className={cn(
-        'px-6 py-2.5 border-2 font-black text-[10px] uppercase tracking-widest shrink-0 shadow active:shadow-none transition-all',
-        following
-          ? 'border-border bg-card hover:bg-muted'
-          : 'border-primary bg-primary text-primary-foreground'
-      )}
-    >
-      {followLabel}
-    </button>
+      disabled={followLoading}
+      unfollowLabel="Following"
+    />
   );
 }
 
@@ -200,7 +117,10 @@ export default function PublicProfilePage() {
   // NOSONAR S3776 — large public profile view; split into section components incrementally
   const params = useParams();
   const router = useRouter();
-  const username = typeof params?.username === 'string' ? params.username.trim().toLowerCase() : '';
+  const username =
+    typeof params?.username === "string"
+      ? params.username.trim().toLowerCase()
+      : "";
   const { user: currentUser, token } = useAuthStore();
   const [profile, setProfile] = useState<PublicProfileUser | null>(null);
   const [followersCount, setFollowersCount] = useState(0);
@@ -209,16 +129,20 @@ export default function PublicProfilePage() {
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [profileUrlCopied, setProfileUrlCopied] = useState(false);
-  const [mySetupPreview, setMySetupPreview] = useState<{ src: string; title: string } | null>(null);
-  const [activityTab, setActivityTab] = useState<'posts' | 'repost'>('posts');
+  const [mySetupPreview, setMySetupPreview] = useState<{
+    src: string;
+    title: string;
+  } | null>(null);
+  const [activityTab, setActivityTab] = useState<ActivityTab>("posts");
+  const activitySwiperRef = useRef<CompactBlogPostsSwiperHandle>(null);
   const [readStreak, setReadStreak] = useState<ReadStreakPayload | null>(null);
   const [readHeatmapDays, setReadHeatmapDays] = useState<string[] | null>(null);
+  const routeRestoreNonce = useRouteRestoreNonce();
 
   useEffect(() => {
     if (!username) {
       setLoading(false);
-      router.replace('/');
+      router.replace("/");
       return;
     }
     setLoading(true);
@@ -236,15 +160,17 @@ export default function PublicProfilePage() {
         }
       })
       .catch(() => {
-        toast.error('User not found');
-        router.replace('/');
+        toast.error("User not found");
+        router.replace("/");
       })
       .finally(() => setLoading(false));
-  }, [username, router]);
+  }, [username, router, routeRestoreNonce]);
 
   useEffect(() => {
     if (!token || !username || !currentUser) return;
-    followApi.checkFollowing(username, token).then((res) => setFollowing(res.following));
+    followApi
+      .checkFollowing(username, token)
+      .then((res) => setFollowing(res.following));
   }, [token, username, currentUser]);
 
   // Record profile view (best-effort; backend ignores self + dedupes by anon cookie)
@@ -257,7 +183,7 @@ export default function PublicProfilePage() {
 
   const handleFollowClick = async () => {
     if (!token || !username) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
     if (currentUser?.username?.toLowerCase() === username) return;
@@ -267,15 +193,15 @@ export default function PublicProfilePage() {
         await followApi.unfollow(username, token);
         setFollowing(false);
         setFollowingCount((c) => Math.max(0, c - 1));
-        toast.success('Unfollowed');
+        toast.success("Unfollowed");
       } else {
         await followApi.follow(username, token);
         setFollowing(true);
         setFollowersCount((c) => c + 1);
-        toast.success('Following');
+        toast.success("Following");
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed');
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setFollowLoading(false);
     }
@@ -294,100 +220,32 @@ export default function PublicProfilePage() {
       .catch(() => {});
   };
 
-  const profileProjects = useMemo(() => {
-    const full = (profile?.projects ?? []) as any[];
-    const isGithub = (p: unknown) => (p as { source?: string }).source === 'github';
-    return {
-      nonGithub: full.filter((p) => !isGithub(p)),
-      github: full.filter(isGithub),
-    };
-  }, [profile?.projects]);
-
-  const openSourceList = useMemo(() => {
-    const fromProjects = profileProjects.github;
-    const fromContributions = ((profile?.openSourceContributions ?? []) as any[]).map((c: any) => ({
-      ...c,
-      repoFullName: c.repoFullName ?? c.repository ?? c.repo ?? c.title,
-      publicationUrl: c.publicationUrl ?? c.repositoryUrl ?? c.url,
-    }));
-    return [...fromProjects, ...fromContributions].slice(0, 7);
-  }, [profileProjects.github, profile?.openSourceContributions]);
-
-  const [openSectionId, setOpenSectionId] = useState<ProfileSectionVariant | null>(
-    'workExperience'
+  const profileProjects = useMemo(
+    () => buildProfileProjects(profile?.projects),
+    [profile?.projects],
   );
-  const accordionsRootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const onDown = (ev: MouseEvent) => {
-      if (!openSectionId) return;
-      const root = accordionsRootRef.current;
-      if (root && !root.contains(ev.target as Node)) setOpenSectionId(null);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [openSectionId]);
+  const openSourceList = useMemo(
+    () =>
+      buildOpenSourceList(profileProjects, profile?.openSourceContributions),
+    [profileProjects, profile?.openSourceContributions],
+  );
 
-  const [visibleCounts, setVisibleCounts] = useState<Record<ProfileSectionVariant, number>>({
-    workExperience: 1,
-    education: 1,
-    certification: 1,
-    project: 1,
-    openSource: 2,
-    mySetup: 2,
-  });
-  const [sectionLoading, setSectionLoading] = useState<Record<ProfileSectionVariant, boolean>>({
-    workExperience: false,
-    education: false,
-    certification: false,
-    project: false,
-    openSource: false,
-    mySetup: false,
-  });
-
-  const setSectionOpen = (variant: ProfileSectionVariant, open: boolean) => {
-    if (!open) {
-      setOpenSectionId((prev) => (prev === variant ? null : prev));
-      return;
-    }
-    setOpenSectionId(variant);
-    setVisibleCounts((prev) => ({
-      ...prev,
-      [variant]: minVisibleAfterOpen(variant, prev[variant]),
-    }));
-    setSectionLoading((prev) => ({ ...prev, [variant]: true }));
-    globalThis.setTimeout(() => setSectionLoading((prev) => ({ ...prev, [variant]: false })), 420);
-  };
-
-  const viewMore = (variant: ProfileSectionVariant, step = 1) => {
-    setSectionLoading((prev) => ({ ...prev, [variant]: true }));
-    globalThis.setTimeout(() => {
-      setVisibleCounts((prev) => ({ ...prev, [variant]: (prev[variant] ?? 0) + step }));
-      setSectionLoading((prev) => ({ ...prev, [variant]: false }));
-    }, 420);
-  };
+  const {
+    openSectionId,
+    accordionsRootRef,
+    visibleCounts,
+    sectionLoading,
+    setSectionOpen,
+    viewMore,
+  } = useProfileAccordionSections("certification");
 
   const joinedLabel = useMemo(() => {
     const str = formatJoinedDate(profile?.createdAt);
-    return str ? `Joined ${str}` : '';
+    return str ? `Joined ${str}` : "";
   }, [profile?.createdAt]);
 
-  const profileShareUrl = useMemo(() => {
-    if (globalThis.window === undefined || !profile?.username) return '';
-    return `${globalThis.window.location.origin}/u/${profile.username}`;
-  }, [profile]);
-
-  const copyProfileUrl = async () => {
-    if (!profileShareUrl) return;
-    try {
-      await navigator.clipboard.writeText(profileShareUrl);
-      setProfileUrlCopied(true);
-      toast.success('Link copied to clipboard');
-      globalThis.setTimeout(() => setProfileUrlCopied(false), 2000);
-    } catch {
-      toast.error('Failed to copy link');
-    }
-  };
+  const profileShareUrl = useProfileShareUrl(profile?.username);
 
   if (loading || !profile) {
     return <ProfilePageSkeletonInner variant="public" />;
@@ -397,7 +255,7 @@ export default function PublicProfilePage() {
 
   return (
     <div className="min-h-screen w-full font-sans text-foreground">
-      <div className={SHELL_CONTENT_RAIL_CLASS}>
+      <div className={shell.contentRail}>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="lg:col-span-8 space-y-8">
             <section className="border-4 border-border bg-card shadow overflow-hidden">
@@ -406,11 +264,14 @@ export default function PublicProfilePage() {
                   <img
                     src={profile.coverBanner}
                     alt={
-                      (profile as { coverBannerAlt?: string }).coverBannerAlt?.trim() ||
-                      'Cover banner'
+                      (
+                        profile as { coverBannerAlt?: string }
+                      ).coverBannerAlt?.trim() || "Cover banner"
                     }
                     title={
-                      (profile as { coverBannerAlt?: string }).coverBannerAlt?.trim() || undefined
+                      (
+                        profile as { coverBannerAlt?: string }
+                      ).coverBannerAlt?.trim() || undefined
                     }
                     className="w-full h-full object-cover"
                   />
@@ -422,16 +283,16 @@ export default function PublicProfilePage() {
               <div className="px-6 pb-8 pt-24 md:pt-32 relative bg-card">
                 <div className="absolute -top-14 left-6 size-28 md:size-36 border-4 border-border bg-muted shadow overflow-hidden">
                   <img
-                    src={
-                      profile.profileImg ||
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`
-                    }
+                    src={resolveProfileMediaUrl(profile.profileImg, profile.username)}
                     alt={
-                      (profile as { profileImgAlt?: string }).profileImgAlt?.trim() ||
-                      'Profile photo'
+                      (
+                        profile as { profileImgAlt?: string }
+                      ).profileImgAlt?.trim() || "Profile photo"
                     }
                     title={
-                      (profile as { profileImgAlt?: string }).profileImgAlt?.trim() || undefined
+                      (
+                        profile as { profileImgAlt?: string }
+                      ).profileImgAlt?.trim() || undefined
                     }
                     className="w-full h-full object-cover"
                   />
@@ -457,25 +318,27 @@ export default function PublicProfilePage() {
                             align="start"
                             contentClassName="w-[280px] p-0"
                           >
-                            <a
+                            <RetroIconLink
                               href={
-                                profile.portfolioUrl.trim().startsWith('http')
+                                profile.portfolioUrl.trim().startsWith("http")
                                   ? profile.portfolioUrl.trim()
                                   : `https://${profile.portfolioUrl.trim()}`
                               }
                               target="_blank"
                               rel="noreferrer"
                               aria-label="Open portfolio"
-                              className="inline-flex items-center justify-center size-7 border-2 border-border bg-card text-foreground hover:bg-muted shadow"
+                              size="sm"
+                              className="size-7"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <Globe className="size-4 text-primary" />
-                            </a>
+                            </RetroIconLink>
                           </HoverCard>
                         ) : null}
                         {joinedLabel ? (
                           <>
-                            <span className="size-1.5 bg-border" /> {joinedLabel}
+                            <span className="size-1.5 bg-border" />{" "}
+                            {joinedLabel}
                           </>
                         ) : null}
                       </div>
@@ -486,7 +349,9 @@ export default function PublicProfilePage() {
                         token={token}
                         username={username}
                         paramsUsername={
-                          typeof params?.username === 'string' ? params.username : undefined
+                          typeof params?.username === "string"
+                            ? params.username
+                            : undefined
                         }
                         followLoading={followLoading}
                         following={following}
@@ -495,40 +360,27 @@ export default function PublicProfilePage() {
                     </div>
                   </div>
 
-                  {profile.bio?.trim() ? (
-                    <div className="relative border-2 border-primary bg-muted/5 p-6 pt-8 group">
-                      <div className="absolute -top-3 left-6 inline-flex items-center bg-background px-2">
-                        <div className="flex items-center bg-primary px-2 py-1">
-                          <Terminal className="size-3 text-primary-foreground" />
-                          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary-foreground">
-                            Summary_Report
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="absolute top-2 right-4 text-[8px] font-mono text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
-                        REF_NO: {String(profile.id ?? '').slice(-8) || '0000X-SYS'}
-                      </div>
-
-                      <div
-                        className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
-                        dangerouslySetInnerHTML={{ __html: markdownBioToHtml(profile.bio) }}
-                      />
-
-                      <div className="absolute bottom-1 right-1 size-3 border-r-2 border-b-2 border-border/50" />
-                    </div>
+                  {profile.bio?.trim() &&
+                  !isPlaceholderProfileBio(profile.bio) ? (
+                    <div
+                      className="text-sm text-foreground/80 font-medium leading-relaxed max-w-none [&_strong]:text-primary [&_strong]:font-black [&_u]:decoration-primary/50 [&_em]:italic [&_em]:text-foreground"
+                      dangerouslySetInnerHTML={{
+                        __html: markdownBioToHtml(profile.bio),
+                      }}
+                    />
                   ) : (
-                    <div className="border-2 border-dashed border-border p-10 flex flex-col items-center justify-center text-center bg-muted/5">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">
-                        &gt; Biography_Data_Missing
+                    <div className="py-6 text-center">
+                      <p className="text-sm text-muted-foreground italic mb-4">
+                        No bio yet.
                       </p>
                       {isSelf ? (
-                        <Link
+                        <BlockShadowButton
                           href="/settings"
-                          className="px-4 py-2 border-2 border-primary text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all"
+                          variant="outline"
+                          size="sm"
                         >
-                          Initialize Summary
-                        </Link>
+                          Add bio
+                        </BlockShadowButton>
                       ) : null}
                     </div>
                   )}
@@ -544,29 +396,28 @@ export default function PublicProfilePage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <WalletLottie play size={24} />
-                    <span className="font-black text-sm uppercase">0</span>
-                    <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
-                      Wallet
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <StreakFireLottie play size={24} />
-                    <span className="font-black text-sm uppercase">{readStreak?.current ?? 0}</span>
+                    <span className="font-black text-sm uppercase">
+                      {readStreak?.current ?? 0}
+                    </span>
                     <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
                       Read streak
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="size-4 text-primary" />
-                    <span className="font-black text-sm uppercase">{followersCount}</span>
+                    <span className="font-black text-sm uppercase">
+                      {followersCount}
+                    </span>
                     <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
                       Followers
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="size-4 text-primary" />
-                    <span className="font-black text-sm uppercase">{followingCount}</span>
+                    <span className="font-black text-sm uppercase">
+                      {followingCount}
+                    </span>
                     <span className="font-bold text-[9px] text-muted-foreground uppercase tracking-widest">
                       Following
                     </span>
@@ -575,47 +426,36 @@ export default function PublicProfilePage() {
               </div>
             </section>
 
-            {/* ACTIVITY (public): Posts + Repost */}
+            {/* ACTIVITY (public) */}
             <section className="space-y-4 border-4 border-border bg-card shadow p-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
                   <Activity className="size-4 text-primary" /> Activity
                 </h2>
-                <Link
-                  href={profileBlogsPageHref(username)}
-                  className="flex items-center gap-2 px-3 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest shadow hover:bg-muted transition-all"
-                >
-                  View all
-                </Link>
-              </div>
-              <div className="flex gap-1 border-b-4 border-border pb-3">
-                {(['posts', 'repost'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActivityTab(tab)}
-                    className={cn(
-                      'flex-1 px-3 py-2 font-black text-[10px] uppercase tracking-widest border-2 border-border transition-all',
-                      activityTab === tab
-                        ? 'bg-primary text-primary-foreground border-primary shadow'
-                        : 'bg-card hover:bg-muted text-muted-foreground'
-                    )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <BlockShadowButton
+                    href={profileBlogsPageHref(username)}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
                   >
-                    {tab === 'posts' ? 'Posts' : 'Repost'}
-                  </button>
-                ))}
+                    View all
+                  </BlockShadowButton>
+                  <ProfileActivitySwiperNav swiperRef={activitySwiperRef} />
+                </div>
               </div>
-              <div>
-                {activityTab === 'posts' ? (
-                  <ProfileActivityBlogList username={username} />
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      No reposts found.
-                    </p>
-                  </div>
-                )}
-              </div>
+              <ProfileActivityTabs
+                tabs={["posts", "replies", "repost"]}
+                value={activityTab}
+                onChange={setActivityTab}
+              />
+              <ProfileActivityBlogList
+                key={activityTab}
+                ref={activitySwiperRef}
+                username={username}
+                kind={activityTab}
+                accessToken={token}
+              />
             </section>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -666,7 +506,10 @@ export default function PublicProfilePage() {
                             <button
                               type="button"
                               onClick={() =>
-                                setMySetupPreview({ src: it.imageUrl, title: setupImgLabel })
+                                setMySetupPreview({
+                                  src: it.imageUrl,
+                                  title: setupImgLabel,
+                                })
                               }
                               className="relative block h-28 w-full cursor-zoom-in border-b-2 border-border bg-muted/20 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                               aria-label={`View ${it.label} image larger`}
@@ -701,7 +544,8 @@ export default function PublicProfilePage() {
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1 mt-2 text-[10px] font-black uppercase text-primary hover:underline"
                                   >
-                                    <ExternalLink className="size-3.5" /> Product
+                                    <ExternalLink className="size-3.5" />{" "}
+                                    Product
                                   </a>
                                 </HoverCard>
                               ) : (
@@ -725,278 +569,41 @@ export default function PublicProfilePage() {
             </div>
 
             <div ref={accordionsRootRef} className="space-y-6">
-              <ProfileSectionAccordion
-                variant="workExperience"
-                open={openSectionId === 'workExperience'}
-                onOpenChange={(open) => setSectionOpen('workExperience', open)}
-                subtitle={entriesCountSubtitle(profile.workExperiences?.length ?? 0)}
-              >
-                {profile.workExperiences?.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.workExperience ? (
-                      <ProfileCardSkeleton lines={4} />
-                    ) : (
-                      (profile.workExperiences as any[])
-                        .slice(0, visibleCounts.workExperience)
-                        .map((e, i) => (
-                          <WorkExperienceCard
-                            key={workExperienceListKey(e as Record<string, unknown>)}
-                            experience={e}
-                            index={i}
-                            saving={false}
-                            onEdit={() => {}}
-                            onRemove={() => {}}
-                            onPreviewMedia={() => {}}
-                            formatMonthYear={formatMonthYearShort}
-                            locationWithoutType={locationWithoutType}
-                            normalizeDomain={normalizeDomain}
-                            isImageUrl={isImageUrl}
-                            hideActions
-                          />
-                        ))
-                    )}
-                    {(profile.workExperiences as any[]).length > visibleCounts.workExperience ? (
-                      <button
-                        type="button"
-                        disabled={sectionLoading.workExperience}
-                        onClick={() => viewMore('workExperience', 1)}
-                        className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                      >
-                        {sectionLoading.workExperience
-                          ? 'LOADING…'
-                          : `View more (${visibleCounts.workExperience}/${(profile.workExperiences as any[]).length})`}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      No work experience
-                    </p>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
-              <ProfileSectionAccordion
-                variant="education"
-                open={openSectionId === 'education'}
-                onOpenChange={(open) => setSectionOpen('education', open)}
-                subtitle={entriesCountSubtitle(profile.education?.length ?? 0)}
-              >
-                {profile.education?.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.education ? (
-                      <ProfileCardSkeleton lines={3} />
-                    ) : (
-                      (profile.education as any[])
-                        .slice(0, visibleCounts.education)
-                        .map((e, i) => (
-                          <EducationCard
-                            key={educationListKey(e as Record<string, unknown>)}
-                            education={e}
-                            index={i}
-                            saving={false}
-                            onEdit={() => {}}
-                            onRemove={() => {}}
-                            formatMonthYear={formatMonthYearShort}
-                            hideActions
-                          />
-                        ))
-                    )}
-                    {(profile.education as any[]).length > visibleCounts.education ? (
-                      <button
-                        type="button"
-                        disabled={sectionLoading.education}
-                        onClick={() => viewMore('education', 1)}
-                        className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                      >
-                        {sectionLoading.education
-                          ? 'LOADING…'
-                          : `View more (${visibleCounts.education}/${(profile.education as any[]).length})`}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      No education
-                    </p>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
-              <ProfileSectionAccordion
-                variant="certification"
-                open={openSectionId === 'certification'}
-                onOpenChange={(open) => setSectionOpen('certification', open)}
-                subtitle={entriesCountSubtitle(profile.certifications?.length ?? 0)}
-              >
-                {profile.certifications?.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.certification ? (
-                      <ProfileCardSkeleton lines={4} />
-                    ) : (
-                      (profile.certifications as any[])
-                        .slice(0, visibleCounts.certification)
-                        .map((c, i) => (
-                          <CertificationCard
-                            key={certificationListKey(c as Record<string, unknown>)}
-                            cert={c}
-                            index={i}
-                            saving={false}
-                            onEdit={() => {}}
-                            onRemove={() => {}}
-                            onPreviewMedia={() => {}}
-                            formatMonthYear={formatMonthYearShort}
-                            domainFromUrl={domainFromUrl}
-                            isImageUrl={isImageUrl}
-                            hideActions
-                          />
-                        ))
-                    )}
-                    {(profile.certifications as any[]).length > visibleCounts.certification ? (
-                      <button
-                        type="button"
-                        disabled={sectionLoading.certification}
-                        onClick={() => viewMore('certification', 1)}
-                        className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                      >
-                        {sectionLoading.certification
-                          ? 'LOADING…'
-                          : `View more (${visibleCounts.certification}/${(profile.certifications as any[]).length})`}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      No certifications
-                    </p>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
-              <ProfileSectionAccordion
-                variant="project"
-                open={openSectionId === 'project'}
-                onOpenChange={(open) => setSectionOpen('project', open)}
-                subtitle={entriesCountSubtitle(profileProjects.nonGithub.length)}
-              >
-                {profileProjects.nonGithub.length ? (
-                  <div className="space-y-4">
-                    {sectionLoading.project ? (
-                      <ProfileCardSkeleton lines={4} />
-                    ) : (
-                      profileProjects.nonGithub
-                        .slice(0, visibleCounts.project)
-                        .map((p, i) => (
-                          <ProjectCard
-                            key={projectListKey(p as Record<string, unknown>)}
-                            project={p}
-                            index={i}
-                            saving={false}
-                            onEdit={() => {}}
-                            onRemove={() => {}}
-                            onPreviewMedia={() => {}}
-                            formatMonthYear={formatMonthYearShort}
-                            domainFromUrl={domainFromUrl}
-                            isImageUrl={isImageUrl}
-                            hideActions
-                          />
-                        ))
-                    )}
-                    {profileProjects.nonGithub.length > visibleCounts.project ? (
-                      <button
-                        type="button"
-                        disabled={sectionLoading.project}
-                        onClick={() => viewMore('project', 1)}
-                        className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                      >
-                        {sectionLoading.project
-                          ? 'LOADING…'
-                          : `View more (${visibleCounts.project}/${profileProjects.nonGithub.length})`}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      No projects
-                    </p>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
-
-              <ProfileSectionAccordion
-                variant="openSource"
-                open={openSectionId === 'openSource'}
-                onOpenChange={(open) => setSectionOpen('openSource', open)}
-                subtitle={reposCountSubtitle(openSourceList.length)}
-              >
-                {openSourceList.length ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {sectionLoading.openSource ? (
-                      <>
-                        <ProfileCardSkeleton lines={3} />
-                        <ProfileCardSkeleton lines={3} />
-                      </>
-                    ) : (
-                      openSourceList.slice(0, visibleCounts.openSource).map((item, i) => (
-                        <OpenSourceCard
-                          key={openSourceListKey(item as Record<string, unknown>)}
-                          item={item}
-                          index={i}
-                          saving={false}
-                          onOpen={() => {
-                            const rec = item as Record<string, unknown>;
-                            const url =
-                              (typeof rec.publicationUrl === 'string' && rec.publicationUrl) ||
-                              (typeof rec.url === 'string' && rec.url) ||
-                              (typeof rec.repositoryUrl === 'string' && rec.repositoryUrl) ||
-                              '';
-                            if (url) globalThis.open(url, '_blank', 'noopener,noreferrer');
-                          }}
-                          onDetach={() => {}}
-                          hideActions
-                        />
-                      ))
-                    )}
-
-                    {openSourceList.length > visibleCounts.openSource ? (
-                      <div className="md:col-span-2 pt-1">
-                        <button
-                          type="button"
-                          disabled={sectionLoading.openSource}
-                          onClick={() => viewMore('openSource', 2)}
-                          className="w-full px-4 py-2 border-2 border-border bg-card font-black text-[10px] uppercase tracking-widest hover:bg-muted/40 disabled:opacity-50"
-                        >
-                          {sectionLoading.openSource
-                            ? 'LOADING…'
-                            : `View more (${Math.min(visibleCounts.openSource, openSourceList.length)}/${openSourceList.length})`}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="border-2 border-border border-dashed p-8 text-center bg-muted/5">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      No open source
-                    </p>
-                  </div>
-                )}
-              </ProfileSectionAccordion>
+              <ProfilePortfolioAccordions
+                mode="public"
+                certifications={(profile.certifications as unknown[]) ?? []}
+                projects={profileProjects.nonGithub}
+                openSourceList={openSourceList}
+                openSectionId={openSectionId}
+                visibleCounts={visibleCounts}
+                sectionLoading={sectionLoading}
+                setSectionOpen={setSectionOpen}
+                viewMore={viewMore}
+                formatMonthYear={(val) => formatMonthYearShort(val ?? "")}
+                openSourceEmptyMessage="No open source"
+                footerVariant="retro"
+              />
             </div>
           </div>
 
           <div className="lg:col-span-4 space-y-6">
-            <div className="border-4 border-border bg-card p-4 shadow">
+            <BlockShadowButton
+              type="button"
+              variant="outline"
+              fullWidth
+              onClick={() => setDialogOpen(true)}
+              aria-label="Open followers and following"
+              className="h-auto border-4 p-4 text-left normal-case tracking-normal"
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center">
-                    <Users className="size-4 text-primary" />
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="size-9 border-2 border-border bg-muted/50 flex items-center justify-center shrink-0">
+                    <Users className="size-4 text-primary" aria-hidden />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-black uppercase">Followers & Following</p>
+                    <p className="text-[10px] font-black uppercase">
+                      Followers & Following
+                    </p>
                     {followersCount === 0 && followingCount === 0 ? (
                       <p className="text-[9px] font-bold text-muted-foreground uppercase mt-0.5">
                         No followers yet
@@ -1008,20 +615,22 @@ export default function PublicProfilePage() {
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setDialogOpen(true)}
-                  aria-label="Open followers and following"
-                  className="p-2 border-2 border-border bg-card hover:bg-muted shadow active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all shrink-0"
+                <span
+                  className="p-2 border-2 border-border bg-card shrink-0"
+                  aria-hidden
                 >
                   <ChevronRight className="size-4 text-foreground" />
-                </button>
+                </span>
               </div>
-            </div>
+            </BlockShadowButton>
 
             <ProfileSquadsCategoriesCard
               username={username}
-              userId={isSelf ? (currentUser?.id ?? currentUser?._id ?? profile?.id ?? null) : null}
+              userId={
+                isSelf
+                  ? (currentUser?.id ?? currentUser?._id ?? profile?.id ?? null)
+                  : null
+              }
               token={token}
               isSelf={!!isSelf}
             />
@@ -1032,93 +641,63 @@ export default function PublicProfilePage() {
                 <TestAccountLottie size={24} />
                 Public Profile
               </h3>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => void copyProfileUrl()}
-                  className="group flex min-w-0 flex-1 items-center justify-between gap-3 border-2 border-border bg-muted/20 p-2.5 pl-3 text-left shadow transition-colors hover:bg-muted/40 active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                >
-                  <Link2 className="size-4 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
-                  <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-bold text-foreground">
-                    {profileShareUrl || '—'}
-                  </span>
-                  <span
-                    className={cn(
-                      'flex shrink-0 items-center gap-1.5 border-2 border-border px-2.5 py-1.5 text-[9px] font-black uppercase',
-                      profileUrlCopied
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'bg-card group-hover:border-primary'
-                    )}
-                  >
-                    {profileUrlCopied ? (
-                      <Check className="size-3.5" />
-                    ) : (
-                      <Copy className="size-3.5" />
-                    )}
-                    {profileUrlCopied ? 'Copied' : 'Copy'}
-                  </span>
-                </button>
-              </div>
+              <ProfileShareUrlCopyRow url={profileShareUrl} variant="blockShadow" />
               <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
                 {profile.linkedin && (
-                  <a
+                  <RetroIconLink
                     href={
-                      profile.linkedin.startsWith('http')
+                      profile.linkedin.startsWith("http")
                         ? profile.linkedin
                         : `https://${profile.linkedin}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="LinkedIn"
-                    className={PROFILE_PUBLIC_SOCIAL_BTN}
                   >
                     <LinkedinIcon className="size-5 text-[#0A66C2]" />
-                  </a>
+                  </RetroIconLink>
                 )}
                 {profile.github && (
-                  <a
+                  <RetroIconLink
                     href={
-                      profile.github.startsWith('http')
+                      profile.github.startsWith("http")
                         ? profile.github
                         : `https://${profile.github}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="GitHub"
-                    className={PROFILE_PUBLIC_SOCIAL_BTN}
                   >
                     <GithubIcon className="size-5 text-[#24292f] dark:text-[#f0f6fc]" />
-                  </a>
+                  </RetroIconLink>
                 )}
                 {profile.instagram && (
-                  <a
+                  <RetroIconLink
                     href={
-                      profile.instagram.startsWith('http')
+                      profile.instagram.startsWith("http")
                         ? profile.instagram
                         : `https://${profile.instagram}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Instagram"
-                    className={PROFILE_PUBLIC_SOCIAL_BTN}
                   >
                     <InstagramIcon className="size-5 text-[#E4405F]" />
-                  </a>
+                  </RetroIconLink>
                 )}
                 {profile.youtube && (
-                  <a
+                  <RetroIconLink
                     href={
-                      profile.youtube.startsWith('http')
+                      profile.youtube.startsWith("http")
                         ? profile.youtube
                         : `https://${profile.youtube}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="YouTube"
-                    className={PROFILE_PUBLIC_SOCIAL_BTN}
                   >
                     <YoutubeIcon className="size-5 text-[#FF0000]" />
-                  </a>
+                  </RetroIconLink>
                 )}
               </div>
             </div>
@@ -1135,33 +714,7 @@ export default function PublicProfilePage() {
                 </span>
               </div>
               <div className="h-2 bg-muted border-2 border-border mt-3">
-                <div className="h-full bg-primary" style={{ width: '0%' }} />
-              </div>
-            </div>
-
-            {/* BADGES */}
-            <div className="border-4 border-border bg-card p-5 shadow space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[10px] font-black uppercase tracking-widest">
-                  Badges & Awards
-                </h3>
-                <span className="text-[9px] font-black text-muted-foreground uppercase">
-                  Coming soon
-                </span>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between py-2 border-b-2 border-border border-dashed">
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground">
-                    Top reader badge
-                  </span>
-                  <span className="text-xs font-black">x0</span>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground">
-                    Total Awards
-                  </span>
-                  <span className="text-xs font-black">x0</span>
-                </div>
+                <div className="h-full bg-primary" style={{ width: "0%" }} />
               </div>
             </div>
 
@@ -1176,7 +729,8 @@ export default function PublicProfilePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1 p-2 border-2 border-border bg-muted/10">
                   <div className="text-lg font-black italic flex items-center gap-2">
-                    {readStreak?.longest ?? 0} <StreakFireLottie play size={28} />
+                    {readStreak?.longest ?? 0}{" "}
+                    <StreakFireLottie play size={28} />
                   </div>
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">
                     Longest read streak
@@ -1213,16 +767,16 @@ export default function PublicProfilePage() {
                   <div className="flex-1 min-w-0 h-14 overflow-hidden flex items-center">
                     <AreaChart
                       data={[
-                        { name: 'M', views: 0 },
-                        { name: 'T', views: 0 },
-                        { name: 'W', views: 0 },
-                        { name: 'T', views: 0 },
-                        { name: 'F', views: 0 },
-                        { name: 'S', views: 0 },
-                        { name: 'S', views: 0 },
+                        { name: "M", views: 0 },
+                        { name: "T", views: 0 },
+                        { name: "W", views: 0 },
+                        { name: "T", views: 0 },
+                        { name: "F", views: 0 },
+                        { name: "S", views: 0 },
+                        { name: "S", views: 0 },
                       ]}
                       index="name"
-                      categories={['views']}
+                      categories={["views"]}
                       height={56}
                       sparkline
                     />
@@ -1254,7 +808,7 @@ export default function PublicProfilePage() {
           <MediaFullViewDialog
             open={!!mySetupPreview}
             onClose={() => setMySetupPreview(null)}
-            src={mySetupPreview?.src ?? ''}
+            src={mySetupPreview?.src ?? ""}
             title={mySetupPreview?.title}
           />
         </div>

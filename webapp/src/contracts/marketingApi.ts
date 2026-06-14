@@ -1,62 +1,13 @@
 /**
- * Marketing CMS JSON API — `/api/marketing/*`.
- * Keep in sync with `server/src/routes/marketing.routes.ts`.
+ * Static About page content shapes (frontend seed in `lib/marketing/aboutPage.seed.ts`).
  */
 
-export interface MarketingHero {
-  badge: string;
-  title: string;
-  titleHighlight: string;
-  description: string;
-}
-
-export interface MarketingJourneyItem {
-  year: string;
-  event: string;
-  sortOrder: number;
-}
-
-export interface MarketingTechItem {
-  name: string;
-  icon: string;
-  sortOrder: number;
-}
-
-export interface MarketingFeatureItem {
-  title: string;
-  description: string;
-  icon: string;
-  sortOrder: number;
-}
-
-export interface MarketingTeamMember {
-  name: string;
-  role: string;
-  imageUrl: string;
-  githubUrl?: string;
-  xUrl?: string;
-  sortOrder: number;
-}
-
-export interface MarketingCta {
-  title: string;
-  description: string;
-  buttonLabel: string;
-}
-
-export interface AboutMarketingPage {
-  slug: 'about';
-  hero: MarketingHero;
-  journey: MarketingJourneyItem[];
-  techStack: MarketingTechItem[];
-  features: MarketingFeatureItem[];
-  team: MarketingTeamMember[];
-  cta: MarketingCta;
-  footerNote: string;
-  updatedAt?: string;
-}
-
-export interface AboutMarketingPageResponse {
-  success: boolean;
-  page: AboutMarketingPage;
-}
+export type {
+  AboutHero as MarketingHero,
+  AboutJourneyItem as MarketingJourneyItem,
+  AboutTechItem as MarketingTechItem,
+  AboutFeatureItem as MarketingFeatureItem,
+  AboutTeamMember as MarketingTeamMember,
+  AboutCta as MarketingCta,
+  AboutPageContent as AboutMarketingPage,
+} from "@/lib/marketing/aboutPage.types";

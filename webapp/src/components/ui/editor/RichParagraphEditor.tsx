@@ -1,5 +1,4 @@
-'use client';
-
+"use client";
 import React, {
   useEffect,
   useLayoutEffect,
@@ -8,23 +7,23 @@ import React, {
   useMemo,
   useRef,
   useId,
-} from 'react';
-import { useRouter } from 'next/navigation';
-import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { EditorContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
-import { Extension, Node as TipTapNode, mergeAttributes } from '@tiptap/core';
-import type { Editor, JSONContent } from '@tiptap/core';
-import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
-import type { EditorState, Transaction } from '@tiptap/pm/state';
-import { Node as PMNode, Fragment, Slice } from '@tiptap/pm/model';
-import type { Mark, ResolvedPos, NodeType, Schema } from '@tiptap/pm/model';
-import { canSplit } from '@tiptap/pm/transform';
-import { joinTextblockBackward } from '@tiptap/pm/commands';
+} from "react";
+import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import { Extension, Node as TipTapNode, mergeAttributes } from "@tiptap/core";
+import type { Editor, JSONContent } from "@tiptap/core";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import type { EditorState, Transaction } from "@tiptap/pm/state";
+import { Node as PMNode, Fragment, Slice } from "@tiptap/pm/model";
+import type { Mark, ResolvedPos, NodeType, Schema } from "@tiptap/pm/model";
+import { canSplit } from "@tiptap/pm/transform";
+import { joinTextblockBackward } from "@tiptap/pm/commands";
 import {
   Bold,
   Italic,
@@ -34,48 +33,40 @@ import {
   Image as ImageIcon,
   Search,
   Sparkles,
-} from 'lucide-react';
-import { cn } from '@/lib/core/utils';
+} from "lucide-react";
+import { cn } from "@/lib/core/utils";
 import {
   computeHoverCardPositionAuto,
   estimateGifPopoverDimensions,
   motionAxisOffset,
   HOVER_CARD_Z_INDEX,
   type HoverCardSide,
-} from '../popover/HoverCard';
-import { LinkPreviewCardContent } from '../popover/LinkPreviewCardContent';
-import { MentionPopoverCard } from '../popover/MentionPopoverCard';
-import { resolveMemberAvatarUrl } from '@/lib/profile/categoryMembers';
-import { GifPopoverCard } from '../popover/GifPopoverCard';
-import { searchGifs, type GiphyGif } from '@/api/giphy';
-import { followApi, type FollowUser } from '@/api/follow';
-
-/** Default Link sets `inclusive` from `autolink`, so with autolink on new typing stays inside the link. Force non-inclusive so Space/new text after a link exits the mark (matches user expectation). */
+} from "../popover/HoverCard";
+import { LinkPreviewCardContent } from "../popover/LinkPreviewCardContent";
+import { MentionPopoverCard } from "../popover/MentionPopoverCard";
+import { resolveMemberAvatarUrl } from "@/lib/profile/categoryMembers";
+import { resolveProfileMediaUrl } from "@/lib/profile/resolveProfileMediaUrl";
+import { GifPopoverCard } from "../popover/GifPopoverCard";
+import { searchGifs, type GiphyGif } from "@/api/giphy";
+import { searchApi } from "@/api/search";
+import type { FollowUser } from "@/api/follow";
 const LinkMark = Link.extend({
   inclusive: false,
 });
-
 export interface RichParagraphEditorProps {
   initialDoc?: any;
   legacyText?: string;
-  /** Omitted when `readOnly` (e.g. public blog view). */
   onChange?: (doc: any) => void;
-  /** Collapse multiple spaces, duplicate line breaks, and consecutive empty paragraphs (default true). */
   normalizeContent?: boolean;
-  /** No toolbar; links open on click. */
   readOnly?: boolean;
-  /** When set, hovering `a.ss-link` in read-only mode shows this preview (e.g. `LinkPreviewCardContent`). */
   readOnlyLinkPreview?: (href: string) => React.ReactNode;
   className?: string;
-  /** Empty-editor hint (write mode only). */
   editorPlaceholder?: string;
 }
-
-const READONLY_LINK_SEL = 'a.ss-link';
+const READONLY_LINK_SEL = "a.ss-link";
 const READONLY_MENTION_SEL = '[data-mention="true"]';
 const READONLY_GIF_SEL = '[data-inline-gif="true"]';
-const READONLY_LINK_EXIT_MS = 180;
-
+import { LINK_HOVER_EXIT_MS } from "@/variable";
 function ReadOnlyRichLinkHoverLayer({
   editor,
   renderPreview,
@@ -86,7 +77,7 @@ function ReadOnlyRichLinkHoverLayer({
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [resolvedSide, setResolvedSide] = useState<HoverCardSide>('bottom');
+  const [resolvedSide, setResolvedSide] = useState<HoverCardSide>("bottom");
   const [href, setHref] = useState<string | null>(null);
   const portalRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLAnchorElement | null>(null);
@@ -94,7 +85,6 @@ function ReadOnlyRichLinkHoverLayer({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeLinkRef = useRef<HTMLAnchorElement | null>(null);
-
   const clearTimers = useCallback(() => {
     if (openTimerRef.current) {
       clearTimeout(openTimerRef.current);
@@ -109,16 +99,19 @@ function ReadOnlyRichLinkHoverLayer({
       exitTimerRef.current = null;
     }
   }, []);
-
   useEffect(() => {
     const root = editor.view.dom;
-
     const scheduleOpen = (a: HTMLAnchorElement) => {
       clearTimers();
       openTimerRef.current = setTimeout(() => {
         anchorRef.current = a;
         const rect = a.getBoundingClientRect();
-        const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'center', 160);
+        const { top, left, side } = computeHoverCardPositionAuto(
+          rect,
+          "bottom",
+          "center",
+          160,
+        );
         setPosition({ top, left });
         setResolvedSide(side);
         setHref(a.href);
@@ -127,20 +120,18 @@ function ReadOnlyRichLinkHoverLayer({
         openTimerRef.current = null;
       }, 200);
     };
-
     const onMouseOver = (e: MouseEvent) => {
       const a = (e.target as HTMLElement | null)?.closest(
-        READONLY_LINK_SEL
+        READONLY_LINK_SEL,
       ) as HTMLAnchorElement | null;
       if (!a?.href) return;
       if (activeLinkRef.current === a) return;
       activeLinkRef.current = a;
       scheduleOpen(a);
     };
-
     const onMouseOut = (e: MouseEvent) => {
       const from = (e.target as HTMLElement | null)?.closest(
-        READONLY_LINK_SEL
+        READONLY_LINK_SEL,
       ) as HTMLAnchorElement | null;
       if (!from) return;
       const related = e.relatedTarget as Node | null;
@@ -157,25 +148,22 @@ function ReadOnlyRichLinkHoverLayer({
           setIsClosing(false);
           setHref(null);
           exitTimerRef.current = null;
-        }, READONLY_LINK_EXIT_MS);
+        }, LINK_HOVER_EXIT_MS);
       }, 100);
     };
-
-    root.addEventListener('mouseover', onMouseOver);
-    root.addEventListener('mouseout', onMouseOut);
+    root.addEventListener("mouseover", onMouseOver);
+    root.addEventListener("mouseout", onMouseOut);
     return () => {
-      root.removeEventListener('mouseover', onMouseOver);
-      root.removeEventListener('mouseout', onMouseOut);
+      root.removeEventListener("mouseover", onMouseOver);
+      root.removeEventListener("mouseout", onMouseOut);
       clearTimers();
     };
   }, [editor, clearTimers]);
-
   const cancelClose = useCallback(() => {
     setIsClosing(false);
     clearTimers();
     setOpen(true);
   }, [clearTimers]);
-
   const handlePortalLeave = useCallback(() => {
     clearTimers();
     closeTimerRef.current = setTimeout(() => {
@@ -188,24 +176,27 @@ function ReadOnlyRichLinkHoverLayer({
         setIsClosing(false);
         setHref(null);
         exitTimerRef.current = null;
-      }, READONLY_LINK_EXIT_MS);
+      }, LINK_HOVER_EXIT_MS);
     }, 100);
   }, [clearTimers]);
-
   useEffect(() => {
     if (!open || isClosing) return;
     const onResize = () => {
       const a = anchorRef.current;
       if (!a) return;
       const rect = a.getBoundingClientRect();
-      const { top, left, side } = computeHoverCardPositionAuto(rect, 'bottom', 'center', 160);
+      const { top, left, side } = computeHoverCardPositionAuto(
+        rect,
+        "bottom",
+        "center",
+        160,
+      );
       setPosition({ top, left });
       setResolvedSide(side);
     };
-    globalThis.addEventListener('resize', onResize);
-    return () => globalThis.removeEventListener('resize', onResize);
+    globalThis.addEventListener("resize", onResize);
+    return () => globalThis.removeEventListener("resize", onResize);
   }, [open, isClosing]);
-
   useEffect(() => {
     if (!open) return;
     const handleScroll = () => {
@@ -216,18 +207,17 @@ function ReadOnlyRichLinkHoverLayer({
         setIsClosing(false);
         setHref(null);
         exitTimerRef.current = null;
-      }, READONLY_LINK_EXIT_MS);
+      }, LINK_HOVER_EXIT_MS);
     };
-    globalThis.addEventListener('scroll', handleScroll, true);
-    return () => globalThis.removeEventListener('scroll', handleScroll, true);
+    globalThis.addEventListener("scroll", handleScroll, true);
+    return () => globalThis.removeEventListener("scroll", handleScroll, true);
   }, [open, clearTimers]);
-
   const showPortal = open || isClosing;
   const axis = motionAxisOffset(resolvedSide);
   const cardEl =
     showPortal &&
     href &&
-    typeof document !== 'undefined' &&
+    typeof document !== "undefined" &&
     createPortal(
       <AnimatePresence>
         {open && (
@@ -239,7 +229,11 @@ function ReadOnlyRichLinkHoverLayer({
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="fixed w-70 min-h-20 max-h-80 overflow-hidden border-2 border-border bg-card shadow pointer-events-auto p-0"
-            style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
+            style={{
+              top: position.top,
+              left: position.left,
+              zIndex: HOVER_CARD_Z_INDEX,
+            }}
             role="tooltip"
             onMouseEnter={cancelClose}
             onMouseLeave={handlePortalLeave}
@@ -248,12 +242,10 @@ function ReadOnlyRichLinkHoverLayer({
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body
+      document.body,
     );
-
   return <>{cardEl}</>;
 }
-
 function ReadOnlyMentionHoverLayer({
   editor,
 }: Readonly<{
@@ -262,7 +254,7 @@ function ReadOnlyMentionHoverLayer({
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [resolvedSide, setResolvedSide] = useState<HoverCardSide>('bottom');
+  const [resolvedSide, setResolvedSide] = useState<HoverCardSide>("bottom");
   const [mention, setMention] = useState<{
     username: string;
     fullName?: string;
@@ -274,7 +266,6 @@ function ReadOnlyMentionHoverLayer({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeMentionRef = useRef<HTMLElement | null>(null);
-
   const clearTimers = useCallback(() => {
     if (openTimerRef.current) {
       clearTimeout(openTimerRef.current);
@@ -289,10 +280,8 @@ function ReadOnlyMentionHoverLayer({
       exitTimerRef.current = null;
     }
   }, []);
-
   useEffect(() => {
     const root = editor.view.dom;
-
     const scheduleOpen = (el: HTMLElement) => {
       clearTimers();
       openTimerRef.current = setTimeout(() => {
@@ -300,15 +289,15 @@ function ReadOnlyMentionHoverLayer({
         const rect = el.getBoundingClientRect();
         const { top, left, side } = computeHoverCardPositionAuto(
           rect,
-          'bottom',
-          'start',
+          "bottom",
+          "start",
           155,
           260,
-          0
+          0,
         );
         setPosition({ top, left });
         setResolvedSide(side);
-        const username = el.dataset.username?.trim() ?? '';
+        const username = el.dataset.username?.trim() ?? "";
         if (!username) {
           openTimerRef.current = null;
           return;
@@ -323,20 +312,18 @@ function ReadOnlyMentionHoverLayer({
         openTimerRef.current = null;
       }, 200);
     };
-
     const onMouseOver = (e: MouseEvent) => {
       const el = (e.target as HTMLElement | null)?.closest(
-        READONLY_MENTION_SEL
+        READONLY_MENTION_SEL,
       ) as HTMLElement | null;
       if (!el) return;
       if (activeMentionRef.current === el) return;
       activeMentionRef.current = el;
       scheduleOpen(el);
     };
-
     const onMouseOut = (e: MouseEvent) => {
       const from = (e.target as HTMLElement | null)?.closest(
-        READONLY_MENTION_SEL
+        READONLY_MENTION_SEL,
       ) as HTMLElement | null;
       if (!from) return;
       const related = e.relatedTarget as Node | null;
@@ -353,25 +340,22 @@ function ReadOnlyMentionHoverLayer({
           setIsClosing(false);
           setMention(null);
           exitTimerRef.current = null;
-        }, READONLY_LINK_EXIT_MS);
+        }, LINK_HOVER_EXIT_MS);
       }, 100);
     };
-
-    root.addEventListener('mouseover', onMouseOver);
-    root.addEventListener('mouseout', onMouseOut);
+    root.addEventListener("mouseover", onMouseOver);
+    root.addEventListener("mouseout", onMouseOut);
     return () => {
-      root.removeEventListener('mouseover', onMouseOver);
-      root.removeEventListener('mouseout', onMouseOut);
+      root.removeEventListener("mouseover", onMouseOver);
+      root.removeEventListener("mouseout", onMouseOut);
       clearTimers();
     };
   }, [editor, clearTimers]);
-
   const cancelClose = useCallback(() => {
     setIsClosing(false);
     clearTimers();
     setOpen(true);
   }, [clearTimers]);
-
   const handlePortalLeave = useCallback(() => {
     clearTimers();
     closeTimerRef.current = setTimeout(() => {
@@ -384,10 +368,9 @@ function ReadOnlyMentionHoverLayer({
         setIsClosing(false);
         setMention(null);
         exitTimerRef.current = null;
-      }, READONLY_LINK_EXIT_MS);
+      }, LINK_HOVER_EXIT_MS);
     }, 100);
   }, [clearTimers]);
-
   useEffect(() => {
     if (!open || isClosing) return;
     const onResize = () => {
@@ -396,19 +379,18 @@ function ReadOnlyMentionHoverLayer({
       const rect = el.getBoundingClientRect();
       const { top, left, side } = computeHoverCardPositionAuto(
         rect,
-        'bottom',
-        'start',
+        "bottom",
+        "start",
         155,
         260,
-        0
+        0,
       );
       setPosition({ top, left });
       setResolvedSide(side);
     };
-    globalThis.addEventListener('resize', onResize);
-    return () => globalThis.removeEventListener('resize', onResize);
+    globalThis.addEventListener("resize", onResize);
+    return () => globalThis.removeEventListener("resize", onResize);
   }, [open, isClosing]);
-
   useEffect(() => {
     if (!open) return;
     const handleScroll = () => {
@@ -419,18 +401,17 @@ function ReadOnlyMentionHoverLayer({
         setIsClosing(false);
         setMention(null);
         exitTimerRef.current = null;
-      }, READONLY_LINK_EXIT_MS);
+      }, LINK_HOVER_EXIT_MS);
     };
-    globalThis.addEventListener('scroll', handleScroll, true);
-    return () => globalThis.removeEventListener('scroll', handleScroll, true);
+    globalThis.addEventListener("scroll", handleScroll, true);
+    return () => globalThis.removeEventListener("scroll", handleScroll, true);
   }, [open, clearTimers]);
-
   const showPortal = open || isClosing;
   const axis = motionAxisOffset(resolvedSide);
   const cardEl =
     showPortal &&
     mention &&
-    typeof document !== 'undefined' &&
+    typeof document !== "undefined" &&
     createPortal(
       <AnimatePresence>
         {open && (
@@ -442,7 +423,11 @@ function ReadOnlyMentionHoverLayer({
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="fixed w-[260px] overflow-visible p-0 pointer-events-auto"
-            style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
+            style={{
+              top: position.top,
+              left: position.left,
+              zIndex: HOVER_CARD_Z_INDEX,
+            }}
             role="tooltip"
             onMouseEnter={cancelClose}
             onMouseLeave={handlePortalLeave}
@@ -456,12 +441,10 @@ function ReadOnlyMentionHoverLayer({
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body
+      document.body,
     );
-
   return <>{cardEl}</>;
 }
-
 function ReadOnlyGifHoverLayer({
   editor,
 }: Readonly<{
@@ -470,15 +453,17 @@ function ReadOnlyGifHoverLayer({
   const [open, setOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [resolvedSide, setResolvedSide] = useState<HoverCardSide>('bottom');
-  const [gif, setGif] = useState<{ url: string; sourceUrl: string | null } | null>(null);
+  const [resolvedSide, setResolvedSide] = useState<HoverCardSide>("bottom");
+  const [gif, setGif] = useState<{
+    url: string;
+    sourceUrl: string | null;
+  } | null>(null);
   const portalRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLElement | null>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeGifRef = useRef<HTMLElement | null>(null);
-
   const clearTimers = useCallback(() => {
     if (openTimerRef.current) {
       clearTimeout(openTimerRef.current);
@@ -493,7 +478,6 @@ function ReadOnlyGifHoverLayer({
       exitTimerRef.current = null;
     }
   }, []);
-
   const measureGifPopoverPosition = useCallback(() => {
     const el = anchorRef.current;
     const card = portalRef.current;
@@ -503,44 +487,44 @@ function ReadOnlyGifHoverLayer({
     if (cr.width < 2 || cr.height < 2) return;
     const { top, left, side } = computeHoverCardPositionAuto(
       rect,
-      'bottom',
-      'center',
+      "bottom",
+      "center",
       cr.height,
-      cr.width
+      cr.width,
     );
     setPosition({ top, left });
     setResolvedSide(side);
   }, []);
-
   useLayoutEffect(() => {
     if (!open || !gif) return;
     measureGifPopoverPosition();
   }, [open, gif, measureGifPopoverPosition]);
-
   useEffect(() => {
     const root = editor.view.dom;
-
     const scheduleOpen = (el: HTMLElement) => {
       clearTimers();
       openTimerRef.current = setTimeout(() => {
         anchorRef.current = el;
         const rect = el.getBoundingClientRect();
-        const img = el.querySelector('img');
-        const url = img?.getAttribute('src')?.trim() ?? '';
-        const sourceUrl = el.getAttribute('data-gif-source')?.trim() || null;
+        const img = el.querySelector("img");
+        const url = img?.getAttribute("src")?.trim() ?? "";
+        const sourceUrl = el.getAttribute("data-gif-source")?.trim() || null;
         if (!url) {
           openTimerRef.current = null;
           return;
         }
         const nw = img?.naturalWidth ?? 0;
         const nh = img?.naturalHeight ?? 0;
-        const { width: estW, height: estH } = estimateGifPopoverDimensions(nw, nh);
+        const { width: estW, height: estH } = estimateGifPopoverDimensions(
+          nw,
+          nh,
+        );
         const { top, left, side } = computeHoverCardPositionAuto(
           rect,
-          'bottom',
-          'center',
+          "bottom",
+          "center",
           estH,
-          estW
+          estW,
         );
         setPosition({ top, left });
         setResolvedSide(side);
@@ -550,18 +534,18 @@ function ReadOnlyGifHoverLayer({
         openTimerRef.current = null;
       }, 200);
     };
-
     const onMouseOver = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement | null)?.closest(READONLY_GIF_SEL) as HTMLElement | null;
+      const el = (e.target as HTMLElement | null)?.closest(
+        READONLY_GIF_SEL,
+      ) as HTMLElement | null;
       if (!el) return;
       if (activeGifRef.current === el) return;
       activeGifRef.current = el;
       scheduleOpen(el);
     };
-
     const onMouseOut = (e: MouseEvent) => {
       const from = (e.target as HTMLElement | null)?.closest(
-        READONLY_GIF_SEL
+        READONLY_GIF_SEL,
       ) as HTMLElement | null;
       if (!from) return;
       const related = e.relatedTarget as Node | null;
@@ -578,25 +562,22 @@ function ReadOnlyGifHoverLayer({
           setIsClosing(false);
           setGif(null);
           exitTimerRef.current = null;
-        }, READONLY_LINK_EXIT_MS);
+        }, LINK_HOVER_EXIT_MS);
       }, 100);
     };
-
-    root.addEventListener('mouseover', onMouseOver);
-    root.addEventListener('mouseout', onMouseOut);
+    root.addEventListener("mouseover", onMouseOver);
+    root.addEventListener("mouseout", onMouseOut);
     return () => {
-      root.removeEventListener('mouseover', onMouseOver);
-      root.removeEventListener('mouseout', onMouseOut);
+      root.removeEventListener("mouseover", onMouseOver);
+      root.removeEventListener("mouseout", onMouseOut);
       clearTimers();
     };
   }, [editor, clearTimers]);
-
   const cancelClose = useCallback(() => {
     setIsClosing(false);
     clearTimers();
     setOpen(true);
   }, [clearTimers]);
-
   const handlePortalLeave = useCallback(() => {
     clearTimers();
     closeTimerRef.current = setTimeout(() => {
@@ -609,19 +590,17 @@ function ReadOnlyGifHoverLayer({
         setIsClosing(false);
         setGif(null);
         exitTimerRef.current = null;
-      }, READONLY_LINK_EXIT_MS);
+      }, LINK_HOVER_EXIT_MS);
     }, 100);
   }, [clearTimers]);
-
   useEffect(() => {
     if (!open || isClosing) return;
     const onResize = () => {
       measureGifPopoverPosition();
     };
-    globalThis.addEventListener('resize', onResize);
-    return () => globalThis.removeEventListener('resize', onResize);
+    globalThis.addEventListener("resize", onResize);
+    return () => globalThis.removeEventListener("resize", onResize);
   }, [open, isClosing, measureGifPopoverPosition]);
-
   useEffect(() => {
     if (!open) return;
     const handleScroll = () => {
@@ -632,18 +611,17 @@ function ReadOnlyGifHoverLayer({
         setIsClosing(false);
         setGif(null);
         exitTimerRef.current = null;
-      }, READONLY_LINK_EXIT_MS);
+      }, LINK_HOVER_EXIT_MS);
     };
-    globalThis.addEventListener('scroll', handleScroll, true);
-    return () => globalThis.removeEventListener('scroll', handleScroll, true);
+    globalThis.addEventListener("scroll", handleScroll, true);
+    return () => globalThis.removeEventListener("scroll", handleScroll, true);
   }, [open, clearTimers]);
-
   const showPortal = open || isClosing;
   const axis = motionAxisOffset(resolvedSide);
   const cardEl =
     showPortal &&
     gif &&
-    typeof document !== 'undefined' &&
+    typeof document !== "undefined" &&
     createPortal(
       <AnimatePresence>
         {open && (
@@ -655,7 +633,11 @@ function ReadOnlyGifHoverLayer({
             exit={{ opacity: 0, scale: 0.96, y: axis.y, x: axis.x }}
             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="fixed w-fit max-w-[min(340px,92vw)] cursor-pointer overflow-hidden border-2 border-border bg-muted leading-none shadow pointer-events-auto p-0"
-            style={{ top: position.top, left: position.left, zIndex: HOVER_CARD_Z_INDEX }}
+            style={{
+              top: position.top,
+              left: position.left,
+              zIndex: HOVER_CARD_Z_INDEX,
+            }}
             role="tooltip"
             onMouseEnter={cancelClose}
             onMouseLeave={handlePortalLeave}
@@ -664,53 +646,44 @@ function ReadOnlyGifHoverLayer({
               e.stopPropagation();
               if (gif.sourceUrl) safeOpenLinkHref(gif.sourceUrl);
             }}
-            title={gif.sourceUrl ? 'Open on Giphy' : undefined}
+            title={gif.sourceUrl ? "Open on Giphy" : undefined}
           >
             <GifPopoverCard url={gif.url} onLoad={measureGifPopoverPosition} />
           </motion.div>
         )}
       </AnimatePresence>,
-      document.body
+      document.body,
     );
-
   return <>{cardEl}</>;
 }
-
-const paragraphNormalizeKey = new PluginKey('ssParagraphNormalize');
-
+const paragraphNormalizeKey = new PluginKey("ssParagraphNormalize");
 function hasInlineAtomInParagraph(n: PMNode): boolean {
   let found = false;
   n.descendants((ch) => {
-    if (ch.type.name === 'inlineGif' || ch.type.name === 'mention') found = true;
+    if (ch.type.name === "inlineGif" || ch.type.name === "mention")
+      found = true;
   });
   return found;
 }
-
-/** Plain text only (ignores hard breaks). */
 function paragraphPlainText(n: PMNode): string {
-  let s = '';
+  let s = "";
   n.descendants((ch) => {
     if (ch.isText && ch.text) s += ch.text;
   });
   return s;
 }
-
-/** Empty, whitespace-only, hard-break-only, or spaces + breaks only — no GIF/mention. */
 function isEffectivelyEmptyParagraph(n: PMNode): boolean {
-  if (n.type.name !== 'paragraph') return false;
+  if (n.type.name !== "paragraph") return false;
   if (hasInlineAtomInParagraph(n)) return false;
   if (n.content.size === 0) return true;
-  return paragraphPlainText(n).trim() === '';
+  return paragraphPlainText(n).trim() === "";
 }
-
 function inCodeBlock($pos: ResolvedPos): boolean {
   for (let d = $pos.depth; d > 0; d--) {
-    if ($pos.node(d).type.name === 'codeBlock') return true;
+    if ($pos.node(d).type.name === "codeBlock") return true;
   }
   return false;
 }
-
-/** Open only http(s) links from editor content in a new tab. */
 function safeOpenLinkHref(raw: string | null | undefined): boolean {
   const s = raw?.trim();
   if (!s) return false;
@@ -724,26 +697,36 @@ function safeOpenLinkHref(raw: string | null | undefined): boolean {
       return false;
     }
   }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-  window.open(url.toString(), '_blank', 'noopener,noreferrer');
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  window.open(url.toString(), "_blank", "noopener,noreferrer");
   return true;
 }
-
-function collectConsecutiveEmptyParagraphDeletes(doc: PMNode): { from: number; to: number }[] {
-  const dels: { from: number; to: number }[] = [];
-
+function collectConsecutiveEmptyParagraphDeletes(doc: PMNode): {
+  from: number;
+  to: number;
+}[] {
+  const dels: {
+    from: number;
+    to: number;
+  }[] = [];
   function walk(parent: PMNode, parentPos: number) {
-    const children: { node: PMNode; pos: number }[] = [];
+    const children: {
+      node: PMNode;
+      pos: number;
+    }[] = [];
     parent.forEach((child, offset) => {
       children.push({ node: child, pos: parentPos + 1 + offset });
     });
-
     let i = 0;
     while (i < children.length) {
       const ch = children[i]!;
       if (isEffectivelyEmptyParagraph(ch.node)) {
         let j = i + 1;
-        while (j < children.length && isEffectivelyEmptyParagraph(children[j]!.node)) j++;
+        while (
+          j < children.length &&
+          isEffectivelyEmptyParagraph(children[j]!.node)
+        )
+          j++;
         if (j > i + 1) {
           for (let k = i + 1; k < j; k++) {
             const s = children[k]!;
@@ -754,30 +737,32 @@ function collectConsecutiveEmptyParagraphDeletes(doc: PMNode): { from: number; t
       } else {
         const n = ch.node;
         const p = ch.pos;
-        if (n.type.name === 'bulletList' || n.type.name === 'orderedList') {
+        if (n.type.name === "bulletList" || n.type.name === "orderedList") {
           n.forEach((li, off) => walk(li, p + 1 + off));
-        } else if (n.type.name === 'listItem') {
+        } else if (n.type.name === "listItem") {
           walk(n, p);
-        } else if (n.type.name === 'blockquote') {
+        } else if (n.type.name === "blockquote") {
           walk(n, p);
         }
         i++;
       }
     }
   }
-
   walk(doc, 0);
   return dels;
 }
-
-/** Keep the first top-level empty paragraph (doc order); delete any other top-level empty paragraphs. */
-function collectTopLevelGlobalExtraEmptyParagraphDeletes(
-  doc: PMNode
-): { from: number; to: number }[] {
-  const items: { pos: number; from: number; to: number }[] = [];
+function collectTopLevelGlobalExtraEmptyParagraphDeletes(doc: PMNode): {
+  from: number;
+  to: number;
+}[] {
+  const items: {
+    pos: number;
+    from: number;
+    to: number;
+  }[] = [];
   doc.forEach((child, offset) => {
     const pos = offset + 1;
-    if (child.type.name === 'paragraph' && isEffectivelyEmptyParagraph(child)) {
+    if (child.type.name === "paragraph" && isEffectivelyEmptyParagraph(child)) {
       items.push({ pos, from: pos, to: pos + child.nodeSize });
     }
   });
@@ -786,12 +771,16 @@ function collectTopLevelGlobalExtraEmptyParagraphDeletes(
   const [, ...rest] = items;
   return rest.map((e) => ({ from: e.from, to: e.to }));
 }
-
-/** Whitespace / hard-break–only paragraphs still have content; strip to true empty before merging. */
-function collectEffectiveEmptyParagraphInnerDeletes(doc: PMNode): { from: number; to: number }[] {
-  const dels: { from: number; to: number }[] = [];
+function collectEffectiveEmptyParagraphInnerDeletes(doc: PMNode): {
+  from: number;
+  to: number;
+}[] {
+  const dels: {
+    from: number;
+    to: number;
+  }[] = [];
   doc.descendants((node, pos) => {
-    if (node.type.name !== 'paragraph') return true;
+    if (node.type.name !== "paragraph") return true;
     if (!isEffectivelyEmptyParagraph(node)) return true;
     if (node.content.size === 0) return false;
     const innerFrom = pos + 1;
@@ -801,17 +790,29 @@ function collectEffectiveEmptyParagraphInnerDeletes(doc: PMNode): { from: number
   });
   return dels;
 }
-
-function collectDuplicateHardBreakDeletes(doc: PMNode): { from: number; to: number }[] {
-  const dels: { from: number; to: number }[] = [];
+function collectDuplicateHardBreakDeletes(doc: PMNode): {
+  from: number;
+  to: number;
+}[] {
+  const dels: {
+    from: number;
+    to: number;
+  }[] = [];
   doc.descendants((node, pos) => {
-    if (node.type.name !== 'paragraph') return true;
-    const parts: { name: string; pos: number; size: number }[] = [];
+    if (node.type.name !== "paragraph") return true;
+    const parts: {
+      name: string;
+      pos: number;
+      size: number;
+    }[] = [];
     node.forEach((ch, off) => {
       parts.push({ name: ch.type.name, pos: pos + 1 + off, size: ch.nodeSize });
     });
     for (let i = 1; i < parts.length; i++) {
-      if (parts[i]!.name === 'hardBreak' && parts[i - 1]!.name === 'hardBreak') {
+      if (
+        parts[i]!.name === "hardBreak" &&
+        parts[i - 1]!.name === "hardBreak"
+      ) {
         dels.push({ from: parts[i]!.pos, to: parts[i]!.pos + parts[i]!.size });
       }
     }
@@ -819,31 +820,42 @@ function collectDuplicateHardBreakDeletes(doc: PMNode): { from: number; to: numb
   });
   return dels;
 }
-
 function docMaxPos(doc: PMNode): number {
   return doc.content.size;
 }
-
-function safeDeleteRange(tr: Transaction, doc: PMNode, from: number, to: number): boolean {
+function safeDeleteRange(
+  tr: Transaction,
+  doc: PMNode,
+  from: number,
+  to: number,
+): boolean {
   const max = docMaxPos(doc);
   if (from < 0 || to > max || from >= to) return false;
   tr.delete(from, to);
   return true;
 }
-
 function buildNormalizeTransaction(state: EditorState): Transaction | null {
   const { schema } = state;
   const tr = state.tr;
   let changed = false;
-
-  const textOps: { from: number; to: number; text: string; marks: readonly Mark[] }[] = [];
+  const textOps: {
+    from: number;
+    to: number;
+    text: string;
+    marks: readonly Mark[];
+  }[] = [];
   state.doc.descendants((node, pos) => {
     if (!node.isText || !node.text) return true;
     const $pos = state.doc.resolve(pos + 1);
     if (inCodeBlock($pos)) return true;
-    const normalized = node.text.replace(/[ \t\u00a0]+/g, ' ');
+    const normalized = node.text.replace(/[ \t\u00a0]+/g, " ");
     if (normalized !== node.text) {
-      textOps.push({ from: pos, to: pos + node.nodeSize, text: normalized, marks: node.marks });
+      textOps.push({
+        from: pos,
+        to: pos + node.nodeSize,
+        text: normalized,
+        marks: node.marks,
+      });
     }
     return true;
   });
@@ -854,7 +866,6 @@ function buildNormalizeTransaction(state: EditorState): Transaction | null {
       changed = true;
     }
   }
-
   let guard = 0;
   while (guard++ < 48) {
     const innerDels = collectEffectiveEmptyParagraphInnerDeletes(tr.doc);
@@ -864,8 +875,6 @@ function buildNormalizeTransaction(state: EditorState): Transaction | null {
     if (safeDeleteRange(tr, tr.doc, d.from, d.to)) changed = true;
     else break;
   }
-
-  // One delete per loop: positions must be recomputed from tr.doc after each step (fixes stale ranges).
   guard = 0;
   while (guard++ < 48) {
     const hb = collectDuplicateHardBreakDeletes(tr.doc);
@@ -875,7 +884,6 @@ function buildNormalizeTransaction(state: EditorState): Transaction | null {
     if (safeDeleteRange(tr, tr.doc, d.from, d.to)) changed = true;
     else break;
   }
-
   guard = 0;
   while (guard++ < 48) {
     const emptyDels = collectConsecutiveEmptyParagraphDeletes(tr.doc);
@@ -885,7 +893,6 @@ function buildNormalizeTransaction(state: EditorState): Transaction | null {
     if (safeDeleteRange(tr, tr.doc, d.from, d.to)) changed = true;
     else break;
   }
-
   guard = 0;
   while (guard++ < 48) {
     const globalDels = collectTopLevelGlobalExtraEmptyParagraphDeletes(tr.doc);
@@ -895,20 +902,19 @@ function buildNormalizeTransaction(state: EditorState): Transaction | null {
     if (safeDeleteRange(tr, tr.doc, d.from, d.to)) changed = true;
     else break;
   }
-
   return changed ? tr : null;
 }
-
 function createParagraphNormalizeExtension() {
   return Extension.create({
-    name: 'paragraphNormalize',
+    name: "paragraphNormalize",
     addProseMirrorPlugins() {
       return [
         new Plugin({
           key: paragraphNormalizeKey,
           appendTransaction(transactions, _oldState, newState) {
             if (!transactions.some((t) => t.docChanged)) return null;
-            if (transactions.some((t) => t.getMeta(paragraphNormalizeKey))) return null;
+            if (transactions.some((t) => t.getMeta(paragraphNormalizeKey)))
+              return null;
             const next = buildNormalizeTransaction(newState);
             if (!next || next.steps.length === 0) return null;
             next.setMeta(paragraphNormalizeKey, true);
@@ -919,14 +925,9 @@ function createParagraphNormalizeExtension() {
     },
   });
 }
-
-/**
- * Swallow Enter in a top-level empty paragraph when another top-level empty paragraph already exists.
- * Prevents stacking blank lines before normalize runs.
- */
 function createParagraphEnterGuardExtension() {
   return Extension.create({
-    name: 'paragraphEnterGuard',
+    name: "paragraphEnterGuard",
     priority: 95,
     addKeyboardShortcuts() {
       return {
@@ -935,9 +936,9 @@ function createParagraphEnterGuardExtension() {
           const { selection } = state;
           if (!selection.empty) return false;
           const { $from } = selection;
-          if ($from.parent.type.name !== 'paragraph') return false;
+          if ($from.parent.type.name !== "paragraph") return false;
           for (let d = 1; d <= $from.depth; d++) {
-            if ($from.node(d).type.name === 'listItem') return false;
+            if ($from.node(d).type.name === "listItem") return false;
           }
           if ($from.depth !== 1) return false;
           if (!isEffectivelyEmptyParagraph($from.parent)) return false;
@@ -946,7 +947,7 @@ function createParagraphEnterGuardExtension() {
           let otherTopLevelEmpty = 0;
           doc.forEach((child, offset) => {
             const pos = offset + 1;
-            if (child.type.name !== 'paragraph') return;
+            if (child.type.name !== "paragraph") return;
             if (!isEffectivelyEmptyParagraph(child)) return;
             if (pos === paraStart) return;
             otherTopLevelEmpty++;
@@ -957,54 +958,64 @@ function createParagraphEnterGuardExtension() {
     },
   });
 }
-
-/** Matches TipTap core `getSplittedAttributes` (keepOnSplit attrs only). */
 function getSplittedAttributesForListSplit(
-  extensionAttributes: { type: string; name: string; attribute: { keepOnSplit: boolean } }[],
+  extensionAttributes: {
+    type: string;
+    name: string;
+    attribute: {
+      keepOnSplit: boolean;
+    };
+  }[],
   typeName: string,
-  attributes: Record<string, unknown>
+  attributes: Record<string, unknown>,
 ): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(attributes).filter(([name]) => {
       const extensionAttribute = extensionAttributes.find(
-        (item) => item.type === typeName && item.name === name
+        (item) => item.type === typeName && item.name === name,
       );
       if (!extensionAttribute) return false;
       return extensionAttribute.attribute.keepOnSplit;
-    })
+    }),
   );
 }
-
-function getListItemNodeType(nameOrType: string | NodeType, schema: Schema): NodeType {
-  if (typeof nameOrType === 'string') {
+function getListItemNodeType(
+  nameOrType: string | NodeType,
+  schema: Schema,
+): NodeType {
+  if (typeof nameOrType === "string") {
     const n = schema.nodes[nameOrType];
     if (!n) {
       throw new Error(
-        `There is no node type named '${nameOrType}'. Maybe you forgot to add the extension?`
+        `There is no node type named '${nameOrType}'. Maybe you forgot to add the extension?`,
       );
     }
     return n;
   }
   return nameOrType;
 }
-
-/**
- * TipTap's default `splitListItem` ends with `tr.scrollIntoView()`, which scrolls the viewport on Enter
- * and feels like the list jumps to the "next screen". Register the same behavior without forced scroll.
- */
 function createSplitListItemWithoutScrollExtension() {
   return Extension.create({
-    name: 'splitListItemWithoutScroll',
+    name: "splitListItemWithoutScroll",
     addCommands() {
       return {
         splitListItem:
-          (typeOrName: string | NodeType, overrideAttrs: Record<string, unknown> = {}) =>
+          (
+            typeOrName: string | NodeType,
+            overrideAttrs: Record<string, unknown> = {},
+          ) =>
           ({ tr, state, dispatch, editor }) => {
             const type = getListItemNodeType(typeOrName, state.schema);
             const { $from, $to } = state.selection;
-            const selNode = state.selection as { node?: PMNode };
+            const selNode = state.selection as {
+              node?: PMNode;
+            };
             const node = selNode.node;
-            if ((node && node.isBlock) || $from.depth < 2 || !$from.sameParent($to)) {
+            if (
+              (node && node.isBlock) ||
+              $from.depth < 2 ||
+              !$from.sameParent($to)
+            ) {
               return false;
             }
             const grandParent = $from.node(-1);
@@ -1025,8 +1036,16 @@ function createSplitListItemWithoutScrollExtension() {
               }
               if (dispatch) {
                 let wrap = Fragment.empty;
-                const depthBefore = $from.index(-1) ? 1 : $from.index(-2) ? 2 : 3;
-                for (let d = $from.depth - depthBefore; d >= $from.depth - 3; d -= 1) {
+                const depthBefore = $from.index(-1)
+                  ? 1
+                  : $from.index(-2)
+                    ? 2
+                    : 3;
+                for (
+                  let d = $from.depth - depthBefore;
+                  d >= $from.depth - 3;
+                  d -= 1
+                ) {
                   wrap = Fragment.from($from.node(d).copy(wrap));
                 }
                 const depthAfter =
@@ -1039,15 +1058,25 @@ function createSplitListItemWithoutScrollExtension() {
                   ...getSplittedAttributesForListSplit(
                     extensionAttributes,
                     $from.node().type.name,
-                    $from.node().attrs as Record<string, unknown>
+                    $from.node().attrs as Record<string, unknown>,
                   ),
                   ...overrideAttrs,
                 };
                 const nextType =
-                  type.contentMatch.defaultType?.createAndFill(newNextTypeAttributes) ?? undefined;
-                wrap = wrap.append(Fragment.from(type.createAndFill(null, nextType) ?? undefined));
+                  type.contentMatch.defaultType?.createAndFill(
+                    newNextTypeAttributes,
+                  ) ?? undefined;
+                wrap = wrap.append(
+                  Fragment.from(
+                    type.createAndFill(null, nextType) ?? undefined,
+                  ),
+                );
                 const start = $from.before($from.depth - (depthBefore - 1));
-                tr.replace(start, $from.after(-depthAfter), new Slice(wrap, 4 - depthBefore, 0));
+                tr.replace(
+                  start,
+                  $from.after(-depthAfter),
+                  new Slice(wrap, 4 - depthBefore, 0),
+                );
                 let sel = -1;
                 tr.doc.nodesBetween(start, tr.doc.content.size, (n, pos) => {
                   if (sel > -1) return false;
@@ -1062,12 +1091,14 @@ function createSplitListItemWithoutScrollExtension() {
               return true;
             }
             const nextType =
-              $to.pos === $from.end() ? grandParent.contentMatchAt(0).defaultType : null;
+              $to.pos === $from.end()
+                ? grandParent.contentMatchAt(0).defaultType
+                : null;
             const newTypeAttributes = {
               ...getSplittedAttributesForListSplit(
                 extensionAttributes,
                 grandParent.type.name,
-                grandParent.attrs as Record<string, unknown>
+                grandParent.attrs as Record<string, unknown>,
               ),
               ...overrideAttrs,
             };
@@ -1075,7 +1106,7 @@ function createSplitListItemWithoutScrollExtension() {
               ...getSplittedAttributesForListSplit(
                 extensionAttributes,
                 $from.node().type.name,
-                $from.node().attrs as Record<string, unknown>
+                $from.node().attrs as Record<string, unknown>,
               ),
               ...overrideAttrs,
             };
@@ -1092,13 +1123,15 @@ function createSplitListItemWithoutScrollExtension() {
             if (dispatch) {
               const { selection, storedMarks } = state;
               const { splittableMarks } = editor.extensionManager;
-              const marks = storedMarks || (selection.$to.parentOffset && selection.$from.marks());
+              const marks =
+                storedMarks ||
+                (selection.$to.parentOffset && selection.$from.marks());
               tr.split($from.pos, 2, types);
               if (!marks) {
                 return true;
               }
               const filteredMarks = marks.filter((mark) =>
-                splittableMarks.includes(mark.type.name)
+                splittableMarks.includes(mark.type.name),
               );
               tr.ensureMarks(filteredMarks);
             }
@@ -1108,15 +1141,9 @@ function createSplitListItemWithoutScrollExtension() {
     },
   });
 }
-
-/**
- * Backspace on an empty last list item: default `joinBackward` can leave odd structure so the marker
- * disappears while list padding still reads as a "gap". Prefer a full lift for a one-item list, and
- * `joinTextblockBackward` for multi-item lists (merges text blocks without the broader join path).
- */
 function createListEmptyLastBackspaceExtension() {
   return Extension.create({
-    name: 'listEmptyLastBackspace',
+    name: "listEmptyLastBackspace",
     priority: 1000,
     addKeyboardShortcuts() {
       return {
@@ -1125,114 +1152,106 @@ function createListEmptyLastBackspaceExtension() {
           const { selection } = state;
           if (!selection.empty) return false;
           const { $from } = selection;
-          if ($from.parent.type.name !== 'paragraph') return false;
+          if ($from.parent.type.name !== "paragraph") return false;
           if ($from.parentOffset !== 0) return false;
           if (!isEffectivelyEmptyParagraph($from.parent)) return false;
-
           let liDepth = -1;
           for (let depth = $from.depth; depth >= 0; depth--) {
-            if ($from.node(depth).type.name === 'listItem') {
+            if ($from.node(depth).type.name === "listItem") {
               liDepth = depth;
               break;
             }
           }
           if (liDepth < 0) return false;
-
           const listNode = $from.node(liDepth - 1);
-          if (listNode.type.name !== 'bulletList' && listNode.type.name !== 'orderedList')
+          if (
+            listNode.type.name !== "bulletList" &&
+            listNode.type.name !== "orderedList"
+          )
             return false;
-
-          if ($from.index(liDepth - 1) !== listNode.childCount - 1) return false;
-
+          if ($from.index(liDepth - 1) !== listNode.childCount - 1)
+            return false;
           if (listNode.childCount === 1) {
-            return this.editor.commands.liftListItem('listItem');
+            return this.editor.commands.liftListItem("listItem");
           }
-
           return joinTextblockBackward(state, view.dispatch, view);
         },
       };
     },
   });
 }
-
 const OL_PASTE_LINE = /^\s*(\d+)\.\s+(.*)$/;
-/** Matches `1.dwdw` (no space after dot) as well as `1. dwdw` */
 const OL_PASTE_LINE_LOOSE = /^\s*(\d+)\.(.*)$/;
 const UL_PASTE_LINE = /^\s*[-*+]\s+(.*)$/;
-
 function buildOrderedListJson(lines: string[], re: RegExp): JSONContent | null {
   const parsed = lines.map((l) => {
     const m = l.match(re);
-    return m ? { n: parseInt(m[1]!, 10), body: (m[2] ?? '').trim() } : null;
+    return m ? { n: parseInt(m[1]!, 10), body: (m[2] ?? "").trim() } : null;
   });
   if (parsed.some((p) => p === null)) return null;
   const start = parsed[0]!.n;
   return {
-    type: 'orderedList',
+    type: "orderedList",
     attrs: { start },
     content: parsed.map((p) => ({
-      type: 'listItem',
+      type: "listItem",
       content: [
         {
-          type: 'paragraph',
-          content: p!.body ? [{ type: 'text', text: p!.body }] : [],
+          type: "paragraph",
+          content: p!.body ? [{ type: "text", text: p!.body }] : [],
         },
       ],
     })),
   };
 }
-
-/** Convert pasted plain text like `1. foo` or multi-line numbered / bullet lists into TipTap JSON. */
 function parsePlainTextPasteAsList(text: string): JSONContent | null {
-  const rawLines = text.replace(/\r\n/g, '\n').split('\n');
-  const lines = rawLines.map((l) => l.replace(/\s+$/, '')).filter((l) => l.length > 0);
+  const rawLines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = rawLines
+    .map((l) => l.replace(/\s+$/, ""))
+    .filter((l) => l.length > 0);
   if (lines.length === 0) return null;
-
   const allOlStrict = lines.every((l) => OL_PASTE_LINE.test(l));
   const allOlLoose = lines.every((l) => OL_PASTE_LINE_LOOSE.test(l));
   const allUl = lines.every((l) => UL_PASTE_LINE.test(l));
-
   if (allOlStrict) {
     return buildOrderedListJson(lines, OL_PASTE_LINE);
   }
   if (allOlLoose) {
     return buildOrderedListJson(lines, OL_PASTE_LINE_LOOSE);
   }
-
   if (allUl) {
     const bodies = lines.map((l) => {
       const m = l.match(UL_PASTE_LINE);
-      return m ? (m[1] ?? '').trim() : '';
+      return m ? (m[1] ?? "").trim() : "";
     });
     return {
-      type: 'bulletList',
+      type: "bulletList",
       content: bodies.map((body) => ({
-        type: 'listItem',
+        type: "listItem",
         content: [
           {
-            type: 'paragraph',
-            content: body ? [{ type: 'text', text: body }] : [],
+            type: "paragraph",
+            content: body ? [{ type: "text", text: body }] : [],
           },
         ],
       })),
     };
   }
-
   if (lines.length === 1) {
     const olStrict = lines[0]!.match(OL_PASTE_LINE);
     const olLoose = olStrict ?? lines[0]!.match(OL_PASTE_LINE_LOOSE);
     if (olLoose) {
-      const body = (olLoose[2] ?? '').trim();
+      const body = (olLoose[2] ?? "").trim();
       return {
-        type: 'orderedList',
+        type: "orderedList",
         attrs: { start: parseInt(olLoose[1]!, 10) },
         content: [
           {
-            type: 'listItem',
+            type: "listItem",
             content: [
               {
-                type: 'paragraph',
-                content: body ? [{ type: 'text', text: body }] : [],
+                type: "paragraph",
+                content: body ? [{ type: "text", text: body }] : [],
               },
             ],
           },
@@ -1241,16 +1260,16 @@ function parsePlainTextPasteAsList(text: string): JSONContent | null {
     }
     const ul = lines[0]!.match(UL_PASTE_LINE);
     if (ul) {
-      const body = (ul[1] ?? '').trim();
+      const body = (ul[1] ?? "").trim();
       return {
-        type: 'bulletList',
+        type: "bulletList",
         content: [
           {
-            type: 'listItem',
+            type: "listItem",
             content: [
               {
-                type: 'paragraph',
-                content: body ? [{ type: 'text', text: body }] : [],
+                type: "paragraph",
+                content: body ? [{ type: "text", text: body }] : [],
               },
             ],
           },
@@ -1258,73 +1277,76 @@ function parsePlainTextPasteAsList(text: string): JSONContent | null {
       };
     }
   }
-
   return null;
 }
-
-type GifAlign = 'left' | 'center' | 'right';
-
-function giphyImageUrl(images: GiphyGif['images'] | undefined, ...keys: string[]): string {
-  if (!images) return '';
-  const bag = images as Record<string, { url?: string } | undefined>;
+type GifAlign = "left" | "center" | "right";
+function giphyImageUrl(
+  images: GiphyGif["images"] | undefined,
+  ...keys: string[]
+): string {
+  if (!images) return "";
+  const bag = images as Record<
+    string,
+    | {
+        url?: string;
+      }
+    | undefined
+  >;
   for (const k of keys) {
     const u = bag[k]?.url;
     if (u) return u;
   }
-  return '';
+  return "";
 }
-
-/** Remove accidental double schemes like `https://https://…`. */
 function collapseDuplicateUrlSchemes(input: string): string {
   let t = input.trim();
   while (/^https?:\/\/https?:\/\//i.test(t)) {
-    t = t.replace(/^https?:\/\//i, '');
+    t = t.replace(/^https?:\/\//i, "");
   }
   return t;
 }
-
-/**
- * Validates and normalizes a URL for storage. Preserves `http://` vs `https://` when the user typed a scheme;
- * scheme-less input defaults to `https://`. Rejects incomplete hosts (e.g. `youtube` without TLD).
- */
-function normalizeUrlForStorage(input: string): { ok: boolean; href: string; error?: string } {
+function normalizeUrlForStorage(input: string): {
+  ok: boolean;
+  href: string;
+  error?: string;
+} {
   const s = collapseDuplicateUrlSchemes(input);
-  if (!s) return { ok: false, href: '' };
-
-  const originalScheme = /^http:\/\//i.test(s) ? 'http' : /^https:\/\//i.test(s) ? 'https' : null;
-
+  if (!s) return { ok: false, href: "" };
+  const originalScheme = /^http:\/\//i.test(s)
+    ? "http"
+    : /^https:\/\//i.test(s)
+      ? "https"
+      : null;
   let candidate = s;
   if (!/^https?:\/\//i.test(candidate)) {
     candidate = `https://${candidate}`;
   }
-
   let u: URL;
   try {
     u = new URL(candidate);
   } catch {
-    return { ok: false, href: '', error: 'Invalid URL' };
+    return { ok: false, href: "", error: "Invalid URL" };
   }
-
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-    return { ok: false, href: '', error: 'Only http(s) links' };
+  if (u.protocol !== "http:" && u.protocol !== "https:") {
+    return { ok: false, href: "", error: "Only http(s) links" };
   }
-
   const host = u.hostname;
-  if (!host || (host !== 'localhost' && !host.includes('.'))) {
-    return { ok: false, href: '', error: 'Use a full domain (e.g. youtube.com)' };
+  if (!host || (host !== "localhost" && !host.includes("."))) {
+    return {
+      ok: false,
+      href: "",
+      error: "Use a full domain (e.g. youtube.com)",
+    };
   }
-
-  if (originalScheme === 'http') {
+  if (originalScheme === "http") {
     u = new URL(u.toString());
-    u.protocol = 'http:';
+    u.protocol = "http:";
   } else {
     u = new URL(u.toString());
-    u.protocol = 'https:';
+    u.protocol = "https:";
   }
-
   return { ok: true, href: u.toString() };
 }
-
 function parseLinkInputForPreview(raw: string): {
   valid: boolean;
   href: string;
@@ -1334,16 +1356,16 @@ function parseLinkInputForPreview(raw: string): {
 } {
   const trimmed = raw.trim();
   if (!trimmed) {
-    return { valid: false, href: '', host: '', displayUrl: '' };
+    return { valid: false, href: "", host: "", displayUrl: "" };
   }
   const n = normalizeUrlForStorage(trimmed);
   if (!n.ok) {
     return {
       valid: false,
-      href: '',
-      host: '',
+      href: "",
+      host: "",
       displayUrl: trimmed,
-      error: n.error ?? 'Invalid URL',
+      error: n.error ?? "Invalid URL",
     };
   }
   try {
@@ -1351,46 +1373,42 @@ function parseLinkInputForPreview(raw: string): {
     return {
       valid: true,
       href: n.href,
-      host: u.hostname.replace(/^www\./, ''),
+      host: u.hostname.replace(/^www\./, ""),
       displayUrl: n.href,
     };
   } catch {
-    return { valid: false, href: '', host: '', displayUrl: trimmed };
+    return { valid: false, href: "", host: "", displayUrl: trimmed };
   }
 }
-
 const InlineGif = TipTapNode.create({
-  name: 'inlineGif',
-  group: 'inline',
+  name: "inlineGif",
+  group: "inline",
   inline: true,
   atom: true,
   selectable: true,
-
   addAttributes() {
     return {
       url: {
-        default: '',
+        default: "",
       },
       align: {
-        default: 'center' as GifAlign,
+        default: "center" as GifAlign,
       },
       title: {
-        default: '',
+        default: "",
       },
       sourceUrl: {
-        default: '',
+        default: "",
       },
     };
   },
-
   parseHTML() {
     return [
       {
-        tag: 'span[data-inline-gif]',
+        tag: "span[data-inline-gif]",
       },
     ];
   },
-
   renderHTML({ HTMLAttributes }) {
     const { url, align, title, sourceUrl } = HTMLAttributes as {
       url?: string;
@@ -1399,114 +1417,106 @@ const InlineGif = TipTapNode.create({
       sourceUrl?: string;
     };
     const cls =
-      align === 'left'
-        ? 'ss-inline-gif ss-inline-gif-left'
-        : align === 'right'
-          ? 'ss-inline-gif ss-inline-gif-right'
-          : 'ss-inline-gif ss-inline-gif-center';
-
+      align === "left"
+        ? "ss-inline-gif ss-inline-gif-left"
+        : align === "right"
+          ? "ss-inline-gif ss-inline-gif-right"
+          : "ss-inline-gif ss-inline-gif-center";
     return [
-      'span',
+      "span",
       mergeAttributes(HTMLAttributes, {
-        'data-inline-gif': 'true',
-        'data-align': align ?? 'center',
-        'data-gif-title': title ?? '',
-        'data-gif-source': sourceUrl ?? '',
+        "data-inline-gif": "true",
+        "data-align": align ?? "center",
+        "data-gif-title": title ?? "",
+        "data-gif-source": sourceUrl ?? "",
         class: `${cls} inline-block align-middle mr-1`,
       }),
       [
-        'img',
+        "img",
         {
-          src: url ?? '',
-          alt: 'GIF',
-          class: 'inline-block h-24 w-24 shrink-0 object-cover align-middle ',
+          src: url ?? "",
+          alt: "GIF",
+          class: "inline-block h-24 w-24 shrink-0 object-cover align-middle ",
         },
       ],
     ];
   },
 });
-
 const MentionNode = TipTapNode.create({
-  name: 'mention',
-  group: 'inline',
+  name: "mention",
+  group: "inline",
   inline: true,
   atom: true,
   selectable: true,
-
   addAttributes() {
     return {
       username: {
-        default: '',
+        default: "",
       },
       fullName: {
-        default: '',
+        default: "",
       },
       profileImg: {
-        default: '',
+        default: "",
       },
     };
   },
-
   parseHTML() {
     return [
       {
-        tag: 'span[data-mention]',
+        tag: "span[data-mention]",
       },
     ];
   },
-
   renderHTML({ HTMLAttributes }) {
     const { username, fullName, profileImg } = HTMLAttributes as {
       username?: string;
       fullName?: string;
       profileImg?: string;
     };
-    const handle = username?.trim() || 'user';
+    const handle = username?.trim() || "user";
     const label = fullName?.trim() || `@${handle}`;
     const avatarSrc = resolveMemberAvatarUrl(
-      typeof profileImg === 'string' ? profileImg : undefined,
-      handle
+      typeof profileImg === "string" ? profileImg : undefined,
+      handle,
     );
-
     return [
-      'span',
+      "span",
       mergeAttributes(HTMLAttributes, {
-        'data-mention': 'true',
-        'data-username': handle,
-        'data-full-name': fullName?.trim() ?? '',
-        'data-profile-img': profileImg?.trim() ?? '',
+        "data-mention": "true",
+        "data-username": handle,
+        "data-full-name": fullName?.trim() ?? "",
+        "data-profile-img": profileImg?.trim() ?? "",
         class:
-          'ss-mention inline-flex items-center gap-1 px-1.5 py-0.5 border border-primary/60 bg-primary/10 text-primary text-[11px] font-semibold mr-1 align-middle',
+          "ss-mention inline-flex items-center gap-1 px-1.5 py-0.5 border border-primary/60 bg-primary/10 text-primary text-[11px] font-semibold mr-1 align-middle",
       }),
       [
-        'img',
+        "img",
         {
           src: avatarSrc,
-          alt: '',
-          class: 'h-4 w-4 shrink-0 border border-primary/40 object-cover',
+          alt: "",
+          class: "h-4 w-4 shrink-0 border border-primary/40 object-cover",
         },
       ],
-      ['span', { class: 'truncate max-w-[10rem]' }, label],
+      ["span", { class: "truncate max-w-[10rem]" }, label],
     ];
   },
 });
-
 function toInitialDoc(initialDoc?: any, legacyText?: string): any {
   if (initialDoc) return initialDoc;
-  const text = (legacyText ?? '').toString();
+  const text = (legacyText ?? "").toString();
   return {
-    type: 'doc',
+    type: "doc",
     content: [
       {
-        type: 'paragraph',
-        content: text ? [{ type: 'text', text }] : [],
+        type: "paragraph",
+        content: text ? [{ type: "text", text }] : [],
       },
     ],
   };
 }
-
-const DEFAULT_EDITOR_PLACEHOLDER = 'Start writing… Use lists, links, @mentions, or insert a GIF.';
-
+const DEFAULT_EDITOR_PLACEHOLDER =
+  "Start writing… Use lists, links, @mentions, or insert a GIF.";
 export function RichParagraphEditor({
   initialDoc,
   legacyText,
@@ -1520,7 +1530,6 @@ export function RichParagraphEditor({
   const normalizeContent = normalizeContentProp !== false && !readOnly;
   const editorRef = useRef<Editor | null>(null);
   const router = useRouter();
-
   const extensions = useMemo(
     () => [
       StarterKit.configure({
@@ -1541,22 +1550,24 @@ export function RichParagraphEditor({
         linkOnPaste: !readOnly,
         autolink: !readOnly,
         HTMLAttributes: {
-          rel: 'noopener noreferrer',
-          target: '_blank',
-          class: 'ss-link',
+          rel: "noopener noreferrer",
+          target: "_blank",
+          class: "ss-link",
         },
       }),
       InlineGif,
       MentionNode,
       ...(normalizeContent
-        ? [createParagraphEnterGuardExtension(), createParagraphNormalizeExtension()]
+        ? [
+            createParagraphEnterGuardExtension(),
+            createParagraphNormalizeExtension(),
+          ]
         : []),
       createSplitListItemWithoutScrollExtension(),
       createListEmptyLastBackspaceExtension(),
     ],
-    [normalizeContent, readOnly, editorPlaceholder]
+    [normalizeContent, readOnly, editorPlaceholder],
   );
-
   const editor = useEditor(
     {
       extensions,
@@ -1578,7 +1589,7 @@ export function RichParagraphEditor({
           if (!ed) return false;
           const clip = event.clipboardData;
           if (!clip) return false;
-          const text = clip.getData('text/plain');
+          const text = clip.getData("text/plain");
           if (!text || !text.trim()) return false;
           const json = parsePlainTextPasteAsList(text);
           if (!json) return false;
@@ -1588,80 +1599,70 @@ export function RichParagraphEditor({
         },
       },
     },
-    [extensions, readOnly]
+    [extensions, readOnly],
   );
-
   useEffect(() => {
     editorRef.current = editor ?? null;
     return () => {
       editorRef.current = null;
     };
   }, [editor]);
-
   useEffect(() => {
     return () => {
       editor?.destroy();
     };
   }, [editor]);
-
   const [showGifPanel, setShowGifPanel] = useState(false);
-  const [gifSearchQuery, setGifSearchQuery] = useState('');
+  const [gifSearchQuery, setGifSearchQuery] = useState("");
   const [gifResults, setGifResults] = useState<GiphyGif[]>([]);
   const [gifSearching, setGifSearching] = useState(false);
   const [gifError, setGifError] = useState<string | null>(null);
-
   const [showLinkPanel, setShowLinkPanel] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkText, setLinkText] = useState('');
-
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
   const [showMentionPanel, setShowMentionPanel] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionQuery, setMentionQuery] = useState("");
   const [mentionResults, setMentionResults] = useState<FollowUser[]>([]);
   const [mentionLoading, setMentionLoading] = useState(false);
-
   const anyPanelOpen = showLinkPanel || showMentionPanel || showGifPanel;
-  const linkPreview = useMemo(() => parseLinkInputForPreview(linkUrl), [linkUrl]);
+  const linkPreview = useMemo(
+    () => parseLinkInputForPreview(linkUrl),
+    [linkUrl],
+  );
   const linkPanelTitleId = useId();
   const mentionPanelTitleId = useId();
   const gifPanelTitleId = useId();
-
   const closeAllPanels = useCallback(() => {
     setShowLinkPanel(false);
     setShowMentionPanel(false);
     setShowGifPanel(false);
-    setLinkUrl('');
-    setLinkText('');
-    setMentionQuery('');
+    setLinkUrl("");
+    setLinkText("");
+    setMentionQuery("");
     setMentionResults([]);
-    setGifSearchQuery('');
+    setGifSearchQuery("");
     setGifResults([]);
     setGifError(null);
   }, []);
-
   const toolbarPopoverRef = useRef<HTMLDivElement>(null);
   const popoverContainerRef = useRef<HTMLDivElement>(null);
   const [popoverCoords, setPopoverCoords] = useState<{
     top: number;
     left: number;
     width: number;
-    placement: 'above' | 'below';
+    placement: "above" | "below";
   } | null>(null);
-
   const POPOVER_GAP = 6;
-  /** Reserve space for fixed top navbar so popovers flip below instead of overlapping. */
   const POPOVER_NAV_SAFE_TOP = 56;
-
   const computePopoverPosition = useCallback(() => {
     const toolbar = toolbarPopoverRef.current;
     const open = showLinkPanel || showMentionPanel || showGifPanel;
     if (!toolbar || !open) return;
-
     const rect = toolbar.getBoundingClientRect();
     const margin = 8;
     const width = showLinkPanel
       ? Math.min(440, Math.max(280, window.innerWidth - 2 * margin))
       : Math.min(300, Math.max(220, window.innerWidth - 2 * margin));
-
     let estH: number;
     if (showGifPanel) estH = 340;
     else if (showMentionPanel) estH = 300;
@@ -1670,43 +1671,50 @@ export function RichParagraphEditor({
     } else {
       estH = 260;
     }
-
     const measured = popoverContainerRef.current?.offsetHeight;
     const h = measured && measured > 48 ? measured : estH;
-
     const spaceAbove = rect.top - POPOVER_NAV_SAFE_TOP - margin;
     const spaceBelow = window.innerHeight - rect.bottom - margin;
-
     const fitsAbove =
-      spaceAbove >= h + POPOVER_GAP && rect.top - POPOVER_GAP - h >= POPOVER_NAV_SAFE_TOP + margin;
-
-    let placement: 'above' | 'below';
+      spaceAbove >= h + POPOVER_GAP &&
+      rect.top - POPOVER_GAP - h >= POPOVER_NAV_SAFE_TOP + margin;
+    let placement: "above" | "below";
     let top: number;
-
     if (fitsAbove) {
-      placement = 'above';
+      placement = "above";
       top = rect.top - POPOVER_GAP - h;
     } else if (spaceBelow >= h + POPOVER_GAP) {
-      placement = 'below';
+      placement = "below";
       top = rect.bottom + POPOVER_GAP;
     } else {
-      placement = spaceAbove >= spaceBelow ? 'above' : 'below';
-      if (placement === 'above') {
-        top = Math.max(POPOVER_NAV_SAFE_TOP + margin, rect.top - POPOVER_GAP - h);
+      placement = spaceAbove >= spaceBelow ? "above" : "below";
+      if (placement === "above") {
+        top = Math.max(
+          POPOVER_NAV_SAFE_TOP + margin,
+          rect.top - POPOVER_GAP - h,
+        );
       } else {
         top = rect.bottom + POPOVER_GAP;
       }
     }
-
     if (top + h > window.innerHeight - margin) {
-      top = Math.max(POPOVER_NAV_SAFE_TOP + margin, window.innerHeight - margin - h);
+      top = Math.max(
+        POPOVER_NAV_SAFE_TOP + margin,
+        window.innerHeight - margin - h,
+      );
     }
-
-    const left = Math.min(Math.max(margin, rect.left), window.innerWidth - margin - width);
-
+    const left = Math.min(
+      Math.max(margin, rect.left),
+      window.innerWidth - margin - width,
+    );
     setPopoverCoords({ top, left, width, placement });
-  }, [showLinkPanel, showMentionPanel, showGifPanel, linkUrl, linkPreview.valid]);
-
+  }, [
+    showLinkPanel,
+    showMentionPanel,
+    showGifPanel,
+    linkUrl,
+    linkPreview.valid,
+  ]);
   useLayoutEffect(() => {
     if (!anyPanelOpen) {
       setPopoverCoords(null);
@@ -1724,50 +1732,50 @@ export function RichParagraphEditor({
     showMentionPanel,
     showGifPanel,
   ]);
-
   useEffect(() => {
     if (!anyPanelOpen) return;
     const el = popoverContainerRef.current;
     const ro = new ResizeObserver(() => computePopoverPosition());
     if (el) ro.observe(el);
     const onResize = () => computePopoverPosition();
-    window.addEventListener('resize', onResize);
+    window.addEventListener("resize", onResize);
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener("resize", onResize);
     };
   }, [anyPanelOpen, popoverCoords, computePopoverPosition]);
-
   useEffect(() => {
     if (!anyPanelOpen) return;
     const onScroll = (e: Event) => {
       const target = e.target;
-      if (target instanceof Node && popoverContainerRef.current?.contains(target)) return;
+      if (
+        target instanceof Node &&
+        popoverContainerRef.current?.contains(target)
+      )
+        return;
       closeAllPanels();
     };
-    globalThis.addEventListener('scroll', onScroll, true);
-    return () => globalThis.removeEventListener('scroll', onScroll, true);
+    globalThis.addEventListener("scroll", onScroll, true);
+    return () => globalThis.removeEventListener("scroll", onScroll, true);
   }, [anyPanelOpen, closeAllPanels]);
-
   useEffect(() => {
     if (!anyPanelOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeAllPanels();
+      if (e.key === "Escape") closeAllPanels();
     };
-    globalThis.addEventListener('keydown', onKey);
-    return () => globalThis.removeEventListener('keydown', onKey);
+    globalThis.addEventListener("keydown", onKey);
+    return () => globalThis.removeEventListener("keydown", onKey);
   }, [anyPanelOpen, closeAllPanels]);
-
   useEffect(() => {
     if (!anyPanelOpen) return;
     const onPointerDown = (e: PointerEvent) => {
       const el = toolbarPopoverRef.current;
       if (el && !el.contains(e.target as Node)) closeAllPanels();
     };
-    document.addEventListener('pointerdown', onPointerDown, true);
-    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", onPointerDown, true);
   }, [anyPanelOpen, closeAllPanels]);
-
   const runGifSearch = useCallback(async () => {
     const q = gifSearchQuery.trim();
     if (!q) return;
@@ -1777,37 +1785,40 @@ export function RichParagraphEditor({
       const res = await searchGifs(q, { limit: 20 });
       setGifResults(res.data ?? []);
     } catch (e) {
-      setGifError(e instanceof Error ? e.message : 'GIF search failed');
+      setGifError(e instanceof Error ? e.message : "GIF search failed");
       setGifResults([]);
     } finally {
       setGifSearching(false);
     }
   }, [gifSearchQuery]);
-
   const insertGifFromResult = useCallback(
     (gif: GiphyGif) => {
-      const url = giphyImageUrl(gif.images, 'original', 'fixed_height', 'downsized_medium');
+      const url = giphyImageUrl(
+        gif.images,
+        "original",
+        "fixed_height",
+        "downsized_medium",
+      );
       if (!url) return;
       editor
         ?.chain()
         ?.focus()
         ?.insertContent({
-          type: 'inlineGif',
+          type: "inlineGif",
           attrs: {
             url,
-            align: 'center' as GifAlign,
-            title: (gif.title ?? '').trim(),
+            align: "center" as GifAlign,
+            title: (gif.title ?? "").trim(),
             sourceUrl: `https://giphy.com/gifs/${gif.id}`,
           },
         })
         ?.run();
       setShowGifPanel(false);
-      setGifSearchQuery('');
+      setGifSearchQuery("");
       setGifResults([]);
     },
-    [editor]
+    [editor],
   );
-
   const applyLink = useCallback(() => {
     const href = linkUrl.trim();
     if (!href) {
@@ -1820,18 +1831,14 @@ export function RichParagraphEditor({
     const normalized = parsed.href;
     const label = linkText.trim() || normalized;
     const selEmpty = !editor || editor.state.selection.empty;
-
     if (!editor) {
       setShowLinkPanel(false);
-      setLinkUrl('');
-      setLinkText('');
+      setLinkUrl("");
+      setLinkText("");
       return;
     }
-
     const chain = editor.chain().focus();
-
     if (selEmpty) {
-      // insertContent + collapsed setLink only sets stored marks — the next keystroke gets the link, not the inserted label
       const start = editor.state.selection.from;
       chain
         .insertContent(label)
@@ -1839,15 +1846,12 @@ export function RichParagraphEditor({
         .setLink({ href: normalized })
         .run();
     } else {
-      // When text is selected, just apply a link mark to that text
-      chain.extendMarkRange('link').setLink({ href: normalized }).run();
+      chain.extendMarkRange("link").setLink({ href: normalized }).run();
     }
-
     setShowLinkPanel(false);
-    setLinkUrl('');
-    setLinkText('');
+    setLinkUrl("");
+    setLinkText("");
   }, [editor, linkUrl, linkText]);
-
   useEffect(() => {
     if (!showMentionPanel) return;
     const q = mentionQuery.trim();
@@ -1858,17 +1862,16 @@ export function RichParagraphEditor({
     }
     setMentionLoading(true);
     const t = setTimeout(() => {
-      followApi
+      searchApi
         .searchUsers(q)
-        .then((res) => {
-          setMentionResults(res.list ?? []);
+        .then((list) => {
+          setMentionResults(list);
         })
         .catch(() => setMentionResults([]))
         .finally(() => setMentionLoading(false));
     }, 250);
     return () => clearTimeout(t);
   }, [showMentionPanel, mentionQuery]);
-
   const insertMention = useCallback(
     (user: FollowUser) => {
       const username = user.username?.trim();
@@ -1877,41 +1880,38 @@ export function RichParagraphEditor({
         ?.chain()
         ?.focus()
         ?.insertContent({
-          type: 'mention',
+          type: "mention",
           attrs: {
             username,
-            fullName: user.fullName ?? '',
-            profileImg: user.profileImg ?? '',
+            fullName: user.fullName ?? "",
+            profileImg: user.profileImg ?? "",
           },
         })
-        ?.insertContent(' ')
+        ?.insertContent(" ")
         ?.run();
       setShowMentionPanel(false);
-      setMentionQuery('');
+      setMentionQuery("");
       setMentionResults([]);
     },
-    [editor]
+    [editor],
   );
-
-  const isGifSelected = editor?.isActive('inlineGif') ?? false;
-
+  const isGifSelected = editor?.isActive("inlineGif") ?? false;
   const onEditorLinkClickCapture = useCallback(
     (e: React.MouseEvent) => {
       const target = e.target as HTMLElement | null;
-      const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+      const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
       if (!anchor) return;
       e.preventDefault();
       if (readOnly || e.ctrlKey || e.metaKey) {
-        safeOpenLinkHref(anchor.getAttribute('href'));
+        safeOpenLinkHref(anchor.getAttribute("href"));
       }
     },
-    [readOnly]
+    [readOnly],
   );
-
   const onReadOnlyClickCapture = useCallback(
     (e: React.MouseEvent) => {
       const mentionEl = (e.target as HTMLElement | null)?.closest(
-        READONLY_MENTION_SEL
+        READONLY_MENTION_SEL,
       ) as HTMLElement | null;
       if (mentionEl) {
         const u = mentionEl.dataset.username?.trim();
@@ -1922,7 +1922,7 @@ export function RichParagraphEditor({
         }
       }
       const gifEl = (e.target as HTMLElement | null)?.closest(
-        READONLY_GIF_SEL
+        READONLY_GIF_SEL,
       ) as HTMLElement | null;
       if (gifEl) {
         e.preventDefault();
@@ -1930,66 +1930,72 @@ export function RichParagraphEditor({
       }
       onEditorLinkClickCapture(e);
     },
-    [router, onEditorLinkClickCapture]
+    [router, onEditorLinkClickCapture],
   );
-
   const toolbarButton = (active: boolean) =>
     cn(
-      'inline-flex items-center justify-center  border-2 border-border px-2 py-1.5 text-[11px] font-semibold min-h-[30px] shadow',
+      "inline-flex items-center justify-center  border-2 border-border px-2 py-1.5 text-[11px] font-semibold min-h-[30px] shadow",
       active
-        ? 'border-primary bg-primary/15 text-primary'
-        : 'bg-muted/40 text-muted-foreground hover:bg-muted/70'
+        ? "border-primary bg-primary/15 text-primary"
+        : "bg-muted/40 text-muted-foreground hover:bg-muted/70",
     );
-
   const popoverCard =
-    'border border-primary/25 bg-background text-foreground shadow  transition-[box-shadow,border-color] hover:border-primary/45 hover:shadow';
-
+    "border border-primary/25 bg-background text-foreground shadow  transition-[box-shadow,border-color] hover:border-primary/45 hover:shadow";
   if (!editor) {
     return (
       <div
-        className={cn('min-h-12 animate-pulse border border-border bg-muted/30', className)}
+        className={cn(
+          "min-h-12 animate-pulse border border-border bg-muted/30",
+          className,
+        )}
         aria-hidden
       />
     );
   }
-
   if (readOnly) {
     return (
       <div
         className={cn(
-          'ss-read-only-rich ss-rich-paragraph-editor border-0 bg-transparent',
-          className
+          "ss-read-only-rich ss-rich-paragraph-editor border-0 bg-transparent",
+          className,
         )}
       >
         <EditorContent
           editor={editor}
           className={cn(
-            'prose prose-sm dark:prose-invert max-w-none focus:outline-none',
-            '[&_.ProseMirror]:outline-none'
+            "prose prose-sm dark:prose-invert max-w-none focus:outline-none",
+            "[&_.ProseMirror]:outline-none",
           )}
           onClickCapture={onReadOnlyClickCapture}
         />
         {readOnlyLinkPreview ? (
-          <ReadOnlyRichLinkHoverLayer editor={editor} renderPreview={readOnlyLinkPreview} />
+          <ReadOnlyRichLinkHoverLayer
+            editor={editor}
+            renderPreview={readOnlyLinkPreview}
+          />
         ) : null}
         <ReadOnlyMentionHoverLayer editor={editor} />
         <ReadOnlyGifHoverLayer editor={editor} />
       </div>
     );
   }
-
   return (
     <div
       className={cn(
-        'ss-rich-paragraph-editor relative overflow-visible border-0 bg-transparent',
-        className
+        "ss-rich-paragraph-editor relative overflow-visible border-0 bg-transparent",
+        className,
       )}
     >
-      <div ref={toolbarPopoverRef} className="relative z-30 overflow-visible px-2 pt-2">
+      <div
+        ref={toolbarPopoverRef}
+        className="relative z-30 overflow-visible px-2 pt-2"
+      >
         <AnimatePresence mode="wait">
           {anyPanelOpen && popoverCoords && (
             <motion.div
-              key={showLinkPanel ? 'link' : showMentionPanel ? 'mention' : 'gif'}
+              key={
+                showLinkPanel ? "link" : showMentionPanel ? "mention" : "gif"
+              }
               ref={popoverContainerRef}
               role="dialog"
               aria-modal="false"
@@ -2005,7 +2011,7 @@ export function RichParagraphEditor({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.12 }}
               style={{
-                position: 'fixed',
+                position: "fixed",
                 top: popoverCoords.top,
                 left: popoverCoords.left,
                 width: popoverCoords.width,
@@ -2013,13 +2019,16 @@ export function RichParagraphEditor({
               }}
               className={cn(
                 popoverCard,
-                'pointer-events-auto max-h-[min(26rem,calc(100vh-var(--ss-nav-safe,56px)-1rem))] overflow-y-auto p-2.5 text-xs isolate'
+                "pointer-events-auto max-h-[min(26rem,calc(100vh-var(--ss-nav-safe,56px)-1rem))] overflow-y-auto p-2.5 text-xs isolate",
               )}
             >
               {showLinkPanel && (
                 <>
                   <div className="flex items-center gap-1.5 mb-2 border-b border-border pb-2">
-                    <Link2 className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                    <Link2
+                      className="h-4 w-4 text-primary shrink-0"
+                      aria-hidden
+                    />
                     <h2
                       id={linkPanelTitleId}
                       className="text-xs font-bold uppercase tracking-wide text-foreground"
@@ -2044,16 +2053,20 @@ export function RichParagraphEditor({
                           onChange={(e) => setLinkUrl(e.target.value)}
                           placeholder="https://example.com or www.example.com"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                            if (e.key === "Enter") {
                               e.preventDefault();
                               applyLink();
                             }
                           }}
                           className="w-full border border-border px-2 py-2 text-xs bg-background font-mono focus:outline-none focus:border-primary"
                         />
-                        {linkUrl.trim() && !linkPreview.valid && linkPreview.error && (
-                          <p className="mt-1 text-[10px] text-destructive">{linkPreview.error}</p>
-                        )}
+                        {linkUrl.trim() &&
+                          !linkPreview.valid &&
+                          linkPreview.error && (
+                            <p className="mt-1 text-[10px] text-destructive">
+                              {linkPreview.error}
+                            </p>
+                          )}
                       </div>
 
                       <div>
@@ -2061,7 +2074,10 @@ export function RichParagraphEditor({
                           htmlFor="rp-link-text"
                           className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5"
                         >
-                          Label <span className="font-normal normal-case">(opt.)</span>
+                          Label{" "}
+                          <span className="font-normal normal-case">
+                            (opt.)
+                          </span>
                         </label>
                         <input
                           id="rp-link-text"
@@ -2070,7 +2086,7 @@ export function RichParagraphEditor({
                           onChange={(e) => setLinkText(e.target.value)}
                           placeholder="Visible text"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                            if (e.key === "Enter") {
                               e.preventDefault();
                               applyLink();
                             }
@@ -2111,7 +2127,10 @@ export function RichParagraphEditor({
               {showMentionPanel && (
                 <>
                   <div className="flex items-center gap-1.5 mb-2 border-b border-border pb-2">
-                    <AtSign className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                    <AtSign
+                      className="h-4 w-4 text-primary shrink-0"
+                      aria-hidden
+                    />
                     <h2
                       id={mentionPanelTitleId}
                       className="text-xs font-bold uppercase tracking-wide text-foreground"
@@ -2137,13 +2156,17 @@ export function RichParagraphEditor({
 
                   <div className="max-h-44 overflow-y-auto border border-border bg-muted">
                     {mentionLoading && (
-                      <div className="p-3 text-center text-[11px] text-muted-foreground">…</div>
-                    )}
-                    {!mentionLoading && mentionQuery.trim() && mentionResults.length === 0 && (
-                      <div className="p-2 text-center text-[11px] text-muted-foreground">
-                        No match
+                      <div className="p-3 text-center text-[11px] text-muted-foreground">
+                        …
                       </div>
                     )}
+                    {!mentionLoading &&
+                      mentionQuery.trim() &&
+                      mentionResults.length === 0 && (
+                        <div className="p-2 text-center text-[11px] text-muted-foreground">
+                          No match
+                        </div>
+                      )}
                     {!mentionLoading && mentionResults.length > 0 && (
                       <ul className="divide-y divide-border">
                         {mentionResults.map((user) => (
@@ -2154,10 +2177,10 @@ export function RichParagraphEditor({
                               className="flex w-full items-center gap-2 px-2 py-2 text-left transition-colors hover:bg-primary/12 active:bg-primary/18"
                             >
                               <img
-                                src={
-                                  user.profileImg ||
-                                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`
-                                }
+                                src={resolveProfileMediaUrl(
+                                  user.profileImg,
+                                  user.username,
+                                )}
                                 alt=""
                                 className="h-8 w-8 border border-border object-cover shrink-0"
                               />
@@ -2196,12 +2219,18 @@ export function RichParagraphEditor({
               {showGifPanel && (
                 <>
                   <div className="flex items-center gap-1.5 mb-2 border-b border-border pb-2">
-                    <Sparkles className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                    <Sparkles
+                      className="h-4 w-4 text-primary shrink-0"
+                      aria-hidden
+                    />
                     <h2
                       id={gifPanelTitleId}
                       className="text-xs font-bold uppercase tracking-wide text-foreground"
                     >
-                      GIF <span className="font-normal text-muted-foreground">· GIPHY</span>
+                      GIF{" "}
+                      <span className="font-normal text-muted-foreground">
+                        · GIPHY
+                      </span>
                     </h2>
                   </div>
 
@@ -2212,7 +2241,7 @@ export function RichParagraphEditor({
                         type="text"
                         value={gifSearchQuery}
                         onChange={(e) => setGifSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && runGifSearch()}
+                        onKeyDown={(e) => e.key === "Enter" && runGifSearch()}
                         placeholder="Search…"
                         className="w-full border border-border pl-8 pr-2 py-2 text-xs bg-background focus:outline-none focus:border-primary"
                       />
@@ -2223,10 +2252,14 @@ export function RichParagraphEditor({
                       disabled={gifSearching || !gifSearchQuery.trim()}
                       className="shrink-0 px-3 py-2 border border-border bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wide hover:brightness-110 disabled:opacity-50"
                     >
-                      {gifSearching ? '…' : 'Go'}
+                      {gifSearching ? "…" : "Go"}
                     </button>
                   </div>
-                  {gifError && <div className="mb-1 text-[11px] text-destructive">{gifError}</div>}
+                  {gifError && (
+                    <div className="mb-1 text-[11px] text-destructive">
+                      {gifError}
+                    </div>
+                  )}
                   <div className="max-h-[min(220px,42vh)] overflow-y-auto grid grid-cols-2 gap-1.5">
                     {gifResults.map((gif) => (
                       <button
@@ -2238,11 +2271,11 @@ export function RichParagraphEditor({
                         <img
                           src={giphyImageUrl(
                             gif.images,
-                            'fixed_height_small',
-                            'fixed_height',
-                            'original'
+                            "fixed_height_small",
+                            "fixed_height",
+                            "original",
                           )}
-                          alt={gif.title || 'GIF result'}
+                          alt={gif.title || "GIF result"}
                           className="w-full h-full object-cover transition-[filter] group-hover:brightness-105"
                         />
                       </button>
@@ -2273,7 +2306,7 @@ export function RichParagraphEditor({
           <button
             type="button"
             onClick={() => editor?.chain()?.focus()?.toggleBold()?.run()}
-            className={toolbarButton(editor?.isActive('bold') ?? false)}
+            className={toolbarButton(editor?.isActive("bold") ?? false)}
             title="Bold"
             aria-label="Bold"
           >
@@ -2282,7 +2315,7 @@ export function RichParagraphEditor({
           <button
             type="button"
             onClick={() => editor?.chain()?.focus()?.toggleItalic()?.run()}
-            className={toolbarButton(editor?.isActive('italic') ?? false)}
+            className={toolbarButton(editor?.isActive("italic") ?? false)}
             title="Italic"
             aria-label="Italic"
           >
@@ -2291,7 +2324,7 @@ export function RichParagraphEditor({
           <button
             type="button"
             onClick={() => editor?.chain()?.focus()?.toggleUnderline()?.run()}
-            className={toolbarButton(editor?.isActive('underline') ?? false)}
+            className={toolbarButton(editor?.isActive("underline") ?? false)}
             title="Underline"
             aria-label="Underline"
           >
@@ -2307,7 +2340,7 @@ export function RichParagraphEditor({
               setShowMentionPanel(false);
               setShowGifPanel(false);
             }}
-            className={toolbarButton(editor?.isActive('link') ?? false)}
+            className={toolbarButton(editor?.isActive("link") ?? false)}
             title="Insert link"
             aria-label="Insert link"
           >
@@ -2348,8 +2381,8 @@ export function RichParagraphEditor({
       <EditorContent
         editor={editor}
         className={cn(
-          'prose prose-sm dark:prose-invert max-w-none focus:outline-none mt-2 mx-2 mb-2',
-          '[&_.ProseMirror]:'
+          "prose prose-sm dark:prose-invert max-w-none focus:outline-none mt-2 mx-2 mb-2",
+          "[&_.ProseMirror]:",
         )}
         onClickCapture={onEditorLinkClickCapture}
       />

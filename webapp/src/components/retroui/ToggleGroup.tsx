@@ -1,56 +1,58 @@
-'use client';
-
-import * as React from 'react';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import * as React from "react";
+import { cn } from "@/lib/core/utils";
 export interface ToggleGroupContextValue {
-  type: 'single' | 'multiple';
+  type: "single" | "multiple";
   value: string | string[];
   onItemClick: (value: string) => void;
-  variant?: 'default' | 'outline';
+  variant?: "default" | "outline";
 }
-
-const ToggleGroupContext = React.createContext<ToggleGroupContextValue | null>(null);
-
+const ToggleGroupContext = React.createContext<ToggleGroupContextValue | null>(
+  null,
+);
 function useToggleGroup() {
   const ctx = React.useContext(ToggleGroupContext);
   return ctx;
 }
-
 export interface ToggleGroupProps extends Omit<
   React.FieldsetHTMLAttributes<HTMLFieldSetElement>,
-  'onChange'
+  "onChange"
 > {
-  type?: 'single' | 'multiple';
+  type?: "single" | "multiple";
   value?: string | string[];
   defaultValue?: string | string[];
   onValueChange?: (value: string | string[]) => void;
-  variant?: 'default' | 'outline';
+  variant?: "default" | "outline";
 }
-
-export const ToggleGroup = React.forwardRef<HTMLFieldSetElement, ToggleGroupProps>(
+export const ToggleGroup = React.forwardRef<
+  HTMLFieldSetElement,
+  ToggleGroupProps
+>(
   (
     {
-      type = 'single',
+      type = "single",
       value: controlledValue,
       defaultValue,
       onValueChange,
-      variant = 'default',
+      variant = "default",
       className,
       children,
       ...props
     },
-    ref
+    ref,
   ) => {
-    const [uncontrolledValue, setUncontrolledValue] = React.useState<string | string[]>(
-      type === 'multiple' ? ((defaultValue as string[]) ?? []) : ((defaultValue as string) ?? '')
+    const [uncontrolledValue, setUncontrolledValue] = React.useState<
+      string | string[]
+    >(
+      type === "multiple"
+        ? ((defaultValue as string[]) ?? [])
+        : ((defaultValue as string) ?? ""),
     );
     const isControlled = controlledValue !== undefined;
     const value = isControlled ? controlledValue : uncontrolledValue;
-
     const onItemClick = React.useCallback(
       (itemValue: string) => {
-        if (type === 'multiple') {
+        if (type === "multiple") {
           const arr = (value as string[]) ?? [];
           const next = arr.includes(itemValue)
             ? arr.filter((v) => v !== itemValue)
@@ -58,27 +60,25 @@ export const ToggleGroup = React.forwardRef<HTMLFieldSetElement, ToggleGroupProp
           if (!isControlled) setUncontrolledValue(next);
           onValueChange?.(next);
         } else {
-          const next = value === itemValue ? '' : itemValue;
+          const next = value === itemValue ? "" : itemValue;
           if (!isControlled) setUncontrolledValue(next);
           onValueChange?.(next);
         }
       },
-      [type, value, isControlled, onValueChange]
+      [type, value, isControlled, onValueChange],
     );
-
     const ctx = React.useMemo<ToggleGroupContextValue>(
       () => ({ type, value, onItemClick, variant }),
-      [type, value, onItemClick, variant]
+      [type, value, onItemClick, variant],
     );
-
     return (
       <ToggleGroupContext.Provider value={ctx}>
         <fieldset
           ref={ref}
           className={cn(
-            'inline-flex min-w-0 m-0  border-2 border-border bg-card p-0.5 shadow',
-            variant === 'outline' && 'bg-transparent',
-            className
+            "inline-flex min-w-0 m-0  border-2 border-border bg-card p-0.5 shadow",
+            variant === "outline" && "bg-transparent",
+            className,
           )}
           {...props}
         >
@@ -86,55 +86,57 @@ export const ToggleGroup = React.forwardRef<HTMLFieldSetElement, ToggleGroupProp
         </fieldset>
       </ToggleGroupContext.Provider>
     );
-  }
+  },
 );
-ToggleGroup.displayName = 'ToggleGroup';
-
+ToggleGroup.displayName = "ToggleGroup";
 export interface ToggleGroupItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
 }
-
-export const ToggleGroupItem = React.forwardRef<HTMLButtonElement, ToggleGroupItemProps>(
-  ({ value, className, onClick, ...props }, ref) => {
-    const ctx = useToggleGroup();
-    let isActive = false;
-    if (ctx) {
-      if (ctx.type === 'multiple') {
-        isActive = (ctx.value as string[])?.includes(value) ?? false;
-      } else {
-        isActive = (ctx.value as string) === value;
-      }
+export const ToggleGroupItem = React.forwardRef<
+  HTMLButtonElement,
+  ToggleGroupItemProps
+>(({ value, className, onClick, ...props }, ref) => {
+  const ctx = useToggleGroup();
+  let isActive = false;
+  if (ctx) {
+    if (ctx.type === "multiple") {
+      isActive = (ctx.value as string[])?.includes(value) ?? false;
+    } else {
+      isActive = (ctx.value as string) === value;
     }
-
-    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-      ctx?.onItemClick(value);
-      onClick?.(e);
-    };
-
-    if (!ctx) {
-      return (
-        <button ref={ref} type="button" className={cn(className)} onClick={onClick} {...props} />
-      );
-    }
-
+  }
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    ctx?.onItemClick(value);
+    onClick?.(e);
+  };
+  if (!ctx) {
     return (
       <button
         ref={ref}
         type="button"
-        aria-pressed={isActive}
-        data-state={isActive ? 'on' : 'off'}
-        onClick={handleClick}
-        className={cn(
-          'inline-flex h-8 w-8 items-center justify-center  border-0 transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-          'hover:bg-muted/80',
-          ctx.variant === 'outline' && 'bg-transparent hover:bg-muted/50',
-          isActive && 'bg-primary text-primary-foreground hover:bg-primary/90',
-          className
-        )}
+        className={cn(className)}
+        onClick={onClick}
         {...props}
       />
     );
   }
-);
-ToggleGroupItem.displayName = 'ToggleGroupItem';
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-pressed={isActive}
+      data-state={isActive ? "on" : "off"}
+      onClick={handleClick}
+      className={cn(
+        "inline-flex h-8 w-8 items-center justify-center  border-0 transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        "hover:bg-muted/80",
+        ctx.variant === "outline" && "bg-transparent hover:bg-muted/50",
+        isActive && "bg-primary text-primary-foreground hover:bg-primary/90",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
+ToggleGroupItem.displayName = "ToggleGroupItem";

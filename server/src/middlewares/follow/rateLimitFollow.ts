@@ -1,28 +1,32 @@
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
-import type { Request } from 'express';
-import { RedisRateLimitStore } from '../auth/redisRateLimitStore.js';
-
-// Follow/unfollow endpoints are write-heavy and attractive for abuse.
-// We rate-limit per authenticated user when possible, otherwise fallback to IP.
-
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import type { Request } from "express";
+import { RedisRateLimitStore } from "../auth/redisRateLimitStore.js";
 export const rateLimitFollowWrite = rateLimit({
-  windowMs: 10_000, // 10s
-  limit: 10, // 10 follow/unfollow writes per 10 seconds
-  message: { message: 'Too many follow actions. Please slow down.', success: false },
+  windowMs: 10000,
+  limit: 10,
+  message: {
+    message: "Too many follow actions. Please slow down.",
+    success: false,
+  },
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
-    const userId = (req as Request & { user?: { _id?: string } }).user?._id;
+    const userId = (
+      req as Request & {
+        user?: {
+          _id?: string;
+        };
+      }
+    ).user?._id;
     if (userId) return `u:${userId}`;
-    return `ip:${ipKeyGenerator(req.ip ?? req.socket?.remoteAddress ?? '0.0.0.0')}`;
+    return `ip:${ipKeyGenerator(req.ip ?? req.socket?.remoteAddress ?? "0.0.0.0")}`;
   },
   handler: (req, res) => {
     res.status(429).json({
-      message: 'Too many follow actions. Please slow down.',
+      message: "Too many follow actions. Please slow down.",
       success: false,
       retryAfter: 10,
     });
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  store: RedisRateLimitStore('rl:follow:write:', 10_000) as any,
+  store: RedisRateLimitStore("rl:follow:write:", 10000) as any,
 });

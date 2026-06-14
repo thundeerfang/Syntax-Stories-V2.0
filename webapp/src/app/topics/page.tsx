@@ -1,31 +1,50 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Hash, Layers, Tags } from 'lucide-react';
-import { RetroSortDropdown } from '@/components/ui/retro';
-import { toast } from 'sonner';
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { Hash, Layers, Tags } from "lucide-react";
+import { toast } from "sonner";
 import {
   fetchCategoriesList,
   fetchTagsExplore,
   fetchTagsList,
   type TagExploreRow,
-} from '@/api/tagsExplore';
-import { RailFeedEmptyState, ShellPageIntroHeader } from '@/components/layout';
-import { FeaturedCategoryCard } from '@/features/explore';
-import { RankCountPill } from '@/features/topics';
-import { SearchField } from '@/components/ui/form';
-import { HashtagBadgeLink } from '@/features/tags';
-import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
-import type { BlogTaxonomyRow } from '@/types/blog';
-import type { TagListSort } from '@contracts/tagsExploreApi';
+} from "@/api/tagsExplore";
+import {
+  RailCountPill,
+  RailCountPillLoading,
+  RailCountPillPair,
+  RailFeedEmptyState,
+  RailListPaginationFooter,
+  RailSectionSubheader,
+  ShellPageIntroHeader,
+  type RailSectionSubheaderFilterProps,
+  type RailSectionSubheaderSortProps,
+} from "@/components/layout";
+import { FeaturedCategoryCard } from "@/features/explore";
+import { RankCountPill } from "@/features/topics";
+import { HashtagBadgeLink } from "@/features/tags";
+import { BlogApiConnectionError } from "@/lib/api/blogAuthFetch";
+import {
+  FOLLOWED_CATEGORIES_CHANGED_EVENT,
+  readFollowedCategorySlugs,
+} from "@/lib/feeds/followedCategoriesStorage";
+import { shell } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
+import { useAuthStore } from "@/store/auth";
+import type { BlogTaxonomyRow } from "@/types/blog";
+import type { TagListSort, CategoryListSort } from "@contracts/tagsExploreApi";
 
 const DotLottieReact = dynamic(
-  () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false }
+  () => import("@lottiefiles/dotlottie-react").then((m) => m.DotLottieReact),
+  { ssr: false },
 );
 
 function toastApiError(e: unknown, fallback: string) {
@@ -36,7 +55,10 @@ function toastApiError(e: unknown, fallback: string) {
   toast.error(e instanceof Error && e.message ? e.message : fallback);
 }
 
-function HeaderDotLottie({ src, size }: Readonly<{ src: string; size: number }>) {
+function HeaderDotLottie({
+  src,
+  size,
+}: Readonly<{ src: string; size: number }>) {
   return (
     <span
       className="pointer-events-none inline-flex shrink-0 overflow-hidden"
@@ -46,7 +68,7 @@ function HeaderDotLottie({ src, size }: Readonly<{ src: string; size: number }>)
         src={src}
         loop
         autoplay
-        style={{ width: size, height: size, display: 'block' }}
+        style={{ width: size, height: size, display: "block" }}
         renderConfig={{ autoResize: true }}
       />
     </span>
@@ -54,18 +76,67 @@ function HeaderDotLottie({ src, size }: Readonly<{ src: string; size: number }>)
 }
 
 const tagLinkHoverClass =
-  'inline-flex max-w-full min-w-0 items-center  px-2.5 py-1 font-mono text-[12px] font-medium tracking-tight text-foreground transition-colors hover:bg-primary hover:text-primary-foreground';
+  "inline-flex max-w-full min-w-0 items-center  px-2.5 py-1 font-mono text-[12px] font-medium tracking-tight text-foreground transition-colors hover:bg-primary hover:text-primary-foreground";
 
-const TAG_SORT_OPTIONS: ReadonlyArray<{ value: TagListSort; label: string; shortLabel: string }> =
-  [
-    { value: 'name-asc', label: 'Name A–Z', shortLabel: 'A–Z' },
-    { value: 'name-desc', label: 'Name Z–A', shortLabel: 'Z–A' },
-    { value: 'posts-desc', label: 'Most posts', shortLabel: 'Posts' },
-    { value: 'recent', label: 'Recently used', shortLabel: 'Recent' },
-  ];
+const TAG_SORT_OPTIONS: RailSectionSubheaderSortProps["options"] = [
+  { value: "name-asc", label: "Name A–Z" },
+  { value: "name-desc", label: "Name Z–A" },
+  { value: "posts-desc", label: "Most posts" },
+  { value: "recent", label: "Recently used" },
+];
+
+const CATEGORY_SORT_OPTIONS: RailSectionSubheaderSortProps["options"] = [
+  { value: "name-asc", label: "Name A–Z" },
+  { value: "posts-desc", label: "Most posts" },
+];
+
+type CategoryListFilter = "all" | "followed";
+
+const CATEGORY_FILTER_OPTIONS: RailSectionSubheaderFilterProps["options"] = [
+  { value: "all", label: "All" },
+  { value: "followed", label: "Followed" },
+];
 
 const CATEGORY_PAGE_SIZE = 6;
-const TAG_PAGE_SIZE = 48;
+const TAG_PAGE_SIZE = 24;
+const CATEGORY_FETCH_CHUNK = 50;
+
+function mapCategoryRow(c: {
+  slug: string;
+  name: string;
+  postCount: number;
+  description: string;
+}): BlogTaxonomyRow {
+  return {
+    slug: c.slug,
+    name: c.name,
+    postCount: c.postCount,
+    description: c.description,
+  };
+}
+
+type CategoriesCacheEntry = {
+  total: number;
+  pages: Map<number, BlogTaxonomyRow[]>;
+  followedRows?: BlogTaxonomyRow[];
+};
+
+type TagsCacheEntry = {
+  total: number;
+  pages: Map<number, TagExploreRow[]>;
+};
+
+function categoriesQueryKey(
+  filter: CategoryListFilter,
+  sort: CategoryListSort,
+  q: string,
+): string {
+  return `${filter}|${sort}|${q}`;
+}
+
+function tagsQueryKey(sort: TagListSort, q: string): string {
+  return `${sort}|${q}`;
+}
 
 function TagListSkeleton({ count = 12 }: Readonly<{ count?: number }>) {
   return (
@@ -81,11 +152,19 @@ function TagListSkeleton({ count = 12 }: Readonly<{ count?: number }>) {
   );
 }
 
-function CategoryGridSkeleton({ count = CATEGORY_PAGE_SIZE }: Readonly<{ count?: number }>) {
+function CategoryGridSkeleton({
+  count = CATEGORY_PAGE_SIZE,
+}: Readonly<{ count?: number }>) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
+    <div
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      aria-hidden
+    >
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="min-h-[12rem] animate-pulse border-2 border-border bg-muted/40" />
+        <div
+          key={i}
+          className="min-h-[12rem] animate-pulse border-2 border-border bg-muted/40"
+        />
       ))}
     </div>
   );
@@ -113,13 +192,16 @@ function TagRankCard({
       </div>
       <ol className="mt-4 flex list-none flex-col gap-2.5 p-0">
         {shown.map((row, i) => (
-          <li key={row.slug} className="flex min-w-0 items-center gap-3 font-mono text-[13px]">
+          <li
+            key={row.slug}
+            className="flex min-w-0 items-center gap-3 font-mono text-[13px]"
+          >
             <span className="w-6 shrink-0 tabular-nums text-[12px] font-semibold text-muted-foreground">
               {i + 1}
             </span>
             <Link
               href={`/topics/${encodeURIComponent(row.slug)}`}
-              className={cn(tagLinkHoverClass, 'min-w-0 flex-1 text-[13px]')}
+              className={cn(tagLinkHoverClass, "min-w-0 flex-1 text-[13px]")}
             >
               <span className="block truncate">{row.name}</span>
             </Link>
@@ -163,13 +245,16 @@ function CategoryRankCard({
       </div>
       <ol className="mt-4 flex list-none flex-col gap-2.5 p-0">
         {shown.map((row, i) => (
-          <li key={row.slug} className="flex min-w-0 items-center gap-3 font-mono text-[13px]">
+          <li
+            key={row.slug}
+            className="flex min-w-0 items-center gap-3 font-mono text-[13px]"
+          >
             <span className="w-6 shrink-0 tabular-nums text-[12px] font-semibold text-muted-foreground">
               {i + 1}
             </span>
             <Link
               href={`/topics/category/${encodeURIComponent(row.slug)}`}
-              className={cn(tagLinkHoverClass, 'min-w-0 flex-1 text-[13px]')}
+              className={cn(tagLinkHoverClass, "min-w-0 flex-1 text-[13px]")}
             >
               <span className="block truncate">{row.name}</span>
             </Link>
@@ -192,36 +277,77 @@ function CategoryRankCard({
 }
 
 export default function TopicsPage() {
+  const userId = useAuthStore((s) => s.user?.id ?? s.user?._id ?? null);
+
   const [trending, setTrending] = useState<TagExploreRow[]>([]);
   const [popular, setPopular] = useState<TagExploreRow[]>([]);
-  const [popularCategories, setPopularCategories] = useState<BlogTaxonomyRow[]>([]);
+  const [popularCategories, setPopularCategories] = useState<BlogTaxonomyRow[]>(
+    [],
+  );
   const [rankCardsLoading, setRankCardsLoading] = useState(true);
 
   const [categories, setCategories] = useState<BlogTaxonomyRow[]>([]);
   const [categoriesTotal, setCategoriesTotal] = useState(0);
-  const [categoriesHasMore, setCategoriesHasMore] = useState(false);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesLoadingMore, setCategoriesLoadingMore] = useState(false);
+  const [categoriesBootstrapping, setCategoriesBootstrapping] = useState(true);
+  const [categoriesPagePending, setCategoriesPagePending] = useState(false);
+  const [categoryPage, setCategoryPage] = useState(0);
 
   const [tags, setTags] = useState<TagExploreRow[]>([]);
   const [tagsTotal, setTagsTotal] = useState(0);
-  const [tagsHasMore, setTagsHasMore] = useState(false);
-  const [tagsLoading, setTagsLoading] = useState(true);
-  const [tagsLoadingMore, setTagsLoadingMore] = useState(false);
+  const [tagsBootstrapping, setTagsBootstrapping] = useState(true);
+  const [tagsPagePending, setTagsPagePending] = useState(false);
+  const [tagPage, setTagPage] = useState(0);
 
-  const [searchInput, setSearchInput] = useState('');
-  const [searchDebounced, setSearchDebounced] = useState('');
-  const [tagSort, setTagSort] = useState<TagListSort>('name-asc');
+  const [categorySearchInput, setCategorySearchInput] = useState("");
+  const [categorySearchDebounced, setCategorySearchDebounced] = useState("");
+  const [categorySort, setCategorySort] =
+    useState<CategoryListSort>("name-asc");
+  const [categoryFilter, setCategoryFilter] =
+    useState<CategoryListFilter>("all");
 
-  const tagsSentinelRef = useRef<HTMLDivElement>(null);
-  const tagsLoadingMoreRef = useRef(false);
-  const tagsRequestIdRef = useRef(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [tagSort, setTagSort] = useState<TagListSort>("name-asc");
+
   const categoriesRequestIdRef = useRef(0);
-  const categoriesOffsetRef = useRef(0);
-  const tagsOffsetRef = useRef(0);
+  const tagsRequestIdRef = useRef(0);
+  const categoriesCacheRef = useRef<Map<string, CategoriesCacheEntry>>(
+    new Map(),
+  );
+  const tagsCacheRef = useRef<Map<string, TagsCacheEntry>>(new Map());
+
+  const applyCategoryPage = useCallback(
+    (entry: CategoriesCacheEntry, page: number) => {
+      if (entry.followedRows) {
+        const start = page * CATEGORY_PAGE_SIZE;
+        setCategories(
+          entry.followedRows.slice(start, start + CATEGORY_PAGE_SIZE),
+        );
+        setCategoriesTotal(entry.followedRows.length);
+        return;
+      }
+      const rows = entry.pages.get(page);
+      if (rows) {
+        setCategories(rows);
+        setCategoriesTotal(entry.total);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    const t = window.setTimeout(() => setSearchDebounced(searchInput.trim()), 320);
+    const t = window.setTimeout(() => {
+      setCategorySearchDebounced(categorySearchInput.trim());
+      setCategoryPage(0);
+    }, 320);
+    return () => window.clearTimeout(t);
+  }, [categorySearchInput]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setSearchDebounced(searchInput.trim());
+      setTagPage(0);
+    }, 320);
     return () => window.clearTimeout(t);
   }, [searchInput]);
 
@@ -232,7 +358,7 @@ export default function TopicsPage() {
       try {
         const [explore, popularCats] = await Promise.all([
           fetchTagsExplore(),
-          fetchCategoriesList({ offset: 0, limit: 10, sort: 'posts-desc' }),
+          fetchCategoriesList({ offset: 0, limit: 10, sort: "posts-desc" }),
         ]);
         if (cancelled) return;
         setTrending(explore.trending);
@@ -243,11 +369,11 @@ export default function TopicsPage() {
             name: c.name,
             postCount: c.postCount,
             description: c.description,
-          }))
+          })),
         );
       } catch (e) {
         if (!cancelled) {
-          toastApiError(e, 'Could not load topic rankings');
+          toastApiError(e, "Could not load topic rankings");
           setTrending([]);
           setPopular([]);
           setPopularCategories([]);
@@ -261,131 +387,263 @@ export default function TopicsPage() {
     };
   }, []);
 
-  const loadCategoriesPage = useCallback(async (reset: boolean) => {
-    const requestId = ++categoriesRequestIdRef.current;
-    const offset = reset ? 0 : categoriesOffsetRef.current;
+  const loadCategories = useCallback(async () => {
+    const queryKey = categoriesQueryKey(
+      categoryFilter,
+      categorySort,
+      categorySearchDebounced,
+    );
+    const cached = categoriesCacheRef.current.get(queryKey);
 
-    if (reset) {
-      setCategoriesLoading(true);
+    if (categoryFilter === "followed") {
+      if (cached?.followedRows) {
+        applyCategoryPage(cached, categoryPage);
+        setCategoriesBootstrapping(false);
+        setCategoriesPagePending(false);
+        return;
+      }
+
+      const requestId = ++categoriesRequestIdRef.current;
+      setCategories([]);
+      setCategoriesTotal(0);
+      setCategoriesBootstrapping(true);
+      setCategoriesPagePending(false);
+
+      try {
+        const followed = new Set(readFollowedCategorySlugs(userId));
+        if (followed.size === 0) {
+          if (categoriesRequestIdRef.current !== requestId) return;
+          const entry: CategoriesCacheEntry = {
+            total: 0,
+            pages: new Map(),
+            followedRows: [],
+          };
+          categoriesCacheRef.current.set(queryKey, entry);
+          setCategories([]);
+          setCategoriesTotal(0);
+          return;
+        }
+
+        const matched: BlogTaxonomyRow[] = [];
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const page = await fetchCategoriesList({
+            offset,
+            limit: CATEGORY_FETCH_CHUNK,
+            sort: categorySort,
+            q: categorySearchDebounced || undefined,
+          });
+          if (categoriesRequestIdRef.current !== requestId) return;
+
+          for (const row of page.list) {
+            if (followed.has(row.slug.toLowerCase())) {
+              matched.push(mapCategoryRow(row));
+            }
+          }
+
+          hasMore = page.hasMore;
+          offset += page.list.length;
+        }
+
+        const entry: CategoriesCacheEntry = {
+          total: matched.length,
+          pages: new Map(),
+          followedRows: matched,
+        };
+        categoriesCacheRef.current.set(queryKey, entry);
+        if (categoriesRequestIdRef.current !== requestId) return;
+        applyCategoryPage(entry, categoryPage);
+      } catch (e) {
+        if (categoriesRequestIdRef.current !== requestId) return;
+        toastApiError(e, "Could not load categories");
+        setCategories([]);
+        setCategoriesTotal(0);
+      } finally {
+        if (categoriesRequestIdRef.current === requestId) {
+          setCategoriesBootstrapping(false);
+          setCategoriesPagePending(false);
+        }
+      }
+      return;
+    }
+
+    const pageRows = cached?.pages.get(categoryPage);
+    if (pageRows) {
+      setCategories(pageRows);
+      setCategoriesTotal(cached!.total);
+      setCategoriesBootstrapping(false);
+      setCategoriesPagePending(false);
+      return;
+    }
+
+    const requestId = ++categoriesRequestIdRef.current;
+    const showBootstrap = !cached;
+    if (showBootstrap) {
+      setCategories([]);
+      setCategoriesTotal(0);
+      setCategoriesBootstrapping(true);
+      setCategoriesPagePending(false);
     } else {
-      setCategoriesLoadingMore(true);
+      setCategoriesBootstrapping(false);
+      setCategoriesPagePending(true);
     }
 
     try {
       const page = await fetchCategoriesList({
-        offset,
+        offset: categoryPage * CATEGORY_PAGE_SIZE,
         limit: CATEGORY_PAGE_SIZE,
-        sort: 'name-asc',
+        sort: categorySort,
+        q: categorySearchDebounced || undefined,
       });
       if (categoriesRequestIdRef.current !== requestId) return;
 
-      const rows = page.list.map((c) => ({
-        slug: c.slug,
-        name: c.name,
-        postCount: c.postCount,
-        description: c.description,
-      }));
+      const rows = page.list.map(mapCategoryRow);
+      const entry: CategoriesCacheEntry = cached ?? {
+        total: page.total,
+        pages: new Map(),
+      };
+      entry.total = page.total;
+      entry.pages.set(categoryPage, rows);
+      categoriesCacheRef.current.set(queryKey, entry);
 
-      categoriesOffsetRef.current = offset + rows.length;
-      setCategories((prev) => (reset ? rows : [...prev, ...rows]));
+      setCategories(rows);
       setCategoriesTotal(page.total);
-      setCategoriesHasMore(page.hasMore);
     } catch (e) {
       if (categoriesRequestIdRef.current !== requestId) return;
-      toastApiError(e, 'Could not load categories');
-      if (reset) {
-        categoriesOffsetRef.current = 0;
+      toastApiError(e, "Could not load categories");
+      if (showBootstrap) {
         setCategories([]);
         setCategoriesTotal(0);
-        setCategoriesHasMore(false);
       }
     } finally {
       if (categoriesRequestIdRef.current === requestId) {
-        setCategoriesLoading(false);
-        setCategoriesLoadingMore(false);
+        setCategoriesBootstrapping(false);
+        setCategoriesPagePending(false);
       }
     }
-  }, []);
+  }, [
+    categoryPage,
+    categorySort,
+    categorySearchDebounced,
+    categoryFilter,
+    userId,
+    applyCategoryPage,
+  ]);
 
   useEffect(() => {
-    void loadCategoriesPage(true);
-  }, [loadCategoriesPage]);
+    void loadCategories();
+  }, [loadCategories]);
 
-  const loadTagsPage = useCallback(
-    async (reset: boolean) => {
-      const requestId = ++tagsRequestIdRef.current;
-      const offset = reset ? 0 : tagsOffsetRef.current;
-
-      if (reset) {
-        setTagsLoading(true);
-      } else {
-        tagsLoadingMoreRef.current = true;
-        setTagsLoadingMore(true);
+  useEffect(() => {
+    const onFollowedChanged = () => {
+      for (const key of categoriesCacheRef.current.keys()) {
+        if (key.startsWith("followed|")) categoriesCacheRef.current.delete(key);
       }
-
-      try {
-        const page = await fetchTagsList({
-          offset,
-          limit: TAG_PAGE_SIZE,
-          sort: tagSort,
-          q: searchDebounced || undefined,
-        });
-        if (tagsRequestIdRef.current !== requestId) return;
-
-        tagsOffsetRef.current = offset + page.list.length;
-        setTags((prev) => (reset ? page.list : [...prev, ...page.list]));
-        setTagsTotal(page.total);
-        setTagsHasMore(page.hasMore);
-      } catch (e) {
-        if (tagsRequestIdRef.current !== requestId) return;
-        toastApiError(e, 'Could not load tags');
-        if (reset) {
-          tagsOffsetRef.current = 0;
-          setTags([]);
-          setTagsTotal(0);
-          setTagsHasMore(false);
-        }
-      } finally {
-        if (tagsRequestIdRef.current === requestId) {
-          setTagsLoading(false);
-          setTagsLoadingMore(false);
-          tagsLoadingMoreRef.current = false;
-        }
-      }
-    },
-    [tagSort, searchDebounced]
-  );
-
-  useEffect(() => {
-    void loadTagsPage(true);
-  }, [loadTagsPage]);
-
-  useEffect(() => {
-    const el = tagsSentinelRef.current;
-    if (!el || tagsLoading || tagsLoadingMore || !tagsHasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const hit = entries.some((entry) => entry.isIntersecting);
-        if (!hit || tagsLoadingMoreRef.current) return;
-        void loadTagsPage(false);
-      },
-      { rootMargin: '200px 0px' }
+      if (categoryFilter === "followed") void loadCategories();
+    };
+    window.addEventListener(
+      FOLLOWED_CATEGORIES_CHANGED_EVENT,
+      onFollowedChanged,
     );
+    return () =>
+      window.removeEventListener(
+        FOLLOWED_CATEGORIES_CHANGED_EVENT,
+        onFollowedChanged,
+      );
+  }, [categoryFilter, loadCategories]);
 
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [tagsLoading, tagsLoadingMore, tagsHasMore, loadTagsPage]);
+  const loadTags = useCallback(async () => {
+    const queryKey = tagsQueryKey(tagSort, searchDebounced);
+    const cached = tagsCacheRef.current.get(queryKey);
+    const pageRows = cached?.pages.get(tagPage);
+
+    if (pageRows) {
+      setTags(pageRows);
+      setTagsTotal(cached!.total);
+      setTagsBootstrapping(false);
+      setTagsPagePending(false);
+      return;
+    }
+
+    const requestId = ++tagsRequestIdRef.current;
+    const showBootstrap = !cached;
+    if (showBootstrap) {
+      setTags([]);
+      setTagsTotal(0);
+      setTagsBootstrapping(true);
+      setTagsPagePending(false);
+    } else {
+      setTagsBootstrapping(false);
+      setTagsPagePending(true);
+    }
+
+    try {
+      const page = await fetchTagsList({
+        offset: tagPage * TAG_PAGE_SIZE,
+        limit: TAG_PAGE_SIZE,
+        sort: tagSort,
+        q: searchDebounced || undefined,
+      });
+      if (tagsRequestIdRef.current !== requestId) return;
+
+      const entry: TagsCacheEntry = cached ?? {
+        total: page.total,
+        pages: new Map(),
+      };
+      entry.total = page.total;
+      entry.pages.set(tagPage, page.list);
+      tagsCacheRef.current.set(queryKey, entry);
+
+      setTags(page.list);
+      setTagsTotal(page.total);
+    } catch (e) {
+      if (tagsRequestIdRef.current !== requestId) return;
+      toastApiError(e, "Could not load tags");
+      if (showBootstrap) {
+        setTags([]);
+        setTagsTotal(0);
+      }
+    } finally {
+      if (tagsRequestIdRef.current === requestId) {
+        setTagsBootstrapping(false);
+        setTagsPagePending(false);
+      }
+    }
+  }, [tagPage, tagSort, searchDebounced]);
+
+  useEffect(() => {
+    void loadTags();
+  }, [loadTags]);
+
+  const categoryTotalPages = Math.max(
+    1,
+    Math.ceil(categoriesTotal / CATEGORY_PAGE_SIZE),
+  );
+  const tagTotalPages = Math.max(1, Math.ceil(tagsTotal / TAG_PAGE_SIZE));
+
+  useEffect(() => {
+    if (categoryPage > categoryTotalPages - 1) {
+      setCategoryPage(Math.max(0, categoryTotalPages - 1));
+    }
+  }, [categoryPage, categoryTotalPages]);
+
+  useEffect(() => {
+    if (tagPage > tagTotalPages - 1) {
+      setTagPage(Math.max(0, tagTotalPages - 1));
+    }
+  }, [tagPage, tagTotalPages]);
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'flex min-h-0 flex-1 flex-col')}>
+    <div className={cn(shell.contentRail, "flex min-h-0 flex-1 flex-col")}>
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-6 md:space-y-8">
         <ShellPageIntroHeader
-          breadcrumbItems={[{ href: '/', label: 'Home' }, { label: 'Topics' }]}
+          breadcrumbItems={[{ href: "/", label: "Home" }, { label: "Topics" }]}
           description="Browse taxonomy categories and tags writers use — open a category for its post stream, or a tag."
           title={
             <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-              Explore{' '}
+              Explore{" "}
               <span className="text-primary underline decoration-4 underline-offset-4 sm:decoration-6 sm:underline-offset-6">
                 topics.
               </span>
@@ -396,7 +654,10 @@ export default function TopicsPage() {
         {rankCardsLoading ? (
           <div className="grid gap-4 md:grid-cols-3" aria-busy="true">
             {[0, 1, 2].map((k) => (
-              <div key={k} className="h-72 animate-pulse border-2 border-border bg-muted/40" />
+              <div
+                key={k}
+                className="h-72 animate-pulse border-2 border-border bg-muted/40"
+              />
             ))}
           </div>
         ) : (
@@ -404,42 +665,117 @@ export default function TopicsPage() {
             <TagRankCard
               title="Trending tags"
               rows={trending}
-              headerStart={<HeaderDotLottie src="/lottie/Fire.lottie" size={28} />}
+              headerStart={
+                <HeaderDotLottie src="/lottie/Fire.lottie" size={28} />
+              }
             />
             <TagRankCard
               title="Popular tags"
               rows={popular}
-              headerStart={<HeaderDotLottie src="/lottie/Tags.lottie" size={28} />}
+              headerStart={
+                <HeaderDotLottie src="/lottie/Tags.lottie" size={28} />
+              }
             />
             <CategoryRankCard
               title="Popular categories"
               rows={popularCategories}
               headerStart={
-                <Layers className="size-6 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
+                <Layers
+                  className="size-6 shrink-0 text-primary"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
               }
             />
           </div>
         )}
 
-        <section aria-labelledby="all-categories-heading" className="min-w-0 space-y-3">
-          <h2
-            id="all-categories-heading"
-            className="font-mono text-sm font-black uppercase tracking-wide text-foreground"
-          >
-            All categories
-          </h2>
-          <div>
-            {categoriesLoading ? (
+        <section aria-label="All categories" className="min-w-0 space-y-3">
+          <RailSectionSubheader
+            label="All categories"
+            text={
+              categoriesBootstrapping ? (
+                <RailCountPillLoading />
+              ) : categorySearchDebounced ? (
+                <RailCountPillPair
+                  primary={categories.length}
+                  secondary={categoriesTotal}
+                  primaryLabel={`${categories.length} loaded`}
+                  secondaryLabel={`${categoriesTotal} matching`}
+                />
+              ) : (
+                <RailCountPill
+                  count={categoriesTotal}
+                  aria-label={`${categoriesTotal} categories`}
+                />
+              )
+            }
+            search={{
+              value: categorySearchInput,
+              onChange: setCategorySearchInput,
+              placeholder: "Search categories…",
+              ariaLabel: "Search categories",
+              disabled: categoriesBootstrapping,
+            }}
+            sort={{
+              id: "topics-all-categories-sort",
+              value: categorySort,
+              onChange: (v) => {
+                setCategorySort(v as CategoryListSort);
+                setCategoryPage(0);
+              },
+              options: CATEGORY_SORT_OPTIONS,
+              placeholder: "Sort",
+              disabled: categoriesBootstrapping,
+            }}
+            filter={{
+              id: "topics-all-categories-filter",
+              value: categoryFilter,
+              onChange: (v) => {
+                setCategoryFilter(v as CategoryListFilter);
+                setCategoryPage(0);
+              },
+              options: CATEGORY_FILTER_OPTIONS,
+              placeholder: "Filter",
+              disabled: categoriesBootstrapping,
+            }}
+          />
+          <div aria-busy={categoriesPagePending}>
+            {categoriesBootstrapping ? (
               <CategoryGridSkeleton />
-            ) : categories.length === 0 ? (
+            ) : categoriesTotal === 0 && !categorySearchDebounced ? (
               <RailFeedEmptyState
                 icon={Layers}
                 title="No categories in taxonomy yet"
                 description="When staff publish taxonomy categories and writers file stories under them, they will show up here."
               />
+            ) : categoryFilter === "followed" && categoriesTotal === 0 ? (
+              <RailFeedEmptyState
+                icon={Layers}
+                title="No followed categories"
+                description="Follow categories from the cards above or category feeds — they will show up here."
+              />
+            ) : categories.length === 0 ? (
+              <RailFeedEmptyState
+                icon={Layers}
+                variant="filter"
+                title="No categories match your search"
+                description="Try a different keyword or clear the search field."
+                actions={[
+                  {
+                    label: "Clear search",
+                    onClick: () => setCategorySearchInput(""),
+                  },
+                ]}
+              />
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                  className={cn(
+                    "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
+                    categoriesPagePending && "pointer-events-none opacity-60",
+                  )}
+                >
                   {categories.map((c) => (
                     <FeaturedCategoryCard
                       key={c.slug}
@@ -454,55 +790,63 @@ export default function TopicsPage() {
                     />
                   ))}
                 </div>
-                {categoriesLoadingMore ? (
-                  <div className="mt-4">
-                    <CategoryGridSkeleton />
-                  </div>
-                ) : null}
-                {categoriesHasMore && !categoriesLoadingMore ? (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() => void loadCategoriesPage(false)}
-                      className="w-full border-2 border-border bg-card px-4 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest text-foreground transition-colors hover:bg-muted/40"
-                    >
-                      View more ({categories.length}/{categoriesTotal})
-                    </button>
-                  </div>
+                {categoriesTotal > 0 ? (
+                  <RailListPaginationFooter
+                    className="mt-4"
+                    page={categoryPage}
+                    pageSize={CATEGORY_PAGE_SIZE}
+                    total={categoriesTotal}
+                    onPageChange={setCategoryPage}
+                    disabled={categoriesPagePending}
+                  />
                 ) : null}
               </>
             )}
           </div>
         </section>
 
-        <section aria-labelledby="all-tags-heading" className="min-w-0 space-y-3">
-          <div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-              <h2
-                id="all-tags-heading"
-                className="shrink-0 font-mono text-sm font-black uppercase tracking-wide text-foreground"
-              >
-                All tags
-              </h2>
-              <div className="flex w-full min-w-0 shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-stretch sm:justify-end sm:gap-2">
-                <SearchField
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search tags…"
+        <section aria-label="All tags" className="min-w-0 space-y-3">
+          <RailSectionSubheader
+            label="All tags"
+            text={
+              tagsBootstrapping ? (
+                <RailCountPillLoading />
+              ) : searchDebounced ? (
+                <RailCountPillPair
+                  primary={tags.length}
+                  secondary={tagsTotal}
+                  primaryLabel={`${tags.length} loaded`}
+                  secondaryLabel={`${tagsTotal} matching`}
                 />
-                <RetroSortDropdown
-                  value={tagSort}
-                  onChange={setTagSort}
-                  options={TAG_SORT_OPTIONS}
-                  ariaLabelPrefix="Sort tags"
-                  triggerClassName="sm:min-w-[8.25rem]"
+              ) : (
+                <RailCountPill
+                  count={tagsTotal}
+                  aria-label={`${tagsTotal} tags`}
                 />
-              </div>
-            </div>
-          </div>
-          <div>
-            {tagsLoading ? (
-              <TagListSkeleton count={24} />
+              )
+            }
+            search={{
+              value: searchInput,
+              onChange: setSearchInput,
+              placeholder: "Search tags…",
+              ariaLabel: "Search tags",
+              disabled: tagsBootstrapping,
+            }}
+            sort={{
+              id: "topics-all-tags-sort",
+              value: tagSort,
+              onChange: (v) => {
+                setTagSort(v as TagListSort);
+                setTagPage(0);
+              },
+              options: TAG_SORT_OPTIONS,
+              placeholder: "Sort",
+              disabled: tagsBootstrapping,
+            }}
+          />
+          <div aria-busy={tagsPagePending}>
+            {tagsBootstrapping ? (
+              <TagListSkeleton count={TAG_PAGE_SIZE} />
             ) : tagsTotal === 0 && !searchDebounced ? (
               <RailFeedEmptyState
                 icon={Hash}
@@ -515,11 +859,18 @@ export default function TopicsPage() {
                 variant="filter"
                 title="No tags match your search"
                 description="Try a different keyword or clear the search field."
-                actions={[{ label: 'Clear search', onClick: () => setSearchInput('') }]}
+                actions={[
+                  { label: "Clear search", onClick: () => setSearchInput("") },
+                ]}
               />
             ) : (
               <>
-                <div className="flex flex-wrap gap-x-3 gap-y-2">
+                <div
+                  className={cn(
+                    "flex flex-wrap gap-x-3 gap-y-2",
+                    tagsPagePending && "pointer-events-none opacity-60",
+                  )}
+                >
                   {tags.map((t) => (
                     <HashtagBadgeLink
                       key={t.slug}
@@ -529,13 +880,15 @@ export default function TopicsPage() {
                     />
                   ))}
                 </div>
-                {tagsLoadingMore ? (
-                  <div className="mt-3">
-                    <TagListSkeleton count={16} />
-                  </div>
-                ) : null}
-                {tagsHasMore ? (
-                  <div ref={tagsSentinelRef} className="h-px w-full" aria-hidden />
+                {tagsTotal > 0 ? (
+                  <RailListPaginationFooter
+                    className="mt-4"
+                    page={tagPage}
+                    pageSize={TAG_PAGE_SIZE}
+                    total={tagsTotal}
+                    onPageChange={setTagPage}
+                    disabled={tagsPagePending}
+                  />
                 ) : null}
               </>
             )}

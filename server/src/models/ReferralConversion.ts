@@ -1,7 +1,10 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
-export type ReferralStatus = 'pending' | 'verified' | 'rewarded' | 'expired' | 'rejected';
-
+import mongoose, { Schema, Document, Model } from "mongoose";
+export type ReferralStatus =
+  | "pending"
+  | "verified"
+  | "rewarded"
+  | "expired"
+  | "rejected";
 export interface IReferralConversion extends Document {
   referrerId: mongoose.Types.ObjectId;
   refereeId: mongoose.Types.ObjectId;
@@ -17,16 +20,26 @@ export interface IReferralConversion extends Document {
   createdAt?: Date;
   updatedAt?: Date;
 }
-
 const ReferralConversionSchema = new Schema<IReferralConversion>(
   {
-    referrerId: { type: Schema.Types.ObjectId, ref: 'users', required: true, index: true },
-    refereeId: { type: Schema.Types.ObjectId, ref: 'users', required: true, unique: true, index: true },
+    referrerId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      required: true,
+      index: true,
+    },
+    refereeId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      required: true,
+      unique: true,
+      index: true,
+    },
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'verified', 'rewarded', 'expired', 'rejected'],
-      default: 'pending',
+      enum: ["pending", "verified", "rewarded", "expired", "rejected"],
+      default: "pending",
       index: true,
     },
     source: { type: String, required: true, trim: true, maxlength: 32 },
@@ -38,12 +51,13 @@ const ReferralConversionSchema = new Schema<IReferralConversion>(
     ipHash: { type: String, trim: true, maxlength: 64 },
     rejectReason: { type: String, trim: true, maxlength: 128 },
   },
-  { timestamps: true, collection: 'referralconversions' }
+  { timestamps: true, collection: "referralconversions" },
 );
-
 ReferralConversionSchema.index({ referrerId: 1, createdAt: -1 });
 ReferralConversionSchema.index({ referrerId: 1, status: 1 });
-
 export const ReferralConversionModel: Model<IReferralConversion> =
   mongoose.models?.ReferralConversion ??
-  mongoose.model<IReferralConversion>('ReferralConversion', ReferralConversionSchema);
+  mongoose.model<IReferralConversion>(
+    "ReferralConversion",
+    ReferralConversionSchema,
+  );

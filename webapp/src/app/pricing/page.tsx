@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronRight, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import Link from 'next/link';
+import { useCallback, useEffect, useState } from "react";
+import { Check, ChevronRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import Link from "next/link";
 import {
   createCheckoutSession,
   fetchBillingPlans,
   type BillingPaidPlanKey,
   type BillingPlanCatalogItem,
-} from '@/api/billing';
-import { useAuthStore } from '@/store/auth';
-import { BlockShadowButton } from '@/components/ui';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
+} from "@/api/billing";
+import { useAuthStore } from "@/store/auth";
+import { BlockShadowButton } from "@/components/ui";
+import { shell } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
 
 function PlanCheckoutButton({
   planKey,
@@ -30,11 +30,11 @@ function PlanCheckoutButton({
 
   const onClick = useCallback(async () => {
     if (!checkoutEnabled) {
-      toast.error('Checkout is not configured for this plan yet.');
+      toast.error("Checkout is not configured for this plan yet.");
       return;
     }
     if (!token) {
-      window.location.href = `/login?next=${encodeURIComponent('/pricing')}`;
+      window.location.href = `/login?next=${encodeURIComponent("/pricing")}`;
       return;
     }
     setBusy(true);
@@ -48,7 +48,7 @@ function PlanCheckoutButton({
     }
   }, [token, planKey, checkoutEnabled]);
 
-  const label = token ? 'Continue to checkout' : 'Sign in to subscribe';
+  const label = token ? "Continue to checkout" : "Sign in to subscribe";
 
   return (
     <BlockShadowButton
@@ -57,12 +57,16 @@ function PlanCheckoutButton({
       fullWidth
       disabled={busy || !isHydrated || !checkoutEnabled}
       aria-busy={busy}
-      aria-label={busy ? 'Opening checkout…' : `${label} — ${planName}`}
-      className={cn((!isHydrated || !checkoutEnabled) && 'pointer-events-none opacity-60')}
+      aria-label={busy ? "Opening checkout…" : `${label} — ${planName}`}
+      className={cn(
+        (!isHydrated || !checkoutEnabled) && "pointer-events-none opacity-60",
+      )}
       onClick={() => void onClick()}
     >
-      {busy ? <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden /> : null}
-      {busy ? 'Opening checkout…' : isHydrated ? label : 'Loading…'}
+      {busy ? (
+        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+      ) : null}
+      {busy ? "Opening checkout…" : isHydrated ? label : "Loading…"}
     </BlockShadowButton>
   );
 }
@@ -74,8 +78,8 @@ function PricingPlansGrid({ plans }: { plans: BillingPlanCatalogItem[] }) {
         <article
           key={p.key}
           className={cn(
-            'relative flex min-h-0 flex-col border-4 border-border bg-card text-card-foreground shadow',
-            p.featured && 'border-primary shadow'
+            "relative flex min-h-0 flex-col border-4 border-border bg-card text-card-foreground shadow",
+            p.featured && "border-primary shadow",
           )}
         >
           {p.badge ? (
@@ -89,7 +93,9 @@ function PricingPlansGrid({ plans }: { plans: BillingPlanCatalogItem[] }) {
               <h3 className="font-mono text-lg font-black uppercase tracking-tight text-foreground">
                 {p.name}
               </h3>
-              <p className="text-sm leading-snug text-muted-foreground">{p.description}</p>
+              <p className="text-sm leading-snug text-muted-foreground">
+                {p.description}
+              </p>
             </div>
 
             <div className="text-left">
@@ -153,7 +159,7 @@ export default function PricingPage() {
   }, []);
 
   return (
-    <div className={SHELL_CONTENT_RAIL_CLASS}>
+    <div className={shell.contentRail}>
       <div className="w-full space-y-6 md:space-y-8">
         <header className="w-full">
           <nav
@@ -163,11 +169,15 @@ export default function PricingPage() {
             <Link href="/" className="transition-colors hover:text-foreground">
               Home
             </Link>
-            <ChevronRight className="size-3 shrink-0 opacity-35" strokeWidth={2.5} aria-hidden />
+            <ChevronRight
+              className="size-3 shrink-0 opacity-35"
+              strokeWidth={2.5}
+              aria-hidden
+            />
             <span className="text-foreground">Pricing</span>
           </nav>
           <h1 className="text-3xl font-black uppercase italic tracking-tighter text-foreground sm:text-4xl lg:text-5xl">
-            Plans for every{' '}
+            Plans for every{" "}
             <span className="text-primary underline decoration-4 underline-offset-4 sm:decoration-6 sm:underline-offset-6">
               builder.
             </span>
@@ -188,7 +198,9 @@ export default function PricingPage() {
               {error}
             </p>
           ) : plans.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No plans are available right now.</p>
+            <p className="text-sm text-muted-foreground">
+              No plans are available right now.
+            </p>
           ) : (
             <PricingPlansGrid plans={plans} />
           )}

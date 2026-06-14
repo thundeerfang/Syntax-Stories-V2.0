@@ -24,8 +24,29 @@
      ```
 
 4. **Run**
-   - Dev: `npm run dev` (ts-node-dev)
+   - Dev API: `npm run dev` (ts-node-dev)
+   - Dev notification webhook worker (separate terminal): `npm run dev:notification-webhook`
    - Prod: `npm run build` then `npm start`
+   - Prod webhook worker: `npm run start:notification-webhook`
+
+### Notification webhook worker
+
+Outbound platform webhooks are **not** sent from the API process. When a notification is created, the API enqueues Redis `notifications:outbox`; the dedicated worker delivers HTTP webhooks.
+
+**Requirements:** `REDIS_URL`, `MONGO_CONN`, platform webhook enabled in admin.
+
+| Process | Command | Port |
+|---------|---------|------|
+| API | `npm run dev` | `PORT` (default 7373 in `.env.example`) |
+| Webhook worker | `npm run dev:notification-webhook` | `NOTIFICATION_WEBHOOK_PORT` (default 7380) |
+
+**Worker endpoints:**
+- `GET /health` — liveness
+- `GET /webhooks/notifications/ping` — ping
+- `POST /webhooks/notifications/ingest` — create notification (header `X-Webhook-Secret`)
+
+For local ingest via ngrok: `ngrok http 7380`
+
 
 ## Deploy on Render
 

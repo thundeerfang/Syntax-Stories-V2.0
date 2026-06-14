@@ -1,95 +1,93 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import session from 'express-session';
-import { errorHandler } from './middlewares/index.js';
-import { requestContextMiddleware } from './middlewares/requestContext.js';
-import { registerAppListeners } from './bootstrap/registerAppListeners.js';
-import passport from './passport/index.js';
-import { env } from './config/env.js';
-import { getProductionAllowedOrigins, isOriginAllowed } from './config/frontendUrl.js';
-import { getRedis } from './config/redis.js';
-import { RedisStore } from 'connect-redis';
-import cookieParser from 'cookie-parser';
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import session from "express-session";
+import { errorHandler } from "./middlewares/index.js";
+import { storageFullGate } from "./middlewares/storageFullGate.middleware.js";
+import { requestContextMiddleware } from "./middlewares/requestContext.js";
+import { registerAppListeners } from "./bootstrap/registerAppListeners.js";
+import passport from "./passport/index.js";
+import { env } from "./config/env.js";
+import {
+  getProductionAllowedOrigins,
+  isOriginAllowed,
+} from "./config/frontendUrl.js";
+import { getRedis } from "./config/redis.js";
+import { RedisStore } from "connect-redis";
+import cookieParser from "cookie-parser";
 import {
   registerApiRoutes,
   registerStaticUploads,
   registerUploadApiRoutes,
   registerAuthModuleRoutes,
   registerOAuthRoutes,
-} from './bootstrap/index.js';
-import { handleStripeWebhook } from './controllers/stripeWebhook.controller.js';
-import internalBillingRoutes from './routes/internalBilling.routes.js';
-
+} from "./bootstrap/index.js";
+import { handleStripeWebhook } from "./controllers/stripeWebhook.controller.js";
+import internalBillingRoutes from "./routes/internalBilling.routes.js";
 const app = express();
-
 registerAppListeners();
-
-/** Stripe webhooks require the raw body for signature verification (§3.6). */
-app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
-
-// Trust first proxy (e.g. Nginx, load balancer) so req.ip and rate limiting are correct
-app.set('trust proxy', 1);
+app.post(
+  "/webhooks/stripe",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook,
+);
+app.set("trust proxy", 1);
 app.use(requestContextMiddleware);
-
 app.use(
   helmet({
-    contentSecurityPolicy: env.NODE_ENV === 'production' ? undefined : false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-  })
+    contentSecurityPolicy: env.NODE_ENV === "production" ? undefined : false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
 );
 app.use(express.json());
 app.use(cookieParser());
-// In production allow FRONTEND_URL (comma-separated; use *.example.com for Vercel previews, etc.)
-const allowedOrigins = env.NODE_ENV === 'production' ? getProductionAllowedOrigins() : null;
+const allowedOrigins =
+  env.NODE_ENV === "production" ? getProductionAllowedOrigins() : null;
 function allowCorsOrigin(origin: string | undefined): boolean {
   if (!allowedOrigins?.length) return false;
   return isOriginAllowed(origin, allowedOrigins);
 }
-
 function corsOriginOption():
   | boolean
   | string
   | string[]
-  | ((origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => void) {
-  // Dev: reflect request Origin so localhost vs 127.0.0.1 and any dev port work (ALTCHA, fetch, etc.).
-  // A single FRONTEND_URL string rejects the other hostname and breaks the PoW challenge fetch.
-  if (env.NODE_ENV !== 'production') return true;
+  | ((
+      origin: string | undefined,
+      cb: (err: Error | null, allow?: boolean) => void,
+    ) => void) {
+  if (env.NODE_ENV !== "production") return true;
   if (!allowedOrigins?.length) return false;
   return (origin, cb) => {
     cb(null, allowCorsOrigin(origin));
   };
 }
-
 app.use(
   cors({
     origin: corsOriginOption(),
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Request-Id',
-      'X-Idempotency-Key',
-      'Idempotency-Key',
-      'X-Intent-Token',
-      'X-Device-Fingerprint',
+      "Content-Type",
+      "Authorization",
+      "X-Request-Id",
+      "X-Idempotency-Key",
+      "Idempotency-Key",
+      "X-Intent-Token",
+      "X-Device-Fingerprint",
     ],
-  })
+  }),
 );
-
 const sessionConfig: session.SessionOptions = {
   secret: env.SESSION_SECRET as string,
   resave: false,
-  saveUninitialized: env.NODE_ENV !== 'production',
+  saveUninitialized: env.NODE_ENV !== "production",
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
-    secure: env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === "production",
     httpOnly: true,
-    sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: env.NODE_ENV === "production" ? "strict" : "lax",
   },
 };
-
 const redis = getRedis();
 if (redis) {
   sessionConfig.store = new RedisStore({ client: redis });
@@ -97,14 +95,12 @@ if (redis) {
 app.use(session(sessionConfig));
 app.use(passport.initialize());
 app.use(passport.session());
-
+app.use(storageFullGate);
 registerStaticUploads(app);
 registerApiRoutes(app);
 registerUploadApiRoutes(app);
 registerAuthModuleRoutes(app);
 registerOAuthRoutes(app);
-app.use('/api/internal/billing', internalBillingRoutes);
-
+app.use("/api/internal/billing", internalBillingRoutes);
 app.use(errorHandler);
-
 export default app;

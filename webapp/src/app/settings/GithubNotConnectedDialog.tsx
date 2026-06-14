@@ -1,10 +1,8 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Dialog } from '@/components/ui/dialog';
-import { GithubConnectLottie } from '@/components/ui/lottie';
-import { cn } from '@/lib/core/utils';
-import { settingsBtnBlockPrimarySm } from '@/app/settings/buttonStyles';
+import { Dialog } from "@/components/ui/dialog";
+import { GithubConnectLottie } from "@/components/ui/lottie";
+import { BlockShadowButton } from "@/components/ui/button";
 
 export function GithubNotConnectedDialog({
   open,
@@ -34,20 +32,23 @@ export function GithubNotConnectedDialog({
         <GithubConnectLottie size={132} />
       </div>
       <p className="text-xs font-medium leading-relaxed text-muted-foreground">
-        Go to <span className="font-black text-foreground">Security → Connected accounts</span>,
-        link GitHub, then return here and open{' '}
-        <span className="font-black text-foreground">Add open source</span> again.
+        Go to{" "}
+        <span className="font-black text-foreground">
+          Security → Connected Accounts
+        </span>
+        , link GitHub, then return here and open{" "}
+        <span className="font-black text-foreground">Add open source</span>{" "}
+        again.
       </p>
-      <Link
+      <BlockShadowButton
         href="/settings?section=connected-accounts"
-        className={cn(
-          settingsBtnBlockPrimarySm,
-          'flex w-full items-center justify-center px-5 py-2.5 text-xs tracking-wide no-underline'
-        )}
+        shadow="sm"
+        fullWidth
+        className="px-5 py-2.5 text-xs tracking-wide"
         onClick={onClose}
       >
         Open Connected accounts
-      </Link>
+      </BlockShadowButton>
     </Dialog>
   );
 }

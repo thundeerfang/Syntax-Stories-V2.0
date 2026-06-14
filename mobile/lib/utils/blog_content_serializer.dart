@@ -157,6 +157,10 @@ Future<List<BlogBlock>> prepareBlogBlocksForSubmit(
         filename: block.pendingImageFileName ?? 'blog-image.jpg',
       );
       final nextPayload = Map<String, dynamic>.from(block.payload)..['url'] = result.url;
+      final alt = result.imageAlt;
+      if (alt != null && alt.isNotEmpty) {
+        nextPayload['title'] = alt;
+      }
       out.add(block.copyWith(payload: nextPayload, clearPendingImage: true));
       continue;
     }

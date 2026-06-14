@@ -1,19 +1,17 @@
-import passport from 'passport';
-import { UserModel } from '../models/User.js';
-import { registerGoogle } from './google.js';
-import { registerGithub } from './github.js';
-import { registerFacebook } from './facebook.js';
-import { registerX } from './x.js';
-import { registerDiscord } from './discord.js';
-import { registerTwitch } from './twitch.js';
-
+import passport from "passport";
+import { UserModel } from "../models/User.js";
+import { registerGoogle } from "./google.js";
+import { registerGithub } from "./github.js";
+import { registerFacebook } from "./facebook.js";
+import { registerX } from "./x.js";
+import { registerDiscord } from "./discord.js";
+import { registerTwitch } from "./twitch.js";
 registerGoogle(passport);
 registerGithub(passport);
 registerFacebook(passport);
 registerX(passport);
 registerDiscord(passport);
 registerTwitch(passport);
-
 passport.serializeUser((user: Express.User, done) => {
   const u = user as {
     _id?: unknown;
@@ -37,7 +35,6 @@ passport.serializeUser((user: Express.User, done) => {
     twitchId: u.twitchId,
   });
 });
-
 passport.deserializeUser(
   async (
     data: {
@@ -51,7 +48,7 @@ passport.deserializeUser(
       discordId?: string;
       twitchId?: string;
     },
-    done
+    done,
   ) => {
     try {
       const id = data.id ?? data._id;
@@ -71,11 +68,10 @@ passport.deserializeUser(
     } catch (err) {
       done(err as Error, undefined);
     }
-  }
+  },
 );
-
 export default passport;
-export { hasFacebookConfig } from './facebook.js';
-export { hasXConfig } from './x.js';
-export { hasDiscordConfig } from './discord.js';
-export { hasTwitchConfig } from './twitch.js';
+export { hasFacebookConfig } from "./facebook.js";
+export { hasXConfig } from "./x.js";
+export { hasDiscordConfig } from "./discord.js";
+export { hasTwitchConfig } from "./twitch.js";

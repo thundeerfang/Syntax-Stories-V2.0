@@ -1,9 +1,14 @@
-'use client';
-
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { flushSync } from 'react-dom';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
+"use client";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
+import { flushSync } from "react-dom";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   FileText,
   BookOpen,
@@ -13,15 +18,13 @@ import {
   Link2,
   ImagePlus,
   X,
-} from 'lucide-react';
-import { cn } from '@/lib/core/utils';
-import { settingsBtnBlockPrimarySm } from '@/app/settings/buttonStyles';
-import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
-import { MediaFullViewDialog } from '@/features/profile';
-import { ImageUploadCropDialog } from '@/components/upload';
-import { FormDialog } from '@/components/ui/dialog';
-import { ConfirmDialog } from '@/components/ui/dialog';
-import { GhostOutlineButton } from '@/components/ui';
+} from "lucide-react";
+import { cn } from "@/lib/core/utils";
+import { BlockShadowButton, GhostOutlineButton } from "@/components/ui";
+import { useSettingsAuthSlice } from "@/hooks/useSettingsAuthSlice";
+import { MediaFullViewDialog } from "@/features/profile";
+import { FormDialog } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import {
   Toggle,
   FormInput,
@@ -31,13 +34,13 @@ import {
   Label,
   SearchableSelect,
   Textarea,
-} from '@/components/retroui';
-import { ProjectCard } from '@/components/settings-list/ProjectCard';
-import { SettingsSectionHeader } from '@/app/settings/settings-list/Header';
+} from "@/components/retroui";
+import { ProjectCard } from "@/components/settings-list/ProjectCard";
+import { SettingsSectionHeader } from "@/app/settings/settings-list/Header";
 import {
   SettingsTabPanel,
   SettingsTabRoot,
-} from '@/app/settings/settings-list/SettingsSectionHeading';
+} from "@/app/settings/settings-list/SettingsSectionHeading";
 import {
   MONTH_SELECT_OPTIONS,
   PROFILE_CERT_EXPIRATION_END_YEAR,
@@ -45,20 +48,17 @@ import {
   monthYearToValue,
   valueToMonthYear,
   yearOptionsFromMin,
-} from '@/lib/profile/dateLabels';
-import { SettingsSectionEmptyState } from '../components/SettingsSectionEmptyState';
-import { FormSection } from '../components/FormSection';
+} from "@/lib/profile/dateLabels";
+import { SettingsSectionEmptyState, FormSection, SettingsStagedMediaUploadDialog } from "@/components/settings";
 import {
   type MediaItem,
   resolveProfileMediaItems,
-  domainFromUrl,
-  isImageUrl,
   YEAR_OPTIONS,
   MediaThumbnailRow,
   parseMediaLinkLineInput,
-} from '../lib/workExperienceForm';
-
-type ProjectType = 'project' | 'publication';
+} from "@/lib/profile/profileMediaForm";
+import { domainFromUrl, isImageUrl } from "@/lib/profile/profileDisplay";
+type ProjectType = "project" | "publication";
 type ProjectForm = {
   type: ProjectType;
   title: string;
@@ -75,48 +75,77 @@ type ProjectForm = {
   mediaItems: MediaItem[];
 };
 const PROJECT_DEFAULT: ProjectForm = {
-  type: 'project',
-  title: '',
-  publisher: '',
+  type: "project",
+  title: "",
+  publisher: "",
   ongoing: false,
-  publicationDate: '',
-  endDate: '',
-  publicationMonth: '',
-  publicationYear: '',
-  endMonth: '',
-  endYear: '',
-  publicationUrl: '',
-  description: '',
+  publicationDate: "",
+  endDate: "",
+  publicationMonth: "",
+  publicationYear: "",
+  endMonth: "",
+  endYear: "",
+  publicationUrl: "",
+  description: "",
   mediaItems: [],
 };
-
 export function ProjectsContent() {
   const { user, updateProfile, token } = useSettingsAuthSlice();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fullProjects = user?.projects ?? [];
-  const isGithubProject = (p: unknown) => (p as { source?: string }).source === 'github';
+  const isGithubProject = (p: unknown) =>
+    (
+      p as {
+        source?: string;
+      }
+    ).source === "github";
   const githubProjects = fullProjects.filter(isGithubProject);
   const nonGithubProjects = fullProjects.filter((p) => !isGithubProject(p));
   const list = nonGithubProjects.map((p) => {
-    const pub = valueToMonthYear(p.publicationDate ?? '');
-    const end = valueToMonthYear(p.endDate ?? '');
-    const rawType = (p as { type?: string }).type;
-    const type: ProjectType = rawType === 'publication' ? 'publication' : 'project';
+    const pub = valueToMonthYear(p.publicationDate ?? "");
+    const end = valueToMonthYear(p.endDate ?? "");
+    const rawType = (
+      p as {
+        type?: string;
+      }
+    ).type;
+    const type: ProjectType =
+      rawType === "publication" ? "publication" : "project";
     return {
       type,
-      title: p.title ?? (p as { name?: string }).name ?? '',
-      publisher: p.publisher ?? '',
+      title:
+        p.title ??
+        (
+          p as {
+            name?: string;
+          }
+        ).name ??
+        "",
+      publisher: p.publisher ?? "",
       ongoing: !!p.ongoing,
-      publicationDate: p.publicationDate ?? '',
-      endDate: p.endDate ?? '',
+      publicationDate: p.publicationDate ?? "",
+      endDate: p.endDate ?? "",
       publicationMonth: pub.month,
       publicationYear: pub.year,
       endMonth: end.month,
       endYear: end.year,
-      publicationUrl: p.publicationUrl ?? (p as { url?: string }).url ?? '',
-      description: p.description ?? '',
-      mediaItems: ((p as { media?: MediaItem[] }).media ?? []).map((m) => ({
+      publicationUrl:
+        p.publicationUrl ??
+        (
+          p as {
+            url?: string;
+          }
+        ).url ??
+        "",
+      description: p.description ?? "",
+      mediaItems: (
+        (
+          p as {
+            media?: MediaItem[];
+          }
+        ).media ?? []
+      ).map((m) => ({
         url: m.url,
         title: m.title,
       })),
@@ -128,27 +157,35 @@ export function ProjectsContent() {
   const [form, setForm] = useState<ProjectForm>(PROJECT_DEFAULT);
   const [initialForm, setInitialForm] = useState<ProjectForm>(PROJECT_DEFAULT);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [projAddMediaDropdownOpen, setProjAddMediaDropdownOpen] = useState(false);
+  const [projAddMediaDropdownOpen, setProjAddMediaDropdownOpen] =
+    useState(false);
   const [projShowLinkForm, setProjShowLinkForm] = useState(false);
-  const [projUploadMediaDialogOpen, setProjUploadMediaDialogOpen] = useState(false);
-  const [projLinkUrl, setProjLinkUrl] = useState('');
-  const [projLinkTitle, setProjLinkTitle] = useState('');
-  const [projFullViewMedia, setProjFullViewMedia] = useState<MediaItem | null>(null);
-  const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
+  const [projUploadMediaDialogOpen, setProjUploadMediaDialogOpen] =
+    useState(false);
+  const [projLinkUrl, setProjLinkUrl] = useState("");
+  const [projLinkTitle, setProjLinkTitle] = useState("");
+  const [projFullViewMedia, setProjFullViewMedia] = useState<MediaItem | null>(
+    null,
+  );
+  const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(
+    null,
+  );
   const projMediaDropdownRef = useRef<HTMLDivElement>(null);
   const hasFormChanged = useMemo(
     () => JSON.stringify(form) !== JSON.stringify(initialForm),
-    [form, initialForm]
+    [form, initialForm],
   );
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (projMediaDropdownRef.current && !projMediaDropdownRef.current.contains(e.target as Node))
+      if (
+        projMediaDropdownRef.current &&
+        !projMediaDropdownRef.current.contains(e.target as Node)
+      )
         setProjAddMediaDropdownOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
   const openAdd = () => {
     setForm(PROJECT_DEFAULT);
     setInitialForm(PROJECT_DEFAULT);
@@ -159,62 +196,78 @@ export function ProjectsContent() {
   const openEdit = useCallback(
     (i: number) => {
       const item = list[i];
-      const next: ProjectForm = { ...PROJECT_DEFAULT, ...item, type: item.type };
+      const next: ProjectForm = {
+        ...PROJECT_DEFAULT,
+        ...item,
+        type: item.type,
+      };
       setForm(next);
       setInitialForm(next);
       setEditingIndex(i);
       setFieldErrors({});
       setDialogOpen(true);
     },
-    [list]
+    [list],
   );
   const openedEditFromUrlRefProj = useRef(false);
   useEffect(() => {
     if (openedEditFromUrlRefProj.current || list.length === 0) return;
-    const edit = searchParams.get('edit');
+    const edit = searchParams.get("edit");
     if (edit == null) return;
     const idx = parseInt(edit, 10);
     if (Number.isNaN(idx) || idx < 0 || idx >= list.length) return;
     openedEditFromUrlRefProj.current = true;
     openEdit(idx);
-    router.replace('/settings', { scroll: false });
+    router.replace("/settings", { scroll: false });
   }, [list.length, openEdit, router, searchParams]);
   const remove = async (i: number) => {
-    const next = [...githubProjects, ...nonGithubProjects.filter((_, idx) => idx !== i)];
+    const next = [
+      ...githubProjects,
+      ...nonGithubProjects.filter((_, idx) => idx !== i),
+    ];
     setSaving(true);
     try {
-      await updateProfile({ projects: next }, { section: 'projects' });
-      toast.success('Removed.');
+      await updateProfile({ projects: next }, { section: "projects" });
+      toast.success("Removed.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed');
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setSaving(false);
     }
   };
   const submitDialog = async () => {
     if (!hasFormChanged) {
-      toast.error('No changes to save.', { id: 'syntax-no-changes' });
+      toast.error("No changes to save.", { id: "syntax-no-changes" });
       return;
     }
     const err: Record<string, string> = {};
-    if (!form.title.trim()) err.title = 'Title is required.';
-    const pubDateVal = monthYearToValue(form.publicationMonth, form.publicationYear);
-    if (!pubDateVal) err.publicationDate = 'Publication date is required.';
+    if (!form.title.trim()) err.title = "Title is required.";
+    const pubDateVal = monthYearToValue(
+      form.publicationMonth,
+      form.publicationYear,
+    );
+    if (!pubDateVal) err.publicationDate = "Publication date is required.";
     if (Object.keys(err).length) {
       setFieldErrors(err);
-      toast.error('Please fix the errors below.', { id: 'syntax-form-errors' });
+      toast.error("Please fix the errors below.", { id: "syntax-form-errors" });
       return;
     }
     setFieldErrors({});
     const endDateVal = form.ongoing
       ? undefined
       : monthYearToValue(form.endMonth, form.endYear) || undefined;
-    let resolvedProjMedia: { url: string; title?: string }[];
+    let resolvedProjMedia: {
+      url: string;
+      title?: string;
+    }[];
     try {
-      resolvedProjMedia = await resolveProfileMediaItems(token, form.mediaItems);
+      resolvedProjMedia = await resolveProfileMediaItems(
+        token,
+        form.mediaItems,
+      );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to upload media.', {
-        id: 'syntax-media-upload',
+      toast.error(e instanceof Error ? e.message : "Failed to upload media.", {
+        id: "syntax-media-upload",
       });
       return;
     }
@@ -231,25 +284,33 @@ export function ProjectsContent() {
     };
     const next =
       editingIndex !== null
-        ? [...githubProjects, ...nonGithubProjects.map((p, j) => (j === editingIndex ? entry : p))]
+        ? [
+            ...githubProjects,
+            ...nonGithubProjects.map((p, j) =>
+              j === editingIndex ? entry : p,
+            ),
+          ]
         : [...fullProjects, entry];
     setSaving(true);
     try {
-      await updateProfile({ projects: next }, { section: 'projects' });
-      toast.success(editingIndex !== null ? 'Updated.' : 'Added.', {
-        id: 'syntax-project-entry-success',
+      await updateProfile({ projects: next }, { section: "projects" });
+      toast.success(editingIndex !== null ? "Updated." : "Added.", {
+        id: "syntax-project-entry-success",
       });
       setDialogOpen(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed');
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setSaving(false);
     }
   };
-
   return (
     <SettingsTabRoot>
-      <SettingsSectionHeader variant="projects" onPrimaryAction={openAdd} disabled={saving} />
+      <SettingsSectionHeader
+        variant="projects"
+        onPrimaryAction={openAdd}
+        disabled={saving}
+      />
       <SettingsTabPanel>
         <FormSection>
           {list.length === 0 ? (
@@ -296,7 +357,7 @@ export function ProjectsContent() {
       <MediaFullViewDialog
         open={!!projFullViewMedia}
         onClose={() => setProjFullViewMedia(null)}
-        src={projFullViewMedia?.url ?? ''}
+        src={projFullViewMedia?.url ?? ""}
         title={projFullViewMedia?.title}
       />
       <FormDialog
@@ -309,15 +370,19 @@ export function ProjectsContent() {
         headerRight={
           <div className="flex border-2 border-border bg-muted/20 p-0.5 gap-0.5 shadow">
             <Toggle
-              pressed={form.type === 'project'}
-              onPressedChange={(p) => p && setForm((f) => ({ ...f, type: 'project' }))}
+              pressed={form.type === "project"}
+              onPressedChange={(p) =>
+                p && setForm((f) => ({ ...f, type: "project" }))
+              }
               className="min-w-0 px-3 py-1.5 border-0"
             >
               <FolderGit2 className="size-3.5 shrink-0" /> Project
             </Toggle>
             <Toggle
-              pressed={form.type === 'publication'}
-              onPressedChange={(p) => p && setForm((f) => ({ ...f, type: 'publication' }))}
+              pressed={form.type === "publication"}
+              onPressedChange={(p) =>
+                p && setForm((f) => ({ ...f, type: "publication" }))
+              }
               className="min-w-0 px-3 py-1.5 border-0"
             >
               <BookOpen className="size-3.5 shrink-0" /> Publication
@@ -331,17 +396,22 @@ export function ProjectsContent() {
               * Required fields
             </p>
             <div className="flex gap-3">
-              <GhostOutlineButton type="button" onClick={() => setDialogOpen(false)}>
+              <GhostOutlineButton
+                type="button"
+                onClick={() => setDialogOpen(false)}
+              >
                 Cancel
               </GhostOutlineButton>
-              <button
+              <BlockShadowButton
                 type="button"
+                shadow="sm"
+                loading={saving}
+                disabled={!hasFormChanged}
+                className="px-5 py-2.5 text-xs tracking-wide"
                 onClick={submitDialog}
-                disabled={saving || !hasFormChanged}
-                className={cn(settingsBtnBlockPrimarySm, 'px-5 py-2.5 text-xs tracking-wide')}
               >
-                {saving ? 'Saving…' : hasFormChanged ? 'Confirm changes' : 'Save'}
-              </button>
+                {hasFormChanged ? "Confirm changes" : "Save"}
+              </BlockShadowButton>
             </div>
           </div>
         }
@@ -356,7 +426,8 @@ export function ProjectsContent() {
             error={fieldErrors.title}
             onChange={(e) => {
               setForm((f) => ({ ...f, title: e.target.value }));
-              if (fieldErrors.title) setFieldErrors((e2) => (e2.title ? { ...e2, title: '' } : e2));
+              if (fieldErrors.title)
+                setFieldErrors((e2) => (e2.title ? { ...e2, title: "" } : e2));
             }}
           />
           <FormInput
@@ -365,19 +436,27 @@ export function ProjectsContent() {
             placeholder="Publisher name"
             maxLength={120}
             value={form.publisher}
-            onChange={(e) => setForm((f) => ({ ...f, publisher: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, publisher: e.target.value }))
+            }
           />
           <FormCheckbox
             id="proj-ongoing"
             label="Ongoing project/publication"
             checked={form.ongoing}
             onCheckedChange={(v) =>
-              setForm((f) => ({ ...f, ongoing: v, ...(v ? { endMonth: '', endYear: '' } : {}) }))
+              setForm((f) => ({
+                ...f,
+                ongoing: v,
+                ...(v ? { endMonth: "", endYear: "" } : {}),
+              }))
             }
           />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase">Publication date *</Label>
+              <Label className="text-[10px] font-bold uppercase">
+                Publication date *
+              </Label>
               <div className="flex gap-2">
                 <SearchableSelect
                   id="proj-pub-month"
@@ -388,7 +467,9 @@ export function ProjectsContent() {
                     setForm((f) => ({ ...f, publicationMonth: v }));
                     if (fieldErrors.publicationDate)
                       setFieldErrors((e2) =>
-                        e2.publicationDate ? { ...e2, publicationDate: '' } : e2
+                        e2.publicationDate
+                          ? { ...e2, publicationDate: "" }
+                          : e2,
                       );
                   }}
                   options={MONTH_SELECT_OPTIONS}
@@ -400,7 +481,9 @@ export function ProjectsContent() {
                   label=""
                   placeholder="Year"
                   value={form.publicationYear}
-                  onChange={(v) => setForm((f) => ({ ...f, publicationYear: v }))}
+                  onChange={(v) =>
+                    setForm((f) => ({ ...f, publicationYear: v }))
+                  }
                   options={YEAR_OPTIONS}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
@@ -413,7 +496,9 @@ export function ProjectsContent() {
               )}
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase">End date</Label>
+              <Label className="text-[10px] font-bold uppercase">
+                End date
+              </Label>
               <div className="flex gap-2">
                 <SearchableSelect
                   id="proj-end-month"
@@ -432,14 +517,19 @@ export function ProjectsContent() {
                   placeholder="Year"
                   value={form.endYear}
                   onChange={(v) => setForm((f) => ({ ...f, endYear: v }))}
-                  options={yearOptionsFromMin(form.publicationYear, PROFILE_CERT_EXPIRATION_END_YEAR)}
+                  options={yearOptionsFromMin(
+                    form.publicationYear,
+                    PROFILE_CERT_EXPIRATION_END_YEAR,
+                  )}
                   listMaxHeight={220}
                   widthClass="flex-1 min-w-0"
                   disabled={form.ongoing}
                 />
               </div>
               {form.ongoing && (
-                <p className="text-[9px] text-muted-foreground">Disabled for ongoing projects.</p>
+                <p className="text-[9px] text-muted-foreground">
+                  Disabled for ongoing projects.
+                </p>
               )}
             </div>
           </div>
@@ -450,13 +540,17 @@ export function ProjectsContent() {
             placeholder="https://example.com/page"
             maxLength={500}
             value={form.publicationUrl}
-            onChange={(e) => setForm((f) => ({ ...f, publicationUrl: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, publicationUrl: e.target.value }))
+            }
           />
           <div className="space-y-2">
-            <Label className="text-[10px] font-bold uppercase">Media (optional, max 5)</Label>
+            <Label className="text-[10px] font-bold uppercase">
+              Media (optional, max 5)
+            </Label>
             <p className="text-[9px] text-muted-foreground">
-              Links and images share the limit. One URL per line; optional title when adding a
-              single URL.
+              Links and images share the limit. One URL per line; optional title
+              when adding a single URL.
             </p>
             {form.mediaItems.length > 0 && (
               <ul className="space-y-2">
@@ -466,7 +560,10 @@ export function ProjectsContent() {
                     item={m}
                     onPreview={() => setProjFullViewMedia(m)}
                     onRemove={() =>
-                      setForm((f) => ({ ...f, mediaItems: f.mediaItems.filter((_, j) => j !== i) }))
+                      setForm((f) => ({
+                        ...f,
+                        mediaItems: f.mediaItems.filter((_, j) => j !== i),
+                      }))
                     }
                   />
                 ))}
@@ -487,9 +584,12 @@ export function ProjectsContent() {
                     onClick={() => setProjAddMediaDropdownOpen((o) => !o)}
                     className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-border text-[10px] font-bold uppercase hover:bg-muted/30"
                   >
-                    <Plus className="size-3" /> Add media{' '}
+                    <Plus className="size-3" /> Add media{" "}
                     <ChevronDown
-                      className={cn('size-3', projAddMediaDropdownOpen && 'rotate-180')}
+                      className={cn(
+                        "size-3",
+                        projAddMediaDropdownOpen && "rotate-180",
+                      )}
                     />
                   </button>
                   {projAddMediaDropdownOpen && (
@@ -500,8 +600,8 @@ export function ProjectsContent() {
                           setProjAddMediaDropdownOpen(false);
                           setProjShowLinkForm(true);
                           if (!projShowLinkForm) {
-                            setProjLinkUrl('');
-                            setProjLinkTitle('');
+                            setProjLinkUrl("");
+                            setProjLinkTitle("");
                           }
                         }}
                         className="w-full px-3 py-2 text-left text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-muted/50"
@@ -531,8 +631,8 @@ export function ProjectsContent() {
                         type="button"
                         onClick={() => {
                           setProjShowLinkForm(false);
-                          setProjLinkUrl('');
-                          setProjLinkTitle('');
+                          setProjLinkUrl("");
+                          setProjLinkTitle("");
                         }}
                         className="flex size-8 shrink-0 items-center justify-center border-2 border-border bg-card text-muted-foreground shadow hover:bg-muted hover:text-foreground"
                         aria-label="Close"
@@ -541,16 +641,20 @@ export function ProjectsContent() {
                       </button>
                     </div>
                     <div className="space-y-2 p-3">
-                      <Label className="text-[10px] font-bold uppercase">Link URL(s)</Label>
+                      <Label className="text-[10px] font-bold uppercase">
+                        Link URL(s)
+                      </Label>
                       <Textarea
-                        placeholder={'https://example.com\nhttps://another.org'}
+                        placeholder={"https://example.com\nhttps://another.org"}
                         value={projLinkUrl}
                         onChange={(e) => setProjLinkUrl(e.target.value)}
                         className="min-h-[5rem] resize-y text-sm font-mono"
                         rows={4}
                         autoComplete="off"
                       />
-                      <Label className="text-[10px] font-bold uppercase">Title (optional)</Label>
+                      <Label className="text-[10px] font-bold uppercase">
+                        Title (optional)
+                      </Label>
                       <Input
                         placeholder="Single-URL adds only"
                         value={projLinkTitle}
@@ -564,22 +668,26 @@ export function ProjectsContent() {
                           size="sm"
                           onClick={() => {
                             setProjShowLinkForm(false);
-                            setProjLinkUrl('');
-                            setProjLinkTitle('');
+                            setProjLinkUrl("");
+                            setProjLinkTitle("");
                           }}
                         >
                           Cancel
                         </GhostOutlineButton>
-                        <button
+                        <BlockShadowButton
                           type="button"
+                          shadow="sm"
+                          size="sm"
+                          className="px-3 py-1.5 text-[10px] font-bold"
                           onClick={() => {
-                            const { urls, skippedNonEmpty } = parseMediaLinkLineInput(projLinkUrl);
+                            const { urls, skippedNonEmpty } =
+                              parseMediaLinkLineInput(projLinkUrl);
                             if (urls.length === 0) {
                               toast.error(
                                 skippedNonEmpty > 0
-                                  ? 'No valid URLs. Use https://… or domain.com, one per line.'
-                                  : 'Enter at least one URL (one per line).',
-                                { id: 'syntax-invalid-url' }
+                                  ? "No valid URLs. Use https://… or domain.com, one per line."
+                                  : "Enter at least one URL (one per line).",
+                                { id: "syntax-invalid-url" },
                               );
                               return;
                             }
@@ -588,41 +696,47 @@ export function ProjectsContent() {
                             let added = 0;
                             flushSync(() => {
                               setForm((f) => {
-                                const prev = Array.isArray(f.mediaItems) ? f.mediaItems : [];
+                                const prev = Array.isArray(f.mediaItems)
+                                  ? f.mediaItems
+                                  : [];
                                 const room = Math.max(0, 5 - prev.length);
                                 const slice = urls.slice(0, room);
                                 added = slice.length;
                                 const titled = slice.map((url, i) => ({
                                   url,
-                                  title: slice.length === 1 ? title : i === 0 ? title : undefined,
+                                  title:
+                                    slice.length === 1
+                                      ? title
+                                      : i === 0
+                                        ? title
+                                        : undefined,
                                 }));
                                 const nextItems = [...prev, ...titled];
                                 nextLen = nextItems.length;
                                 return { ...f, mediaItems: nextItems };
                               });
                             });
-                            setProjLinkUrl('');
-                            setProjLinkTitle('');
+                            setProjLinkUrl("");
+                            setProjLinkTitle("");
                             setProjShowLinkForm(nextLen < 5);
                             if (skippedNonEmpty > 0) {
                               toast.message(
                                 `Skipped ${skippedNonEmpty} line(s) that were not valid URLs.`,
-                                { id: 'syntax-skip-url-lines' }
+                                { id: "syntax-skip-url-lines" },
                               );
                             }
                             if (urls.length > added) {
-                              toast.message(`Added ${added} link(s); max is 5 media items total.`, {
-                                id: 'syntax-max-media',
-                              });
+                              toast.message(
+                                `Added ${added} link(s); max is 5 media items total.`,
+                                {
+                                  id: "syntax-max-media",
+                                },
+                              );
                             }
                           }}
-                          className={cn(
-                            settingsBtnBlockPrimarySm,
-                            'px-3 py-1.5 text-[10px] font-bold'
-                          )}
                         >
                           Add link(s)
-                        </button>
+                        </BlockShadowButton>
                       </div>
                     </div>
                   </div>
@@ -631,31 +745,17 @@ export function ProjectsContent() {
             )}
           </div>
           {token && (
-            <ImageUploadCropDialog
+            <SettingsStagedMediaUploadDialog
               open={projUploadMediaDialogOpen}
               onClose={() => setProjUploadMediaDialogOpen(false)}
               titleId="project-media-crop"
-              title="Upload media"
-              titleIcon={<ImagePlus className="size-4 shrink-0 text-primary" aria-hidden />}
               subtitle="Square crop · max 5 MB · uploads when you save this entry."
-              subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
-              maxSizeBytes={5 * 1024 * 1024}
-              aspect={1}
-              imageTitleField
-              confirmLabel="Save & add"
-              chooseAnotherLabel="Choose another"
-              onConfirm={async (file, meta) => {
-                if (!token) throw new Error('Not signed in.');
-                const url = URL.createObjectURL(file);
-                const title = (meta?.imageTitle ?? '').trim() || 'Media image';
+              username={user?.username}
+              onStaged={(item) => {
                 setForm((f) => ({
                   ...f,
-                  mediaItems: [
-                    ...f.mediaItems,
-                    { url, title, isPending: true, pendingFile: file },
-                  ].slice(0, 5),
+                  mediaItems: [...f.mediaItems, item].slice(0, 5),
                 }));
-                toast.success('Media staged. It will upload when you save.');
               }}
             />
           )}
@@ -666,7 +766,12 @@ export function ProjectsContent() {
             maxLength={2000}
             rows={3}
             value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value.slice(0, 2000) }))}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                description: e.target.value.slice(0, 2000),
+              }))
+            }
           />
         </div>
       </FormDialog>

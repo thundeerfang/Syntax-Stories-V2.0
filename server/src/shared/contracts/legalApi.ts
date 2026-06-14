@@ -1,10 +1,8 @@
-/**
- * Legal JSON API shapes shared with the webapp (`webapp/src/contracts/legalApi.ts`).
- */
-
-export type LegalPolicyKind = 'terms' | 'privacy' | 'udd';
-export type AcceptPolicyKind = 'terms' | 'privacy';
-
+import type {
+  AcceptPolicyKind,
+  LegalPolicyKind,
+} from "../../variable/constants.js";
+export type { AcceptPolicyKind, LegalPolicyKind };
 export interface PublishedPolicyResponse {
   ok: true;
   kind: LegalPolicyKind;
@@ -14,7 +12,7 @@ export interface PublishedPolicyResponse {
   title: string;
   summary: string;
   body: string;
-  bodyFormat: 'markdown' | 'mdx' | 'richtext';
+  bodyFormat: "markdown" | "mdx" | "richtext";
   publishedAt: string | null;
   effectiveAt: string | null;
   region: string;
@@ -24,37 +22,31 @@ export interface PublishedPolicyResponse {
   companyName?: string;
   contentHash?: string;
 }
-
 export interface LegalNotFoundResponse {
   ok: false;
-  code: 'LEGAL_NOT_FOUND';
+  code: "LEGAL_NOT_FOUND";
   message: string;
 }
-
 export interface LegalConsentSlice {
   acceptedVersion: number;
   requiredVersion: number;
   mustReaccept: boolean;
 }
-
 export interface LegalMeStatusResponse {
   ok: true;
   terms: LegalConsentSlice;
   privacy: LegalConsentSlice;
 }
-
 export interface PostAcceptIntentBody {
   policyKind: AcceptPolicyKind;
   revisionId: string;
 }
-
 export interface PostAcceptIntentResponse {
   ok: true;
   nonce: string;
   expiresAt: string;
   revisionId: string;
 }
-
 export interface PostAcceptBody {
   policyKind: AcceptPolicyKind;
   version: number;
@@ -62,7 +54,6 @@ export interface PostAcceptBody {
   nonce: string;
   contentHash?: string;
 }
-
 export interface PostAcceptResponse {
   ok: true;
   accepted: true;
@@ -72,14 +63,12 @@ export interface PostAcceptResponse {
   revisionId: string;
   acceptedAt: string;
 }
-
 export interface PostDataDeletionRequestBody {
   message?: string;
 }
-
 export interface PostDataDeletionRequestResponse {
   ok: true;
   id: string;
-  status: 'requested';
+  status: "requested";
   requestedAt: string;
 }

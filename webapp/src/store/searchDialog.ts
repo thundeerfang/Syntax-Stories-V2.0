@@ -1,14 +1,11 @@
-'use client';
-
-import { create } from 'zustand';
-
+"use client";
+import { create } from "zustand";
 type SearchDialogState = {
   isOpen: boolean;
   open: () => void;
   close: () => void;
   toggle: () => void;
 };
-
 export const useSearchDialogStore = create<SearchDialogState>((set) => ({
   isOpen: false,
   open: () => set({ isOpen: true }),

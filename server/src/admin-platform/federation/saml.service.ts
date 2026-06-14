@@ -1,7 +1,7 @@
-import { env } from '../../config/env.js';
-
+import { env } from "../../config/env.js";
 export function samlMetadataXml(apiOrigin: string): string {
-  const entityId = env.SAML_ENTITY_ID ?? `${apiOrigin}/api/v1/admin/saml/metadata`;
+  const entityId =
+    env.SAML_ENTITY_ID ?? `${apiOrigin}/api/v1/admin/saml/metadata`;
   const acs = env.SAML_ACS_URL ?? `${apiOrigin}/api/v1/admin/saml/acs`;
   return `<?xml version="1.0"?>
 <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="${entityId}">
@@ -13,16 +13,13 @@ export function samlMetadataXml(apiOrigin: string): string {
   </SPSSODescriptor>
 </EntityDescriptor>`;
 }
-
 export function samlLoginRedirectUrl(): string | null {
   if (!env.FEATURE_SAML_SSO || !env.SAML_IDP_SSO_URL) return null;
   return env.SAML_IDP_SSO_URL;
 }
-
-/** Dev/test: extract email-like NameID from base64 SAMLResponse payload. */
 export function extractEmailFromSamlResponseBase64(raw: string): string | null {
   try {
-    const decoded = Buffer.from(raw, 'base64').toString('utf8');
+    const decoded = Buffer.from(raw, "base64").toString("utf8");
     const emailMatch =
       decoded.match(/<saml:NameID[^>]*>([^<]+@[^<]+)<\/saml:NameID>/i) ??
       decoded.match(/<NameID[^>]*>([^<]+@[^<]+)<\/NameID>/i);

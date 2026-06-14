@@ -52,7 +52,7 @@ type TabKey = (typeof TAB_KEYS)[number];
 const USER_DETAIL_TABS = [
   { label: 'Overview', icon: PersonRoundedIcon },
   { label: 'Profile', icon: BadgeRoundedIcon },
-  { label: 'Connected accounts', icon: LinkRoundedIcon },
+  { label: 'Connected Accounts', icon: LinkRoundedIcon },
   { label: 'Billing', icon: PaymentsRoundedIcon },
   { label: 'Content', icon: ArticleRoundedIcon },
   { label: 'Audit', icon: HistoryRoundedIcon },

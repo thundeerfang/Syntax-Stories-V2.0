@@ -1,27 +1,22 @@
-'use client';
-
-import { Bookmark } from 'lucide-react';
-import { Dialog, DIALOG_Z_INDEX_STACKED } from '@/components/ui/dialog';
-import { BookmarkFolderEmojiPicker } from './BookmarkFolderEmojiPicker';
-
+"use client";
+import { Bookmark } from "lucide-react";
+import { Dialog, DIALOG_Z_INDEX_STACKED } from "@/components/ui/dialog";
+import { BookmarkFolderEmojiPicker } from "./BookmarkFolderEmojiPicker";
 export type BookmarkFolderFormValues = {
   name: string;
   emoji: string;
   makeDefault: boolean;
 };
-
 type BookmarkFolderFormDialogProps = Readonly<{
   open: boolean;
-  mode: 'create' | 'edit';
+  mode: "create" | "edit";
   submitting: boolean;
   values: BookmarkFolderFormValues;
   onClose: () => void;
   onChange: (patch: Partial<BookmarkFolderFormValues>) => void;
   onSubmit: () => void;
-  /** Hide default checkbox when editing the folder that is already default. */
   showMakeDefault?: boolean;
 }>;
-
 export function BookmarkFolderFormDialog({
   open,
   mode,
@@ -32,19 +27,20 @@ export function BookmarkFolderFormDialog({
   onSubmit,
   showMakeDefault = true,
 }: BookmarkFolderFormDialogProps) {
-  const isCreate = mode === 'create';
-  const titleId = isCreate ? 'bookmark-new-folder-title' : 'bookmark-edit-folder-title';
-
+  const isCreate = mode === "create";
+  const titleId = isCreate
+    ? "bookmark-new-folder-title"
+    : "bookmark-edit-folder-title";
   return (
     <Dialog
       open={open}
       onClose={() => !submitting && onClose()}
       titleId={titleId}
-      title={isCreate ? 'New folder' : 'Edit folder'}
+      title={isCreate ? "New folder" : "Edit folder"}
       description={
         isCreate
-          ? 'Name your folder and pick an emoji from the list.'
-          : 'Update the folder name or emoji.'
+          ? "Name your folder and pick an emoji from the list."
+          : "Update the folder name or emoji."
       }
       titleIcon={<Bookmark strokeWidth={2.25} />}
       panelClassName="max-w-md"
@@ -94,8 +90,8 @@ export function BookmarkFolderFormDialog({
             <span className="text-left text-xs leading-snug text-foreground">
               <span className="font-bold">Default folder</span>
               <span className="block text-muted-foreground">
-                New bookmarks from your feed and story pages save here unless you pick another
-                folder.
+                New bookmarks from your feed and story pages save here unless
+                you pick another folder.
               </span>
             </span>
           </label>
@@ -115,7 +111,13 @@ export function BookmarkFolderFormDialog({
             onClick={onSubmit}
             className="border-2 border-border bg-primary px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow transition-transform hover:-translate-y-0.5 disabled:opacity-40"
           >
-            {submitting ? (isCreate ? 'Creating…' : 'Saving…') : isCreate ? 'Create' : 'Save'}
+            {submitting
+              ? isCreate
+                ? "Creating…"
+                : "Saving…"
+              : isCreate
+                ? "Create"
+                : "Save"}
           </button>
         </div>
       </div>

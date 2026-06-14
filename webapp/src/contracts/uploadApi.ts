@@ -6,6 +6,10 @@
 export interface UploadResponse {
   success: boolean;
   url?: string;
+  /** Auto-set by server from uploader username + original file name. */
+  title?: string;
+  /** Same as `title`; used for HTML `alt`. */
+  alt?: string;
   blurDataUrl?: string;
   message?: string;
 }

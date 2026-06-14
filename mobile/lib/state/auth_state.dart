@@ -313,29 +313,38 @@ class AuthState extends ChangeNotifier {
   Future<String?> uploadProfileImage({
     required ImageUploadKind kind,
     required Uint8List imageBytes,
+    String? originalFileName,
   }) async {
     assert(kind.patchesProfile);
     final token = accessToken;
     if (token == null || token.isEmpty) return 'Not signed in';
 
     final uploadApi = UploadApi();
+    final filename = originalFileName?.trim().isNotEmpty == true
+        ? originalFileName!.trim()
+        : kind.defaultFilename;
     try {
       final result = kind == ImageUploadKind.cover
           ? await uploadApi.uploadCover(
               accessToken: token,
               bytes: imageBytes,
-              filename: 'cover.png',
+              filename: filename,
             )
           : await uploadApi.uploadAvatar(
               accessToken: token,
               bytes: imageBytes,
-              filename: 'avatar.png',
+              filename: filename,
             );
 
+      final patch = <String, dynamic>{kind.profileField: result.url};
+      final alt = result.imageAlt;
+      if (alt != null && alt.isNotEmpty) {
+        patch[kind == ImageUploadKind.cover ? 'coverBannerAlt' : 'profileImgAlt'] = alt;
+      }
       user = await _api.updateProfileSection(
         accessToken: token,
         section: 'basic',
-        data: {kind.profileField: result.url},
+        data: patch,
       );
       notifyListeners();
       return null;

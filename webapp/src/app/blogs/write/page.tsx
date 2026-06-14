@@ -1,1 +1,1 @@
-export { default } from '@/features/blog/pages/write';
+export { default } from "@/features/blog/pages/write";

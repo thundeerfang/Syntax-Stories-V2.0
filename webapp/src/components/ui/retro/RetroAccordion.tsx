@@ -1,10 +1,8 @@
-'use client';
-
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/core/utils';
-
+"use client";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/core/utils";
 interface RetroAccordionProps {
   label: React.ReactNode;
   subtitle?: React.ReactNode;
@@ -12,7 +10,6 @@ interface RetroAccordionProps {
   className?: string;
   children: React.ReactNode;
 }
-
 export function RetroAccordion({
   label,
   subtitle,
@@ -21,9 +18,8 @@ export function RetroAccordion({
   children,
 }: Readonly<RetroAccordionProps>) {
   const [open, setOpen] = useState(defaultOpen);
-
   return (
-    <div className={cn('space-y-1', className)}>
+    <div className={cn("space-y-1", className)}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -37,15 +33,20 @@ export function RetroAccordion({
             </span>
           )}
         </div>
-        <ChevronRight className={cn('size-3 shrink-0 transition-transform', open && 'rotate-90')} />
+        <ChevronRight
+          className={cn(
+            "size-3 shrink-0 transition-transform",
+            open && "rotate-90",
+          )}
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             className="overflow-hidden"
           >
             <div className="mt-2 border-2 border-dashed border-border bg-card/40 p-2">

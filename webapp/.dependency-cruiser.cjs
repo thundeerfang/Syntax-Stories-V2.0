@@ -4,10 +4,10 @@ module.exports = {
     {
       name: 'no-shared-to-features',
       comment:
-        'Shared components/ must not import features/ (use feature-shim barrels during migration).',
+        'Shared components/ must not import features/ (domain UI lives under src/components/<domain>/).',
       severity: 'error',
       from: {
-        path: '^src/components/(?!blog/|profile/|squads/|explore/|topics/|tags/|legal/|connectivity/|auth/)',
+        path: '^src/components/(?!achievements/|auth/|blog/|connectivity/|explore/|legal/|platform/|profile/|settings/|squads/|tags/|topics/)',
       },
       to: { path: '^src/features/' },
     },
@@ -16,7 +16,7 @@ module.exports = {
       comment: 'Shared components/ must not import app/ routes.',
       severity: 'error',
       from: {
-        path: '^src/components/(?!blog/|profile/|squads/|explore/|topics/|tags/|legal/|connectivity/|auth/)',
+        path: '^src/components/(?!achievements/|auth/|blog/|connectivity/|explore/|legal/|platform/|profile/|settings/|squads/|tags/|topics/)',
       },
       to: { path: '^src/app/' },
     },

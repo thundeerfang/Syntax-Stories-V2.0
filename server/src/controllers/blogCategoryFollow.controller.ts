@@ -1,48 +1,49 @@
-import mongoose from 'mongoose';
-import { Request, Response } from 'express';
+import mongoose from "mongoose";
+import { Request, Response } from "express";
 import {
   attachAchievementsToResponse,
   dispatchAchievementEvents,
-} from '../achievements/achievement.service.js';
-import { BlogCategoryFollowModel } from '../models/BlogCategoryFollow.js';
-import { UserModel, normalizeProfileImg } from '../models/User.js';
-import type { AuthUser } from '../middlewares/auth/index.js';
-
+} from "../achievements/achievement.service.js";
+import { BlogCategoryFollowModel } from "../models/BlogCategoryFollow.js";
+import { UserModel, normalizeProfileImg } from "../models/User.js";
+import type { AuthUser } from "../middlewares/auth/index.js";
 function paramString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
   if (Array.isArray(v)) return v[0];
   return v;
 }
-
 function normalizeCategorySlug(raw: string | undefined): string | null {
-  const slug = raw?.trim().toLowerCase() ?? '';
+  const slug = raw?.trim().toLowerCase() ?? "";
   if (!slug || slug.length > 64) return null;
   return slug;
 }
-
 function parseSlugsQuery(raw: unknown): string[] {
   const parts: string[] = [];
-  if (typeof raw === 'string') {
-    parts.push(...raw.split(','));
+  if (typeof raw === "string") {
+    parts.push(...raw.split(","));
   } else if (Array.isArray(raw)) {
     for (const item of raw) {
-      if (typeof item === 'string') parts.push(...item.split(','));
+      if (typeof item === "string") parts.push(...item.split(","));
     }
   }
-  return [...new Set(parts.map((s) => s.trim().toLowerCase()).filter(Boolean))].slice(0, 32);
+  return [
+    ...new Set(parts.map((s) => s.trim().toLowerCase()).filter(Boolean)),
+  ].slice(0, 32);
 }
-
-type MemberPreview = { username: string; profileImg: string };
-
-/** GET /api/blog/categories/members-preview?slugs=a,b,c — public follower counts + face previews. */
-export async function getCategoryMembersPreview(req: Request, res: Response): Promise<void> {
+type MemberPreview = {
+  username: string;
+  profileImg: string;
+};
+export async function getCategoryMembersPreview(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
     const slugs = parseSlugsQuery(req.query.slugs);
     if (slugs.length === 0) {
       res.status(200).json({ success: true, categories: {} });
       return;
     }
-
     const grouped = await BlogCategoryFollowModel.aggregate<{
       _id: string;
       count: number;
@@ -52,35 +53,41 @@ export async function getCategoryMembersPreview(req: Request, res: Response): Pr
       { $sort: { createdAt: -1 } },
       {
         $group: {
-          _id: '$categorySlug',
+          _id: "$categorySlug",
           count: { $sum: 1 },
-          userIds: { $push: '$userId' },
+          userIds: { $push: "$userId" },
         },
       },
       {
         $project: {
           count: 1,
-          userIds: { $slice: ['$userIds', 4] },
+          userIds: { $slice: ["$userIds", 4] },
         },
       },
     ]);
-
     const previewUserIds = [
-      ...new Set(grouped.flatMap((g) => g.userIds.map((id) => String(id))).filter(Boolean)),
+      ...new Set(
+        grouped
+          .flatMap((g) => g.userIds.map((id) => String(id)))
+          .filter(Boolean),
+      ),
     ].map((id) => new mongoose.Types.ObjectId(id));
-
     const users =
       previewUserIds.length > 0
         ? await UserModel.find({ _id: { $in: previewUserIds }, isActive: true })
-            .select('username profileImg')
+            .select("username profileImg")
             .lean()
         : [];
-
     const userById = new Map(
       users
         .map((u) => {
-          const row = u as { _id: mongoose.Types.ObjectId; username?: string; profileImg?: string };
-          const username = typeof row.username === 'string' ? row.username.trim() : '';
+          const row = u as {
+            _id: mongoose.Types.ObjectId;
+            username?: string;
+            profileImg?: string;
+          };
+          const username =
+            typeof row.username === "string" ? row.username.trim() : "";
           if (!username) return null;
           return [
             String(row._id),
@@ -90,10 +97,15 @@ export async function getCategoryMembersPreview(req: Request, res: Response): Pr
             } satisfies MemberPreview,
           ] as const;
         })
-        .filter((x): x is [string, MemberPreview] => x != null)
+        .filter((x): x is [string, MemberPreview] => x != null),
     );
-
-    const categories: Record<string, { totalCount: number; members: MemberPreview[] }> = {};
+    const categories: Record<
+      string,
+      {
+        totalCount: number;
+        members: MemberPreview[];
+      }
+    > = {};
     for (const slug of slugs) {
       categories[slug] = { totalCount: 0, members: [] };
     }
@@ -107,54 +119,73 @@ export async function getCategoryMembersPreview(req: Request, res: Response): Pr
         members,
       };
     }
-
     res.status(200).json({ success: true, categories });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to load category members' });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to load category members" });
   }
 }
-
-/** GET /api/blog/categories/following — auth: slugs the viewer follows. */
-export async function listMyFollowedCategories(req: Request, res: Response): Promise<void> {
+export async function listMyFollowedCategories(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
+      res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
     const rows = await BlogCategoryFollowModel.find({
       userId: new mongoose.Types.ObjectId(user._id),
     })
       .sort({ createdAt: -1 })
-      .select('categorySlug')
+      .select("categorySlug")
       .lean();
     const slugs = rows
-      .map((r) => (typeof r.categorySlug === 'string' ? r.categorySlug.trim().toLowerCase() : ''))
+      .map((r) =>
+        typeof r.categorySlug === "string"
+          ? r.categorySlug.trim().toLowerCase()
+          : "",
+      )
       .filter(Boolean);
     res.status(200).json({ success: true, slugs });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to load followed categories' });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to load followed categories" });
   }
 }
-
-/** POST /api/blog/categories/following/sync — auth: upsert slugs from client (localStorage migration). */
-export async function syncMyFollowedCategories(req: Request, res: Response): Promise<void> {
+export async function syncMyFollowedCategories(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
+      res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const body = req.body as { slugs?: unknown };
+    const body = req.body as {
+      slugs?: unknown;
+    };
     const slugs = Array.isArray(body.slugs)
       ? [
           ...new Set(
             body.slugs
-              .filter((x): x is string => typeof x === 'string')
+              .filter((x): x is string => typeof x === "string")
               .map((s) => s.trim().toLowerCase())
-              .filter(Boolean)
+              .filter(Boolean),
           ),
         ]
       : [];
@@ -170,62 +201,83 @@ export async function syncMyFollowedCategories(req: Request, res: Response): Pro
         upsert: true,
       },
     }));
-    const result = await BlogCategoryFollowModel.bulkWrite(ops, { ordered: false });
+    const result = await BlogCategoryFollowModel.bulkWrite(ops, {
+      ordered: false,
+    });
     res.status(200).json({
       success: true,
       synced: (result.upsertedCount ?? 0) + (result.modifiedCount ?? 0),
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to sync followed categories' });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to sync followed categories" });
   }
 }
-
-/** POST /api/blog/categories/:slug/follow */
-export async function followCategory(req: Request, res: Response): Promise<void> {
+export async function followCategory(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
+      res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
     const slug = normalizeCategorySlug(paramString(req.params.slug));
     if (!slug) {
-      res.status(400).json({ success: false, message: 'Invalid category' });
+      res.status(400).json({ success: false, message: "Invalid category" });
       return;
     }
     const userId = new mongoose.Types.ObjectId(user._id);
     const result = await BlogCategoryFollowModel.updateOne(
       { userId, categorySlug: slug },
       { $setOnInsert: { userId, categorySlug: slug } },
-      { upsert: true }
+      { upsert: true },
     );
     const newlyUnlocked =
       result.upsertedCount === 1
-        ? await dispatchAchievementEvents(String(user._id), [{ type: 'profile_sync' }])
+        ? await dispatchAchievementEvents(String(user._id), [
+            { type: "profile_sync" },
+          ])
         : [];
     res
       .status(200)
       .json(
-        attachAchievementsToResponse({ success: true, following: true, slug }, newlyUnlocked)
+        attachAchievementsToResponse(
+          { success: true, following: true, slug },
+          newlyUnlocked,
+        ),
       );
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to follow category' });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to follow category" });
   }
 }
-
-/** DELETE /api/blog/categories/:slug/follow */
-export async function unfollowCategory(req: Request, res: Response): Promise<void> {
+export async function unfollowCategory(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
+      res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
     const slug = normalizeCategorySlug(paramString(req.params.slug));
     if (!slug) {
-      res.status(400).json({ success: false, message: 'Invalid category' });
+      res.status(400).json({ success: false, message: "Invalid category" });
       return;
     }
     await BlogCategoryFollowModel.deleteOne({
@@ -235,6 +287,8 @@ export async function unfollowCategory(req: Request, res: Response): Promise<voi
     res.status(200).json({ success: true, following: false, slug });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to unfollow category' });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to unfollow category" });
   }
 }

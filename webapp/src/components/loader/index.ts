@@ -3,4 +3,4 @@ export {
   GlobalLoaderOverlay,
   TerminalLoaderPage,
   pathnameToPageName,
-} from './GlobalLoader';
+} from "./GlobalLoader";

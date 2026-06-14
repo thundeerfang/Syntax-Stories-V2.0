@@ -1,12 +1,9 @@
-/**
- * Billing / Stripe JSON API — `/api/billing/*`.
- * Keep in sync with `webapp/src/contracts/billingApi.ts`.
- */
-
-export type BillingPlanKey = 'free' | 'pro' | 'proplus' | 'ultra' | 'premium';
-
-export type BillingPaidPlanKey = 'pro' | 'proplus' | 'ultra';
-
+import type {
+  PaidPlanKey,
+  SubscriptionPlan,
+} from "../../variable/constants.js";
+export type BillingPlanKey = SubscriptionPlan;
+export type BillingPaidPlanKey = PaidPlanKey;
 export type BillingPlanCatalogItem = {
   key: BillingPaidPlanKey;
   name: string;
@@ -20,12 +17,10 @@ export type BillingPlanCatalogItem = {
   badge?: string;
   checkoutEnabled: boolean;
 };
-
 export interface BillingPlansResponse {
   success: boolean;
   plans: BillingPlanCatalogItem[];
 }
-
 export type BillingSubscriptionDto = {
   planKey: BillingPlanKey;
   planDisplayName: string;
@@ -38,7 +33,6 @@ export type BillingSubscriptionDto = {
   lastSyncedAt: string | null;
   stale: boolean;
 };
-
 export type BillingTransactionRow = {
   id: string;
   stripeInvoiceId: string;
@@ -50,20 +44,16 @@ export type BillingTransactionRow = {
   hostedInvoiceUrl: string | null;
   invoicePdfUrl: string | null;
 };
-
 export interface BillingSubscriptionResponse {
   success: boolean;
   subscription: BillingSubscriptionDto;
 }
-
 export interface BillingCheckoutSessionBody {
   planKey: BillingPaidPlanKey;
 }
-
 export interface BillingVerifyCheckoutBody {
   sessionId: string;
 }
-
 export interface BillingTransactionsResponse {
   success: boolean;
   transactions: BillingTransactionRow[];

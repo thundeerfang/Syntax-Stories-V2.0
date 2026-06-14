@@ -3,9 +3,9 @@
  * Keep in sync with `server/src/routes/billing.routes.ts` and `server/src/shared/contracts/billingApi.ts`.
  */
 
-export type BillingPlanKey = 'free' | 'pro' | 'proplus' | 'ultra' | 'premium';
+export type BillingPlanKey = "free" | "pro" | "proplus" | "ultra" | "premium";
 
-export type BillingPaidPlanKey = 'pro' | 'proplus' | 'ultra';
+export type BillingPaidPlanKey = "pro" | "proplus" | "ultra";
 
 export type BillingPlanCatalogItem = {
   key: BillingPaidPlanKey;

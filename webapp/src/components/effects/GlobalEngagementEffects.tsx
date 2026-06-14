@@ -1,26 +1,24 @@
-'use client';
-
-import { useCallback, useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useEngagementEffectsStore } from '@/store/engagementEffects';
-
+"use client";
+import { useCallback, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  LIGHTNING_AUTO_DISMISS_MS,
+  LIGHTNING_LAYER_Z_INDEX,
+  LIGHTNING_LOTTIE_SRC,
+  LIGHTNING_SIZE_PX,
+  lightningOverlayBox,
+} from "@/variable";
+import { useEngagementEffectsStore } from "@/store/engagementEffects";
 const DotLottieReact = dynamic(
-  () => import('@lottiefiles/dotlottie-react').then((m) => m.DotLottieReact),
-  { ssr: false }
+  () => import("@lottiefiles/dotlottie-react").then((m) => m.DotLottieReact),
+  { ssr: false },
 );
-
-const LIGHTNING_AUTO_DISMISS_MS = 2400;
-const LIGHTNING_SIZE_PX = 300;
-const LIGHTNING_GAP_PX = 6;
-
 type DotLottieHandle = {
   play: () => void;
   pause: () => void;
   stop: () => void;
 };
-
-/** Lightning above Respect button; transparent dismiss layer (no dark overlay). */
 export function GlobalEngagementEffects() {
   const reduceMotion = useReducedMotion();
   const visible = useEngagementEffectsStore((s) => s.lightningVisible);
@@ -28,7 +26,6 @@ export function GlobalEngagementEffects() {
   const dismissLightning = useEngagementEffectsStore((s) => s.dismissLightning);
   const instRef = useRef<DotLottieHandle | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const dismiss = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -37,7 +34,6 @@ export function GlobalEngagementEffects() {
     instRef.current?.stop();
     dismissLightning();
   }, [dismissLightning]);
-
   useEffect(() => {
     if (!visible) return undefined;
     timerRef.current = setTimeout(dismiss, LIGHTNING_AUTO_DISMISS_MS);
@@ -45,22 +41,16 @@ export function GlobalEngagementEffects() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [visible, dismiss]);
-
   useEffect(() => {
     if (!visible) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dismiss();
+      if (e.key === "Escape") dismiss();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [visible, dismiss]);
-
   if (reduceMotion || !anchor) return null;
-
-  const centerX = anchor.left + anchor.width / 2;
-  const top = anchor.top - LIGHTNING_SIZE_PX - LIGHTNING_GAP_PX;
-  const left = centerX - LIGHTNING_SIZE_PX / 2;
-
+  const overlayBox = lightningOverlayBox(anchor);
   return (
     <AnimatePresence>
       {visible ? (
@@ -68,22 +58,15 @@ export function GlobalEngagementEffects() {
           key="respect-lightning-layer"
           role="presentation"
           aria-hidden
-          className="fixed inset-0 z-[200] cursor-pointer bg-transparent"
+          className="fixed inset-0 cursor-pointer bg-transparent"
+          style={{ zIndex: LIGHTNING_LAYER_Z_INDEX }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.12 }}
           onClick={dismiss}
         >
-          <div
-            className="pointer-events-none fixed"
-            style={{
-              left,
-              top,
-              width: LIGHTNING_SIZE_PX,
-              height: LIGHTNING_SIZE_PX,
-            }}
-          >
+          <div className="pointer-events-none fixed" style={overlayBox}>
             <motion.div
               className="size-full"
               initial={{ opacity: 0 }}
@@ -92,14 +75,18 @@ export function GlobalEngagementEffects() {
               transition={{ duration: 0.18 }}
             >
               <DotLottieReact
-                src="/lottie/lightning.lottie"
+                src={LIGHTNING_LOTTIE_SRC}
                 loop={false}
                 autoplay
                 dotLottieRefCallback={(instance) => {
                   instRef.current = instance as DotLottieHandle;
                   instance?.play();
                 }}
-                style={{ width: LIGHTNING_SIZE_PX, height: LIGHTNING_SIZE_PX, display: 'block' }}
+                style={{
+                  width: LIGHTNING_SIZE_PX,
+                  height: LIGHTNING_SIZE_PX,
+                  display: "block",
+                }}
                 renderConfig={{ autoResize: true }}
               />
             </motion.div>

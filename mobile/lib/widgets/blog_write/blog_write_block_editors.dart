@@ -11,7 +11,6 @@ import '../../utils/mermaid_validate.dart';
 import '../../utils/table_block_limits.dart';
 import 'mermaid_preview_panel.dart';
 import '../../utils/resolve_profile_media_url.dart';
-import '../../utils/upload_image_alt.dart';
 import '../../utils/user_message_case.dart';
 import '../../utils/video_embed_utils.dart';
 import '../auth/auth_button.dart';
@@ -490,11 +489,7 @@ class _ImageEditorState extends State<_ImageEditor> {
       return;
     }
     final fileName = result.fileName ?? 'blog-image.jpg';
-    final deviceLabel = await resolveMobileDeviceLabel();
-    if (!mounted) return;
-    final alt = blogImageAltFromPick(deviceLabel: deviceLabel, fileName: fileName);
     final payload = Map<String, dynamic>.from(widget.block.payload)
-      ..['title'] = alt
       ..['layout'] = _layout;
     widget.onChanged(
       widget.block.copyWith(

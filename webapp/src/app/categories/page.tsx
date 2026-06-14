@@ -1,16 +1,17 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Layers } from 'lucide-react';
-import { toast } from 'sonner';
-import { blogApi } from '@/api/blog';
-import { FeaturedCategoryCard } from '@/features/explore';
-import { RailFeedEmptyState, ShellPageIntroHeader } from '@/components/layout';
-import { BlogApiConnectionError } from '@/lib/api/blogAuthFetch';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
-import { cn } from '@/lib/core/utils';
-import type { BlogTaxonomyRow } from '@/types/blog';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Layers } from "lucide-react";
+import { toast } from "sonner";
+import { blogApi } from "@/api/blog";
+import { FeaturedCategoryCard } from "@/features/explore";
+import { BlockShadowButton } from "@/components/ui/button";
+import { RailFeedEmptyState, ShellPageIntroHeader } from "@/components/layout";
+import { BlogApiConnectionError } from "@/lib/api/blogAuthFetch";
+import { shell } from "@/lib/styles";
+import { cn } from "@/lib/core/utils";
+import type { BlogTaxonomyRow } from "@/types/blog";
 
 function toastApiError(e: unknown, fallback: string) {
   if (e instanceof BlogApiConnectionError) {
@@ -34,9 +35,9 @@ export default function CategoriesPage() {
       setCategories(tax.categories ?? []);
     } catch (e) {
       setCategories([]);
-      const msg = e instanceof Error ? e.message : 'Could not load categories.';
+      const msg = e instanceof Error ? e.message : "Could not load categories.";
       setErrorMsg(msg);
-      toastApiError(e, 'Could not load categories.');
+      toastApiError(e, "Could not load categories.");
     } finally {
       setLoading(false);
     }
@@ -47,16 +48,19 @@ export default function CategoriesPage() {
   }, [load]);
 
   const sorted = useMemo(
-    () => [...categories].sort((a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name)),
-    [categories]
+    () =>
+      [...categories].sort(
+        (a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name),
+      ),
+    [categories],
   );
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 sm:py-10')}>
+    <div className={cn(shell.contentRail, "py-8 sm:py-10")}>
       <ShellPageIntroHeader
         breadcrumbItems={[
-          { label: 'Home', href: '/' },
-          { label: 'Categories', href: '/categories' },
+          { label: "Home", href: "/" },
+          { label: "Categories", href: "/categories" },
         ]}
         title={
           <h1 className="font-mono text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
@@ -85,19 +89,24 @@ export default function CategoriesPage() {
           aria-busy="true"
         >
           {[0, 1, 2, 3, 4, 5].map((k) => (
-            <div key={k} className="h-48 animate-pulse border-2 border-border bg-muted/40" />
+            <div
+              key={k}
+              className="h-48 animate-pulse border-2 border-border bg-muted/40"
+            />
           ))}
         </div>
       ) : errorMsg ? (
         <div className="mt-10 border-2 border-destructive bg-destructive/10 px-4 py-6 text-center">
           <p className="text-sm font-medium text-destructive">{errorMsg}</p>
-          <button
+          <BlockShadowButton
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => void load()}
-            className="mt-4 border-2 border-border bg-card px-4 py-2 font-mono text-[10px] font-black uppercase tracking-widest shadow hover:bg-muted/50"
+            className="mt-4"
           >
             Retry
-          </button>
+          </BlockShadowButton>
         </div>
       ) : sorted.length === 0 ? (
         <RailFeedEmptyState
@@ -105,7 +114,9 @@ export default function CategoriesPage() {
           className="mt-10"
           title="No categories in taxonomy yet"
           description="When staff publish taxonomy categories and writers file stories under them, they will show up here."
-          actions={[{ label: 'All topics', href: '/topics', variant: 'primary' }]}
+          actions={[
+            { label: "All topics", href: "/topics", variant: "primary" },
+          ]}
         />
       ) : (
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

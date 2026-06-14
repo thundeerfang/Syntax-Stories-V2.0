@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useCallback, useState, type FormEvent } from 'react';
-import Link from 'next/link';
+import { useCallback, useState, type FormEvent } from "react";
+import Link from "next/link";
 import {
   Mail,
   MapPin,
@@ -12,34 +12,39 @@ import {
   Asterisk,
   ArrowRight,
   Timer,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuthStore } from '@/store/auth';
-import { cn } from '@/lib/core/utils';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+} from "lucide-react";
+import { toast } from "sonner";
+import { useAuthStore } from "@/store/auth";
+import { cn } from "@/lib/core/utils";
+import { shell } from "@/lib/styles";
 import {
   BlockShadowButton,
   FormInput,
   FormTextareaField,
   GhostOutlineButton,
   Header,
-} from '@/components/ui';
-import { AltchaField, readAltchaPayload } from '@/features/auth';
-import { getAltchaChallengeUrl } from '@/api/auth';
-import { collectFeedbackClientMeta } from '@/api/feedback';
-import { submitContactLead } from '@/api/contact';
+} from "@/components/ui";
+import { AltchaField, readAltchaPayload } from "@/features/auth";
+import { getAltchaChallengeUrl } from "@/api/auth";
+import { collectFeedbackClientMeta } from "@/api/feedback";
+import { submitContactLead } from "@/api/contact";
 
-import { CONTACT_TOPIC_SUGGESTIONS, PRODUCT_SITE_LINKS } from '@/lib/shell/siteLinks';
+import {
+  CONTACT_TOPIC_SUGGESTIONS,
+  PRODUCT_SITE_LINKS,
+} from "@/lib/shell/siteLinks";
 
 export default function ContactPage() {
   const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const altchaOn = Boolean(getAltchaChallengeUrl()) && !token;
 
-  const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle');
+  const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
 
   const setTopic = (val: string) => {
-    const input = document.getElementById('contact-topic') as HTMLInputElement | null;
+    const input = document.getElementById(
+      "contact-topic",
+    ) as HTMLInputElement | null;
     if (input) input.value = val;
   };
 
@@ -47,16 +52,16 @@ export default function ContactPage() {
     async (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       const form = e.currentTarget;
-      setStatus('sending');
+      setStatus("sending");
 
       const fd = new FormData(form);
-      const topic = String(fd.get('topic') ?? '').trim();
-      const message = String(fd.get('message') ?? '').trim();
-      const company = String(fd.get('company') ?? '').trim();
-      const hp = String(fd.get('_hp') ?? '').trim();
+      const topic = String(fd.get("topic") ?? "").trim();
+      const message = String(fd.get("message") ?? "").trim();
+      const company = String(fd.get("company") ?? "").trim();
+      const hp = String(fd.get("_hp") ?? "").trim();
 
       if (hp) {
-        setStatus('done');
+        setStatus("done");
         return;
       }
 
@@ -64,8 +69,10 @@ export default function ContactPage() {
       if (altchaOn) {
         altchaPayload = readAltchaPayload(form);
         if (!altchaPayload) {
-          toast.error('Please complete the security challenge.', { id: 'contact-form' });
-          setStatus('idle');
+          toast.error("Please complete the security challenge.", {
+            id: "contact-form",
+          });
+          setStatus("idle");
           return;
         }
       }
@@ -76,32 +83,40 @@ export default function ContactPage() {
           topic,
           message,
           company: company || undefined,
-          fullName: token ? undefined : String(fd.get('fullName') ?? '').trim() || undefined,
-          email: token ? undefined : String(fd.get('email') ?? '').trim() || undefined,
+          fullName: token
+            ? undefined
+            : String(fd.get("fullName") ?? "").trim() || undefined,
+          email: token
+            ? undefined
+            : String(fd.get("email") ?? "").trim() || undefined,
           altcha: altchaPayload,
           clientMeta,
         },
-        token
+        token,
       );
 
       if (!res.success) {
-        toast.error(res.message ?? 'Could not send. Try again.', { id: 'contact-form' });
-        setStatus('idle');
+        toast.error(res.message ?? "Could not send. Try again.", {
+          id: "contact-form",
+        });
+        setStatus("idle");
         return;
       }
-      toast.success('Message sent. We will get back to you soon.', { id: 'contact-success' });
-      setStatus('done');
+      toast.success("Message sent. We will get back to you soon.", {
+        id: "contact-success",
+      });
+      setStatus("done");
       form.reset();
     },
-    [altchaOn, token]
+    [altchaOn, token],
   );
 
   if (!isHydrated) {
     return (
       <div
         className={cn(
-          SHELL_CONTENT_RAIL_CLASS,
-          'flex min-h-[60vh] items-center justify-center py-16'
+          shell.contentRail,
+          "flex min-h-[60vh] items-center justify-center py-16",
         )}
       >
         <div className="mx-auto w-full max-w-md border-4 border-border bg-card p-8 text-center shadow">
@@ -115,7 +130,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className={cn(SHELL_CONTENT_RAIL_CLASS, 'py-8 pb-24 md:py-12')}>
+    <div className={cn(shell.contentRail, "py-8 pb-24 md:py-12")}>
       <div className="w-full space-y-8">
         <div className="grid items-start gap-8 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] xl:gap-12">
           <div className="space-y-8">
@@ -141,19 +156,25 @@ export default function ContactPage() {
                 {!token && <Asterisk className="size-4 text-primary" />}
               </div>
 
-              {status === 'done' ? (
+              {status === "done" ? (
                 <div className="flex flex-col items-center gap-6 px-6 py-20 text-center">
                   <div className="relative">
                     <div className="absolute inset-0 animate-ping bg-primary/20" />
-                    <CheckCircle2 className="relative size-20 text-primary" strokeWidth={1.5} />
+                    <CheckCircle2
+                      className="relative size-20 text-primary"
+                      strokeWidth={1.5}
+                    />
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-2xl font-black uppercase tracking-tight">
                       Transmission Sent
                     </h3>
                     <p className="mx-auto max-w-xs text-sm font-medium text-muted-foreground">
-                      We&apos;ve received your lead. Our average response time is currently{' '}
-                      <span className="text-foreground underline underline-offset-2">48 hours</span>
+                      We&apos;ve received your lead. Our average response time
+                      is currently{" "}
+                      <span className="text-foreground underline underline-offset-2">
+                        48 hours
+                      </span>
                       .
                     </p>
                   </div>
@@ -161,10 +182,10 @@ export default function ContactPage() {
                     type="button"
                     variant="secondary"
                     size="md"
-                    onClick={() => setStatus('idle')}
+                    onClick={() => setStatus("idle")}
                     className="group"
                   >
-                    Send another{' '}
+                    Send another{" "}
                     <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                   </BlockShadowButton>
                 </div>
@@ -209,7 +230,8 @@ export default function ContactPage() {
                       <div className="flex items-center gap-3 border-4 border-dashed border-border bg-muted/10 p-4">
                         <div className="size-3 bg-primary" />
                         <p className="text-xs font-bold uppercase tracking-tight text-muted-foreground">
-                          Authenticated as <span className="text-foreground">Current User</span>
+                          Authenticated as{" "}
+                          <span className="text-foreground">Current User</span>
                         </p>
                       </div>
                     )}
@@ -260,7 +282,11 @@ export default function ContactPage() {
 
                   {altchaOn && (
                     <div className="border-t-4 border-dashed border-border pt-6">
-                      <AltchaField enabled floating="bottom" floatingAnchor="#contact-submit" />
+                      <AltchaField
+                        enabled
+                        floating="bottom"
+                        floatingAnchor="#contact-submit"
+                      />
                     </div>
                   )}
 
@@ -270,15 +296,21 @@ export default function ContactPage() {
                     variant="primary"
                     size="lg"
                     fullWidth
-                    disabled={status === 'sending'}
+                    disabled={status === "sending"}
                     shadow="md"
-                    className={cn('group', status === 'sending' && 'animate-pulse')}
+                    className={cn(
+                      "group",
+                      status === "sending" && "animate-pulse",
+                    )}
                   >
                     <Send
-                      className={cn('size-5', status === 'sending' && 'animate-bounce')}
+                      className={cn(
+                        "size-5",
+                        status === "sending" && "animate-bounce",
+                      )}
                       aria-hidden
                     />
-                    {status === 'sending' ? 'Processing...' : 'Send message'}
+                    {status === "sending" ? "Processing..." : "Send message"}
                   </BlockShadowButton>
                 </form>
               )}
@@ -290,7 +322,10 @@ export default function ContactPage() {
             <div className="border-4 border-border bg-card shadow">
               <div className="border-b-4 border-border bg-muted/30 px-6 py-4">
                 <h2 className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-foreground">
-                  <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+                  <MapPin
+                    className="size-4 shrink-0 text-primary"
+                    aria-hidden
+                  />
                   Logistics
                 </h2>
               </div>
@@ -298,7 +333,10 @@ export default function ContactPage() {
               <div className="divide-y-4 divide-dashed divide-border px-6">
                 <div className="space-y-3 py-5">
                   <div className="flex items-center gap-2">
-                    <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+                    <MapPin
+                      className="size-4 shrink-0 text-primary"
+                      aria-hidden
+                    />
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       Headquarters
                     </h3>
@@ -316,7 +354,10 @@ export default function ContactPage() {
 
                 <div className="space-y-3 py-5">
                   <div className="flex items-center gap-2">
-                    <Mail className="size-4 shrink-0 text-primary" aria-hidden />
+                    <Mail
+                      className="size-4 shrink-0 text-primary"
+                      aria-hidden
+                    />
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       Direct line
                     </h3>
@@ -325,15 +366,17 @@ export default function ContactPage() {
                     href="mailto:hello@syntaxstories.example"
                     className="group inline-flex w-full max-w-full items-center justify-between gap-2 border-4 border-border bg-muted/10 px-3 py-2.5 text-left text-[11px] font-black uppercase tracking-tight text-foreground shadow transition-all hover:border-primary/50 hover:text-primary"
                   >
-                    <span className="min-w-0 truncate">hello@syntaxstories.example</span>
+                    <span className="min-w-0 truncate">
+                      hello@syntaxstories.example
+                    </span>
                     <ArrowRight
                       className="size-4 shrink-0 -rotate-45 transition-transform group-hover:rotate-0"
                       aria-hidden
                     />
                   </a>
                   <p className="text-[10px] font-medium leading-relaxed text-muted-foreground">
-                    For billing or account issues, add “URGENT” to the subject when it is
-                    time-sensitive.
+                    For billing or account issues, add “URGENT” to the subject
+                    when it is time-sensitive.
                   </p>
                 </div>
 

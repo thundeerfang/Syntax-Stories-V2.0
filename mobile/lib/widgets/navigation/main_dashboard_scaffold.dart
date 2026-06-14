@@ -18,6 +18,7 @@ class MainDashboardScaffold extends StatefulWidget {
     required this.onSearch,
     required this.onNotifications,
     required this.onSettings,
+    this.onCreate,
     this.showNotifications = true,
   });
 
@@ -28,6 +29,7 @@ class MainDashboardScaffold extends StatefulWidget {
   final VoidCallback onSearch;
   final VoidCallback onNotifications;
   final VoidCallback onSettings;
+  final VoidCallback? onCreate;
   final bool showNotifications;
 
   @override
@@ -211,6 +213,7 @@ class _MainDashboardScaffoldState extends State<MainDashboardScaffold>
                 onSearch: widget.onSearch,
                 onNotifications: widget.onNotifications,
                 onSettings: widget.onSettings,
+                onCreate: widget.onCreate,
                 showNotifications: widget.showNotifications,
               ),
             ),

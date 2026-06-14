@@ -1,51 +1,24 @@
-'use client';
-
-import * as React from 'react';
-import { createPortal } from 'react-dom';
-import { ChevronDown, Search } from 'lucide-react';
-import { Label } from './Label';
-import { cn } from '@/lib/core/utils';
-
-/** Above dialog panels (z-[100]) so the list tracks the trigger while the dialog body scrolls. */
-const LISTBOX_Z = 160;
-
+"use client";
+import * as React from "react";
+import { ChevronDown, Search } from "lucide-react";
+import { Label } from "./Label";
+import { DropdownPortal, useDropdown } from "@/components/ui/dropdown";
+import { cn } from "@/lib/core/utils";
 export interface SearchableSelectOption {
   value: string;
   label: string;
 }
-
-function SearchableSelectListboxShell({
-  children,
-  panelPos,
-  listboxRef,
-  className,
-}: Readonly<{
-  children: React.ReactNode;
-  panelPos: { top: number; left: number; width: number };
-  listboxRef: React.RefObject<HTMLDivElement | null>;
-  className?: string;
-}>) {
-  return (
-    <div
-      ref={listboxRef}
-      className={cn(
-        'fixed  border-2 border-border bg-card shadow overflow-hidden flex flex-col',
-        className
-      )}
-      style={{ top: panelPos.top, left: panelPos.left, width: panelPos.width, zIndex: LISTBOX_Z }}
-      role="listbox"
-    >
-      {children}
-    </div>
-  );
-}
-
 function SearchableSelectOptionRow({
   selected,
   label,
   onSelect,
   className,
-}: Readonly<{ selected: boolean; label: string; onSelect: () => void; className: string }>) {
+}: Readonly<{
+  selected: boolean;
+  label: string;
+  onSelect: () => void;
+  className: string;
+}>) {
   return (
     <button
       type="button"
@@ -58,7 +31,6 @@ function SearchableSelectOptionRow({
     </button>
   );
 }
-
 export interface SearchableSelectProps {
   id: string;
   label: string;
@@ -69,34 +41,35 @@ export interface SearchableSelectProps {
   disabled?: boolean;
   error?: string;
   className?: string;
-  /** Control width from parent: e.g. "w-full", "sm:w-1/2", "sm:col-span-4" (when inside a grid) */
   widthClass?: string;
-  /** Max height of dropdown list (default 220px) */
   listMaxHeight?: number;
-  /** When false, list is options-only (no search field). Default true. */
   searchable?: boolean;
-  /** Extra classes on the trigger button. */
   triggerClassName?: string;
-  /** Extra classes on the portaled listbox panel. */
   listboxClassName?: string;
 }
-
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined | null>) {
   return (node: T | null) => {
     for (const r of refs) {
       if (r == null) continue;
-      if (typeof r === 'function') r(node);
-      else (r as { current: T | null }).current = node;
+      if (typeof r === "function") r(node);
+      else
+        (
+          r as {
+            current: T | null;
+          }
+        ).current = node;
     }
   };
 }
-
-export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelectProps>(
+export const SearchableSelect = React.forwardRef<
+  HTMLDivElement,
+  SearchableSelectProps
+>(
   (
     {
       id,
       label,
-      placeholder = 'Select...',
+      placeholder = "Select...",
       value,
       onChange,
       options,
@@ -109,83 +82,37 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
       triggerClassName,
       listboxClassName,
     },
-    ref
+    ref,
   ) => {
-    const [open, setOpen] = React.useState(false);
-    const [search, setSearch] = React.useState('');
-    const [panelPos, setPanelPos] = React.useState({ top: 0, left: 0, width: 200 });
-    const [scrollableMax, setScrollableMax] = React.useState(listMaxHeight);
-    const containerRef = React.useRef<HTMLDivElement>(null);
+    const [search, setSearch] = React.useState("");
+    const { open, setOpen, close, rootRef, contentRef } = useDropdown({
+      onClose: () => setSearch(""),
+    });
     const buttonRef = React.useRef<HTMLButtonElement>(null);
-    const listboxRef = React.useRef<HTMLDivElement>(null);
     const inputRef = React.useRef<HTMLInputElement>(null);
-
     const selectedOption = options.find((o) => o.value === value);
-    const displayLabel = selectedOption?.label ?? (value || '');
-
+    const displayLabel = selectedOption?.label ?? (value || "");
     const filtered = React.useMemo(() => {
       if (!search.trim()) return options;
       const q = search.toLowerCase();
       return options.filter(
-        (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)
+        (o) =>
+          o.label.toLowerCase().includes(q) ||
+          o.value.toLowerCase().includes(q),
       );
     }, [options, search]);
-
-    const updateListPosition = React.useCallback(() => {
-      const btn = buttonRef.current;
-      if (!btn || !open) return;
-      const r = btn.getBoundingClientRect();
-      const w = Math.max(r.width, 200);
-      const top = r.bottom + 4;
-      const margin = 8;
-      const searchChrome = searchable ? 72 : 0;
-      const scrollMax = Math.min(
-        listMaxHeight,
-        Math.max(80, globalThis.innerHeight - top - margin - searchChrome)
-      );
-      setPanelPos({ top, left: r.left, width: w });
-      setScrollableMax(scrollMax);
-    }, [open, listMaxHeight, searchable]);
-
-    React.useLayoutEffect(() => {
-      updateListPosition();
-    }, [open, updateListPosition, filtered.length, value]);
-
-    React.useEffect(() => {
-      if (!open) return;
-      const onScrollOrResize = () => updateListPosition();
-      globalThis.addEventListener('scroll', onScrollOrResize, true);
-      globalThis.addEventListener('resize', onScrollOrResize);
-      return () => {
-        globalThis.removeEventListener('scroll', onScrollOrResize, true);
-        globalThis.removeEventListener('resize', onScrollOrResize);
-      };
-    }, [open, updateListPosition]);
-
-    React.useEffect(() => {
-      if (!open) setSearch('');
-    }, [open]);
-
-    React.useEffect(() => {
-      const handleClickOutside = (e: MouseEvent) => {
-        const t = e.target as Node;
-        if (containerRef.current?.contains(t)) return;
-        if (listboxRef.current?.contains(t)) return;
-        setOpen(false);
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     const handleSelect = (opt: SearchableSelectOption) => {
       onChange(opt.value);
-      setOpen(false);
+      close();
     };
-
     return (
       <div
-        ref={mergeRefs(containerRef, ref)}
-        className={cn('grid items-center gap-1.5 min-w-0', widthClass ?? 'w-full', className)}
+        ref={mergeRefs(rootRef, ref)}
+        className={cn(
+          "grid items-center gap-1.5 min-w-0",
+          widthClass ?? "w-full",
+          className,
+        )}
       >
         <Label htmlFor={id}>{label}</Label>
         <div className="relative">
@@ -196,39 +123,51 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
             disabled={disabled}
             onClick={() => {
               if (disabled) return;
-              setOpen((o) => !o);
-              if (!open && searchable) setTimeout(() => inputRef.current?.focus(), 50);
+              setOpen((o) => {
+                const next = !o;
+                if (next && searchable)
+                  setTimeout(() => inputRef.current?.focus(), 50);
+                return next;
+              });
             }}
             className={cn(
-              'w-full min-w-0  border-2 border-border bg-background px-3 py-2.5 text-sm font-medium text-left flex items-center justify-between gap-2',
-              'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors',
-              'disabled:cursor-not-allowed disabled:opacity-50',
-              error && 'border-destructive',
-              open && 'border-primary ring-2 ring-primary/20',
-              triggerClassName
+              "w-full min-w-0  border-2 border-border bg-background px-3 py-2.5 text-sm font-medium text-left flex items-center justify-between gap-2",
+              "focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              error && "border-destructive",
+              open && "border-primary ring-2 ring-primary/20",
+              triggerClassName,
             )}
             aria-haspopup="listbox"
             aria-expanded={open}
           >
-            <span className={cn('min-w-0 truncate', !displayLabel && 'text-muted-foreground')}>
+            <span
+              className={cn(
+                "min-w-0 truncate",
+                !displayLabel && "text-muted-foreground",
+              )}
+            >
               {displayLabel || placeholder}
             </span>
             <ChevronDown
               className={cn(
-                'size-4 shrink-0 text-muted-foreground transition-transform',
-                open && 'rotate-180'
+                "size-4 shrink-0 text-muted-foreground transition-transform",
+                open && "rotate-180",
               )}
             />
           </button>
 
-          {open &&
-            typeof document !== 'undefined' &&
-            createPortal(
-              <SearchableSelectListboxShell
-                panelPos={panelPos}
-                listboxRef={listboxRef}
-                className={listboxClassName}
-              >
+          <DropdownPortal
+            open={open}
+            triggerRef={buttonRef}
+            contentRef={contentRef}
+            className={listboxClassName}
+            maxHeight={listMaxHeight}
+            reservedBottom={searchable ? 72 : 0}
+            layoutDeps={[filtered.length, value]}
+          >
+            {(layout) => (
+              <>
                 {searchable ? (
                   <div className="p-2 border-b-2 border-border bg-muted/20 shrink-0">
                     <div className="relative">
@@ -239,7 +178,7 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Escape') setOpen(false);
+                          if (e.key === "Escape") close();
                         }}
                         placeholder="Search..."
                         className="w-full border-2 border-border bg-background py-2 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-primary"
@@ -247,7 +186,10 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
                     </div>
                   </div>
                 ) : null}
-                <div className="overflow-y-auto min-h-0" style={{ maxHeight: scrollableMax }}>
+                <div
+                  className="overflow-y-auto min-h-0"
+                  style={{ maxHeight: layout.scrollableMax }}
+                >
                   {filtered.length === 0 ? (
                     <p className="py-4 text-center text-[10px] font-bold text-muted-foreground uppercase">
                       No results
@@ -260,23 +202,24 @@ export const SearchableSelect = React.forwardRef<HTMLDivElement, SearchableSelec
                         label={opt.label}
                         onSelect={() => handleSelect(opt)}
                         className={cn(
-                          'w-full px-3 py-2.5 text-left text-sm font-medium transition-colors',
+                          "w-full px-3 py-2.5 text-left text-sm font-medium transition-colors",
                           opt.value === value
-                            ? 'bg-primary/15 text-primary border-l-2 border-primary'
-                            : 'hover:bg-muted/50'
+                            ? "bg-primary/15 text-primary border-l-2 border-primary"
+                            : "hover:bg-muted/50",
                         )}
                       />
                     ))
                   )}
                 </div>
-              </SearchableSelectListboxShell>,
-              document.body
+              </>
             )}
+          </DropdownPortal>
         </div>
-        {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+        {error && (
+          <p className="text-xs text-destructive font-medium">{error}</p>
+        )}
       </div>
     );
-  }
+  },
 );
-
-SearchableSelect.displayName = 'SearchableSelect';
+SearchableSelect.displayName = "SearchableSelect";

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { AnalyticsPageSkeletonInner } from '@/components/skeletons';
+import { AnalyticsPageSkeletonInner } from "@/components/skeletons";
 
 export default function ProfileAnalyticsLoading() {
   return <AnalyticsPageSkeletonInner />;

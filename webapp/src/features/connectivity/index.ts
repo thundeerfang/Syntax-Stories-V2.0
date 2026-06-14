@@ -1,1 +1,1 @@
-export { ConnectivityGate } from './components/ConnectivityGate';
+export * from "@/components/connectivity";

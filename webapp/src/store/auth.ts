@@ -1,7 +1,6 @@
-'use client';
-
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+"use client";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import {
   authApi,
   AuthError,
@@ -9,21 +8,19 @@ import {
   type AuthUser,
   type ProfileUpdateSection,
   type UpdateProfilePayload,
-} from '@/api/auth';
-import { runProfilePatch } from '@/lib/auth/runProfilePatch';
-import { setLastUserName } from '@/lib/auth/lastUser';
-import { consumePostAuthRedirect } from '@/lib/auth/postAuthRedirect';
-import { FOLLOWED_CATEGORIES_CHANGED_EVENT } from '@/lib/feeds/followedCategoriesStorage';
-import { accessTokenNeedsRefresh } from '@/lib/auth/jwtExpiry';
-
-const AUTH_KEY = 'syntax-stories-auth';
-
+} from "@/api/auth";
+import { runProfilePatch } from "@/lib/auth/runProfilePatch";
+import { setLastUserName } from "@/lib/auth/lastUser";
+import { consumePostAuthRedirect } from "@/lib/auth/postAuthRedirect";
+import { FOLLOWED_CATEGORIES_CHANGED_EVENT } from "@/lib/feeds/followedCategoriesStorage";
+import { accessTokenNeedsRefresh } from "@/lib/auth/jwtExpiry";
+const AUTH_KEY = "syntax-stories-auth";
 function writeAuthPersistSnapshot(snapshot: {
   user: AuthUser | null;
   token: string | null;
   refreshToken: string | null;
 }): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
       AUTH_KEY,
@@ -34,19 +31,14 @@ function writeAuthPersistSnapshot(snapshot: {
           refreshToken: snapshot.refreshToken,
         },
         version: 0,
-      })
+      }),
     );
-  } catch {
-    /* private mode / quota */
-  }
+  } catch {}
 }
-
-/** Prevents parallel `/auth/refresh` calls (e.g. hard reload + 401 retries) from reusing a rotated token. */
 let refreshInFlight: Promise<string | null> | null = null;
-
 async function recoverSessionAfterGetAccount401(
   get: () => AuthState,
-  set: (partial: Partial<AuthState>) => void
+  set: (partial: Partial<AuthState>) => void,
 ): Promise<void> {
   const refreshToken = get().refreshToken;
   if (!refreshToken) {
@@ -72,41 +64,49 @@ async function recoverSessionAfterGetAccount401(
       const rt = get().refreshToken;
       try {
         if (rt) await authApi.revokeSession(rt);
-      } catch {
-        /* ignore */
-      }
+      } catch {}
       set({ user: null, token: null, refreshToken: null });
     }
   }
 }
-
 type AuthState = {
   user: AuthUser | null;
   token: string | null;
   refreshToken: string | null;
   isLoading: boolean;
   isHydrated: boolean;
-  twoFactor: { challengeToken: string; email: string } | null;
-  /** Latest OTP generation from send/signup; paired with verify-otp. */
+  twoFactor: {
+    challengeToken: string;
+    email: string;
+  } | null;
   pendingOtpVersion: number | null;
   setHydrated: () => void;
-  setAuth: (user: AuthUser | null, token: string | null, refreshToken?: string | null) => void;
+  setAuth: (
+    user: AuthUser | null,
+    token: string | null,
+    refreshToken?: string | null,
+  ) => void;
   refreshUser: () => Promise<void>;
   updateProfile: (
     data: UpdateProfilePayload,
-    opts?: { section?: ProfileUpdateSection }
+    opts?: {
+      section?: ProfileUpdateSection;
+    },
   ) => Promise<void>;
   sendLoginOtp: (email: string, altcha?: string) => Promise<void>;
   signUp: (fullName: string, email: string, altcha?: string) => Promise<void>;
-  verifyCode: (email: string, code: string, opts?: { acceptPolicies?: boolean }) => Promise<void>;
+  verifyCode: (
+    email: string,
+    code: string,
+    opts?: {
+      acceptPolicies?: boolean;
+    },
+  ) => Promise<void>;
   verifyTwoFactor: (token: string) => Promise<void>;
   logout: () => Promise<void>;
-  /** Clear OTP pairing state when the auth dialog closes (does not touch 2FA OAuth challenge). */
   resetEphemeralOtpState: () => void;
-  /** Used by auth API 401 retry: try refresh and return new access token or null. */
   tryRefreshAndReturnNewToken: () => Promise<string | null>;
 };
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -137,7 +137,9 @@ export const useAuthStore = create<AuthState>()(
       },
       updateProfile: async (
         data: UpdateProfilePayload,
-        opts?: { section?: ProfileUpdateSection }
+        opts?: {
+          section?: ProfileUpdateSection;
+        },
       ) => {
         await runProfilePatch(
           {
@@ -150,7 +152,7 @@ export const useAuthStore = create<AuthState>()(
             refreshUser: () => get().refreshUser(),
           },
           data,
-          opts?.section
+          opts?.section,
         );
       },
       sendLoginOtp: async (email: string, altcha?: string) => {
@@ -159,11 +161,13 @@ export const useAuthStore = create<AuthState>()(
           const out = await authApi.sendOtp({ email, altcha });
           set({
             isLoading: false,
-            pendingOtpVersion: typeof out.otpVersion === 'number' ? out.otpVersion : null,
+            pendingOtpVersion:
+              typeof out.otpVersion === "number" ? out.otpVersion : null,
           });
         } catch (err) {
           set({ isLoading: false });
-          const message = err instanceof Error ? err.message : 'Failed to send code';
+          const message =
+            err instanceof Error ? err.message : "Failed to send code";
           throw new Error(message);
         }
       },
@@ -173,31 +177,38 @@ export const useAuthStore = create<AuthState>()(
           const out = await authApi.signupEmail({ fullName, email, altcha });
           set({
             isLoading: false,
-            pendingOtpVersion: typeof out.otpVersion === 'number' ? out.otpVersion : null,
+            pendingOtpVersion:
+              typeof out.otpVersion === "number" ? out.otpVersion : null,
           });
         } catch (err) {
           set({ isLoading: false });
-          const message = err instanceof Error ? err.message : 'Sign up failed';
+          const message = err instanceof Error ? err.message : "Sign up failed";
           throw new Error(message);
         }
       },
-      verifyCode: async (email: string, code: string, opts?: { acceptPolicies?: boolean }) => {
+      verifyCode: async (
+        email: string,
+        code: string,
+        opts?: {
+          acceptPolicies?: boolean;
+        },
+      ) => {
         set({ isLoading: true });
         try {
           const otpVersion = get().pendingOtpVersion;
           const pendingRef =
-            typeof globalThis.sessionStorage !== 'undefined'
-              ? globalThis.sessionStorage.getItem('pendingReferralCode')
+            typeof globalThis.sessionStorage !== "undefined"
+              ? globalThis.sessionStorage.getItem("pendingReferralCode")
               : null;
           const res = await authApi.verifyOtp({
             email,
             code,
-            ...(typeof otpVersion === 'number' ? { otpVersion } : {}),
+            ...(typeof otpVersion === "number" ? { otpVersion } : {}),
             ...(pendingRef ? { referralCode: pendingRef } : {}),
             ...(opts?.acceptPolicies === true ? { acceptPolicies: true } : {}),
           });
-          if (pendingRef && typeof globalThis.sessionStorage !== 'undefined') {
-            globalThis.sessionStorage.removeItem('pendingReferralCode');
+          if (pendingRef && typeof globalThis.sessionStorage !== "undefined") {
+            globalThis.sessionStorage.removeItem("pendingReferralCode");
           }
           if (res.twoFactorRequired && res.challengeToken) {
             set({
@@ -210,7 +221,7 @@ export const useAuthStore = create<AuthState>()(
             });
             return;
           }
-          if (!res.accessToken || !res.user) throw new Error('Login failed');
+          if (!res.accessToken || !res.user) throw new Error("Login failed");
           const user = normalizeUser(res.user);
           set({
             user,
@@ -223,15 +234,20 @@ export const useAuthStore = create<AuthState>()(
           if (user?.fullName) setLastUserName(user.fullName);
           if (consumePostAuthRedirect()) return;
         } catch (err) {
-          const stale = err instanceof AuthError && err.extras?.code === 'OTP_STALE_VERSION';
-          set({ isLoading: false, ...(stale ? { pendingOtpVersion: null } : {}) });
-          const message = err instanceof Error ? err.message : 'Invalid code';
+          const stale =
+            err instanceof AuthError &&
+            err.extras?.code === "OTP_STALE_VERSION";
+          set({
+            isLoading: false,
+            ...(stale ? { pendingOtpVersion: null } : {}),
+          });
+          const message = err instanceof Error ? err.message : "Invalid code";
           throw new Error(message);
         }
       },
       verifyTwoFactor: async (token: string) => {
         const tf = get().twoFactor;
-        if (!tf?.challengeToken) throw new Error('2FA challenge missing');
+        if (!tf?.challengeToken) throw new Error("2FA challenge missing");
         set({ isLoading: true });
         try {
           const res = await authApi.verifyTwoFactorLogin({
@@ -250,7 +266,8 @@ export const useAuthStore = create<AuthState>()(
           if (consumePostAuthRedirect()) return;
         } catch (err) {
           set({ isLoading: false });
-          const message = err instanceof Error ? err.message : 'Invalid 2FA code';
+          const message =
+            err instanceof Error ? err.message : "Invalid 2FA code";
           throw new Error(message);
         }
       },
@@ -260,19 +277,18 @@ export const useAuthStore = create<AuthState>()(
         try {
           if (token) await authApi.logout(token, refreshToken);
           else if (refreshToken) await authApi.revokeSession(refreshToken);
-        } catch {
-          /* ignore */
-        }
+        } catch {}
         set({ user: null, token: null, refreshToken: null, twoFactor: null });
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
           window.dispatchEvent(
-            new CustomEvent(FOLLOWED_CATEGORIES_CHANGED_EVENT, { detail: { userId: null } })
+            new CustomEvent(FOLLOWED_CATEGORIES_CHANGED_EVENT, {
+              detail: { userId: null },
+            }),
           );
         }
       },
       tryRefreshAndReturnNewToken: async () => {
         if (refreshInFlight) return refreshInFlight;
-
         refreshInFlight = (async (): Promise<string | null> => {
           const { refreshToken, token } = get();
           if (!refreshToken) return null;
@@ -286,30 +302,22 @@ export const useAuthStore = create<AuthState>()(
               token: res.accessToken,
               refreshToken: nextRefresh,
             });
-            // Re-fetch user so connected-accounts and OAuth flags stay correct after silent refresh
             try {
               const accountRes = await authApi.getAccount(res.accessToken);
               set({ user: normalizeUser(accountRes.user) });
-            } catch {
-              /* keep existing user if /me fails after refresh */
-            }
+            } catch {}
             return res.accessToken;
           } catch (e) {
-            // Only clear auth state when refresh returns 401 (session invalid/expired).
-            // On network error, 5xx, or 429 we keep the user "logged in" so they can retry.
             if (e instanceof AuthError && e.status === 401) {
               const rt = get().refreshToken;
               try {
                 if (rt) await authApi.revokeSession(rt);
-              } catch {
-                /* ignore */
-              }
+              } catch {}
               set({ user: null, token: null, refreshToken: null });
             }
             return null;
           }
         })();
-
         try {
           return await refreshInFlight;
         } finally {
@@ -319,10 +327,14 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: AUTH_KEY,
-      partialize: (s) => ({ user: s.user, token: s.token, refreshToken: s.refreshToken }),
+      partialize: (s) => ({
+        user: s.user,
+        token: s.token,
+        refreshToken: s.refreshToken,
+      }),
       onRehydrateStorage: () => () => {
         useAuthStore.getState().setHydrated();
       },
-    }
-  )
+    },
+  ),
 );

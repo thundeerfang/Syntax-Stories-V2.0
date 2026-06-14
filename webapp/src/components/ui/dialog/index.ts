@@ -8,11 +8,18 @@ export {
   DIALOG_TITLE_HEADER_CLASS,
   DIALOG_FOOTER_ACTIONS_CLASS,
   DIALOG_TITLE_ICON_BOX_CLASS,
-} from './dialogs';
-export { FormDialog, type FormDialogProps } from './FormDialog';
+} from "./dialogs";
+export { FormDialog, type FormDialogProps } from "./FormDialog";
 export {
   InfoSwiperDialog,
   type InfoSwiperDialogProps,
   type InfoSwiperSlide,
-} from './InfoSwiperDialog';
-export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
+} from "./InfoSwiperDialog";
+export { ConfirmDialog, type ConfirmDialogProps } from "./ConfirmDialog";
+export { InfoHintDialog, type InfoHintDialogProps } from "./InfoHintDialog";
+export {
+  SearchableTabbedFormDialog,
+  DialogSearchEmptyState,
+  type SearchableTabbedFormDialogProps,
+  type SearchableTabbedFormDialogTab,
+} from "./SearchableTabbedFormDialog";

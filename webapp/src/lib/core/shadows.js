@@ -16,12 +16,3 @@ export const SHADOW_BLOCK_BUTTON =
 
 /** Ghost outline buttons: inset hover wash only (no block offset). */
 export const SHADOW_GHOST_HOVER = 'hover:shadow-ghost-inset';
-
-/** Retro layout shells (border + single shadow). */
-export const retro = {
-  card: 'retro-card',
-  cardLg: 'retro-card-lg',
-  panel: 'retro-panel',
-  metricCard: 'retro-metric-card',
-  dropdownPanel: 'retro-dropdown-panel',
-};

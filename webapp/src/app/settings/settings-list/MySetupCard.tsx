@@ -1,10 +1,15 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { ExternalLink, Pencil, Trash2, Wrench } from 'lucide-react';
-import { cn } from '@/lib/core/utils';
+import React from "react";
+import { ExternalLink, Pencil, Trash2, Wrench } from "lucide-react";
+import { cn } from "@/lib/core/utils";
 
-export type SetupItem = { label: string; imageUrl: string; productUrl?: string; imageAlt?: string };
+export type SetupItem = {
+  label: string;
+  imageUrl: string;
+  productUrl?: string;
+  imageAlt?: string;
+};
 
 type MySetupCardProps = Readonly<{
   item: SetupItem;
@@ -24,8 +29,8 @@ export function MySetupCard({
   hideActions = false,
 }: MySetupCardProps) {
   const rawId = String(index + 1);
-  const displayId = rawId.padStart(2, '0');
-  const hasProduct = Boolean((item.productUrl ?? '').trim());
+  const displayId = rawId.padStart(2, "0");
+  const hasProduct = Boolean((item.productUrl ?? "").trim());
 
   return (
     <div className="group relative ss-settings-card">
@@ -80,7 +85,7 @@ export function MySetupCard({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-base font-black leading-snug text-foreground truncate">
-                  {item.label || 'Untitled'}
+                  {item.label || "Untitled"}
                 </div>
                 {hasProduct ? (
                   <a
@@ -88,8 +93,8 @@ export function MySetupCard({
                     target="_blank"
                     rel="noreferrer"
                     className={cn(
-                      'inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide',
-                      'text-primary hover:underline'
+                      "inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide",
+                      "text-primary hover:underline",
                     )}
                   >
                     <ExternalLink className="size-3.5" />

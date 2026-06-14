@@ -1,24 +1,23 @@
-'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
-import Loader from 'react-loaders';
-import 'loaders.css/loaders.min.css';
-import { consumeOAuthNavigationPending, OAUTH_LEAVING_EVENT } from '@/lib/auth/oauthNavigation';
-import { useScrollLock } from '@/hooks/useScrollLock';
-
-const TITLE = 'SYSTEM SYNTAX STORIES — BASH';
-const MIN_SHOW_MS = 5000;
-const FADE_DURATION_MS = 300;
-
+"use client";
+import React, { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
+import Loader from "react-loaders";
+import "loaders.css/loaders.min.css";
+import {
+  consumeOAuthNavigationPending,
+  OAUTH_LEAVING_EVENT,
+} from "@/lib/auth/oauthNavigation";
+import { useScrollLock } from "@/hooks/useScrollLock";
+import { GLOBAL_LOADER_FADE_MS, GLOBAL_LOADER_MIN_SHOW_MS } from "@/variable";
+const TITLE = "SYSTEM SYNTAX STORIES — BASH";
 function scheduleRouteLoaderFadeOut(
   timeouts: ReturnType<typeof setTimeout>[],
   shownAt: number,
   setExiting: React.Dispatch<React.SetStateAction<boolean>>,
-  setShow: React.Dispatch<React.SetStateAction<boolean>>
+  setShow: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
   const elapsed = Date.now() - shownAt;
-  const waitMin = Math.max(0, MIN_SHOW_MS - elapsed);
+  const waitMin = Math.max(0, GLOBAL_LOADER_MIN_SHOW_MS - elapsed);
   timeouts.push(
     setTimeout(() => {
       setExiting(true);
@@ -26,45 +25,48 @@ function scheduleRouteLoaderFadeOut(
         setTimeout(() => {
           setShow(false);
           setExiting(false);
-        }, FADE_DURATION_MS)
+        }, GLOBAL_LOADER_FADE_MS),
       );
-    }, waitMin)
+    }, waitMin),
   );
 }
-
 const PATH_MAP: Record<string, string> = {
-  about: 'about',
-  profile: 'profile',
-  settings: 'settings',
-  login: 'login',
-  signup: 'signup',
-  explore: 'explore',
-  trending: 'trending',
-  u: 'profile',
-  terms: 'terms',
-  policy: 'policy',
-  privacy: 'privacy',
+  about: "about",
+  profile: "profile",
+  settings: "settings",
+  login: "login",
+  signup: "signup",
+  explore: "explore",
+  trending: "trending",
+  u: "profile",
+  terms: "terms",
+  policy: "policy",
+  privacy: "privacy",
 };
-
 export function pathnameToPageName(pathname: string): string {
-  if (!pathname || pathname === '/') return 'home';
-  const segment = pathname.split('/').find((s) => s.length > 0) ?? 'app';
+  if (!pathname || pathname === "/") return "home";
+  const segment = pathname.split("/").find((s) => s.length > 0) ?? "app";
   return PATH_MAP[segment] ?? segment;
 }
-
-type GlobalLoaderProps = { pageName?: string; status?: string };
-
-export function GlobalLoader({ pageName = 'app', status }: Readonly<GlobalLoaderProps>) {
-  const [dots, setDots] = useState('');
+type GlobalLoaderProps = {
+  pageName?: string;
+  status?: string;
+};
+export function GlobalLoader({
+  pageName = "app",
+  status,
+}: Readonly<GlobalLoaderProps>) {
+  const [dots, setDots] = useState("");
   useEffect(() => {
-    const t = setInterval(() => setDots((p) => (p.length >= 3 ? '' : p + '.')), 400);
+    const t = setInterval(
+      () => setDots((p) => (p.length >= 3 ? "" : p + ".")),
+      400,
+    );
     return () => clearInterval(t);
   }, []);
-
   return (
     <div className="flex items-center justify-center min-h-[300px] w-full p-4">
       <div className="loader-scale-in relative mx-auto w-full max-w-[480px] overflow-hidden bg-[#0d0d0f] border border-white/10 shadow">
-        {/* 1fr | auto | 1fr: title stays visually centered; old flex+flex-1 only centered within the middle strip (shifted toward dots) */}
         <div className="bg-[#1a1a1c] grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-3 border-b border-white/5">
           <div className="flex gap-2 justify-self-start">
             <div className="h-3 w-3 bg-[#ff5f57] opacity-80 hover:opacity-100 transition-opacity" />
@@ -119,19 +121,14 @@ export function GlobalLoader({ pageName = 'app', status }: Readonly<GlobalLoader
     </div>
   );
 }
-
 export function GlobalLoaderOverlay() {
   const pathname = usePathname();
   const [show, setShow] = useState(false);
   const [exiting, setExiting] = useState(false);
-  const [pageName, setPageName] = useState('app');
+  const [pageName, setPageName] = useState("app");
   const prevPathRef = useRef<string | null>(null);
   const shownAtRef = useRef(0);
   const routeLoaderTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  // OAuth: user leaves while overlay is visible → cleanup clears hide timers → show stays true.
-  // bfcache restore may not re-run pathname effect; sessionStorage marks OAuth departures reliably.
-  // Full loads (e.g. OAuth callback) can fire `pageshow` before this effect runs — consume on mount too.
   useEffect(() => {
     const clearStuckOverlay = () => {
       setShow(false);
@@ -141,25 +138,21 @@ export function GlobalLoaderOverlay() {
       if (consumeOAuthNavigationPending()) clearStuckOverlay();
     };
     syncClearIfOAuthReturn();
-
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) clearStuckOverlay();
       syncClearIfOAuthReturn();
     };
-    // History back from Google → not always bfcache; popstate still fires and clears stuck overlay.
     const onPopState = () => {
       clearStuckOverlay();
       syncClearIfOAuthReturn();
     };
-    globalThis.addEventListener('pageshow', onPageShow);
-    globalThis.addEventListener('popstate', onPopState);
+    globalThis.addEventListener("pageshow", onPageShow);
+    globalThis.addEventListener("popstate", onPopState);
     return () => {
-      globalThis.removeEventListener('pageshow', onPageShow);
-      globalThis.removeEventListener('popstate', onPopState);
+      globalThis.removeEventListener("pageshow", onPageShow);
+      globalThis.removeEventListener("popstate", onPopState);
     };
   }, []);
-
-  // OAuth is an external step — hide the route overlay immediately and cancel min-duration timers.
   useEffect(() => {
     const onOAuthLeaving = () => {
       routeLoaderTimeoutsRef.current.forEach(clearTimeout);
@@ -168,13 +161,13 @@ export function GlobalLoaderOverlay() {
       setExiting(false);
     };
     globalThis.addEventListener(OAUTH_LEAVING_EVENT, onOAuthLeaving);
-    return () => globalThis.removeEventListener(OAUTH_LEAVING_EVENT, onOAuthLeaving);
+    return () =>
+      globalThis.removeEventListener(OAUTH_LEAVING_EVENT, onOAuthLeaving);
   }, []);
-
   useEffect(() => {
     const name = pathnameToPageName(pathname);
     const isInitial = prevPathRef.current === null;
-    const isAuthCallback = pathname.includes('-callback');
+    const isAuthCallback = pathname.includes("-callback");
     prevPathRef.current = pathname;
     setPageName(name);
     setExiting(false);
@@ -188,47 +181,56 @@ export function GlobalLoaderOverlay() {
     routeLoaderTimeoutsRef.current = timeouts;
     shownAtRef.current = Date.now();
     setShow(true);
-    scheduleRouteLoaderFadeOut(timeouts, shownAtRef.current, setExiting, setShow);
+    scheduleRouteLoaderFadeOut(
+      timeouts,
+      shownAtRef.current,
+      setExiting,
+      setShow,
+    );
     return () => {
       timeouts.forEach(clearTimeout);
       routeLoaderTimeoutsRef.current = [];
     };
   }, [pathname]);
-
   useScrollLock(show);
-
   if (!show) return null;
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-hidden transition-opacity duration-300 ease-out isolate ${exiting ? 'opacity-0' : 'opacity-100 loader-overlay-in'}`}
+      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-hidden transition-opacity duration-300 ease-out isolate ${exiting ? "opacity-0" : "opacity-100 loader-overlay-in"}`}
       aria-live="polite"
       aria-busy="true"
     >
-      {/* Separate layer: heavy bg + blur on one element makes frosted glass visible */}
       <div
         className="absolute inset-0 bg-background/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-black/72 dark:backdrop-saturate-100"
-        style={{ WebkitBackdropFilter: 'blur(20px) saturate(1.5)' }}
+        style={{ WebkitBackdropFilter: "blur(20px) saturate(1.5)" }}
         aria-hidden
       />
       <div
-        className={`relative z-[1] flex w-full items-center justify-center p-4 ${exiting ? 'opacity-0 transition-opacity duration-300' : 'loader-scale-in'}`}
+        className={`relative z-[1] flex w-full items-center justify-center p-4 ${exiting ? "opacity-0 transition-opacity duration-300" : "loader-scale-in"}`}
       >
         <GlobalLoader pageName={pageName} />
       </div>
     </div>
   );
 }
-
-type TerminalLoaderPageProps = { pageName?: string; inline?: boolean; status?: string };
-
+type TerminalLoaderPageProps = {
+  pageName?: string;
+  inline?: boolean;
+  status?: string;
+};
 export function TerminalLoaderPage({
-  pageName = 'app',
+  pageName = "app",
   inline = false,
   status,
 }: Readonly<TerminalLoaderPageProps>) {
   const content = <GlobalLoader pageName={pageName} status={status} />;
-  if (inline) return <div className="flex items-center justify-center py-12">{content}</div>;
+  if (inline)
+    return (
+      <div className="flex items-center justify-center py-12">{content}</div>
+    );
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">{content}</div>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      {content}
+    </div>
   );
 }

@@ -3,7 +3,7 @@
  * Keep in sync with `server/src/routes/contact.routes.ts`.
  */
 
-import type { FeedbackClientMeta } from './feedbackApi';
+import type { FeedbackClientMeta } from "./feedbackApi";
 
 export type SubmitContactParams = {
   fullName?: string;

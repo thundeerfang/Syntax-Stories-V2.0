@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { Loader2, ExternalLink, CreditCard } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ExternalLink, CreditCard } from "lucide-react";
 import {
   createPortalSession,
   fetchBillingSubscription,
@@ -11,34 +11,39 @@ import {
   verifyCheckout,
   type BillingSubscriptionDto,
   type BillingTransactionRow,
-} from '@/api/billing';
-import { useSettingsAuthSlice } from '@/hooks/useSettingsAuthSlice';
+} from "@/api/billing";
+import { useSettingsAuthSlice } from "@/hooks/useSettingsAuthSlice";
 import {
   SettingsSectionHeading,
   SettingsTabPanel,
   SettingsTabRoot,
-} from './settings-list/SettingsSectionHeading';
-import { ghostOutlineButtonClassNames } from '@/components/ui/button';
-import { settingsBtnBlockPrimaryMd } from './buttonStyles';
-import Link from 'next/link';
+} from "./settings-list/SettingsSectionHeading";
+import {
+  BlockShadowButton,
+  ghostOutlineButtonClassNames,
+} from "@/components/ui/button";
+import Link from "next/link";
 
 function formatInrMinorUnits(amount: number, currency: string): string {
   const cur = currency.toLowerCase();
-  if (cur === 'inr') {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
-      amount / 100
-    );
+  if (cur === "inr") {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount / 100);
   }
   return `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`;
 }
 
 function statusLabel(sub: BillingSubscriptionDto): string {
-  if (sub.isGraceActive) return 'Past due (grace)';
-  if (sub.status === 'canceled') return 'Canceled';
-  if (sub.status === 'past_due') return 'Past due';
-  if (sub.cancelAtPeriodEnd) return 'Canceling at period end';
-  if (sub.planKey === 'free') return 'Free';
-  return sub.status === 'active' || sub.status === 'trialing' ? 'Active' : sub.status;
+  if (sub.isGraceActive) return "Past due (grace)";
+  if (sub.status === "canceled") return "Canceled";
+  if (sub.status === "past_due") return "Past due";
+  if (sub.cancelAtPeriodEnd) return "Canceling at period end";
+  if (sub.planKey === "free") return "Free";
+  return sub.status === "active" || sub.status === "trialing"
+    ? "Active"
+    : sub.status;
 }
 
 export function PaymentsSettingsContent() {
@@ -47,24 +52,25 @@ export function PaymentsSettingsContent() {
   const router = useRouter();
   const [sub, setSub] = useState<BillingSubscriptionDto | null>(null);
   const [tx, setTx] = useState<BillingTransactionRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [verifyDone, setVerifyDone] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     try {
       const [s, t] = await Promise.all([
         fetchBillingSubscription(token),
         fetchBillingTransactions(token, 1),
       ]);
       setSub(s);
-      setTx(t.transactions);
+      let transactions = t.transactions;
+      if (transactions.length === 0 && s.planKey !== "free") {
+        const synced = await fetchBillingTransactions(token, 1, { sync: true });
+        transactions = synced.transactions;
+      }
+      setTx(transactions);
     } catch (e) {
-      toast.error((e as Error).message || 'Could not load billing');
-    } finally {
-      setLoading(false);
+      toast.error((e as Error).message || "Could not load billing");
     }
   }, [token]);
 
@@ -73,21 +79,21 @@ export function PaymentsSettingsContent() {
   }, [load]);
 
   useEffect(() => {
-    const checkout = searchParams.get('checkout');
-    const sessionId = searchParams.get('session_id');
-    if (checkout !== 'success' || !sessionId || !token || verifyDone) return;
+    const checkout = searchParams.get("checkout");
+    const sessionId = searchParams.get("session_id");
+    if (checkout !== "success" || !sessionId || !token || verifyDone) return;
     (async () => {
       try {
         const s = await verifyCheckout(token, sessionId);
         setSub(s);
-        toast.success('Subscription updated.');
+        toast.success("Subscription updated.");
         setVerifyDone(true);
-        router.replace('/settings?section=payments', { scroll: false });
+        router.replace("/settings?section=payments", { scroll: false });
         void load();
       } catch (e) {
-        toast.error((e as Error).message || 'Could not confirm checkout');
+        toast.error((e as Error).message || "Could not confirm checkout");
         setVerifyDone(true);
-        router.replace('/settings?section=payments', { scroll: false });
+        router.replace("/settings?section=payments", { scroll: false });
       }
     })();
   }, [searchParams, token, verifyDone, router, load]);
@@ -105,15 +111,6 @@ export function PaymentsSettingsContent() {
     }
   };
 
-  if (loading && !sub) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        <span className="text-sm">Loading billing…</span>
-      </div>
-    );
-  }
-
   return (
     <SettingsTabRoot>
       <SettingsSectionHeading
@@ -128,35 +125,39 @@ export function PaymentsSettingsContent() {
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Current plan
             </p>
-            <p className="text-lg font-black">{sub?.planDisplayName ?? '—'}</p>
+            <p className="text-lg font-black">{sub?.planDisplayName ?? "—"}</p>
             <p className="text-sm text-muted-foreground">
-              Status:{' '}
-              <span className="font-semibold text-foreground">{sub ? statusLabel(sub) : '—'}</span>
+              Status:{" "}
+              <span className="font-semibold text-foreground">
+                {sub ? statusLabel(sub) : "—"}
+              </span>
             </p>
             {sub?.currentPeriodEnd ? (
               <p className="text-xs text-muted-foreground">
-                {sub.cancelAtPeriodEnd ? 'Access until' : 'Renews or ends'}{' '}
+                {sub.cancelAtPeriodEnd ? "Access until" : "Renews or ends"}{" "}
                 {new Date(sub.currentPeriodEnd).toLocaleString()}
               </p>
             ) : null}
             {sub?.isGraceActive ? (
               <p className="text-xs text-amber-700 dark:text-amber-400">
-                Payment failed — update your card in the billing portal to restore full access.
+                Payment failed — update your card in the billing portal to
+                restore full access.
               </p>
             ) : null}
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
+            <BlockShadowButton
               type="button"
-              className={settingsBtnBlockPrimaryMd}
+              loading={portalLoading}
               onClick={() => void openPortal()}
-              disabled={portalLoading}
             >
-              {portalLoading ? <Loader2 className="size-4 animate-spin inline mr-2" /> : null}
               Manage billing
-            </button>
-            <Link href="/pricing" className={ghostOutlineButtonClassNames({ size: 'md' })}>
+            </BlockShadowButton>
+            <Link
+              href="/pricing"
+              className={ghostOutlineButtonClassNames({ size: "md" })}
+            >
               Change plan
             </Link>
           </div>
@@ -168,27 +169,38 @@ export function PaymentsSettingsContent() {
           </h3>
           {tx.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No invoices yet. After your first successful charge, receipts appear here.
+              No invoices yet. After your first successful charge, receipts
+              appear here.
             </p>
           ) : (
             <div className="overflow-x-auto border-2 border-border">
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/40 border-b-2 border-border">
                   <tr>
-                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">Date</th>
+                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">
+                      Date
+                    </th>
                     <th className="p-2 font-black text-[10px] uppercase tracking-wide">
                       Description
                     </th>
-                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">Amount</th>
-                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">Status</th>
-                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">Receipt</th>
+                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">
+                      Amount
+                    </th>
+                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">
+                      Status
+                    </th>
+                    <th className="p-2 font-black text-[10px] uppercase tracking-wide">
+                      Receipt
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {tx.map((row) => (
                     <tr key={row.id} className="border-b border-border/60">
                       <td className="p-2 whitespace-nowrap">
-                        {row.paidAt ? new Date(row.paidAt).toLocaleDateString() : '—'}
+                        {row.paidAt
+                          ? new Date(row.paidAt).toLocaleDateString()
+                          : "—"}
                       </td>
                       <td className="p-2 max-w-[200px] truncate">
                         {row.description || row.stripeInvoiceId}
@@ -208,7 +220,7 @@ export function PaymentsSettingsContent() {
                             View <ExternalLink className="size-3" />
                           </a>
                         ) : (
-                          '—'
+                          "—"
                         )}
                       </td>
                     </tr>

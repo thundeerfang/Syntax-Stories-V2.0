@@ -1,66 +1,24 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import multer from 'multer';
+import { Router } from "express";
+import { verifyToken } from "../middlewares/auth/index.js";
+import { rateLimitFeedback } from "../middlewares/auth/rateLimitAuth.js";
 import {
-  optionalVerifyToken,
-  type RequestWithOptionalAuth,
-} from '../middlewares/auth/optionalVerifyToken.js';
-import { verifyAltchaIfConfigured } from '../middlewares/auth/verifyAltcha.js';
-import { rateLimitFeedback } from '../middlewares/auth/rateLimitAuth.js';
-import { listFeedbackCategories, submitFeedback } from '../controllers/feedback.controller.js';
-import { isAllowedImageUploadMime, IMAGE_UPLOAD_REJECT_MESSAGE } from '../config/uploadValidation.js';
-import { IMAGE_MASTER_PROFILES } from '../services/image/imageMaster.constants.js';
-
+  getFeedbackQuota,
+  listFeedbackCategories,
+  submitFeedback,
+} from "../controllers/feedback.controller.js";
+import {
+  createImageMasterMulter,
+  runImageMasterUpload,
+} from "../services/image/imageMasterMulter.js";
 const router = Router();
-
-function requireAltchaUnlessAuthed(req: Request, res: Response, next: NextFunction): void {
-  const u = (req as RequestWithOptionalAuth).authUser;
-  if (u?._id) {
-    next();
-    return;
-  }
-  void verifyAltchaIfConfigured(req, res, next);
-}
-
-const uploadFeedback = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: IMAGE_MASTER_PROFILES.feedback.maxInputBytes + 512 },
-  fileFilter: (_req, file, cb) => {
-    if (!isAllowedImageUploadMime(file.mimetype, file.originalname)) {
-      cb(new Error(IMAGE_UPLOAD_REJECT_MESSAGE));
-      return;
-    }
-    cb(null, true);
-  },
-});
-
-function runUploadFeedback(req: Request, res: Response, next: NextFunction): void {
-  uploadFeedback.single('attachment')(req, res, (err: unknown) => {
-    if (!err) {
-      next();
-      return;
-    }
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        res.status(400).json({
-          success: false,
-          message: `Attachment exceeds maximum size (${Math.round(IMAGE_MASTER_PROFILES.feedback.maxInputBytes / (1024 * 1024))} MB).`,
-        });
-        return;
-      }
-    }
-    const msg = err instanceof Error ? err.message : 'Upload failed.';
-    res.status(400).json({ success: false, message: msg });
-  });
-}
-
-router.get('/categories', listFeedbackCategories);
+const uploadFeedbackMw = createImageMasterMulter("feedback");
+router.get("/categories", listFeedbackCategories);
+router.get("/quota", verifyToken, getFeedbackQuota);
 router.post(
-  '/',
+  "/",
   rateLimitFeedback,
-  optionalVerifyToken,
-  runUploadFeedback,
-  requireAltchaUnlessAuthed,
-  submitFeedback
+  verifyToken,
+  runImageMasterUpload(uploadFeedbackMw, "attachment", "feedback"),
+  submitFeedback,
 );
-
 export default router;

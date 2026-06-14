@@ -1,3 +1,3 @@
-export * from './captureScreenToFeedbackFile';
-export * from './exportCroppedImageFile';
-export * from './feedbackAttachmentClient';
+export * from "./captureScreenToFeedbackFile";
+export * from "./exportCroppedImageFile";
+export * from "./feedbackAttachmentClient";

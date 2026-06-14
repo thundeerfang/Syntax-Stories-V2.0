@@ -44,7 +44,7 @@ webapp/
 ├── public/                 # Static assets (lottie, svg, favicon, …)
 ├── packages/
 │   └── shared/             # Zod enums/schemas shared with server (profile, squads)
-├── scripts/                # Tooling (shadows migrate, install-shared-deps, …)
+├── scripts/                # `install-shared-deps.cjs` (postinstall for packages/shared)
 ├── reports/                # eslint-report.json (generated)
 ├── src/                    # ← All application code
 │   ├── app/                # Next.js App Router (routes, layouts, loading.tsx)
@@ -408,7 +408,7 @@ After any structural change:
 2. `npx tsc --noEmit`
 3. Smoke-test routes touched (see README route table)
 4. Update this file + [COMPONENTS.md](./COMPONENTS.md) if consolidation batch completes
-5. Run component audit (when script exists): `node scripts/audit-component-usage.mjs`
+5. Run `npm run arch:check` (dependency-cruiser + eslint) after large moves
 
 ---
 
@@ -706,7 +706,6 @@ The repo is large enough to justify automation beyond manual audits.
 | [madge](https://github.com/pahen/madge)                              | Dependency graph, circular deps     |
 | [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) | Rules + violations report           |
 | [knip](https://github.com/webpro/knip)                               | Unused exports, dead files          |
-| `scripts/audit-component-usage.mjs`                                  | Single-use component detection (§9) |
 
 **Also useful:** route bundle analysis (Next.js / `@next/bundle-analyzer`), especially before splitting mega pages.
 

@@ -1,69 +1,90 @@
-'use client';
-
-import React, { useState } from 'react';
-import { toast } from 'sonner';
-import { Plug } from 'lucide-react';
-import { PROVIDER_ICONS } from '@/components/icons/SocialProviderIcons';
-import { cn } from '@/lib/core/utils';
-import { useAuthStore } from '@/store/auth';
-import { authApi } from '@/api/auth';
-import { markOAuthNavigationPending } from '@/lib/auth/oauthNavigation';
-import { withDesktopOAuthReturnOrigin } from '@/lib/auth/oauthStartHref';
-import { GithubConnectLottie } from '@/components/ui/lottie';
+"use client";
+import React, { useState } from "react";
+import { toast } from "sonner";
+import { Plug } from "lucide-react";
+import { PROVIDER_ICONS } from "@/components/icons/SocialProviderIcons";
+import { cn } from "@/lib/core/utils";
+import { useAuthStore } from "@/store/auth";
+import { authApi } from "@/api/auth";
+import { markOAuthNavigationPending } from "@/lib/auth/oauthNavigation";
+import { withDesktopOAuthReturnOrigin } from "@/lib/auth/oauthStartHref";
+import { GithubConnectLottie } from "@/components/ui/lottie";
 import {
   SettingsSectionHeading,
   SettingsTabPanel,
   SettingsTabRoot,
-} from '@/app/settings/settings-list/SettingsSectionHeading';
-
+} from "@/app/settings/settings-list/SettingsSectionHeading";
 export function ConnectedAccountsContent() {
   const { user, logout, token } = useAuthStore();
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
-
   const handleDisconnect = async (provider: string) => {
     if (!confirm(`Unlinking ${provider} will log you out. Continue?`)) return;
     if (!token) return;
     setDisconnecting(provider);
     try {
       await authApi.disconnectProvider(token, provider);
-      toast.success('Connection severed. Logging out...');
+      toast.success("Connection severed. Logging out...");
       setTimeout(() => logout(), 1500);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to disconnect.');
+      toast.error(e instanceof Error ? e.message : "Failed to disconnect.");
       setDisconnecting(null);
     }
   };
-
   const handleConnect = async (id: string) => {
     if (!token) return;
     setLinkingProvider(id);
     try {
       const data = await authApi.getLinkRedirectUrl(
         token,
-        id as 'google' | 'github' | 'facebook' | 'x' | 'discord'
+        id as "google" | "github" | "facebook" | "x" | "discord",
       );
       if (data.redirectUrl) {
         markOAuthNavigationPending();
-        globalThis.location.assign(withDesktopOAuthReturnOrigin(data.redirectUrl));
+        globalThis.location.assign(
+          withDesktopOAuthReturnOrigin(data.redirectUrl),
+        );
         return;
       }
-      toast.error(data.message ?? 'Could not start linking');
+      toast.error(data.message ?? "Could not start linking");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not start linking');
+      toast.error(e instanceof Error ? e.message : "Could not start linking");
     } finally {
       setLinkingProvider(null);
     }
   };
-
   const providers = [
-    { id: 'google', label: 'Google Cloud', linked: user?.isGoogleAccount, color: '#4285F4' },
-    { id: 'github', label: 'GitHub Source', linked: user?.isGitAccount, color: '#24292F' },
-    { id: 'x', label: 'X (Twitter)', linked: user?.isXAccount, color: '#000000' },
-    { id: 'facebook', label: 'Meta / FB', linked: user?.isFacebookAccount, color: '#1877F2' },
-    { id: 'discord', label: 'Discord', linked: user?.isDiscordAccount, color: '#5865F2' },
+    {
+      id: "google",
+      label: "Google Cloud",
+      linked: user?.isGoogleAccount,
+      color: "#4285F4",
+    },
+    {
+      id: "github",
+      label: "GitHub Source",
+      linked: user?.isGitAccount,
+      color: "#24292F",
+    },
+    {
+      id: "x",
+      label: "X (Twitter)",
+      linked: user?.isXAccount,
+      color: "#000000",
+    },
+    {
+      id: "facebook",
+      label: "Meta / FB",
+      linked: user?.isFacebookAccount,
+      color: "#1877F2",
+    },
+    {
+      id: "discord",
+      label: "Discord",
+      linked: user?.isDiscordAccount,
+      color: "#5865F2",
+    },
   ] as const;
-
   return (
     <SettingsTabRoot>
       <SettingsSectionHeading
@@ -80,28 +101,33 @@ export function ConnectedAccountsContent() {
               <div
                 key={p.id}
                 className={cn(
-                  'group relative border-4 p-5 transition-all',
-                  p.linked ? 'border-primary bg-primary/5 shadow' : 'border-border bg-background'
+                  "group relative border-4 p-5 transition-all",
+                  p.linked
+                    ? "border-primary bg-primary/5 shadow"
+                    : "border-border bg-background",
                 )}
               >
-                {/* Status Light */}
                 <div className="absolute top-4 right-4 flex items-center gap-1.5">
                   <span
                     className={cn(
-                      'text-[8px] font-black uppercase tracking-tighter',
-                      p.linked ? 'text-primary' : 'text-muted-foreground'
+                      "text-[8px] font-black uppercase tracking-tighter",
+                      p.linked ? "text-primary" : "text-muted-foreground",
                     )}
                   >
-                    {p.linked ? 'LINKED' : linkingProvider === p.id ? 'LINKING...' : 'OFFLINE'}
+                    {p.linked
+                      ? "LINKED"
+                      : linkingProvider === p.id
+                        ? "LINKING..."
+                        : "OFFLINE"}
                   </span>
                   <div
                     className={cn(
-                      'size-2 border border-black',
+                      "size-2 border border-black",
                       p.linked
-                        ? 'bg-primary animate-pulse'
+                        ? "bg-primary animate-pulse"
                         : linkingProvider === p.id
-                          ? 'bg-yellow-400 animate-pulse'
-                          : 'bg-muted'
+                          ? "bg-yellow-400 animate-pulse"
+                          : "bg-muted",
                     )}
                   />
                 </div>
@@ -109,16 +135,18 @@ export function ConnectedAccountsContent() {
                 <div className="flex items-center gap-4 mb-6">
                   <div
                     className={cn(
-                      'flex shrink-0 items-center justify-center border-2 border-black shadow',
-                      p.id === 'github' && !p.linked ? 'size-16 overflow-hidden' : 'size-12',
+                      "flex shrink-0 items-center justify-center border-2 border-black shadow",
+                      p.id === "github" && !p.linked
+                        ? "size-16 overflow-hidden"
+                        : "size-12",
                       p.linked
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/20 text-muted-foreground'
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/20 text-muted-foreground",
                     )}
                   >
-                    {p.id === 'github' && !p.linked ? (
+                    {p.id === "github" && !p.linked ? (
                       <GithubConnectLottie size={56} />
-                    ) : p.id === 'google' ? (
+                    ) : p.id === "google" ? (
                       <span className="flex items-center justify-center bg-white p-1.5">
                         <Icon className="size-6" />
                       </span>
@@ -127,9 +155,11 @@ export function ConnectedAccountsContent() {
                     )}
                   </div>
                   <div>
-                    <h4 className="text-sm font-black uppercase leading-none">{p.label}</h4>
+                    <h4 className="text-sm font-black uppercase leading-none">
+                      {p.label}
+                    </h4>
                     <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest">
-                      {p.linked ? `Active Session` : 'No connection'}
+                      {p.linked ? `Active Session` : "No connection"}
                     </p>
                   </div>
                 </div>
@@ -141,7 +171,9 @@ export function ConnectedAccountsContent() {
                     disabled={!!disconnecting}
                     className="w-full py-2 border-2 border-destructive text-destructive font-black text-[10px] uppercase tracking-widest hover:bg-destructive hover:text-white transition-all disabled:opacity-50"
                   >
-                    {disconnecting === p.id ? 'SEVERING...' : 'Sever Connection'}
+                    {disconnecting === p.id
+                      ? "SEVERING..."
+                      : "Sever Connection"}
                   </button>
                 ) : (
                   <button
@@ -150,7 +182,9 @@ export function ConnectedAccountsContent() {
                     disabled={!!linkingProvider}
                     className="w-full py-2 border-2 border-black bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-black hover:text-white transition-all disabled:opacity-50 shadow active:shadow-none"
                   >
-                    {linkingProvider === p.id ? 'REDIRECTING...' : 'Establish Link'}
+                    {linkingProvider === p.id
+                      ? "REDIRECTING..."
+                      : "Establish Link"}
                   </button>
                 )}
               </div>

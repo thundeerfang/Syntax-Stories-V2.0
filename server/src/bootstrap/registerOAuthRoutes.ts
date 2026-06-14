@@ -1,48 +1,60 @@
-import type { Express, Request, Response, NextFunction } from 'express';
-import passport from 'passport';
-import { oauthCallbackHandler, oauthLinkHandler } from '../oauth/oauthExpress.js';
+import type { Express, Request, Response, NextFunction } from "express";
+import passport from "passport";
+import {
+  oauthCallbackHandler,
+  oauthLinkHandler,
+} from "../oauth/oauthExpress.js";
 import {
   getOAuthProviderRegistrations,
   type OAuthProviderRegistration,
-} from '../oauth/oauth.providers.js';
+} from "../oauth/oauth.providers.js";
 import {
   hasFacebookConfig,
   hasXConfig,
   hasDiscordConfig,
   hasTwitchConfig,
-} from '../passport/index.js';
-import { buildOAuthSignupState } from '../oauth/oauthSignupState.js';
+} from "../passport/index.js";
+import { buildOAuthSignupState } from "../oauth/oauthSignupState.js";
 import {
   attachOAuthReturnOrigin,
   resolveOAuthRedirectBase,
-} from '../oauth/oauthReturnOrigin.js';
-
-function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): void {
+} from "../oauth/oauthReturnOrigin.js";
+function registerEnabledProvider(
+  app: Express,
+  def: OAuthProviderRegistration,
+): void {
   const base = `/auth/${def.routeKey}`;
   const strat = def.strategy;
   const scopes = def.scopes;
-
-  const startAuth = (state: 'login' | 'signup') =>
+  const startAuth = (state: "login" | "signup") =>
     scopes?.length
       ? passport.authenticate(strat, { scope: scopes, state })
       : passport.authenticate(strat, { state });
-
-  const startSignupWithOptionalRef = async (req: Request, res: Response, next: NextFunction) => {
+  const startSignupWithOptionalRef = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
     const state = await buildOAuthSignupState(req);
     const authFn = scopes?.length
       ? passport.authenticate(strat, { scope: scopes, state })
       : passport.authenticate(strat, { state });
     return authFn(req, res, next);
   };
-
-  app.get(`${base}/login`, attachOAuthReturnOrigin, startAuth('login'));
-  app.get(`${base}/signup`, attachOAuthReturnOrigin, startSignupWithOptionalRef);
-  app.get(base, attachOAuthReturnOrigin, startAuth('login'));
-
+  app.get(`${base}/login`, attachOAuthReturnOrigin, startAuth("login"));
+  app.get(
+    `${base}/signup`,
+    attachOAuthReturnOrigin,
+    startSignupWithOptionalRef,
+  );
+  app.get(base, attachOAuthReturnOrigin, startAuth("login"));
   const linkStrat = def.linkStrategy ?? def.strategy;
   const linkOpts = scopes?.length ? { scope: scopes } : {};
-  app.get(`${base}/link`, attachOAuthReturnOrigin, oauthLinkHandler(linkStrat, linkOpts));
-
+  app.get(
+    `${base}/link`,
+    attachOAuthReturnOrigin,
+    oauthLinkHandler(linkStrat, linkOpts),
+  );
   app.get(
     `${base}/callback`,
     oauthCallbackHandler({
@@ -51,41 +63,43 @@ function registerEnabledProvider(app: Express, def: OAuthProviderRegistration): 
       auditProvider: def.auditProvider,
       clientCallbackSlug: def.clientCallbackSlug,
       idField: def.idField,
-    })
+    }),
   );
 }
-
 function registerDisabledStubs(
   app: Express,
-  def: OAuthProviderRegistration
+  def: OAuthProviderRegistration,
 ): void {
-  if (def.whenDisabled === 'redirectLoginSignup' && def.redirectErrorMessage) {
+  if (def.whenDisabled === "redirectLoginSignup" && def.redirectErrorMessage) {
     const err = def.redirectErrorMessage;
-    app.get(`/auth/${def.routeKey}/login`, attachOAuthReturnOrigin, (req, res) => {
-      const base = resolveOAuthRedirectBase(req, res);
-      res.redirect(`${base}/login?error=${err}`);
-    });
-    app.get(`/auth/${def.routeKey}/signup`, attachOAuthReturnOrigin, (req, res) => {
-      const base = resolveOAuthRedirectBase(req, res);
-      res.redirect(`${base}/login?error=${err}`);
-    });
+    app.get(
+      `/auth/${def.routeKey}/login`,
+      attachOAuthReturnOrigin,
+      (req, res) => {
+        const base = resolveOAuthRedirectBase(req, res);
+        res.redirect(`${base}/login?error=${err}`);
+      },
+    );
+    app.get(
+      `/auth/${def.routeKey}/signup`,
+      attachOAuthReturnOrigin,
+      (req, res) => {
+        const base = resolveOAuthRedirectBase(req, res);
+        res.redirect(`${base}/login?error=${err}`);
+      },
+    );
     return;
   }
-
-  if (def.whenDisabled === 'stubRoot501') {
+  if (def.whenDisabled === "stubRoot501") {
     const msg =
-      def.routeKey === 'x' ? 'X (Twitter) login not configured.' : 'Facebook login not configured.';
+      def.routeKey === "x"
+        ? "X (Twitter) login not configured."
+        : "Facebook login not configured.";
     app.get(`/auth/${def.routeKey}`, (_req, res) =>
-      res.status(501).json({ message: msg, success: false })
+      res.status(501).json({ message: msg, success: false }),
     );
   }
 }
-
-/**
- * Browser OAuth entrypoints and callbacks (Passport redirects).
- * Register after `registerAuthModuleRoutes` so `/auth/google/login` etc. reach these handlers
- * after the JSON router yields for non-matching paths.
- */
 export function registerOAuthRoutes(app: Express): void {
   const providers = getOAuthProviderRegistrations({
     hasDiscordConfig,
@@ -93,7 +107,6 @@ export function registerOAuthRoutes(app: Express): void {
     hasXConfig,
     hasTwitchConfig,
   });
-
   for (const def of providers) {
     if (def.isEnabled()) {
       registerEnabledProvider(app, def);
@@ -101,11 +114,10 @@ export function registerOAuthRoutes(app: Express): void {
       registerDisabledStubs(app, def);
     }
   }
-
-  app.get('/auth/apple', (_req, res) => {
+  app.get("/auth/apple", (_req, res) => {
     res.status(501).json({
       message:
-        'Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, Discord, X, Twitch, or email OTP.',
+        "Sign in with Apple is not yet configured. Use Google, GitHub, Facebook, Discord, X, Twitch, or email OTP.",
       success: false,
     });
   });

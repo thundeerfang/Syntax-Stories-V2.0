@@ -1,8 +1,6 @@
-'use client';
-
-import { useAuthStore } from '@/store/auth';
-import { useShallow } from 'zustand/react/shallow';
-
+"use client";
+import { useAuthStore } from "@/store/auth";
+import { useShallow } from "zustand/react/shallow";
 export function useAuth() {
   return useAuthStore(
     useShallow((s) => ({
@@ -17,6 +15,6 @@ export function useAuth() {
       verifyTwoFactor: s.verifyTwoFactor,
       logout: s.logout,
       resetEphemeralOtpState: s.resetEphemeralOtpState,
-    }))
+    })),
   );
 }

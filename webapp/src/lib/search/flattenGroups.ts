@@ -3,8 +3,7 @@ import {
   type SearchGroupKey,
   type SearchGroups,
   type SearchHit,
-} from '@contracts/searchApi';
-
+} from "@contracts/searchApi";
 export function flattenSearchGroups(groups: SearchGroups): SearchHit[] {
   const flat: SearchHit[] = [];
   for (const key of SEARCH_GROUP_ORDER) {
@@ -13,7 +12,6 @@ export function flattenSearchGroups(groups: SearchGroups): SearchHit[] {
   }
   return flat;
 }
-
 export function countSearchHits(groups: SearchGroups): number {
   let n = 0;
   for (const key of SEARCH_GROUP_ORDER) {
@@ -21,8 +19,9 @@ export function countSearchHits(groups: SearchGroups): number {
   }
   return n;
 }
-
-export function groupedEntries(groups: SearchGroups): Array<[SearchGroupKey, SearchHit[]]> {
+export function groupedEntries(
+  groups: SearchGroups,
+): Array<[SearchGroupKey, SearchHit[]]> {
   const out: Array<[SearchGroupKey, SearchHit[]]> = [];
   for (const key of SEARCH_GROUP_ORDER) {
     const hits = groups[key];

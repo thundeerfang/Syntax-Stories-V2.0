@@ -22,7 +22,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "strip:comments": "node scripts/strip-comments.mjs"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.18.3",
@@ -35,7 +36,6 @@
     "@tiptap/react": "^2.3.0",
     "@tiptap/starter-kit": "^2.3.0",
     "altcha": "^2.3.0",
-    "appwrite": "^23.0.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "country-state-city": "^3.2.1",

@@ -1,10 +1,8 @@
-import { Router, Request, Response } from 'express';
-import { verifyToken, type AuthUser } from '../middlewares/auth/index.js';
-import { UserModel } from '../models/User.js';
-import { unsealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
-
+import { Router, Request, Response } from "express";
+import { verifyToken, type AuthUser } from "../middlewares/auth/index.js";
+import { UserModel } from "../models/User.js";
+import { unsealProviderToken } from "../shared/crypto/providerTokenCrypto.js";
 const router = Router();
-
 type GitHubRepo = {
   id: number;
   name: string;
@@ -16,28 +14,35 @@ type GitHubRepo = {
   forks_count: number;
   updated_at: string;
   created_at: string;
-  owner: { login: string; avatar_url?: string };
+  owner: {
+    login: string;
+    avatar_url?: string;
+  };
   archived?: boolean;
   fork?: boolean;
 };
-
-/** Public: fetch repo info by owner/repo (no auth). For blog block URL paste. */
-router.get('/repo-info/:owner/:repo', async (req: Request, res: Response) => {
+router.get("/repo-info/:owner/:repo", async (req: Request, res: Response) => {
   try {
-    const owner = encodeURIComponent(String(req.params.owner || '').trim());
-    const repo = encodeURIComponent(String(req.params.repo || '').trim());
+    const owner = encodeURIComponent(String(req.params.owner || "").trim());
+    const repo = encodeURIComponent(String(req.params.repo || "").trim());
     if (!owner || !repo) {
-      res.status(400).json({ success: false, message: 'Invalid owner or repo.' });
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid owner or repo." });
       return;
     }
     const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: { Accept: 'application/vnd.github+json' },
+      headers: { Accept: "application/vnd.github+json" },
     });
     if (!ghRes.ok) {
-      const text = await ghRes.text().catch(() => '');
+      const text = await ghRes.text().catch(() => "");
       res
         .status(ghRes.status)
-        .json({ success: false, message: 'Repo not found or not public.', detail: text });
+        .json({
+          success: false,
+          message: "Repo not found or not public.",
+          detail: text,
+        });
       return;
     }
     const repoData = (await ghRes.json()) as GitHubRepo;
@@ -47,215 +52,283 @@ router.get('/repo-info/:owner/:repo', async (req: Request, res: Response) => {
         name: repoData.name,
         full_name: repoData.full_name,
         html_url: repoData.html_url,
-        description: repoData.description ?? '',
-        owner: repoData.owner?.login ?? '',
+        description: repoData.description ?? "",
+        owner: repoData.owner?.login ?? "",
         avatar_url: repoData.owner?.avatar_url ?? null,
       },
     });
   } catch (err) {
     res
       .status(500)
-      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+      .json({
+        success: false,
+        message: err instanceof Error ? err.message : "Server error",
+      });
   }
 });
-
 function monthYearFromIso(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
+  if (Number.isNaN(d.getTime())) return "";
   const yyyy = String(d.getFullYear());
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 }
-
 async function getGithubToken(userId: string): Promise<string | null> {
-  const u = await UserModel.findById(userId).select('+githubToken isGitAccount githubToken');
+  const u = await UserModel.findById(userId).select(
+    "+githubToken isGitAccount githubToken",
+  );
   if (!u || !u.isGitAccount) return null;
   const raw = u.githubToken;
-  if (raw == null || raw === '') return null;
+  if (raw == null || raw === "") return null;
   return unsealProviderToken(raw) ?? null;
 }
-
-router.get('/repos', verifyToken, async (req: Request, res: Response) => {
+router.get("/repos", verifyToken, async (req: Request, res: Response) => {
   try {
-    const authUser = (req as Request & { user: AuthUser }).user;
+    const authUser = (
+      req as Request & {
+        user: AuthUser;
+      }
+    ).user;
     const token = await getGithubToken(authUser._id);
     if (!token) {
-      res.status(400).json({ success: false, message: 'GitHub is not connected.' });
+      res
+        .status(400)
+        .json({ success: false, message: "GitHub is not connected." });
       return;
     }
-
     const ghRes = await fetch(
-      'https://api.github.com/user/repos?per_page=100&sort=updated&visibility=public&affiliation=owner',
+      "https://api.github.com/user/repos?per_page=100&sort=updated&visibility=public&affiliation=owner",
       {
         headers: {
           Authorization: `token ${token}`,
-          Accept: 'application/vnd.github+json',
+          Accept: "application/vnd.github+json",
         },
-      }
+      },
     );
     if (!ghRes.ok) {
-      const text = await ghRes.text().catch(() => '');
+      const text = await ghRes.text().catch(() => "");
       res
         .status(ghRes.status)
-        .json({ success: false, message: 'Failed to fetch repos from GitHub.', detail: text });
+        .json({
+          success: false,
+          message: "Failed to fetch repos from GitHub.",
+          detail: text,
+        });
       return;
     }
     const repos = (await ghRes.json()) as GitHubRepo[];
-    const cleaned = (Array.isArray(repos) ? repos : []).filter((r) => r && !r.archived);
+    const cleaned = (Array.isArray(repos) ? repos : []).filter(
+      (r) => r && !r.archived,
+    );
     res.json({ success: true, repos: cleaned });
   } catch (err) {
     res
       .status(500)
-      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
+      .json({
+        success: false,
+        message: err instanceof Error ? err.message : "Server error",
+      });
   }
 });
-
-router.get('/repo/:fullName', verifyToken, async (req: Request, res: Response) => {
-  try {
-    const authUser = (req as Request & { user: AuthUser }).user;
-    const token = await getGithubToken(authUser._id);
-    if (!token) {
-      res.status(400).json({ success: false, message: 'GitHub is not connected.' });
-      return;
-    }
-    const fullName = String(req.params.fullName || '').trim();
-    if (!fullName?.includes('/')) {
-      res.status(400).json({ success: false, message: 'Invalid repo name.' });
-      return;
-    }
-    const [ownerRaw, repoRaw] = fullName.split('/');
-    const owner = encodeURIComponent(ownerRaw);
-    const repoName = encodeURIComponent(repoRaw);
-
-    const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: 'application/vnd.github+json',
-      },
-    });
-    if (!ghRes.ok) {
-      const text = await ghRes.text().catch(() => '');
+router.get(
+  "/repo/:fullName",
+  verifyToken,
+  async (req: Request, res: Response) => {
+    try {
+      const authUser = (
+        req as Request & {
+          user: AuthUser;
+        }
+      ).user;
+      const token = await getGithubToken(authUser._id);
+      if (!token) {
+        res
+          .status(400)
+          .json({ success: false, message: "GitHub is not connected." });
+        return;
+      }
+      const fullName = String(req.params.fullName || "").trim();
+      if (!fullName?.includes("/")) {
+        res.status(400).json({ success: false, message: "Invalid repo name." });
+        return;
+      }
+      const [ownerRaw, repoRaw] = fullName.split("/");
+      const owner = encodeURIComponent(ownerRaw);
+      const repoName = encodeURIComponent(repoRaw);
+      const ghRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repoName}`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: "application/vnd.github+json",
+          },
+        },
+      );
+      if (!ghRes.ok) {
+        const text = await ghRes.text().catch(() => "");
+        res
+          .status(ghRes.status)
+          .json({
+            success: false,
+            message: "Failed to fetch repo from GitHub.",
+            detail: text,
+          });
+        return;
+      }
+      const repo = (await ghRes.json()) as GitHubRepo;
+      res.json({
+        success: true,
+        project: projectFromGithubRepo(repo),
+        repo,
+      });
+    } catch (err) {
       res
-        .status(ghRes.status)
-        .json({ success: false, message: 'Failed to fetch repo from GitHub.', detail: text });
-      return;
+        .status(500)
+        .json({
+          success: false,
+          message: err instanceof Error ? err.message : "Server error",
+        });
     }
-    const repo = (await ghRes.json()) as GitHubRepo;
-    res.json({
-      success: true,
-      project: projectFromGithubRepo(repo),
-      repo,
-    });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
-  }
-});
-
+  },
+);
 function projectFromGithubRepo(repo: GitHubRepo) {
   return {
-    type: 'project' as const,
-    source: 'github' as const,
+    type: "project" as const,
+    source: "github" as const,
     repoFullName: repo.full_name,
     repoId: repo.id,
     title: repo.name,
     publisher: repo.owner?.login,
     ongoing: false,
-    publicationDate: monthYearFromIso(repo.created_at) || monthYearFromIso(repo.updated_at),
+    publicationDate:
+      monthYearFromIso(repo.created_at) || monthYearFromIso(repo.updated_at),
     endDate: undefined,
     publicationUrl: repo.html_url,
-    description: repo.description ?? '',
-    media: [] as { url: string; title?: string }[],
+    description: repo.description ?? "",
+    media: [] as {
+      url: string;
+      title?: string;
+    }[],
   };
 }
-
-/** Batch-fetch GitHub repos and return project payloads (one round-trip from the browser vs N GETs). */
-router.post('/repos/import-batch', verifyToken, async (req: Request, res: Response) => {
-  try {
-    const authUser = (req as Request & { user: AuthUser }).user;
-    const token = await getGithubToken(authUser._id);
-    if (!token) {
-      res.status(400).json({ success: false, message: 'GitHub is not connected.' });
-      return;
-    }
-    const raw = (req.body as { fullNames?: unknown })?.fullNames;
-    if (!Array.isArray(raw) || raw.length === 0) {
-      res.status(400).json({ success: false, message: 'Provide fullNames: non-empty string[].' });
-      return;
-    }
-    if (raw.length > 15) {
-      res.status(400).json({ success: false, message: 'At most 15 repositories per request.' });
-      return;
-    }
-    const fullNames = raw.map((s) => String(s ?? '').trim()).filter((s) => s.length > 0);
-    if (fullNames.length === 0) {
-      res.status(400).json({ success: false, message: 'No valid repo names.' });
-      return;
-    }
-
-    const seenLower = new Set<string>();
-    const deduped: string[] = [];
-    const failed: { fullName: string; message: string }[] = [];
-    for (const fullName of fullNames) {
-      const key = fullName.toLowerCase();
-      if (seenLower.has(key)) {
-        failed.push({
-          fullName,
-          message: 'Duplicate in request: same repository listed more than once.',
-        });
-        continue;
+router.post(
+  "/repos/import-batch",
+  verifyToken,
+  async (req: Request, res: Response) => {
+    try {
+      const authUser = (
+        req as Request & {
+          user: AuthUser;
+        }
+      ).user;
+      const token = await getGithubToken(authUser._id);
+      if (!token) {
+        res
+          .status(400)
+          .json({ success: false, message: "GitHub is not connected." });
+        return;
       }
-      seenLower.add(key);
-      deduped.push(fullName);
-    }
-
-    const projects: ReturnType<typeof projectFromGithubRepo>[] = [];
-
-    for (const fullName of deduped) {
-      if (!fullName.includes('/')) {
-        failed.push({ fullName, message: 'Invalid repo name.' });
-        continue;
+      const raw = (
+        req.body as {
+          fullNames?: unknown;
+        }
+      )?.fullNames;
+      if (!Array.isArray(raw) || raw.length === 0) {
+        res
+          .status(400)
+          .json({
+            success: false,
+            message: "Provide fullNames: non-empty string[].",
+          });
+        return;
       }
-      const [ownerRaw, repoRaw] = fullName.split('/');
-      const owner = encodeURIComponent(ownerRaw);
-      const repoName = encodeURIComponent(repoRaw);
-      try {
-        const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
-          headers: {
-            Authorization: `token ${token}`,
-            Accept: 'application/vnd.github+json',
-          },
-        });
-        if (!ghRes.ok) {
-          const text = await ghRes.text().catch(() => '');
-          failed.push({ fullName, message: text || `HTTP ${ghRes.status}` });
+      if (raw.length > 15) {
+        res
+          .status(400)
+          .json({
+            success: false,
+            message: "At most 15 repositories per request.",
+          });
+        return;
+      }
+      const fullNames = raw
+        .map((s) => String(s ?? "").trim())
+        .filter((s) => s.length > 0);
+      if (fullNames.length === 0) {
+        res
+          .status(400)
+          .json({ success: false, message: "No valid repo names." });
+        return;
+      }
+      const seenLower = new Set<string>();
+      const deduped: string[] = [];
+      const failed: {
+        fullName: string;
+        message: string;
+      }[] = [];
+      for (const fullName of fullNames) {
+        const key = fullName.toLowerCase();
+        if (seenLower.has(key)) {
+          failed.push({
+            fullName,
+            message:
+              "Duplicate in request: same repository listed more than once.",
+          });
           continue;
         }
-        const repo = (await ghRes.json()) as GitHubRepo;
-        if (repo.archived) {
-          failed.push({ fullName, message: 'Archived repository skipped.' });
+        seenLower.add(key);
+        deduped.push(fullName);
+      }
+      const projects: ReturnType<typeof projectFromGithubRepo>[] = [];
+      for (const fullName of deduped) {
+        if (!fullName.includes("/")) {
+          failed.push({ fullName, message: "Invalid repo name." });
           continue;
         }
-        projects.push(projectFromGithubRepo(repo));
-      } catch (e) {
-        failed.push({
-          fullName,
-          message: e instanceof Error ? e.message : 'Request failed',
-        });
+        const [ownerRaw, repoRaw] = fullName.split("/");
+        const owner = encodeURIComponent(ownerRaw);
+        const repoName = encodeURIComponent(repoRaw);
+        try {
+          const ghRes = await fetch(
+            `https://api.github.com/repos/${owner}/${repoName}`,
+            {
+              headers: {
+                Authorization: `token ${token}`,
+                Accept: "application/vnd.github+json",
+              },
+            },
+          );
+          if (!ghRes.ok) {
+            const text = await ghRes.text().catch(() => "");
+            failed.push({ fullName, message: text || `HTTP ${ghRes.status}` });
+            continue;
+          }
+          const repo = (await ghRes.json()) as GitHubRepo;
+          if (repo.archived) {
+            failed.push({ fullName, message: "Archived repository skipped." });
+            continue;
+          }
+          projects.push(projectFromGithubRepo(repo));
+        } catch (e) {
+          failed.push({
+            fullName,
+            message: e instanceof Error ? e.message : "Request failed",
+          });
+        }
       }
+      res.json({
+        success: true,
+        projects,
+        failed,
+      });
+    } catch (err) {
+      res
+        .status(500)
+        .json({
+          success: false,
+          message: err instanceof Error ? err.message : "Server error",
+        });
     }
-
-    res.json({
-      success: true,
-      projects,
-      failed,
-    });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: err instanceof Error ? err.message : 'Server error' });
-  }
-});
-
+  },
+);
 export default router;

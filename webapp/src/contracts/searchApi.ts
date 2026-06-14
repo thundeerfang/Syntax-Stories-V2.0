@@ -1,39 +1,35 @@
 /**
  * Unified navbar search JSON API — `GET /api/search`.
- * Keep in sync with `server/src/routes/search.routes.ts`.
+ * Constants and group order live in `@syntax-stories/shared`.
  */
 
-export type SearchEntityType = 'user' | 'tag' | 'category' | 'squad' | 'blog' | 'feature';
-
-export type SearchGroupKey =
-  | 'users'
-  | 'tags'
-  | 'categories'
-  | 'squads'
-  | 'blogs'
-  | 'features';
-
-export const SEARCH_GROUP_ORDER: readonly SearchGroupKey[] = [
-  'features',
-  'blogs',
-  'tags',
-  'categories',
-  'squads',
-  'users',
-] as const;
+import type { SearchGroupKey } from "@syntax-stories/shared";
+export type {
+  SearchEntityType,
+  SearchGroupKey,
+  SearchContext,
+} from "@syntax-stories/shared";
+export {
+  SEARCH_GROUP_ORDER,
+  SEARCH_MIN_CHARS,
+  SEARCH_DEBOUNCE_MS,
+  SEARCH_MAX_QUERY_LEN,
+  SEARCH_DEFAULT_LIMIT,
+  SEARCH_MAX_LIMIT,
+} from "@syntax-stories/shared";
 
 export const SEARCH_GROUP_LABELS: Record<SearchGroupKey, string> = {
-  features: 'Features',
-  blogs: 'Posts',
-  tags: 'Tags',
-  categories: 'Categories',
-  squads: 'Squads',
-  users: 'People',
+  features: "Features",
+  blogs: "Posts",
+  tags: "Tags",
+  categories: "Categories",
+  squads: "Squads",
+  users: "People",
 };
 
 export interface SearchHit {
   id: string;
-  type: SearchEntityType;
+  type: import("@syntax-stories/shared").SearchEntityType;
   label: string;
   sublabel?: string;
   href: string;
@@ -51,6 +47,3 @@ export interface UnifiedSearchResponse {
   tookMs?: number;
   groups: SearchGroups;
 }
-
-export const SEARCH_MIN_CHARS = 3;
-export const SEARCH_DEBOUNCE_MS = 200;

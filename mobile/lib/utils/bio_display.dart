@@ -1,12 +1,23 @@
-/// Mongoose / server default when `bio` was never set on the account.
+/// Legacy schema / OAuth placeholder — not shown as a real user-written bio.
 const kDefaultProfileBio =
     'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀';
 
-/// Bio string to render — uses API value; falls back to server default when absent.
+const kPlaceholderProfileBios = {
+  kDefaultProfileBio,
+  'Welcome to Syntax Stories 🧑🏻‍💻',
+};
+
+bool isPlaceholderProfileBio(String? bio) {
+  final trimmed = bio?.trim();
+  if (trimmed == null || trimmed.isEmpty) return true;
+  return kPlaceholderProfileBios.contains(trimmed);
+}
+
+/// Bio string to render — uses API value; empty when absent or placeholder.
 String? resolveProfileBio(String? bio) {
+  if (isPlaceholderProfileBio(bio)) return null;
   final trimmed = bio?.trim();
   if (trimmed != null && trimmed.isNotEmpty) return trimmed;
-  if (bio == null) return kDefaultProfileBio;
   return null;
 }
 

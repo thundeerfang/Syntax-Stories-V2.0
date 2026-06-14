@@ -1,2 +1,2 @@
-export * from './applyCustomFeedRules';
-export * from './followedCategoriesStorage';
+export * from "./followedCategoriesStorage";
+export * from "./categoryFollowActions";

@@ -3,8 +3,8 @@
  * Keep in sync with `server/src/shared/contracts/legalApi.ts`.
  */
 
-export type LegalPolicyKind = 'terms' | 'privacy' | 'udd';
-export type AcceptPolicyKind = 'terms' | 'privacy';
+export type LegalPolicyKind = "terms" | "privacy" | "udd";
+export type AcceptPolicyKind = "terms" | "privacy";
 
 export interface PublishedPolicyResponse {
   ok: true;
@@ -15,7 +15,7 @@ export interface PublishedPolicyResponse {
   title: string;
   summary: string;
   body: string;
-  bodyFormat: 'markdown' | 'mdx' | 'richtext';
+  bodyFormat: "markdown" | "mdx" | "richtext";
   publishedAt: string | null;
   effectiveAt: string | null;
   region: string;
@@ -28,7 +28,7 @@ export interface PublishedPolicyResponse {
 
 export interface LegalNotFoundResponse {
   ok: false;
-  code: 'LEGAL_NOT_FOUND';
+  code: "LEGAL_NOT_FOUND";
   message: string;
 }
 
@@ -81,6 +81,6 @@ export interface PostDataDeletionRequestBody {
 export interface PostDataDeletionRequestResponse {
   ok: true;
   id: string;
-  status: 'requested';
+  status: "requested";
   requestedAt: string;
 }

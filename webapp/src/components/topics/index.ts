@@ -1,2 +1,5 @@
-/** @deprecated Import from `@/features/topics` instead. */
-export * from '@/features/topics';
+export {
+  CategoryFollowButton,
+  type CategoryFollowButtonProps,
+} from "./CategoryFollowButton";
+export { RankCountPill } from "@/components/layout/rail";

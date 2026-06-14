@@ -1,21 +1,11 @@
-import { normalizeProfileImg } from '../../models/User.js';
-
-/** Matches `User` schema default — legacy docs may omit `bio` until first profile save. */
-const DEFAULT_PROFILE_BIO =
-  'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀';
-
-function resolveProfileBio(raw: unknown): string | undefined {
-  if (typeof raw === 'string') return raw;
-  if (raw === undefined || raw === null) return DEFAULT_PROFILE_BIO;
-  return undefined;
-}
-
-/**
- * Account-owner projection: `GET /auth/me`, `PATCH /auth/profile*`.
- * Always map DB lean docs through this (or `toPublicProfile`) before JSON — avoid returning raw models.
- */
-export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record<string, unknown> {
-  const f = found as { createdAt?: Date };
+import { normalizeProfileImg } from "../../models/User.js";
+import { normalizeProfileBio } from "../../utils/profileBio.js";
+export function mapUserDocumentToApiUser(
+  found: Record<string, unknown>,
+): Record<string, unknown> {
+  const f = found as {
+    createdAt?: Date;
+  };
   return {
     _id: found._id,
     fullName: found.fullName,
@@ -25,7 +15,7 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     profileImgAlt: found.profileImgAlt,
     coverBanner: found.coverBanner,
     coverBannerAlt: found.coverBannerAlt,
-    bio: resolveProfileBio(found.bio),
+    bio: normalizeProfileBio(found.bio),
     job: found.job,
     portfolioUrl: found.portfolioUrl,
     linkedin: found.linkedin,
@@ -33,8 +23,6 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     github: found.github,
     youtube: found.youtube,
     stackAndTools: found.stackAndTools,
-    workExperiences: found.workExperiences,
-    education: found.education,
     certifications: found.certifications,
     projects: found.projects,
     openSourceContributions: found.openSourceContributions,
@@ -44,29 +32,44 @@ export function mapUserDocumentToApiUser(found: Record<string, unknown>): Record
     isFacebookAccount: found.isFacebookAccount,
     isXAccount: found.isXAccount,
     isAppleAccount: found.isAppleAccount,
-    isDiscordAccount: (found as { isDiscordAccount?: boolean }).isDiscordAccount ?? false,
+    isDiscordAccount:
+      (
+        found as {
+          isDiscordAccount?: boolean;
+        }
+      ).isDiscordAccount ?? false,
     twoFactorEnabled: found.twoFactorEnabled,
     createdAt: f.createdAt,
-    profileVersion: typeof found.profileVersion === 'number' ? found.profileVersion : 0,
+    profileVersion:
+      typeof found.profileVersion === "number" ? found.profileVersion : 0,
     profileUpdatedAt:
       found.profileUpdatedAt instanceof Date
         ? found.profileUpdatedAt.toISOString()
-        : typeof found.profileUpdatedAt === 'string'
+        : typeof found.profileUpdatedAt === "string"
           ? found.profileUpdatedAt
           : undefined,
-    staffRole: (found as { staffRole?: string }).staffRole ?? null,
-    blogStreakMode: (found as { blogStreakMode?: string }).blogStreakMode ?? 'daily',
+    staffRole:
+      (
+        found as {
+          staffRole?: string;
+        }
+      ).staffRole ?? null,
+    blogStreakMode:
+      (
+        found as {
+          blogStreakMode?: string;
+        }
+      ).blogStreakMode ?? "daily",
   };
 }
-
-/** Alias for account responses (settings / session user). */
 export const toAccountUser = mapUserDocumentToApiUser;
-
-/**
- * Public profile by username: same field pick as account for now; omit or redact here when a dedicated public route uses this mapper.
- */
-export function toPublicProfile(found: Record<string, unknown>): Record<string, unknown> {
-  const account = { ...mapUserDocumentToApiUser(found) } as Record<string, unknown>;
+export function toPublicProfile(
+  found: Record<string, unknown>,
+): Record<string, unknown> {
+  const account = { ...mapUserDocumentToApiUser(found) } as Record<
+    string,
+    unknown
+  >;
   delete account.email;
   return account;
 }

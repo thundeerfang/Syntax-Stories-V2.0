@@ -1,6 +1,6 @@
-import { getOrCreateDeviceFingerprint } from '@/lib/auth/deviceFingerprint';
-import { resolveSameOriginRequestUrl } from '@/lib/api/publicApiBase';
-import type { ProfileUpdateSection } from '@syntax-stories/shared';
+import { getOrCreateDeviceFingerprint } from "@/lib/auth/deviceFingerprint";
+import { resolveSameOriginRequestUrl } from "@/lib/api/publicApiBase";
+import type { ProfileUpdateSection } from "@syntax-stories/shared";
 import type {
   SendOtpPayload,
   SignUpEmailPayload,
@@ -11,8 +11,7 @@ import type {
   RefreshTokenResponseBody,
   SimpleSuccessMessage,
   OAuthExchangeResponseBody,
-} from '@contracts/authApi';
-
+} from "@contracts/authApi";
 export type {
   SendOtpPayload,
   SignUpEmailPayload,
@@ -23,54 +22,55 @@ export type {
   RefreshTokenResponseBody,
   SimpleSuccessMessage,
   OAuthExchangeResponseBody,
-} from '@contracts/authApi';
-
+} from "@contracts/authApi";
 function getAuthBase(): string {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-  return base ? `${base.replace(/\/$/, '')}/auth` : '/auth';
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+  return base ? `${base.replace(/\/$/, "")}/auth` : "/auth";
 }
-
 function getGithubImportBatchUrl(): string {
-  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-  return base ? `${base}/api/github/repos/import-batch` : '/api/github/repos/import-batch';
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
+  return base
+    ? `${base}/api/github/repos/import-batch`
+    : "/api/github/repos/import-batch";
 }
-
 export function getAltchaChallengeUrl(): string {
-  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
-  return base ? `${base}/auth/altcha/challenge` : '';
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
+  return base ? `${base}/auth/altcha/challenge` : "";
 }
-
-const AUTH_FETCH_TIMEOUT_MS = 28000; // 28s – avoid infinite "Sending..." when backend is cold or slow
-
+const AUTH_FETCH_TIMEOUT_MS = 28000;
 type AuthErrorJson = {
   message?: string;
-  error?: Array<{ message?: string }>;
+  error?: Array<{
+    message?: string;
+  }>;
   retryAfter?: number;
   attemptsLeft?: number;
   code?: string;
   details?: unknown;
 };
-
-function buildAuthErrorExtras(data: AuthErrorJson | null, res: Response): AuthErrorExtras {
-  const retryHeader = res.headers.get('Retry-After');
+function buildAuthErrorExtras(
+  data: AuthErrorJson | null,
+  res: Response,
+): AuthErrorExtras {
+  const retryHeader = res.headers.get("Retry-After");
   let retryFromHeader = Number.NaN;
-  if (retryHeader != null && retryHeader !== '') {
+  if (retryHeader != null && retryHeader !== "") {
     retryFromHeader = Number.parseInt(retryHeader, 10);
   }
   let retryAfter: number | undefined;
-  if (typeof data?.retryAfter === 'number') {
+  if (typeof data?.retryAfter === "number") {
     retryAfter = data.retryAfter;
   } else if (Number.isFinite(retryFromHeader)) {
     retryAfter = retryFromHeader;
   }
   return {
     retryAfter,
-    attemptsLeft: typeof data?.attemptsLeft === 'number' ? data.attemptsLeft : undefined,
-    code: typeof data?.code === 'string' ? data.code : undefined,
+    attemptsLeft:
+      typeof data?.attemptsLeft === "number" ? data.attemptsLeft : undefined,
+    code: typeof data?.code === "string" ? data.code : undefined,
     details: data?.details,
   };
 }
-
 function throwAuthErrorFromResponse(res: Response, text: string): never {
   let data: AuthErrorJson | null = null;
   try {
@@ -79,67 +79,65 @@ function throwAuthErrorFromResponse(res: Response, text: string): never {
     }
   } catch (e) {
     if (e instanceof SyntaxError) {
-      throw new AuthError(text || res.statusText || 'Request failed', res.status);
+      throw new AuthError(
+        text || res.statusText || "Request failed",
+        res.status,
+      );
     }
     throw e;
   }
   const detail = data?.error?.[0]?.message;
-  const msg = detail || data?.message || res.statusText || 'Request failed';
+  const msg = detail || data?.message || res.statusText || "Request failed";
   throw new AuthError(msg, res.status, buildAuthErrorExtras(data, res));
 }
-
 export type AuthErrorExtras = {
   retryAfter?: number;
   attemptsLeft?: number;
   code?: string;
-  /** Server `AppHttpError.details` (e.g. rate-limit metadata). */
   details?: unknown;
 };
-
 export class AuthError extends Error {
   constructor(
     message: string,
     public status?: number,
-    public extras?: AuthErrorExtras
+    public extras?: AuthErrorExtras,
   ) {
     super(message);
-    this.name = 'AuthError';
+    this.name = "AuthError";
   }
 }
-
-/** Called on 401 to try refresh; returns new access token or null. Set by store so any auth request can retry once. */
 let authRetryHandler: (() => Promise<string | null>) | null = null;
-
-export function setAuthRetryHandler(handler: (() => Promise<string | null>) | null) {
+export function setAuthRetryHandler(
+  handler: (() => Promise<string | null>) | null,
+) {
   authRetryHandler = handler;
 }
-
 function buildAuthFetchHeaders(
   restOptions: RequestInit | undefined,
-  token: string | undefined
+  token: string | undefined,
 ): Record<string, string> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(restOptions?.headers as Record<string, string> | undefined),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   if (globalThis.window !== undefined) {
     const fp = getOrCreateDeviceFingerprint();
-    if (fp) headers['X-Device-Fingerprint'] = fp;
+    if (fp) headers["X-Device-Fingerprint"] = fp;
   }
   return headers;
 }
-
 async function authFetch<T>(
   path: string,
-  options?: RequestInit & { token?: string },
-  isRetry = false
+  options?: RequestInit & {
+    token?: string;
+  },
+  isRetry = false,
 ): Promise<T> {
   const url = resolveSameOriginRequestUrl(path);
   const token = options?.token;
   const { token: _, ...restOptions } = options ?? {};
   const headers = buildAuthFetchHeaders(restOptions, token);
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), AUTH_FETCH_TIMEOUT_MS);
   let res: Response;
@@ -148,33 +146,31 @@ async function authFetch<T>(
       ...restOptions,
       headers,
       signal: controller.signal,
-      credentials: 'include',
+      credentials: "include",
     });
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Request timed out. If the server is waking up, try again in a moment.');
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        "Request timed out. If the server is waking up, try again in a moment.",
+      );
     }
     throw err;
   }
   clearTimeout(timeoutId);
-  const text = await res.text().catch(() => '');
-
+  const text = await res.text().catch(() => "");
   if (!res.ok) {
     if (res.status === 401 && token && !isRetry && authRetryHandler) {
       const newToken = await authRetryHandler();
-      if (newToken) return authFetch<T>(path, { ...restOptions, token: newToken }, true);
+      if (newToken)
+        return authFetch<T>(path, { ...restOptions, token: newToken }, true);
     }
     throwAuthErrorFromResponse(res, text);
   }
-
   if (!text) return {} as T;
   return JSON.parse(text) as T;
 }
-
 export type {
-  WorkExperience,
-  EducationItem,
   CertificationItem,
   ProjectItem,
   OpenSourceContribution,
@@ -184,150 +180,104 @@ export type {
   AccountResponseJson,
   AccountResponse,
   UpdateProfilePayload,
-  ParseCvMissingFieldKey,
-  IncompleteItemHint,
-  IncompleteItemHints,
-  ParseCvResponse,
-} from '@contracts/profileApi';
+} from "@contracts/profileApi";
 import type {
   AccountResponse,
   AccountResponseJson,
   AccountUser,
   AuthUser,
-  IncompleteItemHints,
-  ParseCvMissingFieldKey,
-  ParseCvResponse,
   ProjectItem,
   UpdateProfilePayload,
-} from '@contracts/profileApi';
-
-export function unwrapAccountUserPayload(raw: AccountResponseJson): AccountUser {
+} from "@contracts/profileApi";
+export function unwrapAccountUserPayload(
+  raw: AccountResponseJson,
+): AccountUser {
   const u = raw.data?.user ?? raw.user;
   if (!u?._id) {
-    throw new Error('Invalid account response: missing user');
+    throw new Error("Invalid account response: missing user");
   }
   return u;
 }
-
-/** Re-export for callers that import profile types from `auth` only. */
 export type { ProfileUpdateSection };
 export {
   profileBasicPatchSchema,
   profileCertificationsPatchSchema,
-  profileEducationPatchSchema,
   profileProjectsPatchSchema,
   profileSetupPatchSchema,
   profileSocialPatchSchema,
   profileStackPatchSchema,
-  profileWorkPatchSchema,
-} from '@syntax-stories/shared';
-
-type ParseCvResponseJson = ParseCvResponse & {
-  message?: string;
-  data?: {
-    extracted?: Partial<UpdateProfilePayload>;
-    missingFields?: ParseCvMissingFieldKey[];
-    incompleteItemHints?: IncompleteItemHints;
-  };
-};
-
+} from "@syntax-stories/shared";
 export const authApi = {
   sendOtp: (data: SendOtpPayload) =>
     authFetch<SendOtpResponse>(`${getAuthBase()}/send-otp`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
     }),
-
   signupEmail: (data: SignUpEmailPayload) =>
     authFetch<SendOtpResponse>(`${getAuthBase()}/signup-email`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
     }),
-
   verifyOtp: (data: VerifyOtpPayload) =>
     authFetch<VerifyOtpResponse>(`${getAuthBase()}/verify-otp`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
     }),
-
   verifyTwoFactorLogin: (data: { challengeToken: string; token: string }) =>
-    authFetch<VerifyTwoFactorLoginResponse>(`${getAuthBase()}/2fa/verify-login`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  /** Swap one-time `code` from OAuth redirect for tokens (no tokens in URL). */
+    authFetch<VerifyTwoFactorLoginResponse>(
+      `${getAuthBase()}/2fa/verify-login`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    ),
   exchangeOAuthCode: (code: string) =>
     authFetch<OAuthExchangeResponseBody>(`${getAuthBase()}/oauth/exchange`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ code }),
     }),
-
   logout: (accessToken: string, refreshToken?: string | null) =>
-    authFetch<SimpleSuccessMessage & { message: string }>(`${getAuthBase()}/logout`, {
-      method: 'POST',
+    authFetch<
+      SimpleSuccessMessage & {
+        message: string;
+      }
+    >(`${getAuthBase()}/logout`, {
+      method: "POST",
       token: accessToken,
       body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     }),
-
-  /** Revoke session by refresh token (no JWT). Call when clearing state after token expiry. */
   revokeSession: (refreshToken: string) =>
     authFetch<SimpleSuccessMessage>(`${getAuthBase()}/revoke-session`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ refreshToken }),
     }),
-
   refresh: (refreshToken: string) =>
     authFetch<RefreshTokenResponseBody>(`${getAuthBase()}/refresh`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ refreshToken }),
     }),
-
   getAccount: async (accessToken: string): Promise<AccountResponse> => {
     const raw = await authFetch<AccountResponseJson>(`${getAuthBase()}/me`, {
-      method: 'GET',
+      method: "GET",
       token: accessToken,
     });
     return { user: unwrapAccountUserPayload(raw), message: raw.message };
   },
-
   updateProfile: async (
     accessToken: string,
-    data: UpdateProfilePayload
+    data: UpdateProfilePayload,
   ): Promise<{
     success: boolean;
     user: AccountUser;
-    achievements?: import('@/contracts/achievementsApi').AchievementsPayload;
-  }> => {
-    const raw = await authFetch<AccountResponseJson>(`${getAuthBase()}/profile`, {
-      method: 'PATCH',
-      token: accessToken,
-      body: JSON.stringify(data),
-    });
-    return {
-      success: raw.success ?? true,
-      user: unwrapAccountUserPayload(raw),
-      achievements: raw.achievements,
-    };
-  },
-
-  /** Section-scoped profile PATCH (smaller payload + Zod schema). See `docs/PROFILE_UPDATE_FLOW.md`. */
-  updateProfileSection: async (
-    accessToken: string,
-    section: ProfileUpdateSection,
-    data: UpdateProfilePayload
-  ): Promise<{
-    success: boolean;
-    user: AccountUser;
-    achievements?: import('@/contracts/achievementsApi').AchievementsPayload;
+    achievements?: import("@/contracts/achievementsApi").AchievementsPayload;
   }> => {
     const raw = await authFetch<AccountResponseJson>(
-      `${getAuthBase()}/profile/${encodeURIComponent(section)}`,
+      `${getAuthBase()}/profile`,
       {
-        method: 'PATCH',
+        method: "PATCH",
         token: accessToken,
         body: JSON.stringify(data),
-      }
+      },
     );
     return {
       success: raw.success ?? true,
@@ -335,90 +285,98 @@ export const authApi = {
       achievements: raw.achievements,
     };
   },
-
-  /** Parse CV/Resume PDF and return extracted profile + missing field keys. Does not update profile. */
-  parseCv: async (accessToken: string, file: File) => {
-    const path = `${getAuthBase()}/parse-cv`;
-    const url = resolveSameOriginRequestUrl(path);
-    const formData = new FormData();
-    formData.append('pdf', file);
-    const headers: HeadersInit = { Authorization: `Bearer ${accessToken}` };
-    const res = await fetch(url, { method: 'POST', body: formData, headers });
-    const data = (await res.json().catch(() => ({}))) as ParseCvResponseJson;
-    if (!res.ok) throw new Error((data.message as string) || 'Failed to parse PDF');
-    const extracted = data.data?.extracted ?? data.extracted ?? {};
-    const missingFields = (data.data?.missingFields ??
-      data.missingFields ??
-      []) as ParseCvMissingFieldKey[];
-    const incompleteItemHints = data.data?.incompleteItemHints ?? data.incompleteItemHints ?? {};
+  updateProfileSection: async (
+    accessToken: string,
+    section: ProfileUpdateSection,
+    data: UpdateProfilePayload,
+  ): Promise<{
+    success: boolean;
+    user: AccountUser;
+    achievements?: import("@/contracts/achievementsApi").AchievementsPayload;
+  }> => {
+    const raw = await authFetch<AccountResponseJson>(
+      `${getAuthBase()}/profile/${encodeURIComponent(section)}`,
+      {
+        method: "PATCH",
+        token: accessToken,
+        body: JSON.stringify(data),
+      },
+    );
     return {
-      success: Boolean(data.success),
-      extracted,
-      missingFields,
-      incompleteItemHints,
-      achievements: (
-        data as { achievements?: import('@/contracts/achievementsApi').AchievementsPayload }
-      ).achievements,
+      success: raw.success ?? true,
+      user: unwrapAccountUserPayload(raw),
+      achievements: raw.achievements,
     };
   },
-
   disconnectProvider: (accessToken: string, provider: string) =>
-    authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/disconnect/${provider}`, {
-      method: 'POST',
+    authFetch<{
+      success: boolean;
+      message?: string;
+    }>(`${getAuthBase()}/disconnect/${provider}`, {
+      method: "POST",
       token: accessToken,
     }),
-
-  /** Get redirect URL to link an OAuth provider to the current account. Call then set window.location = redirectUrl. */
   getLinkRedirectUrl: (
     accessToken: string,
-    provider: 'google' | 'github' | 'facebook' | 'x' | 'discord'
+    provider: "google" | "github" | "facebook" | "x" | "discord",
   ) =>
-    authFetch<{ success: boolean; redirectUrl?: string; message?: string }>(
-      `${getAuthBase()}/link-request`,
-      {
-        method: 'POST',
-        token: accessToken,
-        body: JSON.stringify({ provider }),
-      }
-    ),
-
+    authFetch<{
+      success: boolean;
+      redirectUrl?: string;
+      message?: string;
+    }>(`${getAuthBase()}/link-request`, {
+      method: "POST",
+      token: accessToken,
+      body: JSON.stringify({ provider }),
+    }),
   initEmailChange: (accessToken: string, newEmail: string) =>
-    authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/email-change/init`, {
-      method: 'POST',
+    authFetch<{
+      success: boolean;
+      message?: string;
+    }>(`${getAuthBase()}/email-change/init`, {
+      method: "POST",
       token: accessToken,
       body: JSON.stringify({ newEmail }),
     }),
-
-  verifyEmailChange: (accessToken: string, currentCode: string, newCode: string) =>
-    authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/email-change/verify`, {
-      method: 'POST',
+  verifyEmailChange: (
+    accessToken: string,
+    currentCode: string,
+    newCode: string,
+  ) =>
+    authFetch<{
+      success: boolean;
+      message?: string;
+    }>(`${getAuthBase()}/email-change/verify`, {
+      method: "POST",
       token: accessToken,
       body: JSON.stringify({ currentCode, newCode }),
     }),
-
   cancelEmailChange: (accessToken: string) =>
-    authFetch<{ success: boolean; message?: string }>(`${getAuthBase()}/email-change/cancel`, {
-      method: 'POST',
+    authFetch<{
+      success: boolean;
+      message?: string;
+    }>(`${getAuthBase()}/email-change/cancel`, {
+      method: "POST",
       token: accessToken,
     }),
-
-  /** Batch import GitHub repos as project payloads (replaces N× GET /github/repo/:fullName). */
   importGithubReposBatch: (
     accessToken: string,
-    fullNames: string[]
+    fullNames: string[],
   ): Promise<{
     success: boolean;
     projects?: ProjectItem[];
-    failed?: { fullName: string; message: string }[];
+    failed?: {
+      fullName: string;
+      message: string;
+    }[];
     message?: string;
   }> =>
     authFetch(getGithubImportBatchUrl(), {
-      method: 'POST',
+      method: "POST",
       token: accessToken,
       body: JSON.stringify({ fullNames }),
     }),
 };
-
 export function normalizeUser(backendUser: AccountUser): AuthUser {
   return {
     id: backendUser._id,
@@ -441,8 +399,6 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     youtube: backendUser.youtube,
     stackAndTools: backendUser.stackAndTools,
     stackAndToolsDisplay: backendUser.stackAndToolsDisplay,
-    workExperiences: backendUser.workExperiences,
-    education: backendUser.education,
     certifications: backendUser.certifications,
     projects: backendUser.projects,
     openSourceContributions: backendUser.openSourceContributions,
@@ -454,7 +410,10 @@ export function normalizeUser(backendUser: AccountUser): AuthUser {
     isXAccount: backendUser.isXAccount,
     isAppleAccount: backendUser.isAppleAccount,
     createdAt: backendUser.createdAt,
-    profileVersion: typeof backendUser.profileVersion === 'number' ? backendUser.profileVersion : 0,
+    profileVersion:
+      typeof backendUser.profileVersion === "number"
+        ? backendUser.profileVersion
+        : 0,
     profileUpdatedAt: backendUser.profileUpdatedAt,
     blogStreakMode: backendUser.blogStreakMode,
   };

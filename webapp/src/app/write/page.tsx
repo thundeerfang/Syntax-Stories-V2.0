@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { useSidebar } from '@/hooks/useSidebar';
-import { blogApi, pickRemoteThumbnailForApi } from '@/api/blog';
-import { BlogWritePageSkeletonInner } from '@/components/skeletons';
+import React, { useState, useEffect } from "react";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useSidebar } from "@/hooks/useSidebar";
+import { blogApi, pickRemoteThumbnailForApi } from "@/api/blog";
+import { BlogWritePageSkeletonInner } from "@/components/skeletons";
 import {
   Save,
   Send,
@@ -17,32 +17,35 @@ import {
   Globe,
   ShieldCheck,
   Box,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/core/utils';
-import { SHELL_CONTENT_RAIL_CLASS } from '@/lib/shell/shellContentRail';
+} from "lucide-react";
+import { BlockShadowButton } from "@/components/ui/button";
+import { toast } from "sonner";
+import { cn } from "@/lib/core/utils";
+import { shell } from "@/lib/styles";
 import {
   BlogWriteEditor,
   Block,
   createBlockInSection,
   stripLegacyGifBlocks,
-} from '@/components/ui/editor';
+} from "@/components/ui/editor";
 
 const TITLE_MAX = 300;
 /** Single section for /write (no section UI); must match how editor filters blocks. */
-const WRITE_DEFAULT_SECTION_ID = 's-1';
+const WRITE_DEFAULT_SECTION_ID = "s-1";
 
 export default function WriteBlogPage() {
   const { user, token, shouldBlock } = useRequireAuth();
   const { isOpen } = useSidebar();
-  const [title, setTitle] = useState('');
-  const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [title, setTitle] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [blocks, setBlocks] = useState<Block[]>(() => [
-    createBlockInSection('paragraph', WRITE_DEFAULT_SECTION_ID),
+    createBlockInSection("paragraph", WRITE_DEFAULT_SECTION_ID),
   ]);
   const [submitting, setSubmitting] = useState(false);
-  const [submitAction, setSubmitAction] = useState<'draft' | 'published' | null>(null);
-  const [currentTime, setCurrentTime] = useState('');
+  const [submitAction, setSubmitAction] = useState<
+    "draft" | "published" | null
+  >(null);
+  const [currentTime, setCurrentTime] = useState("");
 
   useEffect(() => {
     const tick = () => setCurrentTime(new Date().toLocaleTimeString());
@@ -51,9 +54,9 @@ export default function WriteBlogPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleSubmit = async (status: 'draft' | 'published') => {
+  const handleSubmit = async (status: "draft" | "published") => {
     if (!title.trim()) {
-      toast.error('ERROR: TITLE_REQUIRED');
+      toast.error("ERROR: TITLE_REQUIRED");
       return;
     }
     if (!token) return;
@@ -65,19 +68,23 @@ export default function WriteBlogPage() {
         {
           title,
           content,
-          thumbnailUrl: pickRemoteThumbnailForApi(thumbnailUrl.trim() || undefined),
+          thumbnailUrl: pickRemoteThumbnailForApi(
+            thumbnailUrl.trim() || undefined,
+          ),
           status,
         },
-        token
+        token,
       );
-      toast.success(status === 'published' ? 'POST_LIVE' : 'DRAFT_SYNCED');
-      if (status === 'published') {
-        setTitle('');
-        setBlocks([createBlockInSection('paragraph', WRITE_DEFAULT_SECTION_ID)]);
+      toast.success(status === "published" ? "POST_LIVE" : "DRAFT_SYNCED");
+      if (status === "published") {
+        setTitle("");
+        setBlocks([
+          createBlockInSection("paragraph", WRITE_DEFAULT_SECTION_ID),
+        ]);
       }
     } catch (err) {
       console.error(err);
-      toast.error('FATAL: UPLOAD_FAILED');
+      toast.error("FATAL: UPLOAD_FAILED");
     } finally {
       setSubmitting(false);
       setSubmitAction(null);
@@ -89,11 +96,11 @@ export default function WriteBlogPage() {
   return (
     <div
       className={cn(
-        'min-h-screen bg-background pb-10 font-mono text-foreground transition-all duration-300',
-        isOpen ? 'lg:ml-64' : 'ml-0'
+        "min-h-screen bg-background pb-10 font-mono text-foreground transition-all duration-300",
+        isOpen ? "lg:ml-64" : "ml-0",
       )}
     >
-      <div className={SHELL_CONTENT_RAIL_CLASS}>
+      <div className={shell.contentRail}>
         <div className="w-full">
           {/* 1. TOP SYSTEM NAV */}
           <div className="border-b-2 border-border bg-card py-2 flex items-center justify-between shadow sticky top-0 z-50">
@@ -104,9 +111,11 @@ export default function WriteBlogPage() {
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
                 <span>Workspace</span>
                 <ChevronRight className="h-3 w-3 opacity-30" />
-                <span className="text-primary">{user?.username || 'user'}</span>
+                <span className="text-primary">{user?.username || "user"}</span>
                 <ChevronRight className="h-3 w-3 opacity-30" />
-                <span className="bg-muted px-2 border border-border">new_entry.log</span>
+                <span className="bg-muted px-2 border border-border">
+                  new_entry.log
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-6 text-[10px] font-bold text-muted-foreground">
@@ -115,7 +124,7 @@ export default function WriteBlogPage() {
                 <span>Uptime: 99.9%</span>
               </div>
               <div className="hidden min-w-[5.5rem] tabular-nums md:block">
-                {currentTime || '\u00a0'}
+                {currentTime || "\u00a0"}
               </div>
             </div>
           </div>
@@ -129,14 +138,16 @@ export default function WriteBlogPage() {
                   <FileCode className="h-3.5 w-3.5" /> Project_Files
                 </h3>
                 <div className="space-y-1">
-                  {['content.json', 'assets.lib', 'metadata.env'].map((file) => (
-                    <div
-                      key={file}
-                      className="text-[11px] py-1 px-2 border border-transparent hover:border-border hover:bg-card cursor-pointer transition-all flex items-center gap-2"
-                    >
-                      <Box className="h-3 w-3 text-primary" /> {file}
-                    </div>
-                  ))}
+                  {["content.json", "assets.lib", "metadata.env"].map(
+                    (file) => (
+                      <div
+                        key={file}
+                        className="text-[11px] py-1 px-2 border border-transparent hover:border-border hover:bg-card cursor-pointer transition-all flex items-center gap-2"
+                      >
+                        <Box className="h-3 w-3 text-primary" /> {file}
+                      </div>
+                    ),
+                  )}
                 </div>
               </section>
 
@@ -146,10 +157,12 @@ export default function WriteBlogPage() {
                 </h3>
                 <div className="bg-black/5 p-3 border-2 border-border space-y-2">
                   <div className="flex justify-between text-[9px]">
-                    <span>Blocks:</span> <span className="text-primary">{blocks.length}</span>
+                    <span>Blocks:</span>{" "}
+                    <span className="text-primary">{blocks.length}</span>
                   </div>
                   <div className="flex justify-between text-[9px]">
-                    <span>Words:</span> <span className="text-primary">~{blocks.length * 12}</span>
+                    <span>Words:</span>{" "}
+                    <span className="text-primary">~{blocks.length * 12}</span>
                   </div>
                   <div className="w-full bg-border h-1 mt-2">
                     <div className="bg-primary h-full w-2/3"></div>
@@ -167,7 +180,9 @@ export default function WriteBlogPage() {
                   </span>
                   <textarea
                     value={title}
-                    onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
+                    onChange={(e) =>
+                      setTitle(e.target.value.slice(0, TITLE_MAX))
+                    }
                     placeholder="INPUT_TITLE_HERE..."
                     className="w-full bg-transparent border-b-4 border-border text-4xl md:text-5xl font-black uppercase tracking-tighter focus:outline-none focus:border-primary placeholder:opacity-10 py-4 resize-none"
                     rows={2}
@@ -190,30 +205,37 @@ export default function WriteBlogPage() {
             <div className="lg:col-span-3 border-l-2 border-border bg-card flex flex-col p-0 space-y-0">
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border-b border-border pb-2">
-                  <ShieldCheck className="h-4 w-4 text-primary" /> Publish_Control
+                  <ShieldCheck className="h-4 w-4 text-primary" />{" "}
+                  Publish_Control
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
-                  <button
-                    onClick={() => handleSubmit('published')}
+                  <BlockShadowButton
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    onClick={() => handleSubmit("published")}
                     disabled={submitting}
-                    className="group relative bg-primary text-primary-foreground border-2 border-black p-3 font-black uppercase text-xs shadow active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
+                    loading={submitAction === "published"}
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <Send className="h-4 w-4" />{' '}
-                      {submitAction === 'published' ? 'Deploying...' : 'Deploy_Post'}
-                    </div>
-                  </button>
+                    <Send className="h-4 w-4" aria-hidden />
+                    {submitAction === "published"
+                      ? "Deploying..."
+                      : "Deploy_Post"}
+                  </BlockShadowButton>
 
-                  <button
-                    onClick={() => handleSubmit('draft')}
+                  <BlockShadowButton
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    onClick={() => handleSubmit("draft")}
                     disabled={submitting}
-                    className="bg-muted border-2 border-border p-3 font-black uppercase text-xs shadow active:shadow-none active:translate-x-1 active:translate-y-1 transition-all hover:bg-card"
+                    loading={submitAction === "draft"}
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <Save className="h-4 w-4" />{' '}
-                      {submitAction === 'draft' ? 'Saving...' : 'Save_Local'}
-                    </div>
-                  </button>
+                    <Save className="h-4 w-4" aria-hidden />
+                    {submitAction === "draft" ? "Saving..." : "Save_Local"}
+                  </BlockShadowButton>
                 </div>
               </div>
 
@@ -268,7 +290,7 @@ export default function WriteBlogPage() {
             SYSTEM_STABLE
           </div>
           <div className="text-[9px] text-muted-foreground font-mono truncate">
-            {`LOG: User "${user?.username ?? ''}" initiated write sequence... payload size ${JSON.stringify(blocks).length} bytes...`}
+            {`LOG: User "${user?.username ?? ""}" initiated write sequence... payload size ${JSON.stringify(blocks).length} bytes...`}
           </div>
         </div>
       </div>

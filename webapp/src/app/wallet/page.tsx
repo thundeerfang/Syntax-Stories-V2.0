@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import { Wallet } from 'lucide-react';
+import Link from "next/link";
+import { Wallet } from "lucide-react";
 
 export default function WalletPage() {
   return (
@@ -7,12 +7,15 @@ export default function WalletPage() {
       <div className="mb-6 flex size-16 items-center justify-center border-2 border-border bg-muted/30 shadow">
         <Wallet className="size-8 text-primary" strokeWidth={2} aria-hidden />
       </div>
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Wallet</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+        Wallet
+      </p>
       <h1 className="mt-2 text-2xl font-black uppercase tracking-tight text-foreground sm:text-3xl">
         Coming soon
       </h1>
       <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground">
-        Balances, rewards, and payouts will live here. Check back after the next release.
+        Balances, rewards, and payouts will live here. Check back after the next
+        release.
       </p>
       <Link
         href="/"

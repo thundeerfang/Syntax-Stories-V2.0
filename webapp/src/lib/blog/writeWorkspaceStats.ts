@@ -1,4 +1,4 @@
-import type { Block } from '@/components/ui/editor';
+import type { Block } from "@/components/ui/editor";
 import type {
   CodePayload,
   GithubRepoPayload,
@@ -8,83 +8,91 @@ import type {
   TablePayload,
   UnsplashPayload,
   VideoEmbedPayload,
-} from '@/types/blog';
-
-/** Count words in plain text (ASCII-ish; good enough for editor stats). */
+} from "@/types/blog";
 export function countWordsInPlainText(text: string): number {
-  const t = text.replaceAll(/\s+/g, ' ').trim();
+  const t = text.replaceAll(/\s+/g, " ").trim();
   if (!t) return 0;
   return t.split(/\s+/).filter(Boolean).length;
 }
-
 function extractTextFromTipTapNode(node: unknown): string {
-  if (!node || typeof node !== 'object') return '';
+  if (!node || typeof node !== "object") return "";
   const n = node as Record<string, unknown>;
-  if (n.type === 'text' && typeof n.text === 'string') return n.text;
+  if (n.type === "text" && typeof n.text === "string") return n.text;
   const c = n.content;
-  if (!Array.isArray(c)) return '';
-  return c.map((child) => extractTextFromTipTapNode(child)).join('');
+  if (!Array.isArray(c)) return "";
+  return c.map((child) => extractTextFromTipTapNode(child)).join("");
 }
-
-export function paragraphPayloadPlainText(payload: ParagraphPayload | undefined): string {
-  if (!payload) return '';
+export function paragraphPayloadPlainText(
+  payload: ParagraphPayload | undefined,
+): string {
+  if (!payload) return "";
   if (payload.doc) return extractTextFromTipTapNode(payload.doc);
-  return payload.text ?? '';
+  return payload.text ?? "";
 }
-
-/** Word count from summary HTML (same idea as write page summary limits). */
 export function countWordsInSummaryHtml(html: string): number {
-  if (!html || html === '<br>') return 0;
-  if (typeof document === 'undefined') {
-    const text = html.replaceAll(/<[^>]*>/g, ' ').replaceAll('&nbsp;', ' ');
+  if (!html || html === "<br>") return 0;
+  if (typeof document === "undefined") {
+    const text = html.replaceAll(/<[^>]*>/g, " ").replaceAll("&nbsp;", " ");
     return countWordsInPlainText(text);
   }
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.innerHTML = html;
-  const text = div.textContent ?? '';
+  const text = div.textContent ?? "";
   return countWordsInPlainText(text);
 }
-
 export function countWordsForBlock(block: Block): number {
-  const p = (block as { payload?: unknown }).payload as Record<string, unknown> | undefined;
-  switch (block.type) {
-    case 'paragraph':
-      return countWordsInPlainText(paragraphPayloadPlainText(p as ParagraphPayload));
-    case 'heading':
-      return countWordsInPlainText(typeof p?.text === 'string' ? p.text : '');
-    case 'code':
-      return countWordsInPlainText(String((p as CodePayload | undefined)?.code ?? ''));
-    case 'table': {
-      const rows = (p as TablePayload | undefined)?.rows ?? [];
-      return countWordsInPlainText(rows.map((r) => r.join(' ')).join(' '));
+  const p = (
+    block as {
+      payload?: unknown;
     }
-    case 'mermaidDiagram':
-      return countWordsInPlainText(String((p as MermaidDiagramPayload | undefined)?.source ?? ''));
-    case 'image':
-      return countWordsInPlainText(String((p as ImagePayload | undefined)?.title ?? ''));
-    case 'videoEmbed': {
+  ).payload as Record<string, unknown> | undefined;
+  switch (block.type) {
+    case "paragraph":
+      return countWordsInPlainText(
+        paragraphPayloadPlainText(p as ParagraphPayload),
+      );
+    case "heading":
+      return countWordsInPlainText(typeof p?.text === "string" ? p.text : "");
+    case "code":
+      return countWordsInPlainText(
+        String((p as CodePayload | undefined)?.code ?? ""),
+      );
+    case "table": {
+      const rows = (p as TablePayload | undefined)?.rows ?? [];
+      return countWordsInPlainText(rows.map((r) => r.join(" ")).join(" "));
+    }
+    case "mermaidDiagram":
+      return countWordsInPlainText(
+        String((p as MermaidDiagramPayload | undefined)?.source ?? ""),
+      );
+    case "image":
+      return countWordsInPlainText(
+        String((p as ImagePayload | undefined)?.title ?? ""),
+      );
+    case "videoEmbed": {
       const v = p as VideoEmbedPayload | undefined;
       const urls = v?.videos ?? (v?.url ? [v.url] : []);
-      return countWordsInPlainText(urls.join(' '));
+      return countWordsInPlainText(urls.join(" "));
     }
-    case 'githubRepo': {
+    case "githubRepo": {
       const g = p as GithubRepoPayload | undefined;
       return countWordsInPlainText(
-        [g?.name, g?.description, g?.owner, g?.repo].filter(Boolean).join(' ')
+        [g?.name, g?.description, g?.owner, g?.repo].filter(Boolean).join(" "),
       );
     }
-    case 'unsplashImage': {
+    case "unsplashImage": {
       const u = p as UnsplashPayload | undefined;
-      return countWordsInPlainText([u?.caption, u?.photographer].filter(Boolean).join(' '));
+      return countWordsInPlainText(
+        [u?.caption, u?.photographer].filter(Boolean).join(" "),
+      );
     }
-    case 'partition':
-    case 'link':
+    case "partition":
+    case "link":
       return 0;
     default:
       return 0;
   }
 }
-
 export function totalWorkspaceWordCount(args: {
   title: string;
   summaryHtml: string;
@@ -95,32 +103,30 @@ export function totalWorkspaceWordCount(args: {
   for (const b of args.blocks) n += countWordsForBlock(b);
   return n;
 }
-
-/** Labels aligned with Tools / DEFAULT_ITEMS where applicable. */
 export function blockTypeDisplayName(type: string): string {
   switch (type) {
-    case 'paragraph':
-      return 'Paragraph';
-    case 'heading':
-      return 'Sub-heading';
-    case 'partition':
-      return 'Divider';
-    case 'code':
-      return 'Code';
-    case 'image':
-      return 'Image';
-    case 'videoEmbed':
-      return 'Video';
-    case 'githubRepo':
-      return 'GitHub repo';
-    case 'unsplashImage':
-      return 'Unsplash';
-    case 'table':
-      return 'Table';
-    case 'mermaidDiagram':
-      return 'Mermaid';
-    case 'link':
-      return 'Link';
+    case "paragraph":
+      return "Paragraph";
+    case "heading":
+      return "Sub-heading";
+    case "partition":
+      return "Divider";
+    case "code":
+      return "Code";
+    case "image":
+      return "Image";
+    case "videoEmbed":
+      return "Video";
+    case "githubRepo":
+      return "GitHub repo";
+    case "unsplashImage":
+      return "Unsplash";
+    case "table":
+      return "Table";
+    case "mermaidDiagram":
+      return "Mermaid";
+    case "link":
+      return "Link";
     default:
       return type;
   }

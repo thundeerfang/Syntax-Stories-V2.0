@@ -1,8 +1,6 @@
-'use client';
-
-import { create } from 'zustand';
-import type { AppNotification } from '@contracts/notificationsApi';
-
+"use client";
+import { create } from "zustand";
+import type { AppNotification } from "@contracts/notificationsApi";
 type NotificationStore = {
   unreadCount: number;
   latest: AppNotification | null;
@@ -11,7 +9,6 @@ type NotificationStore = {
   pushNotification: (n: AppNotification) => void;
   clearLatest: () => void;
 };
-
 export const useNotificationStore = create<NotificationStore>((set) => ({
   unreadCount: 0,
   latest: null,

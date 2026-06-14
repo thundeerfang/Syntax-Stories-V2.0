@@ -3,7 +3,7 @@
  * Keep in sync with `server/src/routes/follow.routes.ts`.
  */
 
-import type { TechStackItem } from './referenceApi';
+import type { TechStackItem } from "./referenceApi";
 
 export interface FollowUser {
   id: string;
@@ -33,23 +33,21 @@ export interface PublicProfileUser {
   stackAndTools?: string[];
   stackAndToolsDisplay?: TechStackItem[];
   mySetup?: Array<{ label: string; imageUrl: string; productUrl?: string }>;
-  workExperiences?: unknown[];
-  education?: unknown[];
   certifications?: unknown[];
   projects?: unknown[];
   openSourceContributions?: unknown[];
   createdAt?: string;
-  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
+  blogStreakMode?: "daily" | "weekly" | "monthly";
 }
 
 export type ReadStreakCounts = { current: number; longest: number };
 
 export type ReadStreakPayload = {
-  displayMode: 'daily' | 'weekly' | 'monthly';
+  displayMode: "daily" | "weekly" | "monthly";
   current: number;
   longest: number;
   totalDistinctReadDays?: number;
-  byMode: Record<'daily' | 'weekly' | 'monthly', ReadStreakCounts>;
+  byMode: Record<"daily" | "weekly" | "monthly", ReadStreakCounts>;
 };
 
 export interface PublicProfileResponse {
@@ -58,6 +56,7 @@ export interface PublicProfileResponse {
   followersCount: number;
   followingCount: number;
   blogRespectReceivedCount?: number;
+  blogRepostCount?: number;
   readStreak?: ReadStreakPayload;
   readHeatmapDays?: string[];
 }

@@ -1,93 +1,49 @@
-/**
- * Shared blog/draft types for frontend and API.
- *
- * **`BlogPost.content`** (and draft `content` on save) is **`JSON.stringify(Block[])`** — one JSON array
- * of blocks persisted in MongoDB as a string. Each block has `id`, `type`, optional `sectionId`, and `payload`.
- *
- * Supported **`type`** values (editor + DB):
- * `paragraph` (markdown buffer: bold/italic/underline/links/lists, `[@user](mention:24hexUserId)`, plain `@user`),
- * `heading` (H2/H3 text), `partition` (divider), `code` (snippet + `language` / `languageSource`),
- * `image` (`layout`: square | landscape | fullWidth), `videoEmbed` (`layout`, `size`), `githubRepo`, `unsplashImage`,
- * plus `link` if present in legacy content.
- */
-
 export type BlockType =
-  | 'paragraph'
-  | 'heading'
-  | 'code'
-  | 'partition'
-  | 'image'
-  | 'videoEmbed'
-  | 'link'
-  | 'githubRepo'
-  | 'unsplashImage'
-  | 'table'
-  | 'mermaidDiagram';
-
+  | "paragraph"
+  | "heading"
+  | "code"
+  | "partition"
+  | "image"
+  | "videoEmbed"
+  | "link"
+  | "githubRepo"
+  | "unsplashImage"
+  | "table"
+  | "mermaidDiagram";
 export type HeadingLevel = 2 | 3;
-
 export interface BlockBase {
   id: string;
   type: BlockType;
   sectionId?: string;
 }
-
-/** ProseMirror-style JSON document used for rich-text paragraphs. */
-
-/**
- * Paragraph content.
- *
- * Historically this was a plain markdown-ish string in `text`. Going forward,
- * `doc` is the source of truth for rich-text content (inline formatting, GIFs, etc.).
- * `text` is kept for backwards compatibility and as an optional denormalised summary.
- */
 export interface ParagraphPayload {
-  /** Legacy markdown/plain text buffer. May be empty when `doc` is present. */
   text?: string;
-  /** Rich-text document (ProseMirror/TipTap JSON). */
   doc?: any;
-  /** Optional flag to indicate whether this payload was authored with rich-text. */
-  version?: 'plain' | 'rich-text';
+  version?: "plain" | "rich-text";
 }
-
 export interface HeadingPayload {
   text: string;
   level?: HeadingLevel;
 }
-
-/** Code block: `language` is a highlight.js id (e.g. `typescript`, `python`). */
 export interface CodePayload {
   code?: string;
   language?: string;
-  /** `auto` = inferred from snippet; `manual` = author picked from dropdown. */
-  languageSource?: 'auto' | 'manual';
+  languageSource?: "auto" | "manual";
 }
-
-/** How the image block is shown in the editor and on the published post (stored in DB). */
-export type ImageBlockLayout = 'landscape' | 'square' | 'fullWidth';
-
+export type ImageBlockLayout = "landscape" | "square" | "fullWidth";
 export interface ImagePayload {
   url?: string;
-  /** Optional caption; also used as the image `alt` for accessibility. Legacy drafts may still have `altText` at runtime. */
   title?: string;
-  /** `square` | `landscape` | `fullWidth` — persisted on save. */
   layout?: ImageBlockLayout;
 }
-
-export type VideoEmbedLayoutDirection = 'row' | 'column';
-export type VideoEmbedDisplaySize = 'sm' | 'md' | 'lg';
-
+export type VideoEmbedLayoutDirection = "row" | "column";
+export type VideoEmbedDisplaySize = "sm" | "md" | "lg";
 export interface VideoEmbedPayload {
-  /** @deprecated Prefer `videos`. Kept for older drafts. */
   url?: string;
-  /** Up to 3 iframe-safe embed URLs (e.g. youtube.com/embed/…). */
   videos?: string[];
-  /** `row` | `column` — persisted. */
   layout?: VideoEmbedLayoutDirection;
-  /** `sm` | `md` | `lg` — persisted. */
   size?: VideoEmbedDisplaySize;
 }
-
 export interface GithubRepoPayload {
   owner?: string;
   repo?: string;
@@ -96,29 +52,20 @@ export interface GithubRepoPayload {
   description?: string;
   avatarUrl?: string;
 }
-
-/** Tabular data (pasted TSV / pipe tables). */
 export interface TablePayload {
   caption?: string;
-  /** Row-major cell strings. */
   rows: string[][];
 }
-
 export interface MermaidDiagramPayload {
-  /** Mermaid diagram source (e.g. `graph TD` …). */
   source: string;
 }
-
 export interface UnsplashPayload {
   url?: string;
   photographer?: string;
   caption?: string;
-  /** Unsplash photo id for attribution link (`/photos/:id`). */
   unsplashPhotoId?: string;
-  /** Same as image blocks: landscape | square | fullWidth. */
   layout?: ImageBlockLayout;
 }
-
 export type BlockPayload =
   | ParagraphPayload
   | HeadingPayload
@@ -130,20 +77,15 @@ export type BlockPayload =
   | TablePayload
   | MermaidDiagramPayload
   | Record<string, unknown>;
-
 export interface Block extends BlockBase {
   payload?: BlockPayload;
 }
-
-/** Draft payload sent to API (content = JSON.stringify(Block[])) */
 export interface BlogDraftPayload {
   title: string;
   summary?: string;
   content: string;
   thumbnailUrl?: string;
 }
-
-/** Stored draft in localStorage (includes preview URL for thumb) */
 export interface StoredDraftPayload {
   title: string;
   summary: string;
@@ -151,17 +93,12 @@ export interface StoredDraftPayload {
   thumbnailPreviewUrl?: string;
   savedAt: number;
 }
-
-/** Curated or aggregated taxonomy row from `GET /api/blog/taxonomy`. */
 export interface BlogTaxonomyRow {
   slug: string;
   name: string;
   postCount: number;
-  /** Short blurb when curated in DB; optional on aggregated-only rows. */
   description?: string;
 }
-
-/** Server response for a single blog post or draft */
 export interface BlogPostResponse {
   _id: string;
   title: string;
@@ -169,11 +106,14 @@ export interface BlogPostResponse {
   summary?: string;
   content: string;
   thumbnailUrl?: string;
-  status: 'draft' | 'published';
+  status: "draft" | "published";
   createdAt: string;
   updatedAt: string;
   lastEditedAt?: string;
-  lastEditedBy?: { username: string; fullName: string };
+  lastEditedBy?: {
+    username: string;
+    fullName: string;
+  };
   category?: string;
   tags?: string[];
   language?: string;
@@ -187,24 +127,19 @@ export interface BlogPostResponse {
   viewerHasBookmarked?: boolean;
   squad?: PublicFeedSquad;
 }
-
-/** Public home feed item (`GET /api/blog/feed`). */
 export interface PublicFeedPostAuthor {
   username: string;
   fullName: string;
   profileImg: string;
 }
-
-/** Squad summary embedded on feed/detail posts when `squadId` is set. */
 export interface PublicFeedSquad {
   slug: string;
   name: string;
   iconUrl?: string;
   coverBannerUrl?: string;
-  visibility: 'public' | 'private';
+  visibility: "public" | "private";
   memberCount?: number;
 }
-
 export interface PublicFeedPost {
   _id: string;
   title: string;
@@ -214,7 +149,10 @@ export interface PublicFeedPost {
   updatedAt: string;
   createdAt: string;
   lastEditedAt?: string;
-  lastEditedBy?: { username: string; fullName: string };
+  lastEditedBy?: {
+    username: string;
+    fullName: string;
+  };
   author: PublicFeedPostAuthor;
   category?: string;
   tags?: string[];
@@ -230,8 +168,6 @@ export interface PublicFeedPost {
   readTimeMinutes?: number;
   squad?: PublicFeedSquad;
 }
-
-/** Public single post (`GET /api/blog/p/:username/:slug`). */
 export interface PublicBlogPostDetail {
   _id: string;
   title: string;
@@ -242,12 +178,14 @@ export interface PublicBlogPostDetail {
   createdAt: string;
   updatedAt: string;
   lastEditedAt?: string;
-  lastEditedBy?: { username: string; fullName: string };
+  lastEditedBy?: {
+    username: string;
+    fullName: string;
+  };
   author: PublicFeedPostAuthor;
   category?: string;
   tags?: string[];
   language?: string;
-  /** Denormalized respect count from the API (`GET /api/blog/p/:user/:slug`). */
   respectCount?: number;
   repostCount?: number;
   bookmarkCount?: number;
@@ -258,38 +196,27 @@ export interface PublicBlogPostDetail {
   viewerHasBookmarked?: boolean;
   squad?: PublicFeedSquad;
 }
-
-/** Public comment on a blog post (`GET/POST /api/blog/p/:username/:slug/comments`). */
 export interface PublicBlogComment {
   _id: string;
-  /** Reply thread; `null` for top-level. */
   parentId: string | null;
-  /** Plain or rich-text JSON string (`{ "type":"doc", ... }`) persisted in `text` on the server. */
   text: string;
   createdAt: string;
   updatedAt: string;
-  /** Present after the author edits the comment body. */
   editedAt: string | null;
   authorUserId: string;
   likeCount: number;
-  /** Present when the request was authenticated (`optionalVerifyToken` on GET). */
   likedByViewer?: boolean;
   author: PublicFeedPostAuthor;
 }
-
-/**
- * Helper: ensure we always have a rich-text doc for a paragraph, even when only the
- * legacy `text` field is present. This does not mutate the original payload.
- */
 export function coerceParagraphDoc(payload: ParagraphPayload): any {
   if (payload.doc) return payload.doc;
-  const text = (payload.text ?? '').toString();
+  const text = (payload.text ?? "").toString();
   return {
-    type: 'doc',
+    type: "doc",
     content: [
       {
-        type: 'paragraph',
-        content: text ? [{ type: 'text', text }] : [],
+        type: "paragraph",
+        content: text ? [{ type: "text", text }] : [],
       },
     ],
   };

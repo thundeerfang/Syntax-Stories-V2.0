@@ -1,10 +1,8 @@
-import type { Response } from 'express';
-import { AppHttpError, RateLimitHttpError } from './httpErrors.js';
-
-/** Same JSON/headers as `errorHandler` for `AppHttpError` — use when a controller catches and must respond inline (Express 4 async). */
+import type { Response } from "express";
+import { AppHttpError, RateLimitHttpError } from "./httpErrors.js";
 export function sendAppHttpError(res: Response, err: AppHttpError): void {
   if (err instanceof RateLimitHttpError && err.retryAfterSec != null) {
-    res.setHeader('Retry-After', String(err.retryAfterSec));
+    res.setHeader("Retry-After", String(err.retryAfterSec));
   }
   const body: Record<string, unknown> = {
     success: false,
