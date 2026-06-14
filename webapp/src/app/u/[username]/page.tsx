@@ -24,7 +24,6 @@ import {
   MediaFullViewDialog,
   ProfileSquadsCategoriesCard,
 } from "@/features/profile";
-import { cn } from "@/lib/core/utils";
 import { toast } from "sonner";
 import { StackToolsBadgeList } from "@/components/profile";
 import {
@@ -62,7 +61,6 @@ import {
   LinkedinIcon,
   YoutubeIcon,
 } from "@/components/icons/SocialProviderIcons";
-import { ProfileCardSkeleton } from "@/components/skeletons";
 import { resolveProfileMediaUrl } from "@/lib/profile/resolveProfileMediaUrl";
 import {
   ProfilePortfolioAccordions,

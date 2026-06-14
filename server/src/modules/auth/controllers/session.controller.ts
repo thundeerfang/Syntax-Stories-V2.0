@@ -1,56 +1,70 @@
-import type { Request, Response } from 'express';
-import { SessionModel } from '../../../models/Session.js';
-import { SecurityEventModel } from '../../../models/SecurityEvent.js';
-import type { AuthUser } from '../../../middlewares/auth/index.js';
-import { writeAuditLog } from '../../../shared/audit/auditLog.js';
-import { AuditAction } from '../../../shared/audit/events.js';
-import { logSecurityEvent } from '../securityEventLog.js';
-import { hashToken } from '../../../services/session.service.js';
+import type { Request, Response } from "express";
+import { SessionModel } from "../../../models/Session.js";
+import { SecurityEventModel } from "../../../models/SecurityEvent.js";
+import type { AuthUser } from "../../../middlewares/auth/index.js";
+import { writeAuditLog } from "../../../shared/audit/auditLog.js";
+import { AuditAction } from "../../../shared/audit/events.js";
+import { logSecurityEvent } from "../securityEventLog.js";
+import { hashToken } from "../../../services/session.service.js";
 import {
   refreshSessionWithRotation,
   sendRefreshSuccess,
-} from '../../../services/sessionRefresh.service.js';
-import { env } from '../../../config/env.js';
-import { readAdminRefreshToken } from '../../../admin-platform/auth/adminSessionCookies.js';
-
+} from "../../../services/sessionRefresh.service.js";
+import { env } from "../../../config/env.js";
+import { readAdminRefreshToken } from "../../../admin-platform/auth/adminSessionCookies.js";
 export async function refresh(req: Request, res: Response): Promise<void> {
   try {
-    const body = req.body as { refreshToken?: string };
+    const body = req.body as {
+      refreshToken?: string;
+    };
     let refreshTokenRaw = body.refreshToken;
     if (!refreshTokenRaw && env.FEATURE_ADMIN_HTTPONLY_COOKIES) {
       refreshTokenRaw = readAdminRefreshToken(req.cookies ?? {}) ?? undefined;
     }
     if (!refreshTokenRaw) {
-      res.status(400).json({ message: 'Refresh token required', success: false });
+      res
+        .status(400)
+        .json({ message: "Refresh token required", success: false });
       return;
     }
-
     const result = await refreshSessionWithRotation(req, refreshTokenRaw);
     if (!result.ok) {
-      res.status(result.status).json({ message: result.message, success: false });
+      res
+        .status(result.status)
+        .json({ message: result.message, success: false });
       return;
     }
-
     sendRefreshSuccess(res, result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
 export async function logout(req: Request, res: Response): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
-    const body = req.body as { sessionId?: string; refreshToken?: string };
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
+    const body = req.body as {
+      sessionId?: string;
+      refreshToken?: string;
+    };
     const sessionId = body.sessionId ?? user?.sessionId;
     const refreshToken = body.refreshToken;
-
-    async function revokeOne(session: InstanceType<typeof SessionModel> | null): Promise<void> {
+    async function revokeOne(
+      session: InstanceType<typeof SessionModel> | null,
+    ): Promise<void> {
       if (!session || session.revoked || !user?._id) return;
       session.revoked = true;
       await session.save();
       const sid = String(session._id);
-      await logSecurityEvent(user._id, 'session_revoked', req, { sessionId: sid });
+      await logSecurityEvent(user._id, "session_revoked", req, {
+        sessionId: sid,
+      });
       void writeAuditLog(req, AuditAction.USER_SIGNOUT, {
         actorId: String(user._id),
         metadata: { sessionId: sid },
@@ -60,30 +74,45 @@ export async function logout(req: Request, res: Response): Promise<void> {
         metadata: { sessionId: sid },
       });
     }
-
     if (user?._id && sessionId) {
-      const byId = await SessionModel.findOne({ _id: sessionId, userId: user._id });
+      const byId = await SessionModel.findOne({
+        _id: sessionId,
+        userId: user._id,
+      });
       await revokeOne(byId);
     }
     if (user?._id && refreshToken) {
       const refreshTokenHash = hashToken(refreshToken);
-      const byRt = await SessionModel.findOne({ refreshTokenHash, userId: user._id });
+      const byRt = await SessionModel.findOne({
+        refreshTokenHash,
+        userId: user._id,
+      });
       await revokeOne(byRt);
     }
-
-    res.status(200).json({ message: 'Logged out successfully 👋', success: true });
+    res
+      .status(200)
+      .json({ message: "Logged out successfully 👋", success: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
-/** Revoke session by refresh token only (no JWT). Use when token expired and client clears state. */
-export async function revokeSessionByRefreshToken(req: Request, res: Response): Promise<void> {
+export async function revokeSessionByRefreshToken(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const refreshTokenRaw = (req.body as { refreshToken?: string }).refreshToken;
-    if (!refreshTokenRaw || typeof refreshTokenRaw !== 'string') {
-      res.status(400).json({ message: 'refreshToken required', success: false });
+    const refreshTokenRaw = (
+      req.body as {
+        refreshToken?: string;
+      }
+    ).refreshToken;
+    if (!refreshTokenRaw || typeof refreshTokenRaw !== "string") {
+      res
+        .status(400)
+        .json({ message: "refreshToken required", success: false });
       return;
     }
     const refreshTokenHash = hashToken(refreshTokenRaw);
@@ -91,7 +120,7 @@ export async function revokeSessionByRefreshToken(req: Request, res: Response): 
     if (session) {
       session.revoked = true;
       await session.save();
-      await logSecurityEvent(String(session.userId), 'session_revoked', req, {
+      await logSecurityEvent(String(session.userId), "session_revoked", req, {
         sessionId: session._id,
       });
       void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
@@ -99,22 +128,30 @@ export async function revokeSessionByRefreshToken(req: Request, res: Response): 
         metadata: { sessionId: String(session._id) },
       });
     }
-    res.status(200).json({ message: 'Session revoked', success: true });
+    res.status(200).json({ message: "Session revoked", success: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
 export async function listSessions(req: Request, res: Response): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ message: 'Unauthorized', success: false });
+      res.status(401).json({ message: "Unauthorized", success: false });
       return;
     }
-    const limitRaw = (req.query.limit as string | undefined) ?? '20';
-    const limit = Math.max(1, Math.min(Number.parseInt(limitRaw, 10) || 20, 50));
+    const limitRaw = (req.query.limit as string | undefined) ?? "20";
+    const limit = Math.max(
+      1,
+      Math.min(Number.parseInt(limitRaw, 10) || 20, 50),
+    );
     const sessions = await SessionModel.find({
       userId: user._id,
       revoked: false,
@@ -123,7 +160,6 @@ export async function listSessions(req: Request, res: Response): Promise<void> {
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
-
     res.status(200).json({
       success: true,
       sessions: sessions.map((s) => ({
@@ -138,109 +174,145 @@ export async function listSessions(req: Request, res: Response): Promise<void> {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
-export async function revokeSession(req: Request, res: Response): Promise<void> {
+export async function revokeSession(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ message: 'Unauthorized', success: false });
+      res.status(401).json({ message: "Unauthorized", success: false });
       return;
     }
-    const { sessionId } = req.params as { sessionId?: string };
+    const { sessionId } = req.params as {
+      sessionId?: string;
+    };
     if (!sessionId) {
-      res.status(400).json({ message: 'Session ID required', success: false });
+      res.status(400).json({ message: "Session ID required", success: false });
       return;
     }
-
-    const session = await SessionModel.findOne({ _id: sessionId, userId: user._id });
+    const session = await SessionModel.findOne({
+      _id: sessionId,
+      userId: user._id,
+    });
     if (!session || session.revoked) {
-      res.status(404).json({ message: 'Session not found', success: false });
+      res.status(404).json({ message: "Session not found", success: false });
       return;
     }
-
     session.revoked = true;
     await session.save();
-    await logSecurityEvent(String(user._id), 'session_revoked', req, { sessionId });
+    await logSecurityEvent(String(user._id), "session_revoked", req, {
+      sessionId,
+    });
     void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
       actorId: String(user._id),
       metadata: { sessionId },
     });
-
-    res.status(200).json({ success: true, message: 'Session revoked' });
+    res.status(200).json({ success: true, message: "Session revoked" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
 export async function logoutAll(req: Request, res: Response): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ message: 'Unauthorized', success: false });
+      res.status(401).json({ message: "Unauthorized", success: false });
       return;
     }
-
     await SessionModel.updateMany(
       { userId: user._id, revoked: false },
-      { $set: { revoked: true } }
+      { $set: { revoked: true } },
     );
-    await logSecurityEvent(String(user._id), 'session_revoked', req, { scope: 'all' });
+    await logSecurityEvent(String(user._id), "session_revoked", req, {
+      scope: "all",
+    });
     void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
       actorId: String(user._id),
-      metadata: { scope: 'all' },
+      metadata: { scope: "all" },
     });
-
-    res.status(200).json({ success: true, message: 'All sessions revoked' });
+    res.status(200).json({ success: true, message: "All sessions revoked" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
 export async function logoutOthers(req: Request, res: Response): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id || !user.sessionId) {
-      res.status(400).json({ message: 'Current session information missing', success: false });
+      res
+        .status(400)
+        .json({
+          message: "Current session information missing",
+          success: false,
+        });
       return;
     }
-
     await SessionModel.updateMany(
       { userId: user._id, _id: { $ne: user.sessionId }, revoked: false },
-      { $set: { revoked: true } }
+      { $set: { revoked: true } },
     );
-    await logSecurityEvent(String(user._id), 'session_revoked', req, { scope: 'others' });
+    await logSecurityEvent(String(user._id), "session_revoked", req, {
+      scope: "others",
+    });
     void writeAuditLog(req, AuditAction.SESSION_REVOKED, {
       actorId: String(user._id),
-      metadata: { scope: 'others' },
+      metadata: { scope: "others" },
     });
-
-    res.status(200).json({ success: true, message: 'Other sessions revoked' });
+    res.status(200).json({ success: true, message: "Other sessions revoked" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
-export async function listSecurityEvents(req: Request, res: Response): Promise<void> {
+export async function listSecurityEvents(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ message: 'Unauthorized', success: false });
+      res.status(401).json({ message: "Unauthorized", success: false });
       return;
     }
-    const limitRaw = (req.query.limit as string | undefined) ?? '20';
-    const limit = Math.max(1, Math.min(Number.parseInt(limitRaw, 10) || 20, 50));
-
+    const limitRaw = (req.query.limit as string | undefined) ?? "20";
+    const limit = Math.max(
+      1,
+      Math.min(Number.parseInt(limitRaw, 10) || 20, 50),
+    );
     const events = await SecurityEventModel.find({ userId: user._id })
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
-
     res.status(200).json({
       success: true,
       events: events.map((e) => ({
@@ -254,6 +326,8 @@ export async function listSecurityEvents(req: Request, res: Response): Promise<v
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }

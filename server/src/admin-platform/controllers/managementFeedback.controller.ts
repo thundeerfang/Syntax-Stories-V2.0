@@ -1,30 +1,30 @@
-import type { Request, Response } from 'express';
-import mongoose from 'mongoose';
-import { FeedbackSubmissionModel } from '../../models/FeedbackSubmission.js';
-import { adminUserRefFromObjectId } from '../iam/adminUserRef.js';
-import { sendAdminError, sendAdminOk } from '../rbac/adminResponse.js';
-import { parseAdminListLimit } from '../../shared/http/pagination.js';
-
-export async function listFeedbackSubmissions(req: Request, res: Response): Promise<void> {
+import type { Request, Response } from "express";
+import mongoose from "mongoose";
+import { FeedbackSubmissionModel } from "../../models/FeedbackSubmission.js";
+import { adminUserRefFromObjectId } from "../iam/adminUserRef.js";
+import { sendAdminError, sendAdminOk } from "../rbac/adminResponse.js";
+import { parseAdminListLimit } from "../../shared/http/pagination.js";
+export async function listFeedbackSubmissions(
+  req: Request,
+  res: Response,
+): Promise<void> {
   const limit = parseAdminListLimit(req.query.limit);
-  const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
-
+  const cursor =
+    typeof req.query.cursor === "string" ? req.query.cursor.trim() : "";
   const filter: Record<string, unknown> = {};
   if (cursor && mongoose.isValidObjectId(cursor)) {
     filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
   }
-
   const rows = await FeedbackSubmissionModel.find(filter)
     .sort({ _id: -1 })
     .limit(limit + 1)
     .select(
-      'firstName lastName email subject categoryLabel categorySlug createdAt attachmentUrl userId username'
+      "firstName lastName email subject categoryLabel categorySlug createdAt attachmentUrl userId username",
     )
     .lean();
-
   const slice = rows.slice(0, limit);
-  const nextCursor = rows.length > limit ? String(slice[slice.length - 1]!._id) : null;
-
+  const nextCursor =
+    rows.length > limit ? String(slice[slice.length - 1]!._id) : null;
   sendAdminOk(res, {
     items: slice.map((r) => ({
       id: String(r._id),
@@ -43,20 +43,20 @@ export async function listFeedbackSubmissions(req: Request, res: Response): Prom
     nextCursor,
   });
 }
-
-export async function getFeedbackSubmissionById(req: Request, res: Response): Promise<void> {
-  const id = typeof req.params.id === 'string' ? req.params.id.trim() : '';
+export async function getFeedbackSubmissionById(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const id = typeof req.params.id === "string" ? req.params.id.trim() : "";
   if (!id || !mongoose.isValidObjectId(id)) {
-    sendAdminError(res, 400, 'VALIDATION_ERROR', 'Invalid id');
+    sendAdminError(res, 400, "VALIDATION_ERROR", "Invalid id");
     return;
   }
-
   const doc = await FeedbackSubmissionModel.findById(id).lean();
   if (!doc) {
-    sendAdminError(res, 404, 'NOT_FOUND', 'Feedback not found');
+    sendAdminError(res, 404, "NOT_FOUND", "Feedback not found");
     return;
   }
-
   sendAdminOk(res, {
     submission: {
       id: String(doc._id),

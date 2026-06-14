@@ -1,18 +1,18 @@
-import { getRedis } from '../../config/redis.js';
-import { env } from '../../config/env.js';
-import { redisKeys } from '../../shared/redis/keys.js';
-
-export async function invalidateSubscriptionSummary(userId: string): Promise<void> {
+import { getRedis } from "../../config/redis.js";
+import { env } from "../../config/env.js";
+import { redisKeys } from "../../shared/redis/keys.js";
+export async function invalidateSubscriptionSummary(
+  userId: string,
+): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
   try {
     await redis.del(redisKeys.billing.subscriptionSummary(userId));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
-
-export async function getCachedSubscriptionSummary(userId: string): Promise<string | null> {
+export async function getCachedSubscriptionSummary(
+  userId: string,
+): Promise<string | null> {
   const redis = getRedis();
   if (!redis) return null;
   try {
@@ -21,14 +21,16 @@ export async function getCachedSubscriptionSummary(userId: string): Promise<stri
     return null;
   }
 }
-
-export async function setCachedSubscriptionSummary(userId: string, json: string): Promise<void> {
+export async function setCachedSubscriptionSummary(
+  userId: string,
+  json: string,
+): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
   const ttl = env.BILLING_SUMMARY_CACHE_TTL_SEC;
   try {
-    await redis.set(redisKeys.billing.subscriptionSummary(userId), json, { EX: ttl });
-  } catch {
-    // ignore
-  }
+    await redis.set(redisKeys.billing.subscriptionSummary(userId), json, {
+      EX: ttl,
+    });
+  } catch {}
 }

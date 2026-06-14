@@ -1,12 +1,11 @@
-import type { IUser } from '../../models/User.js';
-
+import type { IUser } from "../../models/User.js";
 const USER_LIST_FIELDS =
-  'fullName username email isActive emailVerified lastLoginAt profileImg subscriptionStatus subscriptionPlanKey subscriptionPeriodEnd staffRole createdAt job profileLocation twoFactorEnabled';
-
+  "fullName username email isActive emailVerified lastLoginAt profileImg subscriptionStatus subscriptionPlanKey subscriptionPeriodEnd staffRole createdAt job profileLocation twoFactorEnabled";
 export { USER_LIST_FIELDS };
-
 export type UserListRow = {
-  _id: { toString(): string };
+  _id: {
+    toString(): string;
+  };
   fullName: string;
   username: string;
   email: string;
@@ -23,12 +22,15 @@ export type UserListRow = {
   profileLocation?: string;
   twoFactorEnabled?: boolean;
 };
-
-export function accountTypeFromStaffRole(staffRole?: string | null): 'platform' | 'staff' {
-  return staffRole?.trim() ? 'staff' : 'platform';
+export function accountTypeFromStaffRole(
+  staffRole?: string | null,
+): "platform" | "staff" {
+  return staffRole?.trim() ? "staff" : "platform";
 }
-
-export function toUserListDto(u: UserListRow, encodeRef: (id: string) => string) {
+export function toUserListDto(
+  u: UserListRow,
+  encodeRef: (id: string) => string,
+) {
   const id = String(u._id);
   return {
     id,
@@ -51,15 +53,18 @@ export function toUserListDto(u: UserListRow, encodeRef: (id: string) => string)
     createdAt: u.createdAt.toISOString(),
   };
 }
-
 function iso(d: Date | undefined | null): string | null {
   if (!d) return null;
   const t = new Date(d);
   return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
-
-/** Safe profile payload for admin (no OAuth tokens or secrets). */
-export function toUserProfileDto(user: IUser & { _id: { toString(): string } }) {
+export function toUserProfileDto(
+  user: IUser & {
+    _id: {
+      toString(): string;
+    };
+  },
+) {
   return {
     profileImg: user.profileImg ?? null,
     profileImgAlt: user.profileImgAlt?.trim() || null,
@@ -79,7 +84,7 @@ export function toUserProfileDto(user: IUser & { _id: { toString(): string } }) 
     projects: user.projects ?? [],
     openSourceContributions: user.openSourceContributions ?? [],
     mySetup: user.mySetup ?? [],
-    blogStreakMode: user.blogStreakMode ?? 'daily',
+    blogStreakMode: user.blogStreakMode ?? "daily",
     profileUpdatedAt: iso(user.profileUpdatedAt),
     referralCode: user.referralCode?.trim() || null,
     referralSource: user.referralSource?.trim() || null,
@@ -88,7 +93,6 @@ export function toUserProfileDto(user: IUser & { _id: { toString(): string } }) 
     readStreakLongest: user.readStreakLongest ?? 0,
   };
 }
-
 export function toUserOAuthDto(user: IUser) {
   return {
     isGoogleAccount: Boolean(user.isGoogleAccount),

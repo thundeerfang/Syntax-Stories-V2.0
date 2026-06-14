@@ -3,50 +3,44 @@ export const MAX_CATEGORIES = 3;
 const TAG_SLUG_LEN = 32;
 const CATEGORY_SLUG_LEN = 48;
 const LANGUAGE_MAX = 12;
-
 function slugifyToken(s: string, maxLen: number): string {
   return s
     .trim()
     .toLowerCase()
-    .replaceAll(/\s+/g, '-')
-    .replaceAll(/[^\w-]/g, '')
-    .replaceAll(/-+/g, '-')
-    .replaceAll(/^-+/g, '')
-    .replaceAll(/-+$/g, '')
+    .replaceAll(/\s+/g, "-")
+    .replaceAll(/[^\w-]/g, "")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-+/g, "")
+    .replaceAll(/-+$/g, "")
     .slice(0, maxLen);
 }
-
 export type NormalizedTaxonomy = {
   category?: string;
   categories?: string[];
   tags?: string[];
   language?: string;
 };
-
 function normalizeCategories(body: {
   category?: unknown;
   categories?: unknown;
 }): string[] | undefined {
   const seen = new Set<string>();
   const out: string[] = [];
-
   if (Array.isArray(body.categories)) {
     for (const raw of body.categories) {
-      if (typeof raw !== 'string') continue;
+      if (typeof raw !== "string") continue;
       const c = slugifyToken(raw, CATEGORY_SLUG_LEN);
       if (!c || seen.has(c)) continue;
       seen.add(c);
       out.push(c);
       if (out.length >= MAX_CATEGORIES) break;
     }
-  } else if (typeof body.category === 'string' && body.category.trim()) {
+  } else if (typeof body.category === "string" && body.category.trim()) {
     const c = slugifyToken(body.category, CATEGORY_SLUG_LEN);
     if (c) out.push(c);
   }
-
   return out.length ? out : undefined;
 }
-
 export function normalizeTaxonomyInput(body: {
   category?: unknown;
   categories?: unknown;
@@ -55,13 +49,12 @@ export function normalizeTaxonomyInput(body: {
 }): NormalizedTaxonomy {
   const categories = normalizeCategories(body);
   const category = categories?.[0];
-
   let tags: string[] | undefined;
   if (Array.isArray(body.tags)) {
     const seen = new Set<string>();
     const out: string[] = [];
     for (const t of body.tags) {
-      if (typeof t !== 'string') continue;
+      if (typeof t !== "string") continue;
       const s = slugifyToken(t, TAG_SLUG_LEN);
       if (!s || seen.has(s)) continue;
       seen.add(s);
@@ -70,16 +63,14 @@ export function normalizeTaxonomyInput(body: {
     }
     if (out.length) tags = out;
   }
-
   let language: string | undefined;
-  if (typeof body.language === 'string' && body.language.trim()) {
+  if (typeof body.language === "string" && body.language.trim()) {
     const l = body.language
       .trim()
       .toLowerCase()
-      .replaceAll(/[^a-z-]/g, '')
+      .replaceAll(/[^a-z-]/g, "")
       .slice(0, LANGUAGE_MAX);
     if (l) language = l;
   }
-
   return { category, categories, tags, language };
 }

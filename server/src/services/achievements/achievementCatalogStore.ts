@@ -1,26 +1,29 @@
-import { ACHIEVEMENT_CATALOG, RETIRED_ACHIEVEMENT_KEYS } from '../../achievements/achievement.catalog.js';
-import { invalidateAchievementCatalogCache } from './achievementCatalogCache.js';
-import type { AchievementDef } from '../../achievements/achievement.types.js';
-import { AchievementCatalogModel } from '../../models/AchievementCatalog.js';
-
+import {
+  ACHIEVEMENT_CATALOG,
+  RETIRED_ACHIEVEMENT_KEYS,
+} from "../../achievements/achievement.catalog.js";
+import { invalidateAchievementCatalogCache } from "./achievementCatalogCache.js";
+import type { AchievementDef } from "../../achievements/achievement.types.js";
+import { AchievementCatalogModel } from "../../models/AchievementCatalog.js";
 type CatalogRow = {
-  _id: { toString(): string };
+  _id: {
+    toString(): string;
+  };
   key: string;
   slug: string;
   title: string;
   description: string;
-  category: AchievementDef['category'];
-  module: AchievementDef['module'];
+  category: AchievementDef["category"];
+  module: AchievementDef["module"];
   points: number;
-  metric: AchievementDef['metric'];
+  metric: AchievementDef["metric"];
   target: number;
   unlocksAfter?: string | null;
-  celebrateAs: AchievementDef['celebrateAs'];
+  celebrateAs: AchievementDef["celebrateAs"];
   sortOrder: number;
   active: boolean;
   updatedAt?: Date;
 };
-
 function mapDef(row: CatalogRow): AchievementDef {
   return {
     id: row.key,
@@ -37,7 +40,6 @@ function mapDef(row: CatalogRow): AchievementDef {
     sortOrder: row.sortOrder,
   };
 }
-
 export function mapAdminAchievement(row: CatalogRow) {
   return {
     id: String(row._id),
@@ -56,8 +58,6 @@ export function mapAdminAchievement(row: CatalogRow) {
     active: row.active,
   };
 }
-
-/** Sync platform default achievements into MongoDB on each server start. */
 export async function ensureDefaultAchievements(): Promise<void> {
   for (const def of ACHIEVEMENT_CATALOG) {
     await AchievementCatalogModel.updateOne(
@@ -79,35 +79,41 @@ export async function ensureDefaultAchievements(): Promise<void> {
         },
         $setOnInsert: { key: def.id },
       },
-      { upsert: true }
+      { upsert: true },
     );
   }
-
   if (RETIRED_ACHIEVEMENT_KEYS.length > 0) {
     await AchievementCatalogModel.updateMany(
       { key: { $in: [...RETIRED_ACHIEVEMENT_KEYS] } },
-      { $set: { active: false } }
+      { $set: { active: false } },
     );
   }
 }
-
 async function loadRows(activeOnly: boolean) {
   await ensureDefaultAchievements();
   const filter = activeOnly ? { active: true } : {};
-  return AchievementCatalogModel.find(filter).sort({ sortOrder: 1, key: 1 }).lean();
+  return AchievementCatalogModel.find(filter)
+    .sort({ sortOrder: 1, key: 1 })
+    .lean();
 }
-
 export async function getAchievementCatalogVersion(): Promise<number> {
   await ensureDefaultAchievements();
   const agg = await AchievementCatalogModel.aggregate([
     { $match: { active: true } },
-    { $group: { _id: null, count: { $sum: 1 }, maxUpdated: { $max: '$updatedAt' } } },
+    {
+      $group: {
+        _id: null,
+        count: { $sum: 1 },
+        maxUpdated: { $max: "$updatedAt" },
+      },
+    },
   ]);
   if (!agg[0]) return 1;
-  const maxUpdated = agg[0].maxUpdated ? new Date(agg[0].maxUpdated).getTime() : 0;
-  return agg[0].count * 1_000_000 + (maxUpdated % 1_000_000);
+  const maxUpdated = agg[0].maxUpdated
+    ? new Date(agg[0].maxUpdated).getTime()
+    : 0;
+  return agg[0].count * 1000000 + (maxUpdated % 1000000);
 }
-
 export async function loadActiveAchievementCatalog(): Promise<{
   catalog: AchievementDef[];
   byId: Map<string, AchievementDef>;
@@ -120,47 +126,57 @@ export async function loadActiveAchievementCatalog(): Promise<{
   const version = await getAchievementCatalogVersion();
   return { catalog, byId, total: catalog.length, version };
 }
-
 export async function listAchievementsAdminFromStore() {
   const rows = await loadRows(false);
   return rows.map((r) => mapAdminAchievement(r as CatalogRow));
 }
-
 export async function createAchievementInStore(input: {
   key: string;
   slug: string;
   title: string;
   description: string;
-  category: AchievementDef['category'];
-  module: AchievementDef['module'];
+  category: AchievementDef["category"];
+  module: AchievementDef["module"];
   points: number;
-  metric: AchievementDef['metric'];
+  metric: AchievementDef["metric"];
   target: number;
   unlocksAfter?: string | null;
   sortOrder: number;
   active: boolean;
 }) {
-  const exists = await AchievementCatalogModel.findOne({ key: input.key }).lean();
+  const exists = await AchievementCatalogModel.findOne({
+    key: input.key,
+  }).lean();
   if (exists) {
-    throw new AchievementCatalogStoreError(409, 'Achievement key already exists', 'CONFLICT');
+    throw new AchievementCatalogStoreError(
+      409,
+      "Achievement key already exists",
+      "CONFLICT",
+    );
   }
-
-  const slugTaken = await AchievementCatalogModel.findOne({ slug: input.slug }).lean();
+  const slugTaken = await AchievementCatalogModel.findOne({
+    slug: input.slug,
+  }).lean();
   if (slugTaken) {
-    throw new AchievementCatalogStoreError(409, 'Achievement slug already exists', 'CONFLICT');
+    throw new AchievementCatalogStoreError(
+      409,
+      "Achievement slug already exists",
+      "CONFLICT",
+    );
   }
-
   if (input.unlocksAfter) {
-    const prereq = await AchievementCatalogModel.findOne({ key: input.unlocksAfter, active: true }).lean();
+    const prereq = await AchievementCatalogModel.findOne({
+      key: input.unlocksAfter,
+      active: true,
+    }).lean();
     if (!prereq) {
       throw new AchievementCatalogStoreError(
         400,
-        'unlocksAfter must reference an active achievement key',
-        'VALIDATION_ERROR'
+        "unlocksAfter must reference an active achievement key",
+        "VALIDATION_ERROR",
       );
     }
   }
-
   const doc = await AchievementCatalogModel.create({
     key: input.key,
     slug: input.slug,
@@ -172,41 +188,47 @@ export async function createAchievementInStore(input: {
     metric: input.metric,
     target: input.target,
     unlocksAfter: input.unlocksAfter ?? null,
-    celebrateAs: 'dialog',
+    celebrateAs: "dialog",
     sortOrder: input.sortOrder,
     active: input.active,
   });
-
   void invalidateAchievementCatalogCache();
   return mapAdminAchievement(doc.toObject() as CatalogRow);
 }
-
 export async function updateAchievementInStore(
   id: string,
   patch: Partial<{
     slug: string;
     title: string;
     description: string;
-    category: AchievementDef['category'];
-    module: AchievementDef['module'];
+    category: AchievementDef["category"];
+    module: AchievementDef["module"];
     points: number;
-    metric: AchievementDef['metric'];
+    metric: AchievementDef["metric"];
     target: number;
     unlocksAfter: string | null;
     sortOrder: number;
     active: boolean;
-  }>
+  }>,
 ) {
   const doc = await AchievementCatalogModel.findById(id);
-  if (!doc) throw new AchievementCatalogStoreError(404, 'Achievement not found', 'NOT_FOUND');
-
+  if (!doc)
+    throw new AchievementCatalogStoreError(
+      404,
+      "Achievement not found",
+      "NOT_FOUND",
+    );
   if (patch.slug !== undefined) {
     const slugTaken = await AchievementCatalogModel.findOne({
       slug: patch.slug,
       _id: { $ne: doc._id },
     }).lean();
     if (slugTaken) {
-      throw new AchievementCatalogStoreError(409, 'Achievement slug already exists', 'CONFLICT');
+      throw new AchievementCatalogStoreError(
+        409,
+        "Achievement slug already exists",
+        "CONFLICT",
+      );
     }
     doc.slug = patch.slug;
   }
@@ -219,14 +241,13 @@ export async function updateAchievementInStore(
   if (patch.target !== undefined) doc.target = patch.target;
   if (patch.sortOrder !== undefined) doc.sortOrder = patch.sortOrder;
   if (patch.active !== undefined) doc.active = patch.active;
-
   if (patch.unlocksAfter !== undefined) {
     if (patch.unlocksAfter) {
       if (patch.unlocksAfter === doc.key) {
         throw new AchievementCatalogStoreError(
           400,
-          'Achievement cannot unlock after itself',
-          'VALIDATION_ERROR'
+          "Achievement cannot unlock after itself",
+          "VALIDATION_ERROR",
         );
       }
       const prereq = await AchievementCatalogModel.findOne({
@@ -236,36 +257,37 @@ export async function updateAchievementInStore(
       if (!prereq) {
         throw new AchievementCatalogStoreError(
           400,
-          'unlocksAfter must reference an active achievement key',
-          'VALIDATION_ERROR'
+          "unlocksAfter must reference an active achievement key",
+          "VALIDATION_ERROR",
         );
       }
     }
     doc.unlocksAfter = patch.unlocksAfter;
   }
-
   await doc.save();
   void invalidateAchievementCatalogCache();
   return mapAdminAchievement(doc.toObject() as CatalogRow);
 }
-
 export async function deleteAchievementFromStore(id: string) {
   const doc = await AchievementCatalogModel.findById(id);
-  if (!doc) throw new AchievementCatalogStoreError(404, 'Achievement not found', 'NOT_FOUND');
-
+  if (!doc)
+    throw new AchievementCatalogStoreError(
+      404,
+      "Achievement not found",
+      "NOT_FOUND",
+    );
   doc.active = false;
   await doc.save();
   void invalidateAchievementCatalogCache();
   return { id, deactivated: true };
 }
-
 export class AchievementCatalogStoreError extends Error {
   constructor(
     public status: number,
     message: string,
-    public code = 'VALIDATION_ERROR'
+    public code = "VALIDATION_ERROR",
   ) {
     super(message);
-    this.name = 'AchievementCatalogStoreError';
+    this.name = "AchievementCatalogStoreError";
   }
 }

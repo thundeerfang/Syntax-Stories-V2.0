@@ -1,8 +1,6 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import { PAID_PLAN_KEYS, type PaidPlanKey } from '../variable/constants.js';
-
+import mongoose, { Schema, Document, Model } from "mongoose";
+import { PAID_PLAN_KEYS, type PaidPlanKey } from "../variable/constants.js";
 export type { PaidPlanKey };
-
 export interface IBillingPlanCatalog extends Document {
   key: PaidPlanKey;
   name: string;
@@ -16,10 +14,8 @@ export interface IBillingPlanCatalog extends Document {
   badge?: string | null;
   sortOrder: number;
   active: boolean;
-  /** Stripe Price id (`price_…`) — auto-provisioned when missing. */
   stripePriceId?: string | null;
 }
-
 const BillingPlanCatalogSchema = new Schema<IBillingPlanCatalog>(
   {
     key: {
@@ -31,9 +27,21 @@ const BillingPlanCatalogSchema = new Schema<IBillingPlanCatalog>(
     name: { type: String, required: true, trim: true, maxlength: 80 },
     description: { type: String, required: true, trim: true, maxlength: 280 },
     amountDisplay: { type: String, required: true, trim: true, maxlength: 32 },
-    currency: { type: String, required: true, trim: true, default: 'INR', maxlength: 8 },
+    currency: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "INR",
+      maxlength: 8,
+    },
     amountMinor: { type: Number, required: true, min: 0 },
-    cadence: { type: String, required: true, trim: true, maxlength: 40, default: 'per month' },
+    cadence: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 40,
+      default: "per month",
+    },
     features: { type: [String], default: [] },
     featured: { type: Boolean, default: false },
     badge: { type: String, trim: true, maxlength: 40, default: null },
@@ -41,11 +49,12 @@ const BillingPlanCatalogSchema = new Schema<IBillingPlanCatalog>(
     active: { type: Boolean, default: true, index: true },
     stripePriceId: { type: String, trim: true, default: null },
   },
-  { timestamps: true, collection: 'billingplancatalog' }
+  { timestamps: true, collection: "billingplancatalog" },
 );
-
 BillingPlanCatalogSchema.index({ active: 1, sortOrder: 1 });
-
 export const BillingPlanCatalogModel: Model<IBillingPlanCatalog> =
   mongoose.models?.BillingPlanCatalog ??
-  mongoose.model<IBillingPlanCatalog>('BillingPlanCatalog', BillingPlanCatalogSchema);
+  mongoose.model<IBillingPlanCatalog>(
+    "BillingPlanCatalog",
+    BillingPlanCatalogSchema,
+  );

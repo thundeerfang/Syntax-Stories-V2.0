@@ -1,30 +1,28 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
-/** User-defined bucket for saved posts (`BlogBookmark.groupId`). */
+import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IBookmarkGroup extends Document {
   userId: mongoose.Types.ObjectId;
-  /** Display label without leading emoji (folder title). */
   name: string;
-  /** Optional leading emoji (single grapheme cluster, max 8 chars). */
   emoji?: string;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
-
 const BookmarkGroupSchema = new Schema<IBookmarkGroup>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'users', required: true, index: true },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      required: true,
+      index: true,
+    },
     name: { type: String, required: true, trim: true, maxlength: 80 },
-    emoji: { type: String, trim: true, maxlength: 8, default: '' },
+    emoji: { type: String, trim: true, maxlength: 8, default: "" },
     isDefault: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
 BookmarkGroupSchema.index({ userId: 1, name: 1 }, { unique: true });
 BookmarkGroupSchema.index({ userId: 1, isDefault: 1 });
-
 export const BookmarkGroupModel: Model<IBookmarkGroup> =
   mongoose.models?.bookmarkgroups ??
-  mongoose.model<IBookmarkGroup>('bookmarkgroups', BookmarkGroupSchema);
+  mongoose.model<IBookmarkGroup>("bookmarkgroups", BookmarkGroupSchema);

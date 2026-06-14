@@ -1,50 +1,45 @@
 export const ACHIEVEMENT_CATEGORIES = [
-  'engagement',
-  'profile',
-  'reading',
-  'social',
-  'meta',
+  "engagement",
+  "profile",
+  "reading",
+  "social",
+  "meta",
 ] as const;
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
-
-/** Platform module that owns the metric / unlock trigger for this achievement. */
 export const ACHIEVEMENT_MODULES = [
-  'profile',
-  'blog',
-  'reading',
-  'social',
-  'engagement',
-  'meta',
+  "profile",
+  "blog",
+  "reading",
+  "social",
+  "engagement",
+  "meta",
 ] as const;
 export type AchievementModule = (typeof ACHIEVEMENT_MODULES)[number];
-
-export const ACHIEVEMENT_CELEBRATE_AS = ['dialog'] as const;
+export const ACHIEVEMENT_CELEBRATE_AS = ["dialog"] as const;
 export type AchievementCelebrateAs = (typeof ACHIEVEMENT_CELEBRATE_AS)[number];
-export const ACHIEVEMENT_CELEBRATE_DIALOG: AchievementCelebrateAs = 'dialog';
-
+export const ACHIEVEMENT_CELEBRATE_DIALOG: AchievementCelebrateAs = "dialog";
 export const ACHIEVEMENT_METRICS = [
-  'respect.given.total',
-  'respect.received.total',
-  'read.brief.total',
-  'stack.tools.count',
-  'followers.count',
-  'read.streak.longest',
-  'profile.has_avatar',
-  'profile.has_location',
-  'profile.has_cv',
-  'profile.has_bio',
-  'profile.has_cover',
-  'profile.has_github',
-  'profile.setup.count',
-  'social.following.count',
-  'blog.categories.followed.count',
-  'squads.joined.count',
-  'feedback.submitted.count',
-  'posts.authored.count',
-  'referral.converted.total',
+  "respect.given.total",
+  "respect.received.total",
+  "read.brief.total",
+  "stack.tools.count",
+  "followers.count",
+  "read.streak.longest",
+  "profile.has_avatar",
+  "profile.has_location",
+  "profile.has_cv",
+  "profile.has_bio",
+  "profile.has_cover",
+  "profile.has_github",
+  "profile.setup.count",
+  "social.following.count",
+  "blog.categories.followed.count",
+  "squads.joined.count",
+  "feedback.submitted.count",
+  "posts.authored.count",
+  "referral.converted.total",
 ] as const;
 export type AchievementMetric = (typeof ACHIEVEMENT_METRICS)[number];
-
 export type AchievementDef = {
   id: string;
   slug: string;
@@ -59,7 +54,6 @@ export type AchievementDef = {
   celebrateAs: AchievementCelebrateAs;
   sortOrder: number;
 };
-
 export type AchievementUnlockDto = {
   id: string;
   slug: string;
@@ -72,7 +66,6 @@ export type AchievementUnlockDto = {
   target: number;
   current: number;
 };
-
 export type AchievementProgressItemDto = {
   id: string;
   slug: string;
@@ -88,12 +81,20 @@ export type AchievementProgressItemDto = {
   celebrateAs: AchievementCelebrateAs;
   locked: boolean;
 };
-
 export type AchievementEvent =
-  | { type: 'respect_given' }
-  | { type: 'brief_read' }
-  | { type: 'profile_sync' }
-  | { type: 'cv_parsed' }
-  | { type: 'referral_converted' };
-
+  | {
+      type: "respect_given";
+    }
+  | {
+      type: "brief_read";
+    }
+  | {
+      type: "profile_sync";
+    }
+  | {
+      type: "cv_parsed";
+    }
+  | {
+      type: "referral_converted";
+    };
 export type MetricSnapshot = Record<AchievementMetric, number>;

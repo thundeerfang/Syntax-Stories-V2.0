@@ -23,8 +23,6 @@ import {
   ExternalLink,
   Globe,
 } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/core/utils";
 import { setWriteEditorSessionPostId } from "@/lib/blog/writeBlogSession";
 import { AreaChart } from "@/components/retroui";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -37,7 +35,6 @@ import {
   ProfileShareUrlCopyRow,
   StackToolsBadgeList,
 } from "@/components/profile";
-import { ProfileCardSkeleton } from "@/components/skeletons";
 import { ProfileSectionHeader, ProfileActivityTabs } from "@/features/profile";
 import {
   SparkLottie,

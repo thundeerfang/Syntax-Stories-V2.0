@@ -1,6 +1,4 @@
-import { SECONDS_PER_MINUTE } from '../constants/durations.js';
-
-/** Auth-related Redis / challenge TTLs (seconds unless noted). */
+import { SECONDS_PER_MINUTE } from "../constants/durations.js";
 export const AUTH_TTL = {
   oauthLinkSec: 5 * SECONDS_PER_MINUTE,
   emailChangeSec: 10 * SECONDS_PER_MINUTE,

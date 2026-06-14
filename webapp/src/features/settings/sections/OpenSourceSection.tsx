@@ -2,7 +2,6 @@
 import React, { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Github, Loader2 } from "lucide-react";
-import { cn } from "@/lib/core/utils";
 import { BlockShadowButton } from "@/components/ui";
 import { GithubNotConnectedDialog } from "@/app/settings/GithubNotConnectedDialog";
 import { useSettingsAuthSlice } from "@/hooks/useSettingsAuthSlice";

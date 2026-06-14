@@ -1,5 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
+import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IContactLead extends Document {
   fullName: string;
   email: string;
@@ -19,15 +18,25 @@ export interface IContactLead extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
 const ContactLeadSchema = new Schema<IContactLead>(
   {
     fullName: { type: String, required: true, trim: true, maxlength: 120 },
-    email: { type: String, required: true, trim: true, lowercase: true, maxlength: 254 },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 254,
+    },
     company: { type: String, trim: true, maxlength: 120 },
     topic: { type: String, required: true, trim: true, maxlength: 200 },
     message: { type: String, required: true, trim: true, maxlength: 5000 },
-    userId: { type: Schema.Types.ObjectId, ref: 'users', index: true, default: undefined },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      index: true,
+      default: undefined,
+    },
     username: { type: String, trim: true, maxlength: 64 },
     clientMeta: { type: Schema.Types.Mixed, default: undefined },
     serverMeta: {
@@ -39,15 +48,14 @@ const ContactLeadSchema = new Schema<IContactLead>(
           userAgent: { type: String, trim: true, maxlength: 1024 },
           istTimeZone: { type: String, required: true },
         },
-        { _id: false }
+        { _id: false },
       ),
       required: true,
     },
   },
-  { timestamps: true, collection: 'contactleads' }
+  { timestamps: true, collection: "contactleads" },
 );
-
 ContactLeadSchema.index({ createdAt: -1 });
-
 export const ContactLeadModel: Model<IContactLead> =
-  mongoose.models?.ContactLead ?? mongoose.model<IContactLead>('ContactLead', ContactLeadSchema);
+  mongoose.models?.ContactLead ??
+  mongoose.model<IContactLead>("ContactLead", ContactLeadSchema);

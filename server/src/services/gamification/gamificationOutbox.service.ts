@@ -1,26 +1,24 @@
-import { env } from '../../config/env.js';
-import { isRedisAvailable } from '../../config/redis.js';
-import { GamificationOutboxEventModel } from '../../models/GamificationOutboxEvent.js';
-import type { AchievementEvent } from '../../achievements/achievement.types.js';
-import type { AchievementDispatchContext } from '../achievements/dispatchAchievementEvents.js';
+import { env } from "../../config/env.js";
+import { isRedisAvailable } from "../../config/redis.js";
+import { GamificationOutboxEventModel } from "../../models/GamificationOutboxEvent.js";
+import type { AchievementEvent } from "../../achievements/achievement.types.js";
+import type { AchievementDispatchContext } from "../achievements/dispatchAchievementEvents.js";
 import {
   publishAchievementToGamificationStream,
   publishGamificationStreamMessage,
-} from './gamificationStream.service.js';
-import { processReferralAttribution } from './referralProcessor.service.js';
-
+} from "./gamificationStream.service.js";
+import { processReferralAttribution } from "./referralProcessor.service.js";
 export async function enqueueAchievementGamificationOutbox(
   userId: string,
   events: AchievementEvent[],
-  ctx?: AchievementDispatchContext
+  ctx?: AchievementDispatchContext,
 ): Promise<void> {
   const doc = await GamificationOutboxEventModel.create({
     aggregateId: userId,
-    type: 'achievement.events',
+    type: "achievement.events",
     payload: { userId, events, ctx },
-    status: 'pending',
+    status: "pending",
   });
-
   if (isRedisAvailable()) {
     try {
       await publishAchievementToGamificationStream({
@@ -29,7 +27,7 @@ export async function enqueueAchievementGamificationOutbox(
         events,
         ctx,
       });
-      doc.status = 'published';
+      doc.status = "published";
       await doc.save();
     } catch (e) {
       doc.attempts = (doc.attempts ?? 0) + 1;
@@ -38,44 +36,45 @@ export async function enqueueAchievementGamificationOutbox(
     }
   }
 }
-
-export async function enqueueReferralGamificationOutbox(conversionId: string): Promise<void> {
+export async function enqueueReferralGamificationOutbox(
+  conversionId: string,
+): Promise<void> {
   const doc = await GamificationOutboxEventModel.create({
     aggregateId: conversionId,
-    type: 'referral.process_attribution',
+    type: "referral.process_attribution",
     payload: { conversionId },
-    status: 'pending',
+    status: "pending",
   });
-
   const useAsync = env.REFERRAL_ASYNC && isRedisAvailable();
   if (useAsync) {
     try {
       await publishGamificationStreamMessage({
-        kind: 'referral',
+        kind: "referral",
         outboxId: String(doc._id),
         conversionId,
-        action: 'process_attribution',
+        action: "process_attribution",
       });
-      doc.status = 'published';
+      doc.status = "published";
       await doc.save();
     } catch (e) {
       doc.attempts = (doc.attempts ?? 0) + 1;
       doc.lastError = e instanceof Error ? e.message : String(e);
       await doc.save();
       await processReferralAttribution(conversionId);
-      doc.status = 'published';
+      doc.status = "published";
       await doc.save();
     }
   } else {
     await processReferralAttribution(conversionId);
-    doc.status = 'published';
+    doc.status = "published";
     await doc.save();
   }
 }
-
-export async function markGamificationOutboxPublished(outboxId: string): Promise<void> {
+export async function markGamificationOutboxPublished(
+  outboxId: string,
+): Promise<void> {
   await GamificationOutboxEventModel.updateOne(
-    { _id: outboxId, status: 'pending' },
-    { $set: { status: 'published' } }
+    { _id: outboxId, status: "pending" },
+    { $set: { status: "published" } },
   ).catch(() => undefined);
 }

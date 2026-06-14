@@ -1,6 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
-/** Denormalized counters for achievement evaluation — single-doc read per user. */
+import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IUserStats extends Document {
   userId: mongoose.Types.ObjectId;
   tenantId?: string | null;
@@ -31,11 +29,22 @@ export interface IUserStats extends Document {
   createdAt?: Date;
   updatedAt?: Date;
 }
-
 const UserStatsSchema = new Schema<IUserStats>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'users', required: true, unique: true, index: true },
-    tenantId: { type: String, trim: true, maxlength: 64, default: null, index: true },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      required: true,
+      unique: true,
+      index: true,
+    },
+    tenantId: {
+      type: String,
+      trim: true,
+      maxlength: 64,
+      default: null,
+      index: true,
+    },
     postsCount: { type: Number, default: 0, min: 0 },
     followingCount: { type: Number, default: 0, min: 0 },
     followersCount: { type: Number, default: 0, min: 0 },
@@ -61,8 +70,8 @@ const UserStatsSchema = new Schema<IUserStats>(
     level: { type: Number, default: 1, min: 1 },
     catalogVersion: { type: Number, default: 1, min: 1 },
   },
-  { timestamps: true, collection: 'userstats' }
+  { timestamps: true, collection: "userstats" },
 );
-
 export const UserStatsModel: Model<IUserStats> =
-  mongoose.models?.UserStats ?? mongoose.model<IUserStats>('UserStats', UserStatsSchema);
+  mongoose.models?.UserStats ??
+  mongoose.model<IUserStats>("UserStats", UserStatsSchema);

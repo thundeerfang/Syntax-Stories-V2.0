@@ -1,19 +1,12 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
-/**
- * Optional curated tag (slug). Authors may also use tags not listed here; counts for all tags
- * come from published posts aggregation.
- */
+import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IBlogTag extends Document {
   slug: string;
   name: string;
-  /** Short blurb for Explore / tag landing (optional). */
   description?: string;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }
-
 const BlogTagSchema = new Schema<IBlogTag>(
   {
     slug: {
@@ -26,11 +19,11 @@ const BlogTagSchema = new Schema<IBlogTag>(
       index: true,
     },
     name: { type: String, required: true, trim: true, maxlength: 80 },
-    description: { type: String, trim: true, maxlength: 600, default: '' },
+    description: { type: String, trim: true, maxlength: 600, default: "" },
     sortOrder: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
 export const BlogTagModel: Model<IBlogTag> =
-  mongoose.models?.blogtags ?? mongoose.model<IBlogTag>('blogtags', BlogTagSchema);
+  mongoose.models?.blogtags ??
+  mongoose.model<IBlogTag>("blogtags", BlogTagSchema);

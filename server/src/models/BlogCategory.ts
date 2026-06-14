@@ -1,16 +1,12 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
-/** Curated category row (slug used on posts). Post counts come from aggregation, not this field. */
+import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IBlogCategory extends Document {
   slug: string;
   name: string;
-  /** Short blurb for Explore / category landing (optional). */
   description?: string;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }
-
 const BlogCategorySchema = new Schema<IBlogCategory>(
   {
     slug: {
@@ -23,12 +19,11 @@ const BlogCategorySchema = new Schema<IBlogCategory>(
       index: true,
     },
     name: { type: String, required: true, trim: true, maxlength: 120 },
-    description: { type: String, trim: true, maxlength: 600, default: '' },
+    description: { type: String, trim: true, maxlength: 600, default: "" },
     sortOrder: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
 export const BlogCategoryModel: Model<IBlogCategory> =
   mongoose.models?.blogcategories ??
-  mongoose.model<IBlogCategory>('blogcategories', BlogCategorySchema);
+  mongoose.model<IBlogCategory>("blogcategories", BlogCategorySchema);

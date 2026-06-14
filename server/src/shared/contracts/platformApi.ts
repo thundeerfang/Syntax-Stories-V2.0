@@ -5,7 +5,6 @@ export type PublicPlatformStatsDto = {
   uptimePercent: number;
   collectedAt: string;
 };
-
 export type PublicPlatformStatsResponse = {
   success: boolean;
   stats?: PublicPlatformStatsDto;

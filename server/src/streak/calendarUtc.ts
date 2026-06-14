@@ -1,19 +1,12 @@
-/**
- * UTC calendar helpers for read-streak `YYYY-MM-DD` buckets (Single Source Streak Engine foundation).
- */
-
-import { DAY_BUCKET_RE } from '../variable/constants.js';
-
-/** UTC calendar date `YYYY-MM-DD` for read-streak day buckets. */
+import { DAY_BUCKET_RE } from "../variable/constants.js";
 export function streakUtcDayBucket(d: Date): string {
   const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
 export function utcMidnightFromDayBucket(dayBucket: string): Date {
-  const [ys, ms, ds] = dayBucket.split('-');
+  const [ys, ms, ds] = dayBucket.split("-");
   const y = Number(ys);
   const mo = Number(ms) - 1;
   const d = Number(ds);
@@ -24,27 +17,24 @@ export function isValidUtcDayBucket(s: string): boolean {
   const d = utcMidnightFromDayBucket(s);
   return streakUtcDayBucket(d) === s;
 }
-
-/** Calendar day immediately before `today` (UTC). */
 export function previousUtcCalendarDay(today: string): string {
   const d = utcMidnightFromDayBucket(today);
   d.setUTCDate(d.getUTCDate() - 1);
   return streakUtcDayBucket(d);
 }
-
-/** Calendar day immediately after `yesterday` (UTC). */
 export function nextUtcCalendarDay(yesterday: string): string {
   const d = utcMidnightFromDayBucket(yesterday);
   d.setUTCDate(d.getUTCDate() + 1);
   return streakUtcDayBucket(d);
 }
-
-/** Fails fast if `today` is not the UTC successor of `yesterday`. */
-export function assertTodayIsNextUtcDayAfterYesterday(today: string, yesterday: string): void {
+export function assertTodayIsNextUtcDayAfterYesterday(
+  today: string,
+  yesterday: string,
+): void {
   if (!isValidUtcDayBucket(today) || !isValidUtcDayBucket(yesterday)) {
-    throw new Error('INVALID_DAY_BUCKET_PAIR');
+    throw new Error("INVALID_DAY_BUCKET_PAIR");
   }
   if (nextUtcCalendarDay(yesterday) !== today) {
-    throw new Error('DAY_BUCKET_PAIR_MISMATCH');
+    throw new Error("DAY_BUCKET_PAIR_MISMATCH");
   }
 }

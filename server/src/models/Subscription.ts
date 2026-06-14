@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 import {
   SUBSCRIPTION_PLAN_FREE,
   SUBSCRIPTION_PLAN_KEYS,
@@ -7,10 +7,8 @@ import {
   type SubscriptionPlan,
   type SubscriptionStatus,
   type SubscriptionWriteSource,
-} from '../variable/constants.js';
-
+} from "../variable/constants.js";
 export type { SubscriptionPlan, SubscriptionStatus, SubscriptionWriteSource };
-
 export interface ISubscription extends Document {
   userId: mongoose.Types.ObjectId;
   plan: SubscriptionPlan;
@@ -19,7 +17,6 @@ export interface ISubscription extends Document {
   currentPeriodEnd?: Date;
   cancelAtPeriodEnd?: boolean;
   trialEnd?: Date;
-  /** Stripe subscription id when on a paid Stripe subscription. */
   stripeSubscriptionId?: string;
   stripePriceId?: string;
   version: number;
@@ -32,12 +29,11 @@ export interface ISubscription extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
 const SubscriptionSchema = new Schema<ISubscription>(
   {
     userId: {
       type: Schema.Types.ObjectId,
-      ref: 'users',
+      ref: "users",
       required: true,
       unique: true,
       index: true,
@@ -50,7 +46,7 @@ const SubscriptionSchema = new Schema<ISubscription>(
     status: {
       type: String,
       enum: [...SUBSCRIPTION_STATUS_KEYS],
-      default: 'active',
+      default: "active",
     },
     currentPeriodStart: { type: Date },
     currentPeriodEnd: { type: Date },
@@ -64,15 +60,14 @@ const SubscriptionSchema = new Schema<ISubscription>(
     source: {
       type: String,
       enum: [...SUBSCRIPTION_WRITE_SOURCE_KEYS],
-      default: 'stripe',
+      default: "stripe",
     },
     graceUntil: { type: Date, default: null },
     lastReconciledAt: { type: Date, default: null },
     metadata: { type: Schema.Types.Mixed },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
 export const SubscriptionModel: Model<ISubscription> =
   mongoose.models?.subscriptions ??
-  mongoose.model<ISubscription>('subscriptions', SubscriptionSchema);
+  mongoose.model<ISubscription>("subscriptions", SubscriptionSchema);

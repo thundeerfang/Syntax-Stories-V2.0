@@ -1,59 +1,84 @@
-import type { Request, Response } from 'express';
-import { UserModel } from '../../../models/User.js';
-import { getRedis } from '../../../config/redis.js';
-import type { AuthUser } from '../../../middlewares/auth/index.js';
-import { writeAuditLog } from '../../../shared/audit/auditLog.js';
-import { AuditAction } from '../../../shared/audit/events.js';
+import type { Request, Response } from "express";
+import { UserModel } from "../../../models/User.js";
+import { getRedis } from "../../../config/redis.js";
+import type { AuthUser } from "../../../middlewares/auth/index.js";
+import { writeAuditLog } from "../../../shared/audit/auditLog.js";
+import { AuditAction } from "../../../shared/audit/events.js";
 import {
   sendAuthEmail,
   isAuthEmailConfigured,
-} from '../../../infrastructure/mail/sendAuthEmail.js';
-import { redisKeys } from '../../../shared/redis/keys.js';
-import { generateEmailOtpDigits } from '../../../services/emailOtp.service.js';
-import { logSecurityEvent } from '../securityEventLog.js';
-import { notifyEmailChange } from '../../../services/notifications/notification.listener.js';
-import { AUTH_TTL } from '../../../config/auth.ttls.js';
-
-export async function initEmailChange(req: Request, res: Response): Promise<void> {
+} from "../../../infrastructure/mail/sendAuthEmail.js";
+import { redisKeys } from "../../../shared/redis/keys.js";
+import { generateEmailOtpDigits } from "../../../services/emailOtp.service.js";
+import { logSecurityEvent } from "../securityEventLog.js";
+import { notifyEmailChange } from "../../../services/notifications/notification.listener.js";
+import { AUTH_TTL } from "../../../config/auth.ttls.js";
+export async function initEmailChange(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ message: 'Unauthorized', success: false });
+      res.status(401).json({ message: "Unauthorized", success: false });
       return;
     }
     if (!isAuthEmailConfigured()) {
-      res.status(503).json({ message: 'Email change is not available.', success: false });
+      res
+        .status(503)
+        .json({ message: "Email change is not available.", success: false });
       return;
     }
-    const newEmailRaw = (req.body as { newEmail?: string }).newEmail;
-    const newEmail = typeof newEmailRaw === 'string' ? newEmailRaw.toLowerCase().trim() : '';
+    const newEmailRaw = (
+      req.body as {
+        newEmail?: string;
+      }
+    ).newEmail;
+    const newEmail =
+      typeof newEmailRaw === "string" ? newEmailRaw.toLowerCase().trim() : "";
     if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-      res.status(400).json({ message: 'Valid new email is required.', success: false });
+      res
+        .status(400)
+        .json({ message: "Valid new email is required.", success: false });
       return;
     }
-    const doc = await UserModel.findById(user._id).select('email');
+    const doc = await UserModel.findById(user._id).select("email");
     if (!doc) {
-      res.status(404).json({ message: 'User not found', success: false });
+      res.status(404).json({ message: "User not found", success: false });
       return;
     }
-    const currentEmail = (doc.email ?? '').toLowerCase();
+    const currentEmail = (doc.email ?? "").toLowerCase();
     if (newEmail === currentEmail) {
       res
         .status(400)
-        .json({ message: 'New email must be different from current email.', success: false });
+        .json({
+          message: "New email must be different from current email.",
+          success: false,
+        });
       return;
     }
-
     const existing = await UserModel.findOne({ email: newEmail });
     if (existing) {
       res
         .status(409)
-        .json({ message: 'An account already exists with this email.', success: false });
+        .json({
+          message: "An account already exists with this email.",
+          success: false,
+        });
       return;
     }
     const redis = getRedis();
     if (!redis) {
-      res.status(503).json({ message: 'Email change temporarily unavailable.', success: false });
+      res
+        .status(503)
+        .json({
+          message: "Email change temporarily unavailable.",
+          success: false,
+        });
       return;
     }
     const codeCurrent = generateEmailOtpDigits();
@@ -62,58 +87,73 @@ export async function initEmailChange(req: Request, res: Response): Promise<void
     await redis.setEx(
       key,
       AUTH_TTL.emailChangeSec,
-      JSON.stringify({ codeCurrent, codeNew, newEmail })
+      JSON.stringify({ codeCurrent, codeNew, newEmail }),
     );
-
     await sendAuthEmail({
       to: currentEmail,
-      subject: 'Verify your email change – Syntax Stories',
+      subject: "Verify your email change – Syntax Stories",
       html: `<p>Your verification code for changing your email: <strong>${codeCurrent}</strong>. Valid for 10 minutes.</p>`,
     });
     await sendAuthEmail({
       to: newEmail,
-      subject: 'Verify your new email – Syntax Stories',
+      subject: "Verify your new email – Syntax Stories",
       html: `<p>Your verification code for your new email: <strong>${codeNew}</strong>. Valid for 10 minutes.</p>`,
     });
-
     res.status(200).json({
       success: true,
-      message: 'Verification codes sent to your current and new email.',
+      message: "Verification codes sent to your current and new email.",
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
-export async function verifyEmailChange(req: Request, res: Response): Promise<void> {
+export async function verifyEmailChange(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ message: 'Unauthorized', success: false });
+      res.status(401).json({ message: "Unauthorized", success: false });
       return;
     }
-    const body = req.body as { currentCode?: string; newCode?: string };
-    const currentCode = (body.currentCode ?? '').trim();
-    const newCode = (body.newCode ?? '').trim();
+    const body = req.body as {
+      currentCode?: string;
+      newCode?: string;
+    };
+    const currentCode = (body.currentCode ?? "").trim();
+    const newCode = (body.newCode ?? "").trim();
     if (!currentCode || !/^\d{6}$/.test(currentCode)) {
-      res
-        .status(400)
-        .json({
-          message: 'Valid 6-digit code from your current email is required.',
-          success: false,
-        });
+      res.status(400).json({
+        message: "Valid 6-digit code from your current email is required.",
+        success: false,
+      });
       return;
     }
     if (!newCode || !/^\d{6}$/.test(newCode)) {
       res
         .status(400)
-        .json({ message: 'Valid 6-digit code from your new email is required.', success: false });
+        .json({
+          message: "Valid 6-digit code from your new email is required.",
+          success: false,
+        });
       return;
     }
     const redis = getRedis();
     if (!redis) {
-      res.status(503).json({ message: 'Email change temporarily unavailable.', success: false });
+      res
+        .status(503)
+        .json({
+          message: "Email change temporarily unavailable.",
+          success: false,
+        });
       return;
     }
     const key = redisKeys.auth.emailChange(String(user._id));
@@ -121,27 +161,42 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
     if (!raw) {
       res
         .status(400)
-        .json({ message: 'Codes expired or invalid. Request a new code.', success: false });
+        .json({
+          message: "Codes expired or invalid. Request a new code.",
+          success: false,
+        });
       return;
     }
-    let payload: { codeCurrent: string; codeNew: string; newEmail: string };
+    let payload: {
+      codeCurrent: string;
+      codeNew: string;
+      newEmail: string;
+    };
     try {
-      payload = JSON.parse(raw) as { codeCurrent: string; codeNew: string; newEmail: string };
+      payload = JSON.parse(raw) as {
+        codeCurrent: string;
+        codeNew: string;
+        newEmail: string;
+      };
     } catch {
-      res.status(400).json({ message: 'Invalid request. Try again.', success: false });
+      res
+        .status(400)
+        .json({ message: "Invalid request. Try again.", success: false });
       return;
     }
     if (payload.codeCurrent !== currentCode || payload.codeNew !== newCode) {
       res
         .status(401)
-        .json({ message: 'Invalid code(s). Check both codes and try again.', success: false });
+        .json({
+          message: "Invalid code(s). Check both codes and try again.",
+          success: false,
+        });
       return;
     }
     await redis.del(key);
-
-    const doc = await UserModel.findById(user._id).select('email');
+    const doc = await UserModel.findById(user._id).select("email");
     if (!doc) {
-      res.status(404).json({ message: 'User not found', success: false });
+      res.status(404).json({ message: "User not found", success: false });
       return;
     }
     const newEmail = payload.newEmail.toLowerCase().trim();
@@ -171,7 +226,7 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
         discordToken: 1,
       },
     });
-    await logSecurityEvent(String(user._id), 'login_success', req, {
+    await logSecurityEvent(String(user._id), "login_success", req, {
       metadata: { email_change: true, newEmail },
     });
     void writeAuditLog(req, AuditAction.EMAIL_CHANGE, {
@@ -179,24 +234,30 @@ export async function verifyEmailChange(req: Request, res: Response): Promise<vo
       metadata: { newEmail },
     });
     void notifyEmailChange(String(user._id), newEmail);
-
     res.status(200).json({
       success: true,
       message:
-        'Email updated. All OAuth providers have been unlinked. You can link them again with your new email.',
+        "Email updated. All OAuth providers have been unlinked. You can link them again with your new email.",
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }
-
-/** Cancel pending email change: invalidate codes so verify will fail with "expired or invalid". */
-export async function cancelEmailChange(req: Request, res: Response): Promise<void> {
+export async function cancelEmailChange(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const user = (req as Request & { user?: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user?: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ message: 'Unauthorized', success: false });
+      res.status(401).json({ message: "Unauthorized", success: false });
       return;
     }
     const redis = getRedis();
@@ -206,10 +267,13 @@ export async function cancelEmailChange(req: Request, res: Response): Promise<vo
     }
     res.status(200).json({
       success: true,
-      message: 'Email change cancelled. Codes are invalid; request new codes to try again.',
+      message:
+        "Email change cancelled. Codes are invalid; request new codes to try again.",
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal Server Error 💀', success: false });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error 💀", success: false });
   }
 }

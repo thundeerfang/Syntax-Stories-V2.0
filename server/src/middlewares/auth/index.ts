@@ -4,9 +4,9 @@ export {
   verifyOtpValidation,
   staffLoginValidation,
   updateProfileValidation,
-} from './authValidation.js';
-export { updateProfileSectionBodyValidation } from './profileSection.validation.js';
-export { verifyToken, type AuthUser } from './verifyToken.js';
+} from "./authValidation.js";
+export { updateProfileSectionBodyValidation } from "./profileSection.validation.js";
+export { verifyToken, type AuthUser } from "./verifyToken.js";
 export {
   rateLimitSendOtp,
   rateLimitVerifyOtp,
@@ -14,6 +14,6 @@ export {
   rateLimitStaffLogin,
   rateLimitRefresh,
   rateLimitUpdateProfile,
-} from './rateLimitAuth.js';
-export { verifyAltchaIfConfigured } from './verifyAltcha.js';
-export { idempotency } from './idempotency.js';
+} from "./rateLimitAuth.js";
+export { verifyAltchaIfConfigured } from "./verifyAltcha.js";
+export { idempotency } from "./idempotency.js";

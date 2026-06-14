@@ -1,104 +1,120 @@
-import type { Request, Response } from 'express';
-import type { AuthUser } from '../../../middlewares/auth/index.js';
-import { isAdminRequest } from '../../rbac/middleware/requireStaff.middleware.js';
+import type { Request, Response } from "express";
+import type { AuthUser } from "../../../middlewares/auth/index.js";
+import { isAdminRequest } from "../../rbac/middleware/requireStaff.middleware.js";
 import {
   TRASH_SECTIONS,
   type TrashSection,
-} from '../../../variable/constants.js';
+} from "../../../variable/constants.js";
 import {
   listBlogTrash,
   listUserTrash,
   restoreBlogPostAsAdmin,
   restoreUserAsAdmin,
   TrashServiceError,
-} from './trash.service.js';
-
+} from "./trash.service.js";
 function sendTrashError(res: Response, err: unknown): void {
   if (err instanceof TrashServiceError) {
-    res.status(err.status).json({ success: false, message: err.message, code: err.code });
+    res
+      .status(err.status)
+      .json({ success: false, message: err.message, code: err.code });
     return;
   }
   console.error(err);
-  res.status(500).json({ success: false, message: 'Internal server error' });
+  res.status(500).json({ success: false, message: "Internal server error" });
 }
-
 function parseSections(raw: unknown): TrashSection[] {
   const all: TrashSection[] = [...TRASH_SECTIONS];
-  if (raw == null || raw === '') return all;
+  if (raw == null || raw === "") return all;
   const s = String(raw);
   const parts = s
-    .split(',')
+    .split(",")
     .map((p) => p.trim().toLowerCase())
     .filter(Boolean);
   const set = new Set<TrashSection>();
   for (const p of parts) {
-    if ((TRASH_SECTIONS as readonly string[]).includes(p)) set.add(p as TrashSection);
+    if ((TRASH_SECTIONS as readonly string[]).includes(p))
+      set.add(p as TrashSection);
   }
   return set.size ? [...set] : all;
 }
-
 export async function getTrash(req: Request, res: Response): Promise<void> {
   try {
-    const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1);
+    const page = Math.max(
+      1,
+      Number.parseInt(String(req.query.page ?? "1"), 10) || 1,
+    );
     const pageSize = Math.min(
       50,
-      Math.max(1, Number.parseInt(String(req.query.pageSize ?? '20'), 10) || 20)
+      Math.max(
+        1,
+        Number.parseInt(String(req.query.pageSize ?? "20"), 10) || 20,
+      ),
     );
     const sections = parseSections(req.query.sections);
-
     const out: Record<string, unknown> = { page, pageSize };
-
-    if (sections.includes('blog')) {
+    if (sections.includes("blog")) {
       out.blog = await listBlogTrash(page, pageSize);
     }
-    if (sections.includes('user')) {
+    if (sections.includes("user")) {
       out.users = await listUserTrash(page, pageSize);
     }
-
     res.json({ success: true, ...out });
   } catch (err) {
     sendTrashError(res, err);
   }
 }
-
 export async function postRestore(req: Request, res: Response): Promise<void> {
   try {
-    const user = (req as Request & { user: AuthUser }).user;
+    const user = (
+      req as Request & {
+        user: AuthUser;
+      }
+    ).user;
     if (!user?._id) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
+      res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-
-    const body = req.body as { resourceType?: string; id?: string };
+    const body = req.body as {
+      resourceType?: string;
+      id?: string;
+    };
     const resourceType = body.resourceType?.toLowerCase();
     const id = body.id?.trim();
-
     if (!resourceType || !id) {
-      res.status(400).json({ success: false, message: 'resourceType and id required' });
+      res
+        .status(400)
+        .json({ success: false, message: "resourceType and id required" });
       return;
     }
-
-    if (resourceType === 'blog') {
+    if (resourceType === "blog") {
       if (!isAdminRequest(req)) {
-        res.status(403).json({ success: false, message: 'Only admin can restore blog posts' });
+        res
+          .status(403)
+          .json({
+            success: false,
+            message: "Only admin can restore blog posts",
+          });
         return;
       }
       await restoreBlogPostAsAdmin(id, user._id, req);
       res.json({ success: true });
       return;
     }
-
-    if (resourceType === 'user') {
+    if (resourceType === "user") {
       if (!isAdminRequest(req)) {
-        res.status(403).json({ success: false, message: 'Only admin can restore user accounts' });
+        res
+          .status(403)
+          .json({
+            success: false,
+            message: "Only admin can restore user accounts",
+          });
         return;
       }
       await restoreUserAsAdmin(id, user._id, req);
       res.json({ success: true });
       return;
     }
-
-    res.status(400).json({ success: false, message: 'Invalid resourceType' });
+    res.status(400).json({ success: false, message: "Invalid resourceType" });
   } catch (err) {
     sendTrashError(res, err);
   }

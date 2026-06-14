@@ -1,32 +1,25 @@
-import type { Request } from 'express';
-import type { ProfileSections, ProfileUpdateSection } from '../../modules/profile/profile.types.js';
-
-/**
- * In-process event bus (not Kafka). Listeners must not block the request path for heavy work.
- * Async listeners are fire-and-forget; errors are logged only.
- */
+import type { Request } from "express";
+import type {
+  ProfileSections,
+  ProfileUpdateSection,
+} from "../../modules/profile/profile.types.js";
 export type AuthSigninSuccessPayload = {
   userId: string;
-  /** e.g. `google`, `otp`, `signup_email`, `2fa`, `qr_login` */
   source: string;
   isNewUser?: boolean;
 };
-
-/** Emitted after a successful profile persist; audit listener diffs sections. */
 export type ReferralConvertedPayload = {
   referrerId: string;
   refereeUserId: string;
   source: string;
   conversionId?: string;
 };
-
 export type ReferralSignupCompletedPayload = {
   conversionId: string;
   referrerId: string;
   refereeUserId: string;
   source: string;
 };
-
 export type ReferralRejectedPayload = {
   conversionId: string;
   referrerId: string;
@@ -34,7 +27,6 @@ export type ReferralRejectedPayload = {
   reason: string;
   code: string;
 };
-
 export type ReferralRewardedPayload = {
   conversionId: string;
   referrerId: string;
@@ -42,42 +34,45 @@ export type ReferralRewardedPayload = {
   rewardType: string;
   amount: number;
 };
-
 export type ReferralSharePayload = {
   userId: string;
   channel: string;
   referralCode?: string;
 };
-
 export type ProfileUpdatedPayload = {
   req: Request;
   actorId: string;
   updates: Record<string, unknown>;
   currentProfile: ProfileSections | null;
-  updatedProfile: ProfileSections & { _id: unknown };
-  /** `legacy` = monolithic `PATCH /auth/profile`; otherwise the section route used. */
-  section: ProfileUpdateSection | 'legacy';
+  updatedProfile: ProfileSections & {
+    _id: unknown;
+  };
+  section: ProfileUpdateSection | "legacy";
 };
-
 export type AppEventMap = {
-  /** Successful sign-in after session + JWT issuance (email OTP, OAuth, etc.). */
-  'auth.signin.success': AuthSigninSuccessPayload;
-  /** Referral attributed on new user (verified conversion). */
-  'referral.converted': ReferralConvertedPayload;
-  'referral.signup_completed': ReferralSignupCompletedPayload;
-  'referral.rejected': ReferralRejectedPayload;
-  'referral.rewarded': ReferralRewardedPayload;
-  'referral.share': ReferralSharePayload;
-  'referral.attached': { referrerId: string; code: string };
-  /** Profile document updated (post-DB write). */
-  'profile.updated': ProfileUpdatedPayload;
+  "auth.signin.success": AuthSigninSuccessPayload;
+  "referral.converted": ReferralConvertedPayload;
+  "referral.signup_completed": ReferralSignupCompletedPayload;
+  "referral.rejected": ReferralRejectedPayload;
+  "referral.rewarded": ReferralRewardedPayload;
+  "referral.share": ReferralSharePayload;
+  "referral.attached": {
+    referrerId: string;
+    code: string;
+  };
+  "profile.updated": ProfileUpdatedPayload;
 };
-
-type Listener<K extends keyof AppEventMap> = (payload: AppEventMap[K]) => void | Promise<void>;
-
-const listeners = new Map<keyof AppEventMap, Set<Listener<keyof AppEventMap>>>();
-
-export function onAppEvent<K extends keyof AppEventMap>(event: K, fn: Listener<K>): () => void {
+type Listener<K extends keyof AppEventMap> = (
+  payload: AppEventMap[K],
+) => void | Promise<void>;
+const listeners = new Map<
+  keyof AppEventMap,
+  Set<Listener<keyof AppEventMap>>
+>();
+export function onAppEvent<K extends keyof AppEventMap>(
+  event: K,
+  fn: Listener<K>,
+): () => void {
   let set = listeners.get(event);
   if (!set) {
     set = new Set();
@@ -88,17 +83,19 @@ export function onAppEvent<K extends keyof AppEventMap>(event: K, fn: Listener<K
     set?.delete(fn as Listener<keyof AppEventMap>);
   };
 }
-
-export function emitAppEvent<K extends keyof AppEventMap>(event: K, payload: AppEventMap[K]): void {
+export function emitAppEvent<K extends keyof AppEventMap>(
+  event: K,
+  payload: AppEventMap[K],
+): void {
   const set = listeners.get(event);
   if (!set?.size) return;
   for (const fn of set) {
     try {
       void Promise.resolve(fn(payload)).catch((e) =>
-        console.error('[appEvents]', String(event), e)
+        console.error("[appEvents]", String(event), e),
       );
     } catch (e) {
-      console.error('[appEvents]', String(event), e);
+      console.error("[appEvents]", String(event), e);
     }
   }
 }

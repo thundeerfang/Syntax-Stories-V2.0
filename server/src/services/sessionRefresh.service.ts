@@ -1,30 +1,33 @@
-import crypto from 'node:crypto';
-import type { Request, Response } from 'express';
-import { UserModel } from '../models/User.js';
-import { SessionModel } from '../models/Session.js';
-import { authConfig } from '../config/auth.config.js';
-import { signAccessToken } from '../config/jwt.js';
-import { logSecurityEvent } from '../modules/auth/securityEventLog.js';
-import { generateRefreshToken, SESSION_DURATION_MS, hashToken } from './session.service.js';
-import { refreshStaffPermissionSnapshot } from '../admin-platform/iam/permissionSnapshot.service.js';
-import { incrementIamMetric } from '../admin-platform/iam/iamMetrics.service.js';
-import { setAdminSessionCookies } from '../admin-platform/auth/adminSessionCookies.js';
-import { verifyDeviceBindingOnRefresh } from '../admin-platform/iam/deviceBinding.service.js';
-import { resolveStaffRoleForUser } from '../admin-platform/rbac/services/adminStaffResolution.js';
-import { env } from '../config/env.js';
-
+import crypto from "node:crypto";
+import type { Request, Response } from "express";
+import { UserModel } from "../models/User.js";
+import { SessionModel } from "../models/Session.js";
+import { authConfig } from "../config/auth.config.js";
+import { signAccessToken } from "../config/jwt.js";
+import { logSecurityEvent } from "../modules/auth/securityEventLog.js";
+import {
+  generateRefreshToken,
+  SESSION_DURATION_MS,
+  hashToken,
+} from "./session.service.js";
+import { refreshStaffPermissionSnapshot } from "../admin-platform/iam/permissionSnapshot.service.js";
+import { incrementIamMetric } from "../admin-platform/iam/iamMetrics.service.js";
+import { setAdminSessionCookies } from "../admin-platform/auth/adminSessionCookies.js";
+import { verifyDeviceBindingOnRefresh } from "../admin-platform/iam/deviceBinding.service.js";
+import { resolveStaffRoleForUser } from "../admin-platform/rbac/services/adminStaffResolution.js";
+import { env } from "../config/env.js";
 function hashRefreshToken(token: string): string {
   return hashToken(token);
 }
-
-/** Revoke every session in the same rotation family (token reuse / compromise). */
-export async function revokeSessionFamily(sessionFamilyId: string, reason: string): Promise<void> {
+export async function revokeSessionFamily(
+  sessionFamilyId: string,
+  reason: string,
+): Promise<void> {
   await SessionModel.updateMany(
     { sessionFamilyId, revoked: false },
-    { $set: { revoked: true, revokedReason: reason } }
+    { $set: { revoked: true, revokedReason: reason } },
   );
 }
-
 export type RefreshSessionResult =
   | {
       ok: true;
@@ -33,14 +36,14 @@ export type RefreshSessionResult =
       expiresIn: string;
       sessionId: string;
     }
-  | { ok: false; status: number; message: string };
-
-/**
- * Validates refresh token, rotates when enabled, detects reuse → revokes family.
- */
+  | {
+      ok: false;
+      status: number;
+      message: string;
+    };
 export async function refreshSessionWithRotation(
   req: Request,
-  refreshTokenRaw: string
+  refreshTokenRaw: string,
 ): Promise<RefreshSessionResult> {
   const incomingHash = hashRefreshToken(refreshTokenRaw);
   let session = await SessionModel.findOne({
@@ -48,7 +51,6 @@ export async function refreshSessionWithRotation(
     revoked: false,
     expiresAt: { $gt: new Date() },
   });
-
   if (!session) {
     const reuseVictim = await SessionModel.findOne({
       previousRefreshTokenHash: incomingHash,
@@ -62,44 +64,50 @@ export async function refreshSessionWithRotation(
       if (withinGrace) {
         session = reuseVictim;
       } else if (reuseVictim.sessionFamilyId) {
-        await revokeSessionFamily(reuseVictim.sessionFamilyId, 'refresh_token_reuse');
-        await logSecurityEvent(String(reuseVictim.userId), 'refresh_token_reuse', req, {
-          sessionFamilyId: reuseVictim.sessionFamilyId,
-        });
-        void incrementIamMetric('refresh_token_reuse');
+        await revokeSessionFamily(
+          reuseVictim.sessionFamilyId,
+          "refresh_token_reuse",
+        );
+        await logSecurityEvent(
+          String(reuseVictim.userId),
+          "refresh_token_reuse",
+          req,
+          {
+            sessionFamilyId: reuseVictim.sessionFamilyId,
+          },
+        );
+        void incrementIamMetric("refresh_token_reuse");
       }
     }
     if (!session) {
-      void incrementIamMetric('refresh_failure');
+      void incrementIamMetric("refresh_failure");
       return {
         ok: false,
         status: 401,
-        message: 'Session invalid or expired. Please log in again.',
+        message: "Session invalid or expired. Please log in again.",
       };
     }
   }
-
-  const user = await UserModel.findById(session.userId).select('isActive staffRole');
+  const user = await UserModel.findById(session.userId).select(
+    "isActive staffRole",
+  );
   if (!user || !user.isActive) {
-    return { ok: false, status: 401, message: 'Account disabled or not found' };
+    return { ok: false, status: 401, message: "Account disabled or not found" };
   }
-
   const staffRole = await resolveStaffRoleForUser(String(user._id));
   if (staffRole) {
     const deviceOk = await verifyDeviceBindingOnRefresh(
       String(user._id),
       session.deviceFingerprint,
-      req
+      req,
     );
     if (!deviceOk.ok) {
-      void incrementIamMetric('refresh_failure');
+      void incrementIamMetric("refresh_failure");
       return { ok: false, status: 403, message: deviceOk.reason };
     }
   }
-
   const newRefreshToken = generateRefreshToken();
   const newHash = hashRefreshToken(newRefreshToken);
-
   if (!session.sessionFamilyId) {
     session.sessionFamilyId = crypto.randomUUID();
   }
@@ -109,15 +117,12 @@ export async function refreshSessionWithRotation(
   session.lastActiveAt = new Date();
   session.expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   await session.save();
-
   const accessToken = signAccessToken({
     _id: String(user._id),
     sessionId: String(session._id),
   });
-
   await refreshStaffPermissionSnapshot(String(user._id), String(session._id));
-  void incrementIamMetric('refresh_success');
-
+  void incrementIamMetric("refresh_success");
   return {
     ok: true,
     accessToken,
@@ -126,17 +131,21 @@ export async function refreshSessionWithRotation(
     sessionId: String(session._id),
   };
 }
-
 export function sendRefreshSuccess(
   res: Response,
-  result: Extract<RefreshSessionResult, { ok: true }>
+  result: Extract<
+    RefreshSessionResult,
+    {
+      ok: true;
+    }
+  >,
 ): void {
   setAdminSessionCookies(res, {
     accessToken: result.accessToken,
     refreshToken: result.refreshToken,
   });
   const body: Record<string, unknown> = {
-    message: 'Token refreshed 🚀',
+    message: "Token refreshed 🚀",
     success: true,
     expiresIn: result.expiresIn,
     sessionId: result.sessionId,

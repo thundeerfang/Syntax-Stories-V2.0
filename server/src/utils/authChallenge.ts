@@ -1,26 +1,24 @@
-import crypto from 'node:crypto';
-import { getRedis } from '../config/redis.js';
-import { redisKeys } from '../shared/redis/keys.js';
-import { AUTH_CHALLENGE_TTL_SEC } from '../variable/constants.js';
-
+import crypto from "node:crypto";
+import { getRedis } from "../config/redis.js";
+import { redisKeys } from "../shared/redis/keys.js";
+import { AUTH_CHALLENGE_TTL_SEC } from "../variable/constants.js";
 function hashToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
-
-export async function createAuthChallenge(
-  userId: string
-): Promise<{ challengeToken: string; expiresIn: number }> {
+export async function createAuthChallenge(userId: string): Promise<{
+  challengeToken: string;
+  expiresIn: number;
+}> {
   const redis = getRedis();
-  if (!redis) throw new Error('Redis required for 2FA challenges');
-  const raw = crypto.randomBytes(32).toString('hex');
+  if (!redis) throw new Error("Redis required for 2FA challenges");
+  const raw = crypto.randomBytes(32).toString("hex");
   const key = redisKeys.challenge(hashToken(raw));
   await redis.setEx(key, AUTH_CHALLENGE_TTL_SEC, JSON.stringify({ userId }));
   return { challengeToken: raw, expiresIn: AUTH_CHALLENGE_TTL_SEC };
 }
-
-export async function consumeAuthChallenge(
-  challengeToken: string
-): Promise<{ userId: string } | null> {
+export async function consumeAuthChallenge(challengeToken: string): Promise<{
+  userId: string;
+} | null> {
   const redis = getRedis();
   if (!redis) return null;
   const key = redisKeys.challenge(hashToken(challengeToken));
@@ -28,7 +26,9 @@ export async function consumeAuthChallenge(
   if (!value) return null;
   await redis.del(key);
   try {
-    return JSON.parse(value) as { userId: string };
+    return JSON.parse(value) as {
+      userId: string;
+    };
   } catch {
     return null;
   }

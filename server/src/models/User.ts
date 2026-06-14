@@ -1,39 +1,31 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import { BIO_MAX_LENGTH, DEFAULT_AVATAR_SEED } from '../variable/constants.js';
-import { diceBearAvatarSvgUrl } from '../utils/diceBearAvatarUrl.js';
-import { ensureOpaqueDiceBearDataUri } from '../utils/diceBearSvgBackground.js';
-
-/** Fallback when `profileImg` is empty or invalid (DiceBear Adventurer SVG data URI, deterministic). */
+import mongoose, { Schema, Document, Model } from "mongoose";
+import { BIO_MAX_LENGTH, DEFAULT_AVATAR_SEED } from "../variable/constants.js";
+import { diceBearAvatarSvgUrl } from "../utils/diceBearAvatarUrl.js";
+import { ensureOpaqueDiceBearDataUri } from "../utils/diceBearSvgBackground.js";
 export const DEFAULT_AVATAR_URL = diceBearAvatarSvgUrl(DEFAULT_AVATAR_SEED);
-
-/** Returns DEFAULT_AVATAR_URL when profileImg is missing or a relative/broken path (e.g. old OAuth placeholder). */
 export function normalizeProfileImg(profileImg: string | undefined): string {
   if (!profileImg?.trim()) return DEFAULT_AVATAR_URL;
-  if (profileImg.startsWith('http://') || profileImg.startsWith('https://')) return profileImg;
-  if (profileImg.startsWith('data:image/svg+xml')) {
+  if (profileImg.startsWith("http://") || profileImg.startsWith("https://"))
+    return profileImg;
+  if (profileImg.startsWith("data:image/svg+xml")) {
     return ensureOpaqueDiceBearDataUri(profileImg);
   }
-  if (profileImg.startsWith('data:image/')) return profileImg;
+  if (profileImg.startsWith("data:image/")) return profileImg;
   return DEFAULT_AVATAR_URL;
 }
-
 export interface ICertificationMediaItem {
   url: string;
   title?: string;
 }
-
 export interface ICertification {
-  /** Auto-generated per certification, used for CERT_ID display (e.g. "1", "2"). */
   certId?: string;
   name: string;
   issuingOrganization: string;
   issuerLogo?: string;
-  /** Optional HTML title + img alt for issuer logo. */
   issuerLogoAlt?: string;
   currentlyValid?: boolean;
   issueDate?: string;
   expirationDate?: string;
-  /** Auto-generated per certification, e.g. "A-24" based on year. */
   certValType?: string;
   credentialId?: string;
   credentialUrl?: string;
@@ -41,12 +33,9 @@ export interface ICertification {
   skills?: string[];
   media?: ICertificationMediaItem[];
 }
-
 export interface IProject {
-  type?: 'project' | 'publication';
-  /** When imported from GitHub repo picker */
-  source?: 'github';
-  /** owner/repo */
+  type?: "project" | "publication";
+  source?: "github";
   repoFullName?: string;
   repoId?: number;
   title: string;
@@ -56,11 +45,12 @@ export interface IProject {
   endDate?: string;
   publicationUrl?: string;
   description?: string;
-  media?: { url: string; title?: string }[];
-  /** Last updated year log, e.g. "2025_prd_log", set by backend on profile update. */
+  media?: {
+    url: string;
+    title?: string;
+  }[];
   prjLog?: string;
 }
-
 export interface IOpenSourceContribution {
   title: string;
   repository?: string;
@@ -70,15 +60,12 @@ export interface IOpenSourceContribution {
   endDate?: string;
   description?: string;
 }
-
 export interface ISetupItem {
   label: string;
   imageUrl: string;
   productUrl?: string;
-  /** Optional accessibility text for the image (HTML title + alt). */
   imageAlt?: string;
 }
-
 export interface IUserPasskey {
   credentialId: string;
   publicKey: string;
@@ -87,20 +74,16 @@ export interface IUserPasskey {
   createdAt: Date;
   lastUsedAt?: Date;
 }
-
 export interface IUser extends Document {
   fullName: string;
   username: string;
   email: string;
   profileImg?: string;
-  /** Optional; used as HTML title + img alt for profile photo. */
   profileImgAlt?: string;
   coverBanner?: string;
-  /** Optional; used as HTML title + img alt for cover banner. */
   coverBannerAlt?: string;
   gender?: string;
   job?: string;
-  /** Public profile location (city/region display). */
   profileLocation?: string;
   bio?: string;
   portfolioUrl?: string;
@@ -138,55 +121,44 @@ export interface IUser extends Document {
   emailVerified: boolean;
   lastLoginAt?: Date;
   subscription?: mongoose.Types.ObjectId;
-  /** Stripe Customer id (`cus_...`); one per user when billing is set up. */
   stripeCustomerId?: string | null;
-  /** Denormalized from Subscription / Stripe for fast reads. */
   subscriptionStatus?: string;
   subscriptionPlanKey?: string;
   subscriptionPeriodEnd?: Date;
   lastSubscriptionReconciledAt?: Date | null;
   twoFactorEnabled: boolean;
   twoFactorSecret?: string;
-  /** Platform passkeys (Touch ID / Windows Hello) for admin step-up. */
   passkeys?: IUserPasskey[];
-  /** When true and passkeys exist, step-up may use biometrics instead of TOTP only. */
   passkeyStepUpEnabled?: boolean;
-  /** Denormalized: updated on follow/unfollow */
   followersCount?: number;
   followingCount?: number;
-  /** Incremented on each successful profile PATCH; used for optimistic concurrency (optional client `expectedProfileVersion`). */
   profileVersion?: number;
   profileUpdatedAt?: Date;
-  /** Public invite code (opaque); unique when set. */
   referralCode?: string;
-  /** User who referred this account (immutable once set). */
   referredByUserId?: mongoose.Types.ObjectId;
   referredAt?: Date;
-  /** e.g. `link`, `blog`, `oauth` */
   referralSource?: string;
   referralCapturedAt?: Date;
-  /** CMS / help admin access; unset = no staff UI. */
-  staffRole?: 'editor' | 'admin';
-  /** Bcrypt hash for `POST /auth/staff-login` (staff accounts only). Not selected by default. */
+  staffRole?: "editor" | "admin";
   staffPasswordHash?: string;
-  /** Admin soft-delete (platform user directory); omit or null = active in directory. */
   deletedAt?: Date | null;
   deletedById?: mongoose.Types.ObjectId;
-  /** Which blog posting streak granularity is shown on the public profile (`daily` default). */
-  blogStreakMode?: 'daily' | 'weekly' | 'monthly';
-  /** Durable max daily read streak length from Mongo recompute (F.5); merged into public `readStreak`. */
+  blogStreakMode?: "daily" | "weekly" | "monthly";
   readStreakLongest?: number;
-  /** Denormalized: total Respect received on published, non-deleted blog posts (see blog Respect spec). */
   blogRespectReceivedCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
-
 const CertificationSchema = new Schema(
   {
     certId: { type: String, trim: true, maxlength: 20 },
     name: { type: String, required: true, trim: true, maxlength: 120 },
-    issuingOrganization: { type: String, required: true, trim: true, maxlength: 120 },
+    issuingOrganization: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 120,
+    },
     issuerLogo: { type: String, trim: true, maxlength: 2000 },
     issuerLogoAlt: { type: String, trim: true, maxlength: 120 },
     currentlyValid: { type: Boolean, default: false },
@@ -209,13 +181,17 @@ const CertificationSchema = new Schema(
       _id: false,
     },
   },
-  { _id: false }
+  { _id: false },
 );
-
 const ProjectSchema = new Schema(
   {
-    type: { type: String, enum: ['project', 'publication'], default: 'project', trim: true },
-    source: { type: String, enum: ['github'], trim: true },
+    type: {
+      type: String,
+      enum: ["project", "publication"],
+      default: "project",
+      trim: true,
+    },
+    source: { type: String, enum: ["github"], trim: true },
     repoFullName: { type: String, trim: true, maxlength: 200 },
     repoId: { type: Number },
     title: { type: String, required: true, trim: true, maxlength: 120 },
@@ -238,9 +214,8 @@ const ProjectSchema = new Schema(
       _id: false,
     },
   },
-  { _id: false }
+  { _id: false },
 );
-
 const OpenSourceContributionSchema = new Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 120 },
@@ -251,9 +226,8 @@ const OpenSourceContributionSchema = new Schema(
     endDate: { type: String, trim: true, maxlength: 20 },
     description: { type: String, trim: true, maxlength: 2000 },
   },
-  { _id: false }
+  { _id: false },
 );
-
 const SetupItemSchema = new Schema(
   {
     label: { type: String, required: true, trim: true, maxlength: 80 },
@@ -261,14 +235,26 @@ const SetupItemSchema = new Schema(
     productUrl: { type: String, trim: true, maxlength: 500 },
     imageAlt: { type: String, trim: true, maxlength: 120 },
   },
-  { _id: false }
+  { _id: false },
 );
-
 const UserSchema = new Schema<IUser>(
   {
     fullName: { type: String, required: true, trim: true },
-    username: { type: String, required: true, unique: true, trim: true, index: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      index: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
     profileImg: {
       type: String,
       maxlength: 131072,
@@ -297,12 +283,15 @@ const UserSchema = new Schema<IUser>(
         validator(v: unknown) {
           return Array.isArray(v) && v.length <= 10;
         },
-        message: 'Stack & Tools cannot exceed 10 items.',
+        message: "Stack & Tools cannot exceed 10 items.",
       },
     },
     certifications: { type: [CertificationSchema], default: [] },
     projects: { type: [ProjectSchema], default: [] },
-    openSourceContributions: { type: [OpenSourceContributionSchema], default: [] },
+    openSourceContributions: {
+      type: [OpenSourceContributionSchema],
+      default: [],
+    },
     mySetup: { type: [SetupItemSchema], default: [], maxlength: 5 },
     isGoogleAccount: { type: Boolean, default: false },
     isGitAccount: { type: Boolean, default: false },
@@ -328,7 +317,11 @@ const UserSchema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     emailVerified: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
-    subscription: { type: Schema.Types.ObjectId, ref: 'subscriptions', default: null },
+    subscription: {
+      type: Schema.Types.ObjectId,
+      ref: "subscriptions",
+      default: null,
+    },
     stripeCustomerId: { type: String, sparse: true, unique: true, trim: true },
     subscriptionStatus: { type: String, trim: true, maxlength: 32 },
     subscriptionPlanKey: { type: String, trim: true, maxlength: 16 },
@@ -342,7 +335,7 @@ const UserSchema = new Schema<IUser>(
           credentialId: { type: String, required: true },
           publicKey: { type: String, required: true },
           counter: { type: Number, default: 0 },
-          deviceLabel: { type: String, default: 'This device' },
+          deviceLabel: { type: String, default: "This device" },
           createdAt: { type: Date, default: Date.now },
           lastUsedAt: { type: Date },
         },
@@ -362,23 +355,43 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       maxlength: 24,
     },
-    referredByUserId: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    referredByUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      default: null,
+    },
     referredAt: { type: Date, default: null },
-    referralSource: { type: String, trim: true, maxlength: 32, default: undefined },
+    referralSource: {
+      type: String,
+      trim: true,
+      maxlength: 32,
+      default: undefined,
+    },
     referralCapturedAt: { type: Date, default: null },
-    staffRole: { type: String, enum: ['editor', 'admin'], required: false, select: true },
+    staffRole: {
+      type: String,
+      enum: ["editor", "admin"],
+      required: false,
+      select: true,
+    },
     staffPasswordHash: { type: String, select: false },
     deletedAt: { type: Date, default: null, index: true },
-    deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
-    blogStreakMode: { type: String, enum: ['daily', 'weekly', 'monthly'], default: 'daily' },
+    deletedById: { type: Schema.Types.ObjectId, ref: "users", default: null },
+    blogStreakMode: {
+      type: String,
+      enum: ["daily", "weekly", "monthly"],
+      default: "daily",
+    },
     readStreakLongest: { type: Number, min: 0 },
     blogRespectReceivedCount: { type: Number, default: 0, min: 0 },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
-
 UserSchema.index({ referredByUserId: 1, createdAt: -1 });
 UserSchema.index({ deletedAt: 1, createdAt: -1 });
-
 export const UserModel: Model<IUser> =
-  mongoose.models?.users ?? mongoose.model<IUser>('users', UserSchema);
+  mongoose.models?.users ?? mongoose.model<IUser>("users", UserSchema);

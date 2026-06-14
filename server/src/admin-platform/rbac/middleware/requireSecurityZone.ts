@@ -1,10 +1,11 @@
-import type { Request, Response, NextFunction } from 'express';
-import { env } from '../../../config/env.js';
-import { sendAdminError } from '../adminResponse.js';
-import type { StaffManagementRequest } from './staffManagementContext.js';
-import { actorHasZone, type SecurityZone } from '../../iam/securityZones.config.js';
-
-/** Requires actor effective permissions to include at least one permission in the zone. */
+import type { Request, Response, NextFunction } from "express";
+import { env } from "../../../config/env.js";
+import { sendAdminError } from "../adminResponse.js";
+import type { StaffManagementRequest } from "./staffManagementContext.js";
+import {
+  actorHasZone,
+  type SecurityZone,
+} from "../../iam/securityZones.config.js";
 export function requireSecurityZone(zone: SecurityZone) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!env.FEATURE_ADMIN_RBAC_ENABLED) {
@@ -17,8 +18,8 @@ export function requireSecurityZone(zone: SecurityZone) {
       sendAdminError(
         res,
         403,
-        'PERMISSION_DENIED',
-        `This action requires the ${zone} security zone.`
+        "PERMISSION_DENIED",
+        `This action requires the ${zone} security zone.`,
       );
       return;
     }

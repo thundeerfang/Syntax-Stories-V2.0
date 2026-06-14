@@ -1,10 +1,4 @@
-/**
- * Validates `BlogPost.content` (JSON string of Block[]): structure, size limits, allowed block types.
- * Strips legacy `gif` blocks; normalizes payloads to JSON-safe plain objects.
- */
-
-import { BLOG_LIMITS } from '@syntax-stories/shared';
-
+import { BLOG_LIMITS } from "@syntax-stories/shared";
 const {
   maxContentChars: MAX_CONTENT_CHARS,
   maxBlocks: MAX_BLOCKS,
@@ -23,34 +17,40 @@ const {
   maxTableCellChars: MAX_TABLE_CELL_CHARS,
   maxMermaidSourceChars: MAX_MERMAID_SOURCE_CHARS,
 } = BLOG_LIMITS;
-
 const ALLOWED_TYPES = new Set([
-  'paragraph',
-  'heading',
-  'code',
-  'partition',
-  'image',
-  'videoEmbed',
-  'link',
-  'githubRepo',
-  'unsplashImage',
-  'table',
-  'mermaidDiagram',
+  "paragraph",
+  "heading",
+  "code",
+  "partition",
+  "image",
+  "videoEmbed",
+  "link",
+  "githubRepo",
+  "unsplashImage",
+  "table",
+  "mermaidDiagram",
 ]);
-
 export type BlogContentValidationResult =
-  | { ok: true; normalizedJson: string }
-  | { ok: false; status: number; message: string };
-
+  | {
+      ok: true;
+      normalizedJson: string;
+    }
+  | {
+      ok: false;
+      status: number;
+      message: string;
+    };
 function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v);
+  return v !== null && typeof v === "object" && !Array.isArray(v);
 }
-
 function truncateString(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max);
 }
-
-function assertPayloadJsonSize(value: unknown, maxChars: number, label: string): void {
+function assertPayloadJsonSize(
+  value: unknown,
+  maxChars: number,
+  label: string,
+): void {
   let encoded: string;
   try {
     encoded = JSON.stringify(value);
@@ -61,119 +61,167 @@ function assertPayloadJsonSize(value: unknown, maxChars: number, label: string):
     throw new Error(`${label} exceeds maximum size`);
   }
 }
-
 function sanitizeGenericPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('payload must be an object');
-  assertPayloadJsonSize(p, MAX_GENERIC_PAYLOAD_JSON, 'payload');
+  if (!isPlainObject(p)) throw new Error("payload must be an object");
+  assertPayloadJsonSize(p, MAX_GENERIC_PAYLOAD_JSON, "payload");
   return JSON.parse(JSON.stringify(p)) as Record<string, unknown>;
 }
-
 function sanitizeParagraphPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('paragraph payload must be an object');
+  if (!isPlainObject(p)) throw new Error("paragraph payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof p.text === 'string') out.text = truncateString(p.text, MAX_PARAGRAPH_TEXT);
-  if ('doc' in p) {
-    assertPayloadJsonSize(p.doc, MAX_RICH_DOC_JSON_CHARS, 'paragraph.doc');
+  if (typeof p.text === "string")
+    out.text = truncateString(p.text, MAX_PARAGRAPH_TEXT);
+  if ("doc" in p) {
+    assertPayloadJsonSize(p.doc, MAX_RICH_DOC_JSON_CHARS, "paragraph.doc");
     out.doc = JSON.parse(JSON.stringify(p.doc));
   }
-  if (p.version === 'plain' || p.version === 'rich-text') out.version = p.version;
+  if (p.version === "plain" || p.version === "rich-text")
+    out.version = p.version;
   return out;
 }
-
 function sanitizeHeadingPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('heading payload must be an object');
+  if (!isPlainObject(p)) throw new Error("heading payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof p.text === 'string') out.text = truncateString(p.text, MAX_HEADING_TEXT);
+  if (typeof p.text === "string")
+    out.text = truncateString(p.text, MAX_HEADING_TEXT);
   if (p.level === 2 || p.level === 3) out.level = p.level;
   return out;
 }
-
 function sanitizeImagePayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('image payload must be an object');
+  if (!isPlainObject(p)) throw new Error("image payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof p.url === 'string') out.url = truncateString(p.url, MAX_URL_LEN);
-  if (typeof p.title === 'string') out.title = truncateString(p.title, MAX_CAPTION);
-  if (typeof (p as { altText?: string }).altText === 'string') {
-    out.altText = truncateString((p as { altText: string }).altText, MAX_CAPTION);
+  if (typeof p.url === "string") out.url = truncateString(p.url, MAX_URL_LEN);
+  if (typeof p.title === "string")
+    out.title = truncateString(p.title, MAX_CAPTION);
+  if (
+    typeof (
+      p as {
+        altText?: string;
+      }
+    ).altText === "string"
+  ) {
+    out.altText = truncateString(
+      (
+        p as {
+          altText: string;
+        }
+      ).altText,
+      MAX_CAPTION,
+    );
   }
   const layout = p.layout;
   if (
-    layout === 'landscape' ||
-    layout === 'square' ||
-    layout === 'fullWidth' ||
-    layout === 'natural' ||
-    layout === 'center'
+    layout === "landscape" ||
+    layout === "square" ||
+    layout === "fullWidth" ||
+    layout === "natural" ||
+    layout === "center"
   ) {
     out.layout = layout;
   }
   return out;
 }
-
 function sanitizeVideoEmbedPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('videoEmbed payload must be an object');
+  if (!isPlainObject(p))
+    throw new Error("videoEmbed payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof p.url === 'string') out.url = truncateString(p.url, MAX_URL_LEN);
+  if (typeof p.url === "string") out.url = truncateString(p.url, MAX_URL_LEN);
   if (Array.isArray(p.videos)) {
     const urls = p.videos
-      .filter((x): x is string => typeof x === 'string')
+      .filter((x): x is string => typeof x === "string")
       .map((u) => truncateString(u, MAX_URL_LEN))
       .slice(0, 3);
     if (urls.length) out.videos = urls;
   }
-  if (p.layout === 'row' || p.layout === 'column') out.layout = p.layout;
-  if (p.size === 'sm' || p.size === 'md' || p.size === 'lg') out.size = p.size;
+  if (p.layout === "row" || p.layout === "column") out.layout = p.layout;
+  if (p.size === "sm" || p.size === "md" || p.size === "lg") out.size = p.size;
   return out;
 }
-
 function sanitizeCodePayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('code payload must be an object');
+  if (!isPlainObject(p)) throw new Error("code payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof (p as { code?: string }).code === 'string') {
-    out.code = truncateString((p as { code: string }).code, MAX_CODE_BODY_CHARS);
-  } else if (typeof (p as { text?: string }).text === 'string') {
-    out.code = truncateString((p as { text: string }).text, MAX_CODE_BODY_CHARS);
+  if (
+    typeof (
+      p as {
+        code?: string;
+      }
+    ).code === "string"
+  ) {
+    out.code = truncateString(
+      (
+        p as {
+          code: string;
+        }
+      ).code,
+      MAX_CODE_BODY_CHARS,
+    );
+  } else if (
+    typeof (
+      p as {
+        text?: string;
+      }
+    ).text === "string"
+  ) {
+    out.code = truncateString(
+      (
+        p as {
+          text: string;
+        }
+      ).text,
+      MAX_CODE_BODY_CHARS,
+    );
   }
-  const lang = (p as { language?: string }).language;
-  if (typeof lang === 'string' && /^[a-z0-9#+.\-]{1,72}$/i.test(lang.trim())) {
+  const lang = (
+    p as {
+      language?: string;
+    }
+  ).language;
+  if (typeof lang === "string" && /^[a-z0-9#+.\-]{1,72}$/i.test(lang.trim())) {
     out.language = lang.trim().toLowerCase().slice(0, 72);
   }
-  const src = (p as { languageSource?: string }).languageSource;
-  if (src === 'auto' || src === 'manual') out.languageSource = src;
+  const src = (
+    p as {
+      languageSource?: string;
+    }
+  ).languageSource;
+  if (src === "auto" || src === "manual") out.languageSource = src;
   return out;
 }
-
-function parseGithubRepoUrl(url: string): { owner: string; repo: string } | null {
-  const trimmed = (url || '').trim();
+function parseGithubRepoUrl(url: string): {
+  owner: string;
+  repo: string;
+} | null {
+  const trimmed = (url || "").trim();
   if (!trimmed) return null;
   try {
-    const u = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    const u = new URL(
+      trimmed.startsWith("http") ? trimmed : `https://${trimmed}`,
+    );
     if (!/^(www\.)?github\.com$/i.test(u.hostname)) return null;
-    const parts = u.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+    const parts = u.pathname.replace(/^\/+/, "").split("/").filter(Boolean);
     if (parts.length >= 2) {
-      return { owner: parts[0], repo: parts[1].replace(/\.git$/, '') };
+      return { owner: parts[0], repo: parts[1].replace(/\.git$/, "") };
     }
     return null;
   } catch {
     return null;
   }
 }
-
 function sanitizeGithubPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('githubRepo payload must be an object');
+  if (!isPlainObject(p))
+    throw new Error("githubRepo payload must be an object");
   const out: Record<string, unknown> = {};
-
-  const urlRaw = typeof p.url === 'string' ? p.url.trim() : '';
+  const urlRaw = typeof p.url === "string" ? p.url.trim() : "";
   const parsedFromUrl = urlRaw ? parseGithubRepoUrl(urlRaw) : null;
-  const ownerRaw = typeof p.owner === 'string' ? p.owner.trim() : '';
-  const repoRaw = typeof p.repo === 'string' ? p.repo.trim() : '';
-
+  const ownerRaw = typeof p.owner === "string" ? p.owner.trim() : "";
+  const repoRaw = typeof p.repo === "string" ? p.repo.trim() : "";
   if (parsedFromUrl) {
     out.owner = truncateString(parsedFromUrl.owner, MAX_URL_LEN);
     out.repo = truncateString(parsedFromUrl.repo, MAX_URL_LEN);
@@ -183,21 +231,24 @@ function sanitizeGithubPayload(p: unknown): Record<string, unknown> {
     out.repo = truncateString(repoRaw, MAX_URL_LEN);
     out.url = `https://github.com/${ownerRaw}/${repoRaw}`;
   } else if (urlRaw) {
-    throw new Error('githubRepo url must be a valid https://github.com/owner/repo link');
+    throw new Error(
+      "githubRepo url must be a valid https://github.com/owner/repo link",
+    );
   }
-
-  if (typeof p.name === 'string') out.name = truncateString(p.name, MAX_URL_LEN);
-  if (typeof p.avatarUrl === 'string') out.avatarUrl = truncateString(p.avatarUrl, MAX_URL_LEN);
-  if (typeof p.description === 'string')
+  if (typeof p.name === "string")
+    out.name = truncateString(p.name, MAX_URL_LEN);
+  if (typeof p.avatarUrl === "string")
+    out.avatarUrl = truncateString(p.avatarUrl, MAX_URL_LEN);
+  if (typeof p.description === "string")
     out.description = truncateString(p.description, MAX_GITHUB_DESC);
   return out;
 }
-
 function sanitizeTablePayload(p: unknown): Record<string, unknown> {
   if (p == null) return { rows: [] };
-  if (!isPlainObject(p)) throw new Error('table payload must be an object');
+  if (!isPlainObject(p)) throw new Error("table payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof p.caption === 'string') out.caption = truncateString(p.caption, MAX_CAPTION);
+  if (typeof p.caption === "string")
+    out.caption = truncateString(p.caption, MAX_CAPTION);
   const rowsIn = p.rows;
   if (!Array.isArray(rowsIn)) {
     out.rows = [];
@@ -219,7 +270,9 @@ function sanitizeTablePayload(p: unknown): Record<string, unknown> {
     for (let c = 0; c < row.length && c < MAX_TABLE_COLS; c++) {
       const cell = row[c];
       cells.push(
-        typeof cell === 'string' ? truncateString(cell, MAX_TABLE_CELL_CHARS) : String(cell ?? '')
+        typeof cell === "string"
+          ? truncateString(cell, MAX_TABLE_CELL_CHARS)
+          : String(cell ?? ""),
       );
     }
     if (cells.length) rows.push(cells);
@@ -227,69 +280,84 @@ function sanitizeTablePayload(p: unknown): Record<string, unknown> {
   out.rows = rows;
   return out;
 }
-
 function sanitizeMermaidPayload(p: unknown): Record<string, unknown> {
-  if (p == null) return { source: '' };
-  if (!isPlainObject(p)) throw new Error('mermaidDiagram payload must be an object');
+  if (p == null) return { source: "" };
+  if (!isPlainObject(p))
+    throw new Error("mermaidDiagram payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof (p as { source?: string }).source === 'string') {
-    out.source = truncateString((p as { source: string }).source, MAX_MERMAID_SOURCE_CHARS);
+  if (
+    typeof (
+      p as {
+        source?: string;
+      }
+    ).source === "string"
+  ) {
+    out.source = truncateString(
+      (
+        p as {
+          source: string;
+        }
+      ).source,
+      MAX_MERMAID_SOURCE_CHARS,
+    );
   } else {
-    out.source = '';
+    out.source = "";
   }
   return out;
 }
-
 function sanitizeUnsplashPayload(p: unknown): Record<string, unknown> {
   if (p == null) return {};
-  if (!isPlainObject(p)) throw new Error('unsplashImage payload must be an object');
+  if (!isPlainObject(p))
+    throw new Error("unsplashImage payload must be an object");
   const out: Record<string, unknown> = {};
-  if (typeof p.url === 'string') out.url = truncateString(p.url, MAX_URL_LEN);
-  if (typeof p.photographer === 'string')
+  if (typeof p.url === "string") out.url = truncateString(p.url, MAX_URL_LEN);
+  if (typeof p.photographer === "string")
     out.photographer = truncateString(p.photographer, MAX_CAPTION);
-  if (typeof p.caption === 'string') out.caption = truncateString(p.caption, MAX_CAPTION);
-  if (typeof p.unsplashPhotoId === 'string') {
+  if (typeof p.caption === "string")
+    out.caption = truncateString(p.caption, MAX_CAPTION);
+  if (typeof p.unsplashPhotoId === "string") {
     out.unsplashPhotoId = truncateString(p.unsplashPhotoId, 128);
   }
   const layout = p.layout;
-  if (layout === 'landscape' || layout === 'square' || layout === 'fullWidth') out.layout = layout;
+  if (layout === "landscape" || layout === "square" || layout === "fullWidth")
+    out.layout = layout;
   return out;
 }
-
-function sanitizePayloadForType(type: string, payload: unknown): Record<string, unknown> {
+function sanitizePayloadForType(
+  type: string,
+  payload: unknown,
+): Record<string, unknown> {
   switch (type) {
-    case 'paragraph':
+    case "paragraph":
       return sanitizeParagraphPayload(payload);
-    case 'heading':
+    case "heading":
       return sanitizeHeadingPayload(payload);
-    case 'image':
+    case "image":
       return sanitizeImagePayload(payload);
-    case 'videoEmbed':
+    case "videoEmbed":
       return sanitizeVideoEmbedPayload(payload);
-    case 'githubRepo':
+    case "githubRepo":
       return sanitizeGithubPayload(payload);
-    case 'unsplashImage':
+    case "unsplashImage":
       return sanitizeUnsplashPayload(payload);
-    case 'partition':
+    case "partition":
       return payload == null ? {} : sanitizeGenericPayload(payload);
-    case 'code':
+    case "code":
       return sanitizeCodePayload(payload);
-    case 'link':
+    case "link":
       return sanitizeGenericPayload(payload);
-    case 'table':
+    case "table":
       return sanitizeTablePayload(payload);
-    case 'mermaidDiagram':
+    case "mermaidDiagram":
       return sanitizeMermaidPayload(payload);
   }
   throw new Error(`Unhandled block type: ${type}`);
 }
-
-/**
- * Validates blog post `content` string. Returns normalized JSON (gif blocks removed).
- */
-export function validateBlogPostContent(raw: string): BlogContentValidationResult {
-  if (typeof raw !== 'string') {
-    return { ok: false, status: 400, message: 'Content must be a string' };
+export function validateBlogPostContent(
+  raw: string,
+): BlogContentValidationResult {
+  if (typeof raw !== "string") {
+    return { ok: false, status: 400, message: "Content must be a string" };
   }
   if (raw.length > MAX_CONTENT_CHARS) {
     return {
@@ -298,38 +366,52 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
       message: `Content exceeds maximum length (${MAX_CONTENT_CHARS} characters)`,
     };
   }
-  const toParse = raw.trim() === '' ? '[]' : raw.trim();
+  const toParse = raw.trim() === "" ? "[]" : raw.trim();
   let parsed: unknown;
   try {
     parsed = JSON.parse(toParse);
   } catch {
-    return { ok: false, status: 400, message: 'Content must be a JSON array of blocks' };
+    return {
+      ok: false,
+      status: 400,
+      message: "Content must be a JSON array of blocks",
+    };
   }
   if (!Array.isArray(parsed)) {
-    return { ok: false, status: 400, message: 'Content must be a JSON array of blocks' };
+    return {
+      ok: false,
+      status: 400,
+      message: "Content must be a JSON array of blocks",
+    };
   }
   if (parsed.length > MAX_BLOCKS) {
-    return { ok: false, status: 400, message: `At most ${MAX_BLOCKS} blocks allowed` };
+    return {
+      ok: false,
+      status: 400,
+      message: `At most ${MAX_BLOCKS} blocks allowed`,
+    };
   }
-
   const out: Array<{
     id: string;
     type: string;
     sectionId?: string;
     payload?: Record<string, unknown>;
   }> = [];
-
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i];
     if (!isPlainObject(item)) {
-      return { ok: false, status: 400, message: `Block at index ${i} must be an object` };
+      return {
+        ok: false,
+        status: 400,
+        message: `Block at index ${i} must be an object`,
+      };
     }
-    if (item.type === 'gif') {
+    if (item.type === "gif") {
       continue;
     }
     const id = item.id;
     const type = item.type;
-    if (typeof id !== 'string' || !id.trim()) {
+    if (typeof id !== "string" || !id.trim()) {
       return {
         ok: false,
         status: 400,
@@ -337,9 +419,13 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
       };
     }
     if (id.length > MAX_BLOCK_ID_LEN) {
-      return { ok: false, status: 400, message: `Block id at index ${i} is too long` };
+      return {
+        ok: false,
+        status: 400,
+        message: `Block id at index ${i} is too long`,
+      };
     }
-    if (typeof type !== 'string' || !ALLOWED_TYPES.has(type)) {
+    if (typeof type !== "string" || !ALLOWED_TYPES.has(type)) {
       return {
         ok: false,
         status: 400,
@@ -348,7 +434,7 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
     }
     let sectionId: string | undefined;
     if (item.sectionId !== undefined) {
-      if (typeof item.sectionId !== 'string') {
+      if (typeof item.sectionId !== "string") {
         return {
           ok: false,
           status: 400,
@@ -362,8 +448,12 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
       try {
         payload = sanitizePayloadForType(type, item.payload);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Invalid block payload';
-        return { ok: false, status: 400, message: `Block ${i} (${type}): ${msg}` };
+        const msg = e instanceof Error ? e.message : "Invalid block payload";
+        return {
+          ok: false,
+          status: 400,
+          message: `Block ${i} (${type}): ${msg}`,
+        };
       }
     }
     const block: {
@@ -376,28 +466,28 @@ export function validateBlogPostContent(raw: string): BlogContentValidationResul
       type,
     };
     if (sectionId !== undefined) block.sectionId = sectionId;
-    if (payload !== undefined && Object.keys(payload).length > 0) block.payload = payload;
+    if (payload !== undefined && Object.keys(payload).length > 0)
+      block.payload = payload;
     out.push(block);
   }
-
   return { ok: true, normalizedJson: JSON.stringify(out) };
 }
-
-/**
- * Thumbnail must be https, or http on localhost (dev). Max length aligned with model.
- */
-export function sanitizeThumbnailUrl(input: string | undefined | null): string | undefined {
-  if (input == null || typeof input !== 'string') return undefined;
+export function sanitizeThumbnailUrl(
+  input: string | undefined | null,
+): string | undefined {
+  if (input == null || typeof input !== "string") return undefined;
   const t = input.trim().slice(0, 2000);
   if (!t) return undefined;
   try {
     const u = new URL(t);
-    if (u.protocol === 'https:') return t;
-    const dev = process.env.NODE_ENV !== 'production';
-    if (u.protocol === 'http:' && dev) return t;
+    if (u.protocol === "https:") return t;
+    const dev = process.env.NODE_ENV !== "production";
+    if (u.protocol === "http:" && dev) return t;
     if (
-      u.protocol === 'http:' &&
-      (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]')
+      u.protocol === "http:" &&
+      (u.hostname === "localhost" ||
+        u.hostname === "127.0.0.1" ||
+        u.hostname === "[::1]")
     )
       return t;
   } catch {

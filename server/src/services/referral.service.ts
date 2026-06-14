@@ -1,15 +1,18 @@
-import crypto from 'node:crypto';
-import type { Request } from 'express';
-import mongoose, { type HydratedDocument } from 'mongoose';
-import { env } from '../config/env.js';
-import { getRedis } from '../config/redis.js';
-import { UserModel, normalizeProfileImg, type IUser } from '../models/User.js';
-import { redisKeys } from '../shared/redis/keys.js';
-import { getDeviceHashFromRequest, getIpHashFromRequest } from '../lib/clientMeta.js';
-import { enqueueReferralGamificationOutbox } from './gamification/gamificationOutbox.service.js';
-import { processReferralAttribution } from './gamification/referralProcessor.service.js';
-import { createReferralConversion } from './referral/referralConversion.service.js';
-import { emitAppEvent } from '../shared/events/appEvents.js';
+import crypto from "node:crypto";
+import type { Request } from "express";
+import mongoose, { type HydratedDocument } from "mongoose";
+import { env } from "../config/env.js";
+import { getRedis } from "../config/redis.js";
+import { UserModel, normalizeProfileImg, type IUser } from "../models/User.js";
+import { redisKeys } from "../shared/redis/keys.js";
+import {
+  getDeviceHashFromRequest,
+  getIpHashFromRequest,
+} from "../lib/clientMeta.js";
+import { enqueueReferralGamificationOutbox } from "./gamification/gamificationOutbox.service.js";
+import { processReferralAttribution } from "./gamification/referralProcessor.service.js";
+import { createReferralConversion } from "./referral/referralConversion.service.js";
+import { emitAppEvent } from "../shared/events/appEvents.js";
 import {
   REFERRAL_CODE_REGEX,
   REFERRAL_COOKIE_MAX_MS,
@@ -18,74 +21,76 @@ import {
   REFERRAL_NEGATIVE_CACHE_SENTINEL,
   REFERRAL_NEGATIVE_CACHE_TTL_SEC,
   REFERRAL_POSITIVE_CACHE_TTL_SEC,
-} from '../variable/constants.js';
-
+} from "../variable/constants.js";
 function referralSigningSecret(): string {
-  return env.REFERRAL_SIGNING_SECRET || '';
+  return env.REFERRAL_SIGNING_SECRET || "";
 }
-
 function generateReferralCodeChars(length: number): string {
   const bytes = crypto.randomBytes(length);
-  let s = '';
+  let s = "";
   for (let i = 0; i < length; i++) {
     s += REFERRAL_CROCKFORD_ALPHABET[bytes[i]! % 32];
   }
   return s;
 }
-
-/** Normalize and validate referral codes before any DB access. */
 export function normalizeReferralCode(raw: unknown): string | null {
   if (raw == null) return null;
-  if (typeof raw !== 'string') return null;
+  if (typeof raw !== "string") return null;
   const code = raw.trim().toUpperCase();
   if (!code || code.length < 8 || code.length > 16) return null;
   if (!REFERRAL_CODE_REGEX.test(code)) return null;
   return code;
 }
-
 function signReferralCookiePayload(code: string): string | null {
   const secret = referralSigningSecret();
   if (!secret) return null;
   const exp = Date.now() + REFERRAL_COOKIE_MAX_MS;
   const payload = JSON.stringify({ c: code, exp });
-  const b64 = Buffer.from(payload, 'utf8').toString('base64url');
-  const sig = crypto.createHmac('sha256', secret).update(b64).digest('base64url');
+  const b64 = Buffer.from(payload, "utf8").toString("base64url");
+  const sig = crypto
+    .createHmac("sha256", secret)
+    .update(b64)
+    .digest("base64url");
   return `${b64}.${sig}`;
 }
-
 function readSignedReferralCookie(raw: unknown): string | null {
-  if (typeof raw !== 'string' || !raw.includes('.')) return null;
+  if (typeof raw !== "string" || !raw.includes(".")) return null;
   const secret = referralSigningSecret();
   if (!secret) return null;
-  const i = raw.lastIndexOf('.');
+  const i = raw.lastIndexOf(".");
   const b64 = raw.slice(0, i);
   const sig = raw.slice(i + 1);
-  const expected = crypto.createHmac('sha256', secret).update(b64).digest('base64url');
-  const sigBuf = Buffer.from(sig, 'utf8');
-  const expBuf = Buffer.from(expected, 'utf8');
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(b64)
+    .digest("base64url");
+  const sigBuf = Buffer.from(sig, "utf8");
+  const expBuf = Buffer.from(expected, "utf8");
   if (sigBuf.length !== expBuf.length) return null;
   if (!crypto.timingSafeEqual(sigBuf, expBuf)) return null;
-  let parsed: { c?: string; exp?: number };
+  let parsed: {
+    c?: string;
+    exp?: number;
+  };
   try {
-    parsed = JSON.parse(Buffer.from(b64, 'base64url').toString('utf8')) as {
+    parsed = JSON.parse(Buffer.from(b64, "base64url").toString("utf8")) as {
       c?: string;
       exp?: number;
     };
   } catch {
     return null;
   }
-  if (typeof parsed.c !== 'string' || typeof parsed.exp !== 'number') return null;
+  if (typeof parsed.c !== "string" || typeof parsed.exp !== "number")
+    return null;
   if (parsed.exp < Date.now()) return null;
   return normalizeReferralCode(parsed.c);
 }
-
 export function parseSignupOAuthNonceFromState(state: unknown): string | null {
-  if (typeof state !== 'string' || !state.startsWith('signup:')) return null;
+  if (typeof state !== "string" || !state.startsWith("signup:")) return null;
   const nonce = state.slice(7);
   if (!/^[a-f0-9]{32}$/.test(nonce)) return null;
   return nonce;
 }
-
 async function readOAuthReferralFromReq(req: Request): Promise<string | null> {
   const nonce = parseSignupOAuthNonceFromState(req.query?.state);
   if (!nonce) return null;
@@ -95,19 +100,23 @@ async function readOAuthReferralFromReq(req: Request): Promise<string | null> {
     const raw = await redis.get(redisKeys.invite.oauthSignupNonce(nonce));
     return normalizeReferralCode(raw);
   } catch (err) {
-    console.warn(JSON.stringify({ event: 'referral_redis_degraded', err: String(err) }));
+    console.warn(
+      JSON.stringify({ event: "referral_redis_degraded", err: String(err) }),
+    );
     return null;
   }
 }
-
-/**
- * Single resolver: body → signed cookie → OAuth signup nonce (Redis).
- * Fail-open on Redis (§3.1).
- */
-export async function resolveReferralInput(req: Request): Promise<string | null> {
-  const fromBody = normalizeReferralCode((req.body as { referralCode?: unknown })?.referralCode);
+export async function resolveReferralInput(
+  req: Request,
+): Promise<string | null> {
+  const fromBody = normalizeReferralCode(
+    (
+      req.body as {
+        referralCode?: unknown;
+      }
+    )?.referralCode,
+  );
   if (fromBody) return fromBody;
-
   let fromCookie: string | null = null;
   try {
     fromCookie = readSignedReferralCookie(req.cookies?.[REFERRAL_COOKIE_NAME]);
@@ -115,32 +124,35 @@ export async function resolveReferralInput(req: Request): Promise<string | null>
     fromCookie = null;
   }
   if (fromCookie) return fromCookie;
-
   try {
     const fromOAuth = await readOAuthReferralFromReq(req);
     if (fromOAuth) return fromOAuth;
   } catch (err) {
-    console.warn(JSON.stringify({ event: 'referral_redis_degraded', err: String(err) }));
+    console.warn(
+      JSON.stringify({ event: "referral_redis_degraded", err: String(err) }),
+    );
   }
-
   return null;
 }
-
 export type ReferralDisplayDto = {
   valid: true;
   username: string;
   fullName: string;
   profileImg: string;
 };
-
-export async function resolveCodeForDisplay(
-  code: string
-): Promise<ReferralDisplayDto | { valid: false }> {
+export async function resolveCodeForDisplay(code: string): Promise<
+  | ReferralDisplayDto
+  | {
+      valid: false;
+    }
+> {
   const norm = normalizeReferralCode(code);
   if (!norm) return { valid: false };
   const referrerId = await lookupReferrerIdByCode(norm);
   if (!referrerId) return { valid: false };
-  const u = await UserModel.findById(referrerId).select('username fullName profileImg').lean();
+  const u = await UserModel.findById(referrerId)
+    .select("username fullName profileImg")
+    .lean();
   if (!u?.username) return { valid: false };
   return {
     valid: true,
@@ -149,8 +161,9 @@ export async function resolveCodeForDisplay(
     profileImg: normalizeProfileImg(u.profileImg),
   };
 }
-
-export async function lookupReferrerIdByCode(code: string): Promise<string | null> {
+export async function lookupReferrerIdByCode(
+  code: string,
+): Promise<string | null> {
   const norm = normalizeReferralCode(code);
   if (!norm) return null;
   const redis = getRedis();
@@ -160,107 +173,114 @@ export async function lookupReferrerIdByCode(code: string): Promise<string | nul
       if (cached === REFERRAL_NEGATIVE_CACHE_SENTINEL) return null;
       if (cached && mongoose.isValidObjectId(cached)) return cached;
     } catch (err) {
-      console.warn(JSON.stringify({ event: 'referral_redis_degraded', err: String(err) }));
+      console.warn(
+        JSON.stringify({ event: "referral_redis_degraded", err: String(err) }),
+      );
     }
   }
-
-  const user = await UserModel.findOne({ referralCode: norm }).select('_id').lean();
+  const user = await UserModel.findOne({ referralCode: norm })
+    .select("_id")
+    .lean();
   const id = user?._id ? String(user._id) : null;
-
   if (redis && id) {
     try {
-      await redis.setEx(redisKeys.invite.codeCache(norm), REFERRAL_POSITIVE_CACHE_TTL_SEC, id);
-    } catch {
-      /* ignore */
-    }
+      await redis.setEx(
+        redisKeys.invite.codeCache(norm),
+        REFERRAL_POSITIVE_CACHE_TTL_SEC,
+        id,
+      );
+    } catch {}
   } else if (redis && !id) {
     try {
       await redis.setEx(
         redisKeys.invite.codeCache(norm),
         REFERRAL_NEGATIVE_CACHE_TTL_SEC,
-        REFERRAL_NEGATIVE_CACHE_SENTINEL
+        REFERRAL_NEGATIVE_CACHE_SENTINEL,
       );
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   }
-
   return id;
 }
-
-/** IMPORTANT: invalidate Redis cache on referralCode change (regenerate / admin fix). */
-export async function invalidateReferralCodeCache(normalizedCode: string): Promise<void> {
+export async function invalidateReferralCodeCache(
+  normalizedCode: string,
+): Promise<void> {
   const norm = normalizeReferralCode(normalizedCode);
   if (!norm) return;
   const redis = getRedis();
   if (!redis) return;
   try {
     await redis.del(redisKeys.invite.codeCache(norm));
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 }
-
-export async function ensureReferralCodeForUser(userId: string): Promise<string> {
-  const existing = await UserModel.findById(userId).select('referralCode').lean();
+export async function ensureReferralCodeForUser(
+  userId: string,
+): Promise<string> {
+  const existing = await UserModel.findById(userId)
+    .select("referralCode")
+    .lean();
   if (existing?.referralCode) return existing.referralCode;
-
   for (let attempt = 0; attempt < 12; attempt++) {
     const code = generateReferralCodeChars(10);
     try {
       const updated = await UserModel.findOneAndUpdate(
         {
           _id: userId,
-          $or: [{ referralCode: { $exists: false } }, { referralCode: null }, { referralCode: '' }],
+          $or: [
+            { referralCode: { $exists: false } },
+            { referralCode: null },
+            { referralCode: "" },
+          ],
         },
         { $set: { referralCode: code } },
-        { new: true, select: 'referralCode' }
+        { new: true, select: "referralCode" },
       ).lean();
       if (updated?.referralCode) return updated.referralCode;
     } catch (e) {
-      const dup = (e as { code?: number }).code === 11000;
+      const dup =
+        (
+          e as {
+            code?: number;
+          }
+        ).code === 11000;
       if (!dup) throw e;
     }
   }
-  const u = await UserModel.findById(userId).select('referralCode').lean();
+  const u = await UserModel.findById(userId).select("referralCode").lean();
   if (u?.referralCode) return u.referralCode;
-  throw new Error('Could not allocate referral code');
+  throw new Error("Could not allocate referral code");
 }
-
 export type ApplyReferralArgs = {
   req: Request;
   newUser: HydratedDocument<IUser>;
   refCode: string | null;
   source?: string;
 };
-
-export async function applyReferralOnNewUser(args: ApplyReferralArgs): Promise<void> {
+export async function applyReferralOnNewUser(
+  args: ApplyReferralArgs,
+): Promise<void> {
   if (!env.REFERRALS_ENABLED) return;
-
   const { newUser, refCode, source } = args;
   const rc = refCode;
-  if (rc == null || typeof rc !== 'string' || !rc.trim()) return;
-
+  if (rc == null || typeof rc !== "string" || !rc.trim()) return;
   const referrerIdStr = await lookupReferrerIdByCode(rc);
   if (!referrerIdStr || !mongoose.isValidObjectId(referrerIdStr)) {
-    console.warn(JSON.stringify({ event: 'referral_invalid', refCode: rc.slice(0, 16) }));
+    console.warn(
+      JSON.stringify({ event: "referral_invalid", refCode: rc.slice(0, 16) }),
+    );
     return;
   }
-
   const referrerId = new mongoose.Types.ObjectId(referrerIdStr);
   if (referrerId.equals(newUser._id as mongoose.Types.ObjectId)) {
     return;
   }
-
   console.info(
     JSON.stringify({
-      event: 'referral_attempt',
+      event: "referral_attempt",
       refCode: rc.slice(0, 16),
       newUserId: String(newUser._id),
-      source: source ?? 'unknown',
-    })
+      source: source ?? "unknown",
+    }),
   );
-
   const now = new Date();
   const res = await UserModel.updateOne(
     { _id: newUser._id, referredByUserId: null },
@@ -271,56 +291,49 @@ export async function applyReferralOnNewUser(args: ApplyReferralArgs): Promise<v
         referralCapturedAt: now,
         ...(source ? { referralSource: source.slice(0, 32) } : {}),
       },
-    }
+    },
   );
-
   if (res.modifiedCount === 0) {
     return;
   }
-
-  newUser.set('referredByUserId', referrerId);
-  newUser.set('referredAt', now);
-  if (source) newUser.set('referralSource', source.slice(0, 32));
-  newUser.set('referralCapturedAt', now);
-
+  newUser.set("referredByUserId", referrerId);
+  newUser.set("referredAt", now);
+  if (source) newUser.set("referralSource", source.slice(0, 32));
+  newUser.set("referralCapturedAt", now);
   console.info(
     JSON.stringify({
-      event: 'referral_applied',
+      event: "referral_applied",
       referrerId: referrerIdStr,
       newUserId: String(newUser._id),
-    })
+    }),
   );
-
   const deviceHash = args.req ? getDeviceHashFromRequest(args.req) : undefined;
   const ipHash = args.req ? getIpHashFromRequest(args.req) : undefined;
-
   const { conversionId, created } = await createReferralConversion({
     referrerId: referrerIdStr,
     refereeId: String(newUser._id),
-    source: source ?? 'unknown',
+    source: source ?? "unknown",
     deviceHash,
     ipHash,
   });
-
   if (!created || !conversionId) return;
-
-  emitAppEvent('referral.signup_completed', {
+  emitAppEvent("referral.signup_completed", {
     conversionId,
     referrerId: referrerIdStr,
     refereeUserId: String(newUser._id),
-    source: source ?? 'unknown',
+    source: source ?? "unknown",
   });
-
   try {
     await enqueueReferralGamificationOutbox(conversionId);
   } catch (e) {
-    console.error('[referral] outbox enqueue failed, processing inline:', e);
+    console.error("[referral] outbox enqueue failed, processing inline:", e);
     await processReferralAttribution(conversionId);
   }
 }
-
-export const REFERRAL_COOKIE = { name: REFERRAL_COOKIE_NAME, maxMs: REFERRAL_COOKIE_MAX_MS } as const;
-
+export const REFERRAL_COOKIE = {
+  name: REFERRAL_COOKIE_NAME,
+  maxMs: REFERRAL_COOKIE_MAX_MS,
+} as const;
 export function buildSignedReferralCookieValue(code: string): string | null {
   return signReferralCookiePayload(code);
 }

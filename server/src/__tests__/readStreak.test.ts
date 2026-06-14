@@ -4,18 +4,16 @@ import {
   computeUnanchoredDailyStreakHashFields,
   computeWeeklyStreak,
   utcMondayOfWeekContaining,
-} from '../services/readStreak.service.js';
-import { anchorDailyStreakDisplayFromHash } from '../services/readStreakRedisDisplay.js';
-
-describe('read streak helpers', () => {
-  it('utcMondayOfWeekContaining returns Monday 00:00 UTC', () => {
+} from "../services/readStreak.service.js";
+import { anchorDailyStreakDisplayFromHash } from "../services/readStreakRedisDisplay.js";
+describe("read streak helpers", () => {
+  it("utcMondayOfWeekContaining returns Monday 00:00 UTC", () => {
     const wed = new Date(Date.UTC(2026, 4, 6));
     const mon = utcMondayOfWeekContaining(wed);
     expect(new Date(mon).getUTCDay()).toBe(1);
-    expect(new Date(mon).toISOString().slice(0, 10)).toBe('2026-05-04');
+    expect(new Date(mon).toISOString().slice(0, 10)).toBe("2026-05-04");
   });
-
-  it('computeDailyStreak: current counts consecutive days from today or yesterday', () => {
+  it("computeDailyStreak: current counts consecutive days from today or yesterday", () => {
     const now = new Date(Date.UTC(2026, 4, 4));
     const dates = [
       new Date(Date.UTC(2026, 4, 4)),
@@ -26,36 +24,35 @@ describe('read streak helpers', () => {
     expect(r.current).toBe(3);
     expect(r.longest).toBe(3);
   });
-
-  it('computeDailyStreak: broken when last activity is two days ago', () => {
+  it("computeDailyStreak: broken when last activity is two days ago", () => {
     const now = new Date(Date.UTC(2026, 4, 4));
     const dates = [new Date(Date.UTC(2026, 4, 1))];
     const r = computeDailyStreak(dates, now);
     expect(r.current).toBe(0);
     expect(r.longest).toBe(1);
   });
-
-  it('anchorDailyStreakDisplayFromHash matches computeDailyStreak anchor for HASH-shaped state', () => {
+  it("anchorDailyStreakDisplayFromHash matches computeDailyStreak anchor for HASH-shaped state", () => {
     const now = new Date(Date.UTC(2026, 4, 6));
-    const fromHash = anchorDailyStreakDisplayFromHash('2026-05-05', 2, 2, now);
-    const dates = [new Date(Date.UTC(2026, 4, 4)), new Date(Date.UTC(2026, 4, 5))];
+    const fromHash = anchorDailyStreakDisplayFromHash("2026-05-05", 2, 2, now);
+    const dates = [
+      new Date(Date.UTC(2026, 4, 4)),
+      new Date(Date.UTC(2026, 4, 5)),
+    ];
     const fromMongo = computeDailyStreak(dates, now);
     expect(fromHash).not.toBeNull();
     expect(fromHash!.current).toBe(fromMongo.current);
     expect(fromHash!.longest).toBe(2);
   });
-
-  it('computeUnanchoredDailyStreakHashFields: rolling state without profile anchor', () => {
+  it("computeUnanchoredDailyStreakHashFields: rolling state without profile anchor", () => {
     const now = new Date(Date.UTC(2026, 4, 4));
     const dates = [new Date(Date.UTC(2026, 4, 1))];
     expect(computeDailyStreak(dates, now).current).toBe(0);
     const h = computeUnanchoredDailyStreakHashFields(dates, now);
     expect(h.current).toBe(1);
     expect(h.longest).toBe(1);
-    expect(h.lastDay).toBe('2026-05-01');
+    expect(h.lastDay).toBe("2026-05-01");
   });
-
-  it('computeDailyStreak: anchor on yesterday — streak continues without read today', () => {
+  it("computeDailyStreak: anchor on yesterday — streak continues without read today", () => {
     const now = new Date(Date.UTC(2026, 4, 6));
     const dates = [
       new Date(Date.UTC(2026, 4, 4)),
@@ -66,8 +63,7 @@ describe('read streak helpers', () => {
     expect(r.current).toBe(3);
     expect(r.longest).toBe(3);
   });
-
-  it('computeDailyStreak: Phase 2 uses §33 engine — gap in middle preserves longest', () => {
+  it("computeDailyStreak: Phase 2 uses §33 engine — gap in middle preserves longest", () => {
     const now = new Date(Date.UTC(2026, 4, 10));
     const dates = [
       new Date(Date.UTC(2026, 4, 1)),
@@ -80,8 +76,7 @@ describe('read streak helpers', () => {
     expect(r.longest).toBe(2);
     expect(r.current).toBe(2);
   });
-
-  it('computeWeeklyStreak: consecutive ISO weeks', () => {
+  it("computeWeeklyStreak: consecutive ISO weeks", () => {
     const now = new Date(Date.UTC(2026, 4, 6));
     const w0 = utcMondayOfWeekContaining(now);
     const wPrev = w0 - 7 * 86400000;
@@ -90,8 +85,7 @@ describe('read streak helpers', () => {
     expect(r.current).toBe(2);
     expect(r.longest).toBe(2);
   });
-
-  it('computeMonthlyStreak: consecutive calendar months', () => {
+  it("computeMonthlyStreak: consecutive calendar months", () => {
     const now = new Date(Date.UTC(2026, 4, 15));
     const dates = [
       new Date(Date.UTC(2026, 4, 1)),

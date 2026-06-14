@@ -1,46 +1,49 @@
-import crypto from 'node:crypto';
-import type { Request } from 'express';
-import { SessionModel } from '../models/Session.js';
-import { signAccessToken } from '../config/jwt.js';
-import { SESSION_DURATION_MS } from '../variable/constants.js';
-
+import crypto from "node:crypto";
+import type { Request } from "express";
+import { SessionModel } from "../models/Session.js";
+import { signAccessToken } from "../config/jwt.js";
+import { SESSION_DURATION_MS } from "../variable/constants.js";
 export { SESSION_DURATION_MS };
-
-function getClientMeta(req: Request): { ip: string; userAgent: string } {
+function getClientMeta(req: Request): {
+  ip: string;
+  userAgent: string;
+} {
   const ip =
     req.ip ??
     req.socket?.remoteAddress ??
-    req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ??
-    'unknown';
-  const userAgent = req.get('User-Agent') ?? '';
+    req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() ??
+    "unknown";
+  const userAgent = req.get("User-Agent") ?? "";
   return { ip, userAgent };
 }
-
 export function hashToken(token: string): string {
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
-
-export function computeDeviceFingerprint(ip: string, userAgent: string): string {
-  return crypto.createHash('sha256').update(`${ip}|${userAgent}`).digest('hex').slice(0, 32);
+export function computeDeviceFingerprint(
+  ip: string,
+  userAgent: string,
+): string {
+  return crypto
+    .createHash("sha256")
+    .update(`${ip}|${userAgent}`)
+    .digest("hex")
+    .slice(0, 32);
 }
-
 export function generateRefreshToken(): string {
-  return crypto.randomBytes(40).toString('hex');
+  return crypto.randomBytes(40).toString("hex");
 }
-
 function parseUserAgent(ua: string): string {
-  if (!ua) return 'Unknown device';
+  if (!ua) return "Unknown device";
   const parenRe = /\((.*?)\)/;
   const match = parenRe.exec(ua);
   const os = match ? match[1] : ua.substring(0, 50);
-  const mobile = /Mobile|Android|iPhone/i.test(ua) ? 'Mobile' : 'Desktop';
+  const mobile = /Mobile|Android|iPhone/i.test(ua) ? "Mobile" : "Desktop";
   return `${mobile} - ${os}`;
 }
-
 export async function createSession(
   userId: string,
   req: Request,
-  refreshToken: string
+  refreshToken: string,
 ): Promise<InstanceType<typeof SessionModel>> {
   const { ip, userAgent } = getClientMeta(req);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
@@ -58,11 +61,9 @@ export async function createSession(
   });
   return session;
 }
-
-/** Used by OAuth callbacks and any flow that needs JWT + refresh + persisted session. */
 export async function createSessionAndTokens(
   userId: string,
-  req: Request
+  req: Request,
 ): Promise<{
   accessToken: string;
   refreshToken: string;
@@ -70,6 +71,9 @@ export async function createSessionAndTokens(
 }> {
   const refreshToken = generateRefreshToken();
   const session = await createSession(userId, req, refreshToken);
-  const accessToken = signAccessToken({ _id: userId, sessionId: String(session._id) });
+  const accessToken = signAccessToken({
+    _id: userId,
+    sessionId: String(session._id),
+  });
   return { accessToken, refreshToken, session };
 }

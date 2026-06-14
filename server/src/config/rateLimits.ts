@@ -1,8 +1,8 @@
-import { MS_PER_HOUR, MS_PER_MINUTE } from '../constants/durations.js';
-
-export type RateLimitSpec = { readonly windowMs: number; readonly max: number };
-
-/** Central rate-limit windows — auth, blog, billing, feedback, contact. */
+import { MS_PER_HOUR, MS_PER_MINUTE } from "../constants/durations.js";
+export type RateLimitSpec = {
+  readonly windowMs: number;
+  readonly max: number;
+};
 export const RATE_LIMITS = {
   sendOtp: { windowMs: 15 * MS_PER_MINUTE, max: 5 },
   verifyOtp: { windowMs: 15 * MS_PER_MINUTE, max: 10 },

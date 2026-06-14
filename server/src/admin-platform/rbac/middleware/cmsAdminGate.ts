@@ -1,18 +1,18 @@
-import type { RequestHandler } from 'express';
-import { verifyToken } from '../../../middlewares/auth/index.js';
-import { env } from '../../../config/env.js';
-import { staffManagementContext } from './staffManagementContext.js';
-import { requireAdminPermission } from './requireAdminPermission.js';
-import { requireStaff } from './requireStaff.middleware.js';
-
-/**
- * CMS admin routes: RBAC permission when enabled, legacy staffRole gate otherwise.
- */
+import type { RequestHandler } from "express";
+import { verifyToken } from "../../../middlewares/auth/index.js";
+import { env } from "../../../config/env.js";
+import { staffManagementContext } from "./staffManagementContext.js";
+import { requireAdminPermission } from "./requireAdminPermission.js";
+import { requireStaff } from "./requireStaff.middleware.js";
 export function cmsAdminGate(
-  permission: 'legal:manage' | 'trash:manage'
+  permission: "legal:manage" | "trash:manage",
 ): RequestHandler[] {
   if (env.FEATURE_ADMIN_RBAC_ENABLED) {
-    return [verifyToken, staffManagementContext, requireAdminPermission(permission)];
+    return [
+      verifyToken,
+      staffManagementContext,
+      requireAdminPermission(permission),
+    ];
   }
-  return [verifyToken, requireStaff('editor', 'admin')];
+  return [verifyToken, requireStaff("editor", "admin")];
 }

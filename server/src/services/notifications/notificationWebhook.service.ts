@@ -1,6 +1,5 @@
-import { writeNotificationAudit } from '../../shared/audit/auditLog.js';
-import { NotificationAuditAction } from '../../shared/audit/domains.js';
-
+import { writeNotificationAudit } from "../../shared/audit/auditLog.js";
+import { NotificationAuditAction } from "../../shared/audit/domains.js";
 export async function deliverNotificationWebhook(params: {
   userId: string;
   notificationId: string;
@@ -10,30 +9,27 @@ export async function deliverNotificationWebhook(params: {
 }): Promise<void> {
   const { userId, notificationId, webhookUrl, webhookSecret, payload } = params;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'User-Agent': 'SyntaxStories-Notifications/1.0',
-    'X-Notification-Id': notificationId,
+    "Content-Type": "application/json",
+    "User-Agent": "SyntaxStories-Notifications/1.0",
+    "X-Notification-Id": notificationId,
   };
   if (webhookSecret) {
-    headers['X-Webhook-Secret'] = webhookSecret;
+    headers["X-Webhook-Secret"] = webhookSecret;
   }
-
   try {
     const res = await fetch(webhookUrl, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: JSON.stringify({
-        event: 'notification.created',
+        event: "notification.created",
         notification: payload,
         ts: Date.now(),
       }),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(10000),
     });
-
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
-
     await writeNotificationAudit(NotificationAuditAction.WEBHOOK_SENT, {
       userId,
       notificationId,

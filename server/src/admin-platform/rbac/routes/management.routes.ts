@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
-import { verifyToken } from '../../../middlewares/auth/index.js';
-import { staffManagementContext } from '../middleware/staffManagementContext.js';
-import { requireAdminPermission } from '../middleware/requireAdminPermission.js';
-import { requireAnyAdminPermission } from '../middleware/requireAnyAdminPermission.js';
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import { verifyToken } from "../../../middlewares/auth/index.js";
+import { staffManagementContext } from "../middleware/staffManagementContext.js";
+import { requireAdminPermission } from "../middleware/requireAdminPermission.js";
+import { requireAnyAdminPermission } from "../middleware/requireAnyAdminPermission.js";
 import {
   getUsers,
   getUserById,
@@ -14,15 +14,18 @@ import {
   postLockUser,
   postUnlockUser,
   postRevokeAllSessions,
-} from '../../controllers/managementUsers.controller.js';
-import { getBlogById, listBlogs } from '../../controllers/managementBlog.controller.js';
+} from "../../controllers/managementUsers.controller.js";
+import {
+  getBlogById,
+  listBlogs,
+} from "../../controllers/managementBlog.controller.js";
 import {
   deleteBlogAsAdmin,
   restoreBlogAsAdmin,
   suspendBlogAsAdmin,
   unsuspendBlogAsAdmin,
-} from '../../controllers/managementBlogModeration.controller.js';
-import { getBlogEngagementByMetric } from '../../controllers/managementBlogEngagement.controller.js';
+} from "../../controllers/managementBlogModeration.controller.js";
+import { getBlogEngagementByMetric } from "../../controllers/managementBlogEngagement.controller.js";
 import {
   getBlogCategoryByRef,
   getBlogTagByRef,
@@ -34,14 +37,14 @@ import {
   postBlogCategoryBulk,
   postBlogTag,
   postBlogTagBulk,
-} from '../../controllers/managementBlogTaxonomy.controller.js';
+} from "../../controllers/managementBlogTaxonomy.controller.js";
 import {
   getRoles,
   postRole,
   patchRole,
   deleteRoleSoft,
   postRoleRestore,
-} from '../../controllers/managementRoles.controller.js';
+} from "../../controllers/managementRoles.controller.js";
 import {
   getAccessResources,
   postAccessResource,
@@ -63,930 +66,862 @@ import {
   patchAccessPermission,
   deleteAccessPermissionSoft,
   postAccessPermissionRestore,
-} from '../../controllers/managementAccessCatalog.controller.js';
+} from "../../controllers/managementAccessCatalog.controller.js";
 import {
   getAdminUsers,
   postAdminUser,
   patchAdminUser,
-} from '../../controllers/managementAdminUsers.controller.js';
+} from "../../controllers/managementAdminUsers.controller.js";
 import {
   postAdminInviteSendOtp,
   postAdminInviteVerifyOtp,
-} from '../../controllers/managementAdminInvite.controller.js';
+} from "../../controllers/managementAdminInvite.controller.js";
 import {
   getFeedbackSubmissionById,
   listFeedbackSubmissions,
-} from '../../controllers/managementFeedback.controller.js';
+} from "../../controllers/managementFeedback.controller.js";
 import {
   deleteFeedbackCategory,
   listFeedbackCategoriesAdmin,
   patchFeedbackCategory,
   postFeedbackCategory,
-} from '../../controllers/managementFeedbackCategories.controller.js';
+} from "../../controllers/managementFeedbackCategories.controller.js";
 import {
   deleteBillingPlan,
   getAvailableBillingPlanKeys,
   listBillingPlansAdmin,
   patchBillingPlan,
   postBillingPlan,
-} from '../../controllers/managementBillingPlans.controller.js';
+} from "../../controllers/managementBillingPlans.controller.js";
 import {
   deleteAchievement,
   getAchievementCatalogOptions,
   listAchievementsAdmin,
   patchAchievement,
   postAchievement,
-} from '../../controllers/managementAchievements.controller.js';
+} from "../../controllers/managementAchievements.controller.js";
 import {
   getAdminNotificationConfig,
   getAdminNotificationStats,
   listAdminNotificationAudit,
   patchAdminNotificationConfig,
   postAdminNotificationWebhookTest,
-} from '../../controllers/managementNotifications.controller.js';
+} from "../../controllers/managementNotifications.controller.js";
 import {
   getContactLeadById,
   listContactLeads,
-} from '../../controllers/managementContact.controller.js';
+} from "../../controllers/managementContact.controller.js";
 import {
   getSessionIdleStatus,
   postSessionTouch,
-} from '../../controllers/managementSessionIdle.controller.js';
-import { getManagementMe } from '../../controllers/managementMe.controller.js';
+} from "../../controllers/managementSessionIdle.controller.js";
+import { getManagementMe } from "../../controllers/managementMe.controller.js";
 import {
   listMySessions,
   revokeMySession,
   revokeOtherSessions,
-} from '../../controllers/managementSessions.controller.js';
-import { listAuditLogs } from '../../controllers/managementAudit.controller.js';
-import { getIamMetricsHandler } from '../../controllers/managementIamMetrics.controller.js';
-import { postIamSimulate } from '../../controllers/managementSimulate.controller.js';
+} from "../../controllers/managementSessions.controller.js";
+import { listAuditLogs } from "../../controllers/managementAudit.controller.js";
+import { getIamMetricsHandler } from "../../controllers/managementIamMetrics.controller.js";
+import { postIamSimulate } from "../../controllers/managementSimulate.controller.js";
 import {
   listMyTrustedDevices,
   postTrustCurrentDevice,
   deleteTrustedDevice,
-} from '../../controllers/managementDevices.controller.js';
+} from "../../controllers/managementDevices.controller.js";
 import {
   postImpersonateUser,
   postEndImpersonation,
-} from '../../controllers/managementImpersonation.controller.js';
-import { getFederationHandler } from '../../controllers/managementFederation.controller.js';
-import { getSessionRisk } from '../../controllers/managementRisk.controller.js';
+} from "../../controllers/managementImpersonation.controller.js";
+import { getFederationHandler } from "../../controllers/managementFederation.controller.js";
+import { getSessionRisk } from "../../controllers/managementRisk.controller.js";
 import {
   listElevations,
   postElevation,
   deleteElevation,
-} from '../../controllers/managementTemporal.controller.js';
-import { requireSessionTier } from '../middleware/requireSessionTier.js';
-
+} from "../../controllers/managementTemporal.controller.js";
+import { requireSessionTier } from "../middleware/requireSessionTier.js";
 const read = rateLimit({
-  windowMs: 60_000,
+  windowMs: 60000,
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
 });
-
 const write = rateLimit({
-  windowMs: 60_000,
+  windowMs: 60000,
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
 });
-
 const sensitive = rateLimit({
-  windowMs: 60_000,
+  windowMs: 60000,
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-/**
- * Platform admin API — isolated from public user profile routes.
- * Base path: `/api/v1/admin/management` (see `routes/index.ts`).
- */
 export const adminManagementRouter = Router();
-
 adminManagementRouter.use(verifyToken, staffManagementContext);
-
-adminManagementRouter.get('/me', read, (req, res, next) => {
+adminManagementRouter.get("/me", read, (req, res, next) => {
   void getManagementMe(req, res).catch(next);
 });
-
-adminManagementRouter.get('/session-idle', read, (req, res, next) => {
+adminManagementRouter.get("/session-idle", read, (req, res, next) => {
   void getSessionIdleStatus(req, res).catch(next);
 });
-
-adminManagementRouter.post('/session-touch', write, (req, res, next) => {
+adminManagementRouter.post("/session-touch", write, (req, res, next) => {
   void postSessionTouch(req, res).catch(next);
 });
-
-adminManagementRouter.get('/sessions', read, (req, res, next) => {
+adminManagementRouter.get("/sessions", read, (req, res, next) => {
   void listMySessions(req, res).catch(next);
 });
-
-adminManagementRouter.delete('/sessions/:sessionId', sensitive, (req, res, next) => {
-  void revokeMySession(req, res).catch(next);
-});
-
-adminManagementRouter.post('/sessions/revoke-others', sensitive, (req, res, next) => {
-  void revokeOtherSessions(req, res).catch(next);
-});
-
+adminManagementRouter.delete(
+  "/sessions/:sessionId",
+  sensitive,
+  (req, res, next) => {
+    void revokeMySession(req, res).catch(next);
+  },
+);
+adminManagementRouter.post(
+  "/sessions/revoke-others",
+  sensitive,
+  (req, res, next) => {
+    void revokeOtherSessions(req, res).catch(next);
+  },
+);
 adminManagementRouter.get(
-  '/iam-metrics',
+  "/iam-metrics",
   read,
-  requireAdminPermission('audit:read'),
+  requireAdminPermission("audit:read"),
   (req, res, next) => {
     void getIamMetricsHandler(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/iam/simulate',
+  "/iam/simulate",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postIamSimulate(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/federation',
+  "/federation",
   read,
-  requireAdminPermission('audit:read'),
+  requireAdminPermission("audit:read"),
   (req, res, next) => {
     void getFederationHandler(req, res).catch(next);
-  }
+  },
 );
-
-adminManagementRouter.get('/risk', read, (req, res, next) => {
+adminManagementRouter.get("/risk", read, (req, res, next) => {
   void getSessionRisk(req, res).catch(next);
 });
-
 adminManagementRouter.get(
-  '/iam/elevations',
+  "/iam/elevations",
   read,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void listElevations(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/iam/elevations',
+  "/iam/elevations",
   sensitive,
-  requireAdminPermission('admin_role:manage'),
-  requireSessionTier('root'),
+  requireAdminPermission("admin_role:manage"),
+  requireSessionTier("root"),
   (req, res, next) => {
     void postElevation(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/iam/elevations/:id',
+  "/iam/elevations/:id",
   sensitive,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void deleteElevation(req, res).catch(next);
-  }
+  },
 );
-
-adminManagementRouter.get('/devices', read, (req, res, next) => {
+adminManagementRouter.get("/devices", read, (req, res, next) => {
   void listMyTrustedDevices(req, res).catch(next);
 });
-
-adminManagementRouter.post('/devices/trust-current', sensitive, (req, res, next) => {
-  void postTrustCurrentDevice(req, res).catch(next);
-});
-
-adminManagementRouter.delete('/devices/:deviceId', sensitive, (req, res, next) => {
-  void deleteTrustedDevice(req, res).catch(next);
-});
-
-adminManagementRouter.post('/impersonation/end', sensitive, (req, res, next) => {
-  void postEndImpersonation(req, res).catch(next);
-});
-
+adminManagementRouter.post(
+  "/devices/trust-current",
+  sensitive,
+  (req, res, next) => {
+    void postTrustCurrentDevice(req, res).catch(next);
+  },
+);
+adminManagementRouter.delete(
+  "/devices/:deviceId",
+  sensitive,
+  (req, res, next) => {
+    void deleteTrustedDevice(req, res).catch(next);
+  },
+);
+adminManagementRouter.post(
+  "/impersonation/end",
+  sensitive,
+  (req, res, next) => {
+    void postEndImpersonation(req, res).catch(next);
+  },
+);
 adminManagementRouter.get(
-  '/audit-logs',
+  "/audit-logs",
   read,
-  requireAdminPermission('audit:read'),
+  requireAdminPermission("audit:read"),
   (req, res, next) => {
     void listAuditLogs(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/feedback-submissions',
+  "/feedback-submissions",
   read,
-  requireAdminPermission('feedback:read'),
+  requireAdminPermission("feedback:read"),
   (req, res, next) => {
     void listFeedbackSubmissions(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/feedback-submissions/:id',
+  "/feedback-submissions/:id",
   read,
-  requireAdminPermission('feedback:read'),
+  requireAdminPermission("feedback:read"),
   (req, res, next) => {
     void getFeedbackSubmissionById(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/feedback-categories',
+  "/feedback-categories",
   read,
-  requireAdminPermission('feedback:read'),
+  requireAdminPermission("feedback:read"),
   (req, res, next) => {
     void listFeedbackCategoriesAdmin(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/feedback-categories',
+  "/feedback-categories",
   read,
-  requireAnyAdminPermission('feedback:manage', 'feedback:read'),
+  requireAnyAdminPermission("feedback:manage", "feedback:read"),
   (req, res, next) => {
     void postFeedbackCategory(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/feedback-categories/:id',
+  "/feedback-categories/:id",
   read,
-  requireAnyAdminPermission('feedback:manage', 'feedback:read'),
+  requireAnyAdminPermission("feedback:manage", "feedback:read"),
   (req, res, next) => {
     void patchFeedbackCategory(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/feedback-categories/:id',
+  "/feedback-categories/:id",
   read,
-  requireAnyAdminPermission('feedback:manage', 'feedback:read'),
+  requireAnyAdminPermission("feedback:manage", "feedback:read"),
   (req, res, next) => {
     void deleteFeedbackCategory(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/billing-plans',
+  "/billing-plans",
   read,
-  requireAdminPermission('billing:read_subscription'),
+  requireAdminPermission("billing:read_subscription"),
   (req, res, next) => {
     void listBillingPlansAdmin(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/billing-plans/available-keys',
+  "/billing-plans/available-keys",
   read,
-  requireAdminPermission('billing:read_subscription'),
+  requireAdminPermission("billing:read_subscription"),
   (req, res, next) => {
     void getAvailableBillingPlanKeys(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/billing-plans',
+  "/billing-plans",
   read,
-  requireAnyAdminPermission('billing:manage_plans', 'billing:sync_subscription'),
+  requireAnyAdminPermission(
+    "billing:manage_plans",
+    "billing:sync_subscription",
+  ),
   (req, res, next) => {
     void postBillingPlan(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/billing-plans/:id',
+  "/billing-plans/:id",
   read,
-  requireAnyAdminPermission('billing:manage_plans', 'billing:sync_subscription'),
+  requireAnyAdminPermission(
+    "billing:manage_plans",
+    "billing:sync_subscription",
+  ),
   (req, res, next) => {
     void patchBillingPlan(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/billing-plans/:id',
+  "/billing-plans/:id",
   read,
-  requireAnyAdminPermission('billing:manage_plans', 'billing:sync_subscription'),
+  requireAnyAdminPermission(
+    "billing:manage_plans",
+    "billing:sync_subscription",
+  ),
   (req, res, next) => {
     void deleteBillingPlan(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/achievements',
+  "/achievements",
   read,
-  requireAdminPermission('achievement:list'),
+  requireAdminPermission("achievement:list"),
   (req, res, next) => {
     void listAchievementsAdmin(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/achievements/options',
+  "/achievements/options",
   read,
-  requireAdminPermission('achievement:list'),
+  requireAdminPermission("achievement:list"),
   (req, res, next) => {
     void getAchievementCatalogOptions(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/achievements',
+  "/achievements",
   read,
-  requireAdminPermission('achievement:manage'),
+  requireAdminPermission("achievement:manage"),
   (req, res, next) => {
     void postAchievement(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/achievements/:id',
+  "/achievements/:id",
   read,
-  requireAdminPermission('achievement:manage'),
+  requireAdminPermission("achievement:manage"),
   (req, res, next) => {
     void patchAchievement(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/achievements/:id',
+  "/achievements/:id",
   read,
-  requireAdminPermission('achievement:manage'),
+  requireAdminPermission("achievement:manage"),
   (req, res, next) => {
     void deleteAchievement(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/notifications/config',
+  "/notifications/config",
   read,
-  requireAdminPermission('notification:read'),
+  requireAdminPermission("notification:read"),
   (req, res, next) => {
     void getAdminNotificationConfig(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/notifications/config',
+  "/notifications/config",
   read,
-  requireAdminPermission('notification:manage'),
-  requireSessionTier('root'),
+  requireAdminPermission("notification:manage"),
+  requireSessionTier("root"),
   (req, res, next) => {
     void patchAdminNotificationConfig(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/notifications/stats',
+  "/notifications/stats",
   read,
-  requireAdminPermission('notification:read'),
+  requireAdminPermission("notification:read"),
   (req, res, next) => {
     void getAdminNotificationStats(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/notifications/audit',
+  "/notifications/audit",
   read,
-  requireAdminPermission('notification:read'),
+  requireAdminPermission("notification:read"),
   (req, res, next) => {
     void listAdminNotificationAudit(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/notifications/webhook/test',
+  "/notifications/webhook/test",
   read,
-  requireAdminPermission('notification:manage'),
-  requireSessionTier('root'),
+  requireAdminPermission("notification:manage"),
+  requireSessionTier("root"),
   (req, res, next) => {
     void postAdminNotificationWebhookTest(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/contact-leads',
+  "/contact-leads",
   read,
-  requireAdminPermission('contact_lead:read'),
+  requireAdminPermission("contact_lead:read"),
   (req, res, next) => {
     void listContactLeads(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/contact-leads/:id',
+  "/contact-leads/:id",
   read,
-  requireAdminPermission('contact_lead:read'),
+  requireAdminPermission("contact_lead:read"),
   (req, res, next) => {
     void getContactLeadById(req, res).catch(next);
-  }
+  },
 );
-
-adminManagementRouter.get('/users', read, requireAdminPermission('user:list'), (req, res, next) => {
-  void getUsers(req, res).catch(next);
-});
-
 adminManagementRouter.get(
-  '/users/search',
+  "/users",
   read,
-  requireAdminPermission('user:search'),
+  requireAdminPermission("user:list"),
+  (req, res, next) => {
+    void getUsers(req, res).catch(next);
+  },
+);
+adminManagementRouter.get(
+  "/users/search",
+  read,
+  requireAdminPermission("user:search"),
   (req, res, next) => {
     void searchUsers(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/users/:id',
+  "/users/:id",
   read,
-  requireAdminPermission('user:read'),
+  requireAdminPermission("user:read"),
   (req, res, next) => {
     void getUserById(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/users/:id/ledger',
+  "/users/:id/ledger",
   read,
-  requireAdminPermission('billing:read_ledger'),
+  requireAdminPermission("billing:read_ledger"),
   (req, res, next) => {
     void getUserLedger(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/users/:id/follows',
+  "/users/:id/follows",
   read,
-  requireAdminPermission('user:read'),
+  requireAdminPermission("user:read"),
   (req, res, next) => {
     void getUserFollows(req, res).catch(next);
-  }
+  },
 );
-
-adminManagementRouter.get('/blogs', read, requireAdminPermission('blog:list'), (req, res, next) => {
-  void listBlogs(req, res).catch(next);
-});
-
 adminManagementRouter.get(
-  '/blogs/:id',
+  "/blogs",
   read,
-  requireAdminPermission('blog:read'),
+  requireAdminPermission("blog:list"),
+  (req, res, next) => {
+    void listBlogs(req, res).catch(next);
+  },
+);
+adminManagementRouter.get(
+  "/blogs/:id",
+  read,
+  requireAdminPermission("blog:read"),
   (req, res, next) => {
     void getBlogById(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/blogs/:id/engagement/:metric',
+  "/blogs/:id/engagement/:metric",
   read,
-  requireAdminPermission('blog:read'),
+  requireAdminPermission("blog:read"),
   (req, res, next) => {
     void getBlogEngagementByMetric(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/blogs/:id/suspend',
+  "/blogs/:id/suspend",
   read,
-  requireAdminPermission('blog:read'),
+  requireAdminPermission("blog:read"),
   (req, res, next) => {
     void suspendBlogAsAdmin(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/blogs/:id/unsuspend',
+  "/blogs/:id/unsuspend",
   read,
-  requireAdminPermission('blog:read'),
+  requireAdminPermission("blog:read"),
   (req, res, next) => {
     void unsuspendBlogAsAdmin(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/blogs/:id/restore',
+  "/blogs/:id/restore",
   read,
-  requireAdminPermission('blog:read'),
+  requireAdminPermission("blog:read"),
   (req, res, next) => {
     void restoreBlogAsAdmin(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/blogs/:id',
+  "/blogs/:id",
   read,
-  requireAdminPermission('blog:read'),
+  requireAdminPermission("blog:read"),
   (req, res, next) => {
     void deleteBlogAsAdmin(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/blog-categories',
+  "/blog-categories",
   read,
-  requireAdminPermission('blog_category:list'),
+  requireAdminPermission("blog_category:list"),
   (req, res, next) => {
     void listBlogCategories(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/blog-categories/:ref',
+  "/blog-categories/:ref",
   read,
-  requireAdminPermission('blog_category:read'),
+  requireAdminPermission("blog_category:read"),
   (req, res, next) => {
     void getBlogCategoryByRef(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/blog-categories/bulk',
+  "/blog-categories/bulk",
   write,
-  requireAdminPermission('blog_category:manage'),
+  requireAdminPermission("blog_category:manage"),
   (req, res, next) => {
     void postBlogCategoryBulk(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/blog-categories',
+  "/blog-categories",
   write,
-  requireAdminPermission('blog_category:manage'),
+  requireAdminPermission("blog_category:manage"),
   (req, res, next) => {
     void postBlogCategory(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/blog-categories/:ref',
+  "/blog-categories/:ref",
   write,
-  requireAdminPermission('blog_category:manage'),
+  requireAdminPermission("blog_category:manage"),
   (req, res, next) => {
     void patchBlogCategory(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/blog-tags',
+  "/blog-tags",
   read,
-  requireAdminPermission('blog_tag:list'),
+  requireAdminPermission("blog_tag:list"),
   (req, res, next) => {
     void listBlogTags(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/blog-tags/:ref',
+  "/blog-tags/:ref",
   read,
-  requireAdminPermission('blog_tag:read'),
+  requireAdminPermission("blog_tag:read"),
   (req, res, next) => {
     void getBlogTagByRef(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/blog-tags/bulk',
+  "/blog-tags/bulk",
   write,
-  requireAdminPermission('blog_tag:manage'),
+  requireAdminPermission("blog_tag:manage"),
   (req, res, next) => {
     void postBlogTagBulk(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/blog-tags',
+  "/blog-tags",
   write,
-  requireAdminPermission('blog_tag:manage'),
+  requireAdminPermission("blog_tag:manage"),
   (req, res, next) => {
     void postBlogTag(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/blog-tags/:ref',
+  "/blog-tags/:ref",
   write,
-  requireAdminPermission('blog_tag:manage'),
+  requireAdminPermission("blog_tag:manage"),
   (req, res, next) => {
     void patchBlogTag(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/users/:id',
+  "/users/:id",
   write,
-  requireAdminPermission('user:update_profile'),
+  requireAdminPermission("user:update_profile"),
   (req, res, next) => {
     void patchUserProfile(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/users/:id/lock',
+  "/users/:id/lock",
   sensitive,
-  requireAdminPermission('user:lock'),
+  requireAdminPermission("user:lock"),
   (req, res, next) => {
     void postLockUser(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/users/:id/unlock',
+  "/users/:id/unlock",
   sensitive,
-  requireAdminPermission('user:unlock'),
+  requireAdminPermission("user:unlock"),
   (req, res, next) => {
     void postUnlockUser(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/users/:id/revoke-sessions',
+  "/users/:id/revoke-sessions",
   sensitive,
-  requireAdminPermission('user:revoke_sessions'),
+  requireAdminPermission("user:revoke_sessions"),
   (req, res, next) => {
     void postRevokeAllSessions(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/users/:id/impersonate',
+  "/users/:id/impersonate",
   sensitive,
-  requireAdminPermission('user:impersonate'),
+  requireAdminPermission("user:impersonate"),
   (req, res, next) => {
     void postImpersonateUser(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/roles',
+  "/roles",
   read,
-  requireAnyAdminPermission('admin_role:manage', 'admin_assignment:manage'),
+  requireAnyAdminPermission("admin_role:manage", "admin_assignment:manage"),
   (req, res, next) => {
     void getRoles(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/roles',
+  "/roles",
   write,
-  requireAdminPermission('admin_role:manage'),
-  requireSessionTier('root'),
+  requireAdminPermission("admin_role:manage"),
+  requireSessionTier("root"),
   (req, res, next) => {
     void postRole(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/roles/:id',
+  "/roles/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
-  requireSessionTier('root'),
+  requireAdminPermission("admin_role:manage"),
+  requireSessionTier("root"),
   (req, res, next) => {
     void patchRole(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/roles/:id',
+  "/roles/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
-  requireSessionTier('root'),
+  requireAdminPermission("admin_role:manage"),
+  requireSessionTier("root"),
   (req, res, next) => {
     void deleteRoleSoft(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/roles/:id/restore',
+  "/roles/:id/restore",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postRoleRestore(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/access-resources',
+  "/access-resources",
   read,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void getAccessResources(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-resources',
+  "/access-resources",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessResource(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/access-resources/:id',
+  "/access-resources/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void patchAccessResource(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/access-resources/:id',
+  "/access-resources/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void deleteAccessResourceSoft(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-resources/:id/restore',
+  "/access-resources/:id/restore",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessResourceRestore(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/access-actions',
+  "/access-actions",
   read,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void getAccessActions(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-actions',
+  "/access-actions",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessAction(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/access-actions/:id',
+  "/access-actions/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void patchAccessAction(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/access-actions/:id',
+  "/access-actions/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void deleteAccessActionSoft(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-actions/:id/restore',
+  "/access-actions/:id/restore",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessActionRestore(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/access-scope-types',
+  "/access-scope-types",
   read,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void getAccessScopeTypes(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-scope-types',
+  "/access-scope-types",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessScopeType(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/access-scope-types/:id',
+  "/access-scope-types/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void patchAccessScopeType(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/access-scope-types/:id',
+  "/access-scope-types/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void deleteAccessScopeTypeSoft(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-scope-types/:id/restore',
+  "/access-scope-types/:id/restore",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessScopeTypeRestore(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/access-permissions',
+  "/access-permissions",
   read,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void getAccessPermissions(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-permissions',
+  "/access-permissions",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessPermission(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/access-permissions/:id',
+  "/access-permissions/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void patchAccessPermission(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.delete(
-  '/access-permissions/:id',
+  "/access-permissions/:id",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void deleteAccessPermissionSoft(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/access-permissions/:id/restore',
+  "/access-permissions/:id/restore",
   write,
-  requireAdminPermission('admin_role:manage'),
+  requireAdminPermission("admin_role:manage"),
   (req, res, next) => {
     void postAccessPermissionRestore(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.get(
-  '/admin-users',
+  "/admin-users",
   read,
-  requireAnyAdminPermission('admin_role:manage', 'admin_assignment:manage'),
+  requireAnyAdminPermission("admin_role:manage", "admin_assignment:manage"),
   (req, res, next) => {
     void getAdminUsers(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/admin-users/send-invite-otp',
+  "/admin-users/send-invite-otp",
   sensitive,
-  requireAdminPermission('admin_assignment:manage'),
+  requireAdminPermission("admin_assignment:manage"),
   (req, res, next) => {
     void postAdminInviteSendOtp(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/admin-users/verify-invite-otp',
+  "/admin-users/verify-invite-otp",
   sensitive,
-  requireAdminPermission('admin_assignment:manage'),
+  requireAdminPermission("admin_assignment:manage"),
   (req, res, next) => {
     void postAdminInviteVerifyOtp(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.post(
-  '/admin-users',
+  "/admin-users",
   write,
-  requireAdminPermission('admin_assignment:manage'),
+  requireAdminPermission("admin_assignment:manage"),
   (req, res, next) => {
     void postAdminUser(req, res).catch(next);
-  }
+  },
 );
-
 adminManagementRouter.patch(
-  '/admin-users/:id',
+  "/admin-users/:id",
   write,
-  requireAdminPermission('admin_assignment:manage'),
+  requireAdminPermission("admin_assignment:manage"),
   (req, res, next) => {
     void patchAdminUser(req, res).catch(next);
-  }
+  },
 );

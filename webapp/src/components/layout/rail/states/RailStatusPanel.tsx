@@ -84,7 +84,7 @@ export function RailStatusPanel({
         className={cn(
           "max-w-sm font-mono font-black uppercase tracking-wide text-foreground",
           isCompact ? "mt-4 text-xs" : "text-sm",
-          !isCompact && (isDestructive ? "mt-6" : "mt-6"),
+          !isCompact && "mt-6",
         )}
       >
         {title}

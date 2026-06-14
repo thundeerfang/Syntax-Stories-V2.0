@@ -1,82 +1,88 @@
-import type { Request } from 'express';
-import { UserModel, type IUser } from '../models/User.js';
-import { newRandomDiceBearAvatarSvgUrl } from '../utils/diceBearAvatarUrl.js';
-import { SubscriptionModel } from '../models/Subscription.js';
-import { getRedis } from '../config/redis.js';
-import { writeAuditLog } from '../shared/audit/auditLog.js';
-import { AuditAction } from '../shared/audit/events.js';
-import { redisKeys } from '../shared/redis/keys.js';
+import type { Request } from "express";
+import { UserModel, type IUser } from "../models/User.js";
+import { newRandomDiceBearAvatarSvgUrl } from "../utils/diceBearAvatarUrl.js";
+import { SubscriptionModel } from "../models/Subscription.js";
+import { getRedis } from "../config/redis.js";
+import { writeAuditLog } from "../shared/audit/auditLog.js";
+import { AuditAction } from "../shared/audit/events.js";
+import { redisKeys } from "../shared/redis/keys.js";
 import type {
   HandleOAuthInput,
   NormalizedOAuthProfile,
   OAuthPassportUser,
   OAuthProviderKey,
-} from './oauth.types.js';
-import { sealProviderToken } from '../shared/crypto/providerTokenCrypto.js';
-import { resolveReferralInput, applyReferralOnNewUser } from '../services/referral.service.js';
-import { LEGAL_SIGNUP_ACK_COOKIE } from '../admin-platform/cms/legal/legalSignupCookie.js';
-import { recordSignupLegalAcceptances } from '../admin-platform/cms/legal/recordLegalAcceptances.js';
-
+} from "./oauth.types.js";
+import { sealProviderToken } from "../shared/crypto/providerTokenCrypto.js";
+import {
+  resolveReferralInput,
+  applyReferralOnNewUser,
+} from "../services/referral.service.js";
+import { LEGAL_SIGNUP_ACK_COOKIE } from "../admin-platform/cms/legal/legalSignupCookie.js";
+import { recordSignupLegalAcceptances } from "../admin-platform/cms/legal/recordLegalAcceptances.js";
 const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
-  google: 'Google',
-  github: 'GitHub',
-  facebook: 'Facebook',
-  x: 'X',
-  discord: 'Discord',
-  twitch: 'Twitch',
+  google: "Google",
+  github: "GitHub",
+  facebook: "Facebook",
+  x: "X",
+  discord: "Discord",
+  twitch: "Twitch",
 };
-
 function randomSuffix(): number {
   return Math.floor(1000 + Math.random() * 9000);
 }
-
 async function attachFreeSubscription(userId: unknown): Promise<void> {
   const user = await UserModel.findById(userId);
   if (!user) return;
   const subscription = await SubscriptionModel.create({
     userId: user._id,
-    plan: 'free',
-    status: 'active',
+    plan: "free",
+    status: "active",
   });
   user.subscription = subscription._id;
   await user.save();
 }
-
-function signupUsername(provider: OAuthProviderKey, n: NormalizedOAuthProfile): string {
+function signupUsername(
+  provider: OAuthProviderKey,
+  n: NormalizedOAuthProfile,
+): string {
   const r = randomSuffix();
   switch (provider) {
-    case 'google':
-      return (n.fullName || 'user').trim().replaceAll(/\s+/g, '').toLowerCase() + r;
-    case 'github':
-      return (n.githubUsername ?? 'user') + r;
-    case 'facebook':
-      return (n.fullName || 'user').trim().toLowerCase().replaceAll(/\s+/g, '') + r;
-    case 'x':
-      return (n.xHandle ?? 'user') + r;
-    case 'discord':
-      return `${n.discordUsernameBase ?? 'user'}${r}`;
-    case 'twitch':
-      return `${n.twitchUsernameBase ?? 'user'}${r}`;
+    case "google":
+      return (
+        (n.fullName || "user").trim().replaceAll(/\s+/g, "").toLowerCase() + r
+      );
+    case "github":
+      return (n.githubUsername ?? "user") + r;
+    case "facebook":
+      return (
+        (n.fullName || "user").trim().toLowerCase().replaceAll(/\s+/g, "") + r
+      );
+    case "x":
+      return (n.xHandle ?? "user") + r;
+    case "discord":
+      return `${n.discordUsernameBase ?? "user"}${r}`;
+    case "twitch":
+      return `${n.twitchUsernameBase ?? "user"}${r}`;
     default:
       return `user${r}`;
   }
 }
-
-function signupEmail(provider: OAuthProviderKey, n: NormalizedOAuthProfile): string {
-  if (provider === 'x' && n.useXSyntheticEmail) {
+function signupEmail(
+  provider: OAuthProviderKey,
+  n: NormalizedOAuthProfile,
+): string {
+  if (provider === "x" && n.useXSyntheticEmail) {
     return `x-${n.providerId}@syntaxstories.placeholder`;
   }
   return n.email;
 }
-
 function sealTok(t: string): string {
   return sealProviderToken(t) ?? t;
 }
-
 function newUserBaseDoc(
   provider: OAuthProviderKey,
   n: NormalizedOAuthProfile,
-  accessToken: string
+  accessToken: string,
 ): Record<string, unknown> {
   const username = signupUsername(provider, n);
   const email = signupEmail(provider, n);
@@ -84,7 +90,9 @@ function newUserBaseDoc(
     fullName: n.fullName,
     username,
     email,
-    profileImg: n.profileImg?.startsWith('http') ? n.profileImg : newRandomDiceBearAvatarSvgUrl(),
+    profileImg: n.profileImg?.startsWith("http")
+      ? n.profileImg
+      : newRandomDiceBearAvatarSvgUrl(),
     isGoogleAccount: false,
     isGitAccount: false,
     isFacebookAccount: false,
@@ -93,16 +101,15 @@ function newUserBaseDoc(
     isDiscordAccount: false,
     isTwitchAccount: false,
   };
-
   switch (provider) {
-    case 'google':
+    case "google":
       return {
         ...base,
         googleId: n.providerId,
         googleToken: sealTok(accessToken),
         isGoogleAccount: true,
       };
-    case 'github':
+    case "github":
       return {
         ...base,
         gitId: n.providerId,
@@ -110,28 +117,28 @@ function newUserBaseDoc(
         github: n.githubUrl,
         isGitAccount: true,
       };
-    case 'facebook':
+    case "facebook":
       return {
         ...base,
         facebookId: n.providerId,
         facebookToken: sealTok(accessToken),
         isFacebookAccount: true,
       };
-    case 'x':
+    case "x":
       return {
         ...base,
         xId: n.providerId,
         xToken: sealTok(accessToken),
         isXAccount: true,
       };
-    case 'discord':
+    case "discord":
       return {
         ...base,
         discordId: n.providerId,
         discordToken: sealTok(accessToken),
         isDiscordAccount: true,
       };
-    case 'twitch':
+    case "twitch":
       return {
         ...base,
         twitchId: n.providerId,
@@ -142,18 +149,19 @@ function newUserBaseDoc(
       return base;
   }
 }
-
-function passportShape(provider: OAuthProviderKey, user: IUser): OAuthPassportUser {
+function passportShape(
+  provider: OAuthProviderKey,
+  user: IUser,
+): OAuthPassportUser {
   const out: OAuthPassportUser = { _id: user._id };
-  if (provider === 'google') out.googleId = user.googleId;
-  if (provider === 'github') out.gitId = user.gitId;
-  if (provider === 'facebook') out.facebookId = user.facebookId;
-  if (provider === 'x') out.xId = user.xId;
-  if (provider === 'discord') out.discordId = user.discordId;
-  if (provider === 'twitch') out.twitchId = user.twitchId;
+  if (provider === "google") out.googleId = user.googleId;
+  if (provider === "github") out.gitId = user.gitId;
+  if (provider === "facebook") out.facebookId = user.facebookId;
+  if (provider === "x") out.xId = user.xId;
+  if (provider === "discord") out.discordId = user.discordId;
+  if (provider === "twitch") out.twitchId = user.twitchId;
   return out;
 }
-
 type FinalizeOAuthLinkInput = {
   req: Request;
   redis: NonNullable<ReturnType<typeof getRedis>>;
@@ -166,8 +174,9 @@ type FinalizeOAuthLinkInput = {
   provider: OAuthProviderKey;
   apply: (user: IUser, token: string) => void;
 };
-
-async function finalizeOAuthAccountLink(input: FinalizeOAuthLinkInput): Promise<OAuthPassportUser> {
+async function finalizeOAuthAccountLink(
+  input: FinalizeOAuthLinkInput,
+): Promise<OAuthPassportUser> {
   const {
     req,
     redis,
@@ -181,11 +190,13 @@ async function finalizeOAuthAccountLink(input: FinalizeOAuthLinkInput): Promise<
     apply,
   } = input;
   const user = await UserModel.findById(userId).select(selectFields);
-  if (!user) throw new Error('User not found');
-  const accountEmail = (user.email ?? '').toLowerCase();
+  if (!user) throw new Error("User not found");
+  const accountEmail = (user.email ?? "").toLowerCase();
   const providerEmail = normalized.email.toLowerCase();
   if (accountEmail !== providerEmail) {
-    throw new Error(`Use the same email as your account (${user.email}) to connect ${label}.`);
+    throw new Error(
+      `Use the same email as your account (${user.email}) to connect ${label}.`,
+    );
   }
   apply(user, accessToken);
   await user.save();
@@ -196,22 +207,20 @@ async function finalizeOAuthAccountLink(input: FinalizeOAuthLinkInput): Promise<
   });
   return passportShape(provider, user);
 }
-
 async function handleLink(
   req: Request,
   provider: OAuthProviderKey,
   linkKey: string,
   accessToken: string,
-  n: NormalizedOAuthProfile
+  n: NormalizedOAuthProfile,
 ): Promise<OAuthPassportUser> {
   const label = PROVIDER_LABEL[provider];
   const redis = getRedis();
-  if (!redis) throw new Error('Linking unavailable');
+  if (!redis) throw new Error("Linking unavailable");
   const userId = await redis.get(redisKeys.oauth.link(linkKey));
-  if (!userId) throw new Error('Link expired or invalid');
-
+  if (!userId) throw new Error("Link expired or invalid");
   switch (provider) {
-    case 'google':
+    case "google":
       return finalizeOAuthAccountLink({
         req,
         redis,
@@ -220,15 +229,15 @@ async function handleLink(
         label,
         normalized: n,
         accessToken,
-        selectFields: '+googleToken',
-        provider: 'google',
+        selectFields: "+googleToken",
+        provider: "google",
         apply: (user, tok) => {
           user.googleId = n.providerId;
           user.googleToken = sealTok(tok);
           user.isGoogleAccount = true;
         },
       });
-    case 'github':
+    case "github":
       return finalizeOAuthAccountLink({
         req,
         redis,
@@ -237,15 +246,15 @@ async function handleLink(
         label,
         normalized: n,
         accessToken,
-        selectFields: '+githubToken',
-        provider: 'github',
+        selectFields: "+githubToken",
+        provider: "github",
         apply: (user, tok) => {
           user.gitId = n.providerId;
           user.githubToken = sealTok(tok);
           user.isGitAccount = true;
         },
       });
-    case 'facebook':
+    case "facebook":
       return finalizeOAuthAccountLink({
         req,
         redis,
@@ -254,15 +263,15 @@ async function handleLink(
         label,
         normalized: n,
         accessToken,
-        selectFields: '+facebookToken',
-        provider: 'facebook',
+        selectFields: "+facebookToken",
+        provider: "facebook",
         apply: (user, tok) => {
           user.facebookId = n.providerId;
           user.facebookToken = sealTok(tok);
           user.isFacebookAccount = true;
         },
       });
-    case 'x':
+    case "x":
       return finalizeOAuthAccountLink({
         req,
         redis,
@@ -271,15 +280,15 @@ async function handleLink(
         label,
         normalized: n,
         accessToken,
-        selectFields: '+xToken',
-        provider: 'x',
+        selectFields: "+xToken",
+        provider: "x",
         apply: (user, tok) => {
           user.xId = n.providerId;
           user.xToken = sealTok(tok);
           user.isXAccount = true;
         },
       });
-    case 'discord':
+    case "discord":
       return finalizeOAuthAccountLink({
         req,
         redis,
@@ -288,15 +297,15 @@ async function handleLink(
         label,
         normalized: n,
         accessToken,
-        selectFields: '+discordToken',
-        provider: 'discord',
+        selectFields: "+discordToken",
+        provider: "discord",
         apply: (user, tok) => {
           user.discordId = n.providerId;
           user.discordToken = sealTok(tok);
           user.isDiscordAccount = true;
         },
       });
-    case 'twitch':
+    case "twitch":
       return finalizeOAuthAccountLink({
         req,
         redis,
@@ -305,8 +314,8 @@ async function handleLink(
         label,
         normalized: n,
         accessToken,
-        selectFields: '+twitchToken',
-        provider: 'twitch',
+        selectFields: "+twitchToken",
+        provider: "twitch",
         apply: (user, tok) => {
           user.twitchId = n.providerId;
           user.twitchToken = sealTok(tok);
@@ -314,144 +323,139 @@ async function handleLink(
         },
       });
     default:
-      throw new Error('Unknown provider');
+      throw new Error("Unknown provider");
   }
 }
-
 async function handleLogin(
   provider: OAuthProviderKey,
   accessToken: string,
-  n: NormalizedOAuthProfile
+  n: NormalizedOAuthProfile,
 ): Promise<OAuthPassportUser> {
   const label = PROVIDER_LABEL[provider];
   switch (provider) {
-    case 'google': {
-      const existingUser = await UserModel.findOne({ googleId: n.providerId }).select(
-        '+googleToken'
-      );
+    case "google": {
+      const existingUser = await UserModel.findOne({
+        googleId: n.providerId,
+      }).select("+googleToken");
       if (!existingUser || !existingUser.isGoogleAccount) {
         throw new Error(
-          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
+          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`,
         );
       }
       existingUser.googleToken = sealTok(accessToken);
       await existingUser.save();
-      return passportShape('google', existingUser);
+      return passportShape("google", existingUser);
     }
-    case 'github': {
-      const existingUser = await UserModel.findOne({ gitId: n.providerId }).select('+githubToken');
+    case "github": {
+      const existingUser = await UserModel.findOne({
+        gitId: n.providerId,
+      }).select("+githubToken");
       if (!existingUser || !existingUser.isGitAccount) {
         throw new Error(
-          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
+          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`,
         );
       }
       existingUser.githubToken = sealTok(accessToken);
       await existingUser.save();
-      return passportShape('github', existingUser);
+      return passportShape("github", existingUser);
     }
-    case 'facebook': {
-      const existingUser = await UserModel.findOne({ facebookId: n.providerId }).select(
-        '+facebookToken'
-      );
+    case "facebook": {
+      const existingUser = await UserModel.findOne({
+        facebookId: n.providerId,
+      }).select("+facebookToken");
       if (!existingUser || !existingUser.isFacebookAccount) {
         throw new Error(
-          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
+          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`,
         );
       }
       existingUser.facebookToken = sealTok(accessToken);
       await existingUser.save();
-      return passportShape('facebook', existingUser);
+      return passportShape("facebook", existingUser);
     }
-    case 'x': {
-      const existingUser = await UserModel.findOne({ xId: n.providerId }).select('+xToken');
+    case "x": {
+      const existingUser = await UserModel.findOne({
+        xId: n.providerId,
+      }).select("+xToken");
       if (!existingUser || !existingUser.isXAccount) {
         throw new Error(
-          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
+          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`,
         );
       }
       existingUser.xToken = sealTok(accessToken);
       await existingUser.save();
-      return passportShape('x', existingUser);
+      return passportShape("x", existingUser);
     }
-    case 'discord': {
-      const existingUser = await UserModel.findOne({ discordId: n.providerId }).select(
-        '+discordToken'
-      );
+    case "discord": {
+      const existingUser = await UserModel.findOne({
+        discordId: n.providerId,
+      }).select("+discordToken");
       if (!existingUser || !existingUser.isDiscordAccount) {
         throw new Error(
-          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
+          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`,
         );
       }
       existingUser.discordToken = sealTok(accessToken);
       await existingUser.save();
-      return passportShape('discord', existingUser);
+      return passportShape("discord", existingUser);
     }
-    case 'twitch': {
-      const existingUser = await UserModel.findOne({ twitchId: n.providerId }).select(
-        '+twitchToken'
-      );
+    case "twitch": {
+      const existingUser = await UserModel.findOne({
+        twitchId: n.providerId,
+      }).select("+twitchToken");
       if (!existingUser || !existingUser.isTwitchAccount) {
         throw new Error(
-          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`
+          `No account is linked to this ${label}. Please sign up or link ${label} from settings.`,
         );
       }
       existingUser.twitchToken = sealTok(accessToken);
       await existingUser.save();
-      return passportShape('twitch', existingUser);
+      return passportShape("twitch", existingUser);
     }
     default:
-      throw new Error('Unknown provider');
+      throw new Error("Unknown provider");
   }
 }
-
 async function handleSignup(
   provider: OAuthProviderKey,
   accessToken: string,
   n: NormalizedOAuthProfile,
-  req: Request
+  req: Request,
 ): Promise<OAuthPassportUser> {
   const label = PROVIDER_LABEL[provider];
-  /** Same lookup as legacy Passport flows (X uses placeholder email string before synthetic storage). */
   const existingByEmail = await UserModel.findOne({ email: n.email });
   if (existingByEmail) {
     throw new Error(
-      `An account with this email already exists. Please sign in, then link ${label} from settings.`
+      `An account with this email already exists. Please sign in, then link ${label} from settings.`,
     );
   }
-
   const ack = req.cookies?.[LEGAL_SIGNUP_ACK_COOKIE];
-  if (ack !== '1') {
+  if (ack !== "1") {
     throw new Error(
-      'Please open Sign up again, check the box to agree to the Terms and Privacy Policy, then continue with this provider.'
+      "Please open Sign up again, check the box to agree to the Terms and Privacy Policy, then continue with this provider.",
     );
   }
-
   const doc = newUserBaseDoc(provider, n, accessToken);
   const newUser = new UserModel(doc);
   await newUser.save();
   await attachFreeSubscription(newUser._id);
   try {
     const refCode = await resolveReferralInput(req);
-    await applyReferralOnNewUser({ req, newUser, refCode, source: 'oauth' });
+    await applyReferralOnNewUser({ req, newUser, refCode, source: "oauth" });
   } catch (e) {
     console.error(e);
   }
   await recordSignupLegalAcceptances(newUser._id, req);
   return passportShape(provider, newUser);
 }
-
-/**
- * Central OAuth business logic: link, login, or signup from a normalized provider profile.
- */
-export async function handleOAuthProviderAuth(input: HandleOAuthInput): Promise<OAuthPassportUser> {
+export async function handleOAuthProviderAuth(
+  input: HandleOAuthInput,
+): Promise<OAuthPassportUser> {
   const { provider, flow, accessToken, normalized, req } = input;
-
-  if (flow.startsWith('link:')) {
+  if (flow.startsWith("link:")) {
     return handleLink(req, provider, flow.slice(5), accessToken, normalized);
   }
-  if (flow === 'login') {
+  if (flow === "login") {
     return handleLogin(provider, accessToken, normalized);
   }
-  // signup (or any non-login state treated as signup, matching prior Passport behavior)
   return handleSignup(provider, accessToken, normalized, req);
 }

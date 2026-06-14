@@ -1,16 +1,22 @@
-import type { Options } from 'express-rate-limit';
-import { getRedis } from '../../config/redis.js';
-import { redisKeys } from '../../shared/redis/keys.js';
-
+import type { Options } from "express-rate-limit";
+import { getRedis } from "../../config/redis.js";
+import { redisKeys } from "../../shared/redis/keys.js";
 interface StoreResult {
   totalHits: number;
   resetTime: Date;
 }
-
-export function RedisRateLimitStore(prefix: string, windowMs: number): Options['store'] {
-  const fullPrefix = prefix ?? 'rl:';
-  const localStore = new Map<string, { count: number; resetAt: number }>();
-
+export function RedisRateLimitStore(
+  prefix: string,
+  windowMs: number,
+): Options["store"] {
+  const fullPrefix = prefix ?? "rl:";
+  const localStore = new Map<
+    string,
+    {
+      count: number;
+      resetAt: number;
+    }
+  >();
   const localIncrement = (key: string): StoreResult => {
     const now = Date.now();
     let record = localStore.get(key);
@@ -21,7 +27,6 @@ export function RedisRateLimitStore(prefix: string, windowMs: number): Options['
     record.count += 1;
     return { totalHits: record.count, resetTime: new Date(record.resetAt) };
   };
-
   return {
     async increment(key: string): Promise<StoreResult> {
       const client = getRedis();

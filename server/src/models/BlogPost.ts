@@ -1,67 +1,45 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-
-export type BlogPostStatus = 'draft' | 'published' | 'suspended';
-
-/**
- * Blog post or draft. `content` is **`JSON.stringify(Block[])`**: an array of blocks with `id`, `type`,
- * `sectionId?`, `payload`. Types include `paragraph` (markdown: bold/italic/underline/links/lists,
- * `[@username](mention:24hexMongoUserId)`, plain `@user`), `heading`, `partition`, `image`,
- * `videoEmbed`, `githubRepo`, `unsplashImage`, etc.
- *
- * **`content` validation:** `POST /api/blog` and `PUT /api/blog/draft` run server-side checks
- * (max size, allowed `type` values, payload limits, strip legacy `gif` blocks) before persisting.
- */
+import mongoose, { Schema, Document, Model } from "mongoose";
+export type BlogPostStatus = "draft" | "published" | "suspended";
 export interface IBlogPost extends Document {
   authorId: mongoose.Types.ObjectId;
   title: string;
   slug: string;
   summary?: string;
-  /** JSON string of Block[] (full editor state per block, no server-side stripping) */
   content: string;
   thumbnailUrl?: string;
-  /** Primary category slug (first entry in `categories`). */
   category?: string;
-  /** Up to 3 lowercase category slugs on write. */
   categories?: string[];
-  /** Lowercase slug tokens, max 20 on write. */
   tags?: string[];
-  /** BCP-47-ish language code (e.g. en, en-us). */
   language?: string;
   status: BlogPostStatus;
-  /** Staff moderation: hidden from public; author-only visibility. */
   suspendedAt?: Date;
   suspendedById?: mongoose.Types.ObjectId;
-  /** First time the post became published (create-as-published or draft→publish); falls back to `createdAt` when unset. */
   publishedAt?: Date;
-  /** Set when a published (or draft) post is saved after create; used for “edited” UI. */
   lastEditedAt?: Date;
   lastEditedById?: mongoose.Types.ObjectId;
-  /** Soft-delete: set instead of removing the document. */
   deletedAt?: Date;
   deletedById?: mongoose.Types.ObjectId;
-  /** Denormalized: distinct accounts currently Respecting this post while it is published and not deleted. */
   respectCount: number;
-  /** Denormalized repost edges (see `blogreposts`). */
   repostCount: number;
-  /** Denormalized saved edges (see `blogbookmarks`). */
   bookmarkCount: number;
-  /** Top-level + reply comments on this post. */
   commentCount: number;
-  /** Incremented on successful authenticated read commits (see read view flow). */
   viewCount: number;
-  /** When set, this post is authored into a squad feed (see `squads`). */
   squadId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
-
 const BlogPostSchema = new Schema<IBlogPost>(
   {
-    authorId: { type: Schema.Types.ObjectId, ref: 'users', required: true, index: true },
+    authorId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      required: true,
+      index: true,
+    },
     title: { type: String, required: true, trim: true, maxlength: 300 },
     slug: { type: String, required: true, trim: true, maxlength: 320 },
-    summary: { type: String, trim: true, maxlength: 12000, default: '' },
-    content: { type: String, required: true, default: '' },
+    summary: { type: String, trim: true, maxlength: 12000, default: "" },
+    content: { type: String, required: true, default: "" },
     thumbnailUrl: { type: String, trim: true, maxlength: 2000 },
     category: {
       type: String,
@@ -78,7 +56,7 @@ const BlogPostSchema = new Schema<IBlogPost>(
         validator(v: string[] | undefined) {
           return v == null || v.length <= 3;
         },
-        message: 'At most 3 categories',
+        message: "At most 3 categories",
       },
     },
     tags: {
@@ -88,44 +66,57 @@ const BlogPostSchema = new Schema<IBlogPost>(
         validator(v: string[] | undefined) {
           return v == null || v.length <= 20;
         },
-        message: 'At most 20 tags',
+        message: "At most 20 tags",
       },
     },
-    language: { type: String, trim: true, lowercase: true, maxlength: 12, default: 'en' },
+    language: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      maxlength: 12,
+      default: "en",
+    },
     status: {
       type: String,
-      enum: ['draft', 'published', 'suspended'],
-      default: 'draft',
+      enum: ["draft", "published", "suspended"],
+      default: "draft",
       index: true,
     },
     suspendedAt: { type: Date, default: null },
-    suspendedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    suspendedById: { type: Schema.Types.ObjectId, ref: "users", default: null },
     publishedAt: { type: Date, default: null, index: true },
     lastEditedAt: { type: Date, default: null },
-    lastEditedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    lastEditedById: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      default: null,
+    },
     deletedAt: { type: Date, default: null, index: true },
-    deletedById: { type: Schema.Types.ObjectId, ref: 'users', default: null },
+    deletedById: { type: Schema.Types.ObjectId, ref: "users", default: null },
     respectCount: { type: Number, default: 0, min: 0, index: true },
     repostCount: { type: Number, default: 0, min: 0, index: true },
     bookmarkCount: { type: Number, default: 0, min: 0 },
     commentCount: { type: Number, default: 0, min: 0 },
     viewCount: { type: Number, default: 0, min: 0 },
-    squadId: { type: Schema.Types.ObjectId, ref: 'squads', default: null, index: true },
+    squadId: {
+      type: Schema.Types.ObjectId,
+      ref: "squads",
+      default: null,
+      index: true,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
-// Unique slug per author (same author cannot have two posts with same slug)
 BlogPostSchema.index({ authorId: 1, slug: 1 }, { unique: true });
 BlogPostSchema.index({ status: 1, createdAt: -1 });
 BlogPostSchema.index({ squadId: 1, status: 1, publishedAt: -1 });
 BlogPostSchema.index(
-  { title: 'text', summary: 'text' },
+  { title: "text", summary: "text" },
   {
     weights: { title: 10, summary: 3 },
-    name: 'blog_search_text',
-  }
+    name: "blog_search_text",
+  },
 );
-
 export const BlogPostModel: Model<IBlogPost> =
-  mongoose.models?.blogposts ?? mongoose.model<IBlogPost>('blogposts', BlogPostSchema);
+  mongoose.models?.blogposts ??
+  mongoose.model<IBlogPost>("blogposts", BlogPostSchema);

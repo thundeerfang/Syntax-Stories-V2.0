@@ -4,25 +4,28 @@
  */
 import boundaries from 'eslint-plugin-boundaries';
 
-const FEATURE_SHIMS = [
-  'blog',
-  'profile',
-  'squads',
-  'explore',
-  'topics',
-  'tags',
-  'legal',
-  'connectivity',
+const DOMAIN_COMPONENTS = [
+  'achievements',
   'auth',
+  'blog',
+  'connectivity',
+  'explore',
+  'legal',
+  'platform',
+  'profile',
+  'settings',
+  'squads',
+  'tags',
+  'topics',
 ];
 
 /** @type {import('eslint-plugin-boundaries').BoundariesElement[]} */
 const elements = [
-  ...FEATURE_SHIMS.map((shim) => ({
-    type: 'feature-shim',
-    pattern: `src/components/${shim}/**`,
+  ...DOMAIN_COMPONENTS.map((domain) => ({
+    type: 'domain-components',
+    pattern: `src/components/${domain}/**`,
     mode: 'folder',
-    capture: ['shim'],
+    capture: ['domain'],
   })),
   {
     type: 'shared',
@@ -84,7 +87,7 @@ export const boundariesConfig = {
                   'features',
                   'features-settings',
                   'shared',
-                  'feature-shim',
+                  'domain-components',
                   'infrastructure',
                 ],
               },
@@ -93,25 +96,48 @@ export const boundariesConfig = {
           {
             from: { type: 'features-settings' },
             allow: {
-              to: { type: ['features', 'shared', 'feature-shim', 'infrastructure', 'app'] },
+              to: {
+                type: [
+                  'features',
+                  'shared',
+                  'domain-components',
+                  'infrastructure',
+                  'app',
+                ],
+              },
             },
           },
           {
             from: { type: 'features' },
             allow: {
-              to: { type: ['shared', 'feature-shim', 'infrastructure', 'features'] },
+              to: {
+                type: [
+                  'shared',
+                  'domain-components',
+                  'infrastructure',
+                  'features',
+                ],
+              },
             },
           },
           {
             from: { type: 'shared' },
             allow: {
-              to: { type: ['shared', 'infrastructure', 'feature-shim'] },
+              to: { type: ['shared', 'infrastructure', 'domain-components'] },
             },
           },
           {
-            from: { type: 'feature-shim' },
+            from: { type: 'domain-components' },
             allow: {
-              to: { type: 'features' },
+              to: {
+                type: [
+                  'shared',
+                  'infrastructure',
+                  'features',
+                  'domain-components',
+                  'app',
+                ],
+              },
             },
           },
           {

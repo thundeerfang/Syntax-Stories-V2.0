@@ -1,8 +1,5 @@
-import { Router } from 'express';
-import { getUnifiedSearch } from '../controllers/search.controller.js';
-
+import { Router } from "express";
+import { getUnifiedSearch } from "../controllers/search.controller.js";
 const router = Router();
-
-router.get('/', getUnifiedSearch);
-
+router.get("/", getUnifiedSearch);
 export default router;
