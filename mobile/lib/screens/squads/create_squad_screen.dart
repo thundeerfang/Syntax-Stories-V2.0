@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/image_upload_kind.dart';
 import '../../services/api_errors.dart';
 import '../../services/auth_api.dart';
@@ -14,8 +13,11 @@ import '../../utils/resolve_profile_media_url.dart';
 import '../../utils/squad_category.dart';
 import '../../widgets/auth/auth_button.dart';
 import '../../widgets/auth/auth_text_field.dart';
+import '../../widgets/squads/squad_create_info_sheet.dart';
 import '../../widgets/squads/squad_filter_chips.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/navigation/main_app_bar.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/image_upload_crop_dialog.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
 
@@ -36,7 +38,6 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
   final _name = TextEditingController();
   final _description = TextEditingController();
 
-  bool _descOpen = false;
   String? _iconUrl;
   String? _bannerUrl;
   String _visibility = 'public';
@@ -45,21 +46,12 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
   String _invitePermission = 'all_members';
   bool _requirePostApproval = false;
   bool _busy = false;
-  String? _feedback;
-  AppFeedbackKind _feedbackKind = AppFeedbackKind.error;
 
   @override
   void dispose() {
     _name.dispose();
     _description.dispose();
     super.dispose();
-  }
-
-  void _setFeedback(String? message, {AppFeedbackKind kind = AppFeedbackKind.error}) {
-    setState(() {
-      _feedback = message;
-      _feedbackKind = kind;
-    });
   }
 
   Future<void> _pickIcon() async {
@@ -81,22 +73,21 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
   }
 
   Future<void> _submit() async {
-    _setFeedback(null);
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final token = context.read<AuthState>().accessToken;
     if (token == null || token.isEmpty) {
-      _setFeedback('Sign in to create a squad.');
+      AppFeedbackToast.error(context, 'Sign in to create a squad.');
       return;
     }
 
     final name = _name.text.trim();
     if (name.isEmpty) {
-      _setFeedback('Name is required.');
+      AppFeedbackToast.error(context, 'Name is required.');
       return;
     }
     if (_visibility == 'public' && !isSquadCategory(_category)) {
-      _setFeedback('Pick a category for public squads.');
+      AppFeedbackToast.error(context, 'Pick a category for public squads.');
       return;
     }
 
@@ -119,15 +110,16 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
       if (_visibility == 'private' && result.inviteToken != null) {
         await _showInviteTokenDialog(result.inviteToken!);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Squad created')),
-        );
+        AppFeedbackToast.success(context, 'Squad created');
       }
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      _setFeedback(e is AuthApiException ? e.message : kGenericUserError);
+      AppFeedbackToast.error(
+        context,
+        e is AuthApiException ? e.message : kGenericUserError,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -160,9 +152,7 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
           TextButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: token));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Invite code copied')),
-              );
+              AppFeedbackToast.success(context, 'Invite code copied');
             },
             child: const Text('COPY'),
           ),
@@ -182,160 +172,77 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.background,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
+      appBar: ScreenAppBar(
+        title: 'Create Squad',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: MainAppBar.iconHitSize,
+            minHeight: MainAppBar.iconHitSize,
+          ),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          tooltip: 'Back',
           onPressed: _busy ? null : () => Navigator.pop(context),
         ),
-        title: Text(
-          'CREATE SQUAD',
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
+        actions: [
+          IconButton(
+            onPressed: _busy ? null : () => SquadCreateInfoSheet.show(context),
+            icon: const Icon(Icons.info_outline_rounded),
+            tooltip: 'How squads work',
           ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: colors.primary),
-        ),
+        ],
       ),
       body: UnfocusTapRegion(
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 24),
+            padding: EdgeInsets.only(bottom: bottomInset + 24),
             children: [
-              if (_feedback != null) ...[
-                AppFeedbackBanner(
-                  message: _feedback!,
-                  kind: _feedbackKind,
-                  onDismiss: () => _setFeedback(null),
-                ),
-                const SizedBox(height: 16),
-              ],
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.groups_rounded, size: 20, color: colors.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Create a group where you can learn and interact with other developers around topics that matter to you.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: colors.mutedForeground,
-                        height: 1.4,
+              _SquadCreateCoverHeader(
+                bannerUrl: _bannerUrl,
+                iconUrl: _iconUrl,
+                enabled: !_busy,
+                onPickBanner: _pickBanner,
+                onPickIcon: _pickIcon,
+                onClearBanner: _bannerUrl == null ? null : () => setState(() => _bannerUrl = null),
+                onClearIcon: _iconUrl == null ? null : () => setState(() => _iconUrl = null),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AuthTextField(
+                        controller: _name,
+                        label: 'Name Your Squad',
+                        hintText: 'e.g. Node.js developers',
+                        maxLength: _nameMax,
+                        required: true,
+                        validator: (v) {
+                          final t = v?.trim() ?? '';
+                          if (t.isEmpty) return 'Name is required';
+                          return null;
+                        },
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _SectionHeader(label: 'Squad details'),
-              const SizedBox(height: 12),
-              AuthTextField(
-                controller: _name,
-                label: 'Name your squad',
-                hintText: 'e.g. Node.js developers',
-                maxLength: _nameMax,
-                required: true,
-                validator: (v) {
-                  final t = v?.trim() ?? '';
-                  if (t.isEmpty) return 'Name is required';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your squad URL slug is assigned automatically from the name when you create it.',
-                style: GoogleFonts.inter(fontSize: 11, color: colors.mutedForeground, height: 1.35),
-              ),
-              const SizedBox(height: 12),
-              if (!_descOpen)
-                TextButton(
-                  onPressed: () => setState(() => _descOpen = true),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    alignment: Alignment.centerLeft,
-                  ),
-                  child: Text(
-                    '+ Add description (recommended)',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: colors.primary,
-                      decoration: TextDecoration.underline,
-                      decorationThickness: 2,
-                    ),
-                  ),
-                )
-              else
-                AuthTextField(
-                  controller: _description,
-                  label: 'Description',
-                  hintText: 'What is this squad about?',
-                  maxLength: _descMax,
-                  minLines: 3,
-                  maxLines: 5,
-                ),
-              const SizedBox(height: 24),
-              _SectionHeader(label: 'Group icon'),
-              const SizedBox(height: 12),
-              _MediaPickTile(
-                previewUrl: _iconUrl,
-                squarePreview: true,
-                title: 'Choose logo for the group icon',
-                subtitle: 'Square crop · JPEG, PNG, WebP, or GIF · Optional',
-                onTap: _busy ? null : _pickIcon,
-                onRemove: _iconUrl == null ? null : () => setState(() => _iconUrl = null),
-              ),
-              const SizedBox(height: 24),
-              _SectionHeader(label: 'Squad banner'),
-              const SizedBox(height: 8),
-              Text(
-                'Wide cover behind the squad header. Optional — uses the gradient when empty.',
-                style: GoogleFonts.inter(fontSize: 11, color: colors.mutedForeground),
-              ),
-              const SizedBox(height: 12),
-              if (_bannerUrl != null)
-                Image.network(
-                  resolveProfileMediaUrl(_bannerUrl),
-                  height: 96,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                )
-              else
-                Container(
-                  height: 96,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: colors.border, width: 2),
-                    color: colors.muted.withValues(alpha: 0.2),
-                  ),
-                ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _pickBanner,
-                    icon: const Icon(Icons.image_outlined, size: 18),
-                    label: const Text('UPLOAD BANNER'),
-                  ),
-                  if (_bannerUrl != null) ...[
-                    const SizedBox(width: 8),
-                    TextButton(
-                      onPressed: _busy ? null : () => setState(() => _bannerUrl = null),
-                      child: const Text('REMOVE'),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 24),
-              _SectionHeader(label: 'Squad type'),
+                      const SizedBox(height: 12),
+                      AuthTextField(
+                        controller: _description,
+                        label: 'Description',
+                        hintText: 'What is this squad about?',
+                        maxLength: _descMax,
+                        minLines: 3,
+                        maxLines: 5,
+                        showFieldLabel: false,
+                        required: true,
+                        validator: (v) {
+                          final t = v?.trim() ?? '';
+                          if (t.isEmpty) return 'Description is required';
+                          if (t.length < 10) return 'Use at least 10 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      _SectionHeader(label: 'Squad Type'),
               const SizedBox(height: 12),
               _OptionCard(
                 title: 'Public',
@@ -353,35 +260,19 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
               ),
               if (_visibility == 'public') ...[
                 const SizedBox(height: 16),
-                Text(
-                  'SQUAD CATEGORY *',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                    color: colors.mutedForeground,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Public squads must pick one topic for the directory.',
-                  style: GoogleFonts.inter(fontSize: 11, color: colors.mutedForeground),
-                ),
+                _SectionHeader(label: 'Squad Category', required: true),
                 const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final id in squadCategoryValues) ...[
-                        SquadChip(
-                          label: squadCategoryLabel(id),
-                          selected: _category == id,
-                          onTap: _busy ? () {} : () => setState(() => _category = id),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                    ],
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final id in squadCategoryValues)
+                      SquadChip(
+                        label: squadCategoryLabel(id),
+                        selected: _category == id,
+                        onTap: _busy ? () {} : () => setState(() => _category = id),
+                      ),
+                  ],
                 ),
               ],
               const SizedBox(height: 24),
@@ -389,34 +280,19 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
                 children: [
                   Icon(Icons.lock_rounded, size: 16, color: colors.primary),
                   const SizedBox(width: 6),
-                  _SectionHeader(label: 'Moderation settings'),
+                  _SectionHeader(label: 'Moderation Settings'),
                 ],
               ),
               const SizedBox(height: 12),
-              Text(
-                'POST CONTENT',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                  color: colors.mutedForeground,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Choose who may publish new posts or share into this squad.',
-                style: GoogleFonts.inter(fontSize: 11, color: colors.mutedForeground),
-              ),
-              const SizedBox(height: 8),
               _OptionCard(
-                title: 'All members',
+                title: 'All Members',
                 body: 'Anyone in the squad can post and share.',
                 selected: _postPolicy == 'all_members',
                 onTap: _busy ? null : () => setState(() => _postPolicy = 'all_members'),
               ),
               const SizedBox(height: 8),
               _OptionCard(
-                title: 'Staff only',
+                title: 'Staff Only',
                 body: 'Only admins and moderators can post or share.',
                 selected: _postPolicy == 'staff_only',
                 onTap: _busy ? null : () => setState(() => _postPolicy = 'staff_only'),
@@ -435,7 +311,7 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Require post approval',
+                            'Require Post Approval',
                             style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
@@ -462,40 +338,30 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'INVITATION PERMISSIONS',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                  color: colors.mutedForeground,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Who may add other people to this squad by username.',
-                style: GoogleFonts.inter(fontSize: 11, color: colors.mutedForeground),
-              ),
+              _SectionHeader(label: 'Invitation Permissions'),
               const SizedBox(height: 8),
               _OptionCard(
-                title: 'All members',
+                title: 'All Members',
                 body: 'Any member can invite others.',
                 selected: _invitePermission == 'all_members',
                 onTap: _busy ? null : () => setState(() => _invitePermission = 'all_members'),
               ),
               const SizedBox(height: 8),
               _OptionCard(
-                title: 'Staff only',
+                title: 'Staff Only',
                 body: 'Only admins and moderators can add members.',
                 selected: _invitePermission == 'staff_only',
                 onTap: _busy ? null : () => setState(() => _invitePermission = 'staff_only'),
               ),
               const SizedBox(height: 28),
               AuthButton(
-                label: 'Create squad',
+                label: 'Create Squad',
                 loadingLabel: 'Creating…',
                 loading: _busy,
                 onPressed: _submit,
+              ),
+                    ],
+                  ),
               ),
             ],
           ),
@@ -505,20 +371,207 @@ class _CreateSquadScreenState extends State<CreateSquadScreen> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
+class _SquadCreateCoverHeader extends StatelessWidget {
+  const _SquadCreateCoverHeader({
+    required this.bannerUrl,
+    required this.iconUrl,
+    required this.enabled,
+    required this.onPickBanner,
+    required this.onPickIcon,
+    this.onClearBanner,
+    this.onClearIcon,
+  });
 
-  final String label;
+  static const bannerHeight = 112.0;
+  static const iconSize = 64.0;
+
+  final String? bannerUrl;
+  final String? iconUrl;
+  final bool enabled;
+  final VoidCallback onPickBanner;
+  final VoidCallback onPickIcon;
+  final VoidCallback? onClearBanner;
+  final VoidCallback? onClearIcon;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label.toUpperCase(),
-      style: GoogleFonts.inter(
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 1.4,
-        color: context.appColors.mutedForeground,
+    final colors = context.appColors;
+    final resolvedBanner = resolveProfileMediaUrl(bannerUrl);
+    final resolvedIcon = resolveProfileMediaUrl(iconUrl);
+    final iconTop = bannerHeight - (iconSize / 2);
+
+    return SizedBox(
+      height: bannerHeight + (iconSize / 2),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: bannerHeight,
+            child: _CoverTapTarget(
+              enabled: enabled,
+              onTap: onPickBanner,
+              onClear: onClearBanner,
+              child: resolvedBanner.isNotEmpty
+                  ? Image.network(
+                      resolvedBanner,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: bannerHeight,
+                      errorBuilder: (_, _, _) => _BannerPlaceholder(colors: colors),
+                    )
+                  : _BannerPlaceholder(colors: colors),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            top: iconTop,
+            child: _CoverTapTarget(
+              enabled: enabled,
+              onTap: onPickIcon,
+              onClear: onClearIcon,
+              compact: true,
+              child: Container(
+                width: iconSize,
+                height: iconSize,
+                decoration: BoxDecoration(
+                  color: colors.card,
+                  border: Border.all(color: colors.border, width: 3),
+                ),
+                child: resolvedIcon.isNotEmpty
+                    ? Image.network(
+                        resolvedIcon,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Icon(
+                          Icons.groups_rounded,
+                          color: colors.mutedForeground,
+                          size: 28,
+                        ),
+                      )
+                    : Icon(Icons.add_photo_alternate_outlined, color: colors.mutedForeground, size: 28),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BannerPlaceholder extends StatelessWidget {
+  const _BannerPlaceholder({required this.colors});
+
+  final AppColorTokens colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.primary.withValues(alpha: 0.35),
+            colors.primary.withValues(alpha: 0.12),
+          ],
+        ),
+        border: Border(bottom: BorderSide(color: colors.border, width: 2)),
+      ),
+      child: Center(
+        child: Text(
+          'Tap To Add Banner',
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: colors.mutedForeground,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoverTapTarget extends StatelessWidget {
+  const _CoverTapTarget({
+    required this.child,
+    required this.onTap,
+    required this.enabled,
+    this.onClear,
+    this.compact = false,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+  final bool enabled;
+  final VoidCallback? onClear;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            child,
+            if (onClear != null && enabled)
+              Positioned(
+                top: compact ? -6 : 8,
+                right: compact ? -6 : 8,
+                child: Material(
+                  color: colors.background,
+                  child: InkWell(
+                    onTap: onClear,
+                    child: Container(
+                      width: compact ? 24 : 28,
+                      height: compact ? 24 : 28,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: colors.border, width: 1.5),
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: compact ? 14 : 16,
+                        color: colors.foreground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label, this.required = false});
+
+  final String label;
+  final bool required;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final style = GoogleFonts.inter(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: colors.mutedForeground,
+    );
+    if (!required) {
+      return Text(label, style: style);
+    }
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: label, style: style),
+          TextSpan(text: ' *', style: style.copyWith(color: colors.destructive)),
+        ],
       ),
     );
   }
@@ -577,98 +630,6 @@ class _OptionCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MediaPickTile extends StatelessWidget {
-  const _MediaPickTile({
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.previewUrl,
-    this.squarePreview = false,
-    this.onRemove,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-  final String? previewUrl;
-  final bool squarePreview;
-  final VoidCallback? onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final resolved = resolveProfileMediaUrl(previewUrl);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Material(
-          color: colors.muted.withValues(alpha: 0.15),
-          child: InkWell(
-            onTap: onTap,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: previewUrl != null ? colors.border : colors.border,
-                  width: 2,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: squarePreview ? 64 : 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: colors.border, width: 2),
-                      color: colors.background,
-                    ),
-                    child: resolved.isNotEmpty
-                        ? Image.network(resolved, fit: BoxFit.cover, errorBuilder: (_, _, _) {
-                            return Icon(Icons.image_outlined, color: colors.mutedForeground);
-                          })
-                        : Icon(Icons.add_photo_alternate_outlined, color: colors.mutedForeground),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: GoogleFonts.inter(fontSize: 11, color: colors.mutedForeground),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (onRemove != null)
-          TextButton(
-            onPressed: onRemove,
-            child: Text(
-              'REMOVE LOGO',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: colors.destructive,
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

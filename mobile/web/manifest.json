@@ -1,6 +1,6 @@
 {
-    "name": "syntax_stories_app",
-    "short_name": "syntax_stories_app",
+    "name": "Syntax Stories",
+    "short_name": "Syntax Stories",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

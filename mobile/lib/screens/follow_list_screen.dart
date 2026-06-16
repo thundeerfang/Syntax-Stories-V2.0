@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../models/follow_user.dart';
+import '../services/auth_api.dart';
 import '../services/follow_api.dart';
+import '../state/auth_state.dart';
 import '../theme/app_color_tokens.dart';
+import '../utils/profile_navigation.dart';
 import '../utils/resolve_profile_media_url.dart';
+import '../widgets/navigation/screen_app_bar.dart';
+import '../widgets/ui/app_feedback_toast.dart';
+import '../widgets/ui/app_loading_indicator.dart';
+import '../widgets/ui/follow_toggle_button.dart';
 import '../widgets/ui/unfocus_tap_region.dart';
 
 /// Followers or following list with local search — mirrors webapp dialog behavior.
@@ -29,9 +37,11 @@ class _FollowListScreenState extends State<FollowListScreen> {
   final _searchController = TextEditingController();
 
   List<FollowUser> _users = [];
+  final Set<String> _iFollowUsernames = {};
   String? _nextCursor;
   bool _loading = true;
   bool _loadingMore = false;
+  String? _actionUsername;
   String _search = '';
 
   @override
@@ -49,6 +59,12 @@ class _FollowListScreenState extends State<FollowListScreen> {
     super.dispose();
   }
 
+  String? get _currentUsername {
+    return context.read<AuthState>().user?.username?.trim().toLowerCase();
+  }
+
+  String? get _accessToken => context.read<AuthState>().accessToken;
+
   Future<void> _loadInitial() async {
     setState(() {
       _loading = true;
@@ -56,12 +72,29 @@ class _FollowListScreenState extends State<FollowListScreen> {
       _nextCursor = null;
     });
     final page = await _fetchPage();
+    await _loadMyFollowingSet();
     if (!mounted) return;
     setState(() {
       _users = page.list;
       _nextCursor = page.nextCursor;
       _loading = false;
     });
+  }
+
+  Future<void> _loadMyFollowingSet() async {
+    final token = _accessToken;
+    final me = _currentUsername;
+    if (token == null || token.isEmpty || me == null || me.isEmpty) return;
+
+    try {
+      final page = await _api.getFollowing(me);
+      if (!mounted) return;
+      setState(() {
+        _iFollowUsernames
+          ..clear()
+          ..addAll(page.list.map((u) => u.username.trim().toLowerCase()).where((s) => s.isNotEmpty));
+      });
+    } catch (_) {}
   }
 
   Future<FollowListPage> _fetchPage({String? cursor}) {
@@ -80,6 +113,83 @@ class _FollowListScreenState extends State<FollowListScreen> {
       _nextCursor = page.nextCursor;
       _loadingMore = false;
     });
+  }
+
+  bool _showFollowActions(String rowUsername) {
+    final token = _accessToken;
+    if (token == null || token.isEmpty) return false;
+
+    final row = rowUsername.trim().toLowerCase();
+    final profile = widget.username.trim().toLowerCase();
+    if (row.isEmpty || row == profile) return false;
+
+    final me = _currentUsername ?? '';
+    return me.isEmpty || row != me;
+  }
+
+  bool _isFollowingUser(String rowUsername) {
+    final row = rowUsername.trim().toLowerCase();
+    if (widget.kind == FollowListKind.following) {
+      final profile = widget.username.trim().toLowerCase();
+      final me = _currentUsername ?? '';
+      if (me.isNotEmpty && profile == me) return true;
+    }
+    return _iFollowUsernames.contains(row);
+  }
+
+  Future<void> _follow(String targetUsername) async {
+    final token = _accessToken;
+    if (token == null || token.isEmpty) {
+      AppFeedbackToast.warning(context, 'Sign in to follow users.');
+      return;
+    }
+
+    setState(() => _actionUsername = targetUsername);
+    try {
+      await _api.follow(username: targetUsername, bearer: token);
+      if (!mounted) return;
+      final key = targetUsername.trim().toLowerCase();
+      setState(() => _iFollowUsernames.add(key));
+      AppFeedbackToast.success(context, 'Following');
+    } on AuthApiException catch (e) {
+      if (!mounted) return;
+      AppFeedbackToast.error(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedbackToast.error(context, 'Could not follow user.');
+    } finally {
+      if (mounted) setState(() => _actionUsername = null);
+    }
+  }
+
+  Future<void> _unfollow(String targetUsername) async {
+    final token = _accessToken;
+    if (token == null || token.isEmpty) {
+      AppFeedbackToast.warning(context, 'Sign in to unfollow users.');
+      return;
+    }
+
+    setState(() => _actionUsername = targetUsername);
+    try {
+      await _api.unfollow(username: targetUsername, bearer: token);
+      if (!mounted) return;
+      final key = targetUsername.trim().toLowerCase();
+      setState(() {
+        _iFollowUsernames.remove(key);
+        if (widget.kind == FollowListKind.following) {
+          _users = _users.where((u) => u.username.trim().toLowerCase() != key).toList();
+        }
+      });
+      AppFeedbackToast.success(context, 'Unfollowed');
+    } on AuthApiException catch (e) {
+      if (!mounted) return;
+      AppFeedbackToast.error(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedbackToast.error(context, 'Could not unfollow user.');
+    } finally {
+      if (mounted) setState(() => _actionUsername = null);
+    }
   }
 
   List<FollowUser> get _filtered {
@@ -106,20 +216,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
 
     return Scaffold(
       backgroundColor: context.appColors.background,
-      appBar: AppBar(
-        backgroundColor: context.appColors.background,
-        foregroundColor: context.appColors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          '$_title$countLabel'.toUpperCase(),
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ),
+      appBar: ScreenAppBar(title: '$_title$countLabel'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -161,7 +258,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
           ),
           Expanded(
             child: _loading
-                ? Center(child: CircularProgressIndicator(color: context.appColors.primary))
+                ? const AppLoadingCenter()
                 : filtered.isEmpty
                     ? _EmptyState(kind: widget.kind, hasSearch: hasSearch)
                     : RefreshIndicator(
@@ -182,7 +279,16 @@ class _FollowListScreenState extends State<FollowListScreen> {
                                 onTap: _loadMore,
                               );
                             }
-                            return _FollowUserRow(user: filtered[index]);
+                            final user = filtered[index];
+                            return _FollowUserRow(
+                              user: user,
+                              showActions: _showFollowActions(user.username),
+                              isFollowing: _isFollowingUser(user.username),
+                              busy: _actionUsername == user.username,
+                              onOpenProfile: () => openPublicProfile(context, username: user.username),
+                              onFollow: () => _follow(user.username),
+                              onUnfollow: () => _unfollow(user.username),
+                            );
                           },
                         ),
                       ),
@@ -196,9 +302,23 @@ class _FollowListScreenState extends State<FollowListScreen> {
 }
 
 class _FollowUserRow extends StatelessWidget {
-  const _FollowUserRow({required this.user});
+  const _FollowUserRow({
+    required this.user,
+    required this.showActions,
+    required this.isFollowing,
+    required this.busy,
+    required this.onOpenProfile,
+    required this.onFollow,
+    required this.onUnfollow,
+  });
 
   final FollowUser user;
+  final bool showActions;
+  final bool isFollowing;
+  final bool busy;
+  final VoidCallback onOpenProfile;
+  final VoidCallback onFollow;
+  final VoidCallback onUnfollow;
 
   @override
   Widget build(BuildContext context) {
@@ -213,47 +333,68 @@ class _FollowUserRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
-            ),
-            clipBehavior: Clip.hardEdge,
-            child: img.isNotEmpty
-                ? Image.network(img, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _avatarFallback())
-                : _avatarFallback(),
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.6,
-                    color: context.appColors.foreground,
-                  ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onOpenProfile,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+                      ),
+                      clipBehavior: Clip.hardEdge,
+                      child: img.isNotEmpty
+                          ? Image.network(img, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _avatarFallback())
+                          : _avatarFallback(),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            displayName.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.6,
+                              color: context.appColors.foreground,
+                            ),
+                          ),
+                          Text(
+                            '@${user.username}'.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                              color: context.appColors.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '@${user.username}'.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: context.appColors.mutedForeground,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
+          if (showActions) ...[
+            const SizedBox(width: 8),
+            FollowToggleButton(
+              isFollowing: isFollowing,
+              busy: busy,
+              compact: true,
+              onPressed: isFollowing ? onUnfollow : onFollow,
+            ),
+          ],
         ],
       ),
     );

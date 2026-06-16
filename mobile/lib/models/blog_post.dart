@@ -10,6 +10,9 @@ class BlogPost {
     this.category,
     this.tags = const [],
     this.language,
+    this.createdAt,
+    this.updatedAt,
+    this.deletedAt,
   });
 
   factory BlogPost.fromJson(Map<String, dynamic> json) {
@@ -29,6 +32,9 @@ class BlogPost {
       category: json['category']?.toString().trim(),
       tags: tags,
       language: json['language']?.toString().trim(),
+      createdAt: json['createdAt']?.toString(),
+      updatedAt: json['updatedAt']?.toString(),
+      deletedAt: json['deletedAt']?.toString(),
     );
   }
 
@@ -42,6 +48,11 @@ class BlogPost {
   final String? category;
   final List<String> tags;
   final String? language;
+  final String? createdAt;
+  final String? updatedAt;
+  final String? deletedAt;
 
   bool get isPublished => status == 'published';
+
+  String get sortTimestamp => deletedAt ?? updatedAt ?? createdAt ?? '';
 }

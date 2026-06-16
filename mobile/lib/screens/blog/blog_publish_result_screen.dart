@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/blog_post.dart';
 import '../../theme/app_color_tokens.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
 import '../../widgets/auth/auth_button.dart';
 
 class BlogPublishResultScreen extends StatelessWidget {
@@ -21,20 +22,9 @@ class BlogPublishResultScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.background,
-        foregroundColor: colors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          published ? 'PUBLISHED' : 'DRAFT SAVED',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
+      appBar: ScreenAppBar(
+        title: published ? 'Published' : 'Draft Saved',
+        leading: const SizedBox.shrink(),
       ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),

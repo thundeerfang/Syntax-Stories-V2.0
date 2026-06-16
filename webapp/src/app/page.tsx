@@ -236,6 +236,14 @@ function HomePageContent() {
     [reduceMotion],
   );
 
+  const libraryGridTransition = useMemo(
+    () =>
+      reduceMotion
+        ? { duration: 0.08 }
+        : { duration: 0.16, ease: [0.33, 1, 0.68, 1] as const },
+    [reduceMotion],
+  );
+
   const gridPosts = useMemo(() => {
     if (selection.kind === "category") return categoryFetch;
     if (selection.kind === "categorized") {
@@ -504,59 +512,101 @@ function HomePageContent() {
             })}
           </div>
 
-          {gridError != null ? (
-            <RailFeedErrorState
-              title="Could not load posts"
-              error={gridError}
-              onRetry={() => void loadGrid()}
-            />
-          ) : gridLoading ? (
-            <FollowingPostsGridSkeleton count={6} />
-          ) : gridPosts.length === 0 ? (
-            noCatalogSource ? (
-              <RailFeedEmptyState
-                icon={FileStack}
-                title="No published posts yet"
-                description="When someone publishes a story, it will show up here."
-                actions={[
-                  {
-                    label: "Browse topics",
-                    href: "/topics",
-                    variant: "primary",
-                    icon: (
-                      <Compass
-                        className="size-4 shrink-0"
-                        strokeWidth={2.5}
-                        aria-hidden
-                      />
-                    ),
-                  },
-                ]}
-              />
+          <AnimatePresence mode="wait" initial={false}>
+            {gridError != null ? (
+              <motion.div
+                key="library-error"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={libraryGridTransition}
+              >
+                <RailFeedErrorState
+                  title="Could not load posts"
+                  error={gridError}
+                  onRetry={() => void loadGrid()}
+                />
+              </motion.div>
+            ) : gridLoading ? (
+              <motion.div
+                key="library-loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={libraryGridTransition}
+              >
+                <FollowingPostsGridSkeleton count={6} />
+              </motion.div>
+            ) : gridPosts.length === 0 ? (
+              <motion.div
+                key="library-empty"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={libraryGridTransition}
+              >
+                {noCatalogSource ? (
+                  <RailFeedEmptyState
+                    icon={FileStack}
+                    title="No published posts yet"
+                    description="When someone publishes a story, it will show up here."
+                    actions={[
+                      {
+                        label: "Browse topics",
+                        href: "/topics",
+                        variant: "primary",
+                        icon: (
+                          <Compass
+                            className="size-4 shrink-0"
+                            strokeWidth={2.5}
+                            aria-hidden
+                          />
+                        ),
+                      },
+                    ]}
+                  />
+                ) : (
+                  <RailFeedEmptyState
+                    icon={FileStack}
+                    variant="filter"
+                    title="No posts match this view"
+                    description="Try another category or switch to All blogs."
+                    actions={[
+                      {
+                        label: "All blogs",
+                        onClick: () => setSelection({ kind: "all" }),
+                        variant: "primary",
+                      },
+                    ]}
+                  />
+                )}
+              </motion.div>
             ) : (
-              <RailFeedEmptyState
-                icon={FileStack}
-                variant="filter"
-                title="No posts match this view"
-                description="Try another category or switch to All blogs."
-                actions={[
-                  {
-                    label: "All blogs",
-                    onClick: () => setSelection({ kind: "all" }),
-                    variant: "primary",
-                  },
-                ]}
-              />
-            )
-          ) : (
-            <ul className={BLOG_FEED_GRID_CLASS}>
-              {gridPosts.map((post) => (
-                <li key={post.id} className={BLOG_FEED_GRID_ITEM_CLASS}>
-                  <BlogCard post={post} />
-                </li>
-              ))}
-            </ul>
-          )}
+              <motion.ul
+                key={`library-posts-${selection.kind}-${selection.kind === "category" ? selection.slug : "all"}`}
+                className={BLOG_FEED_GRID_CLASS}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={libraryGridTransition}
+              >
+                {gridPosts.map((post, index) => (
+                  <motion.li
+                    key={post.id}
+                    className={BLOG_FEED_GRID_ITEM_CLASS}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      ...libraryGridTransition,
+                      delay: reduceMotion ? 0 : Math.min(index * 0.03, 0.15),
+                    }}
+                  >
+                    <BlogCard post={post} />
+                  </motion.li>
+                ))}
+              </motion.ul>
+            )}
+          </AnimatePresence>
         </section>
       </div>
     </div>

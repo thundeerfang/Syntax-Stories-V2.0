@@ -2,11 +2,10 @@
 
 import { useEffect } from "react";
 import { useParams } from "next/navigation";
-import { resolvePublicApiBase } from "@/lib/api/publicApiBase";
+import { writePendingReferralCode } from "@/lib/referral/referralCode";
 
 /**
- * Sets `pendingReferralCode` in sessionStorage (backup for verify body) and redirects to the API
- * attach endpoint so the signed `ss_ref` cookie is set on the API origin.
+ * Stores the referral code for signup and sends the visitor to the home page.
  */
 export default function InviteLandingPage() {
   const params = useParams();
@@ -19,19 +18,8 @@ export default function InviteLandingPage() {
       globalThis.location?.replace("/");
       return;
     }
-    const normalized = trimmed.toUpperCase();
-    try {
-      globalThis.sessionStorage?.setItem("pendingReferralCode", normalized);
-    } catch {
-      /* ignore */
-    }
-    const api = resolvePublicApiBase();
-    if (!api) {
-      globalThis.location?.replace("/");
-      return;
-    }
-    const next = encodeURIComponent("/");
-    globalThis.location.href = `${api}/api/invites/attach?code=${encodeURIComponent(normalized)}&next=${next}`;
+    writePendingReferralCode(trimmed.toUpperCase());
+    globalThis.location?.replace("/");
   }, [code]);
 
   return (

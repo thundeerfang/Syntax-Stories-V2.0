@@ -123,6 +123,32 @@ class AuthRetry {
     return res;
   }
 
+  static Future<http.Response> delete(
+    Uri uri, {
+    required String bearer,
+    Map<String, String> headers = const {},
+    Object? body,
+    bool isRetry = false,
+  }) async {
+    final res = await http.delete(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...headers,
+        'Authorization': 'Bearer $bearer',
+      },
+      body: body,
+    );
+    if (res.statusCode == 401 && !isRetry) {
+      final newToken = await refreshAndGetNewToken(force: true);
+      if (newToken != null && newToken.isNotEmpty) {
+        return delete(uri, bearer: newToken, headers: headers, body: body, isRetry: true);
+      }
+    }
+    return res;
+  }
+
   static Future<http.StreamedResponse> sendMultipart(
     http.MultipartRequest request, {
     required String bearer,

@@ -56,10 +56,6 @@ export type AppEventMap = {
   "referral.rejected": ReferralRejectedPayload;
   "referral.rewarded": ReferralRewardedPayload;
   "referral.share": ReferralSharePayload;
-  "referral.attached": {
-    referrerId: string;
-    code: string;
-  };
   "profile.updated": ProfileUpdatedPayload;
 };
 type Listener<K extends keyof AppEventMap> = (

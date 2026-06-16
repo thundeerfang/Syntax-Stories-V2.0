@@ -32,7 +32,7 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
       { id: "certifications", label: "License & Certifications", icon: Award },
       { id: "projects", label: "Projects & Publications", icon: FolderGit2 },
       { id: "open-source", label: "Open Source", icon: Github },
-      { id: "blog-streak", label: "Blog read streak", icon: Flame },
+      { id: "blog-streak", label: "Blog Read Streak", icon: Flame },
     ],
   },
   {

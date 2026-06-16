@@ -14,7 +14,6 @@ export type InviteResolveResponse = InviteResolveValid | InviteResolveInvalid;
 export type InviteShareChannel =
   | "copy_link"
   | "copy_code"
-  | "copy_attach"
   | "twitter"
   | "whatsapp"
   | "email"

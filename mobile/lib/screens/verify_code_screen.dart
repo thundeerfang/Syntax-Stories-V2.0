@@ -3,14 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/app_feedback.dart';
 import '../services/auth_api.dart';
 import '../state/auth_state.dart';
 import '../widgets/auth/auth_button.dart';
 import '../widgets/auth/auth_screen_layout.dart';
 import '../widgets/auth/auth_text_field.dart';
 import '../widgets/auth/auth_ui.dart';
-import '../widgets/ui/app_feedback_banner.dart';
+import '../widgets/ui/app_feedback_toast.dart';
 import 'two_factor_screen.dart';
 
 class VerifyCodeScreen extends StatefulWidget {
@@ -25,7 +24,6 @@ class VerifyCodeScreen extends StatefulWidget {
 class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
   final _code = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  String? _apiError;
   int _resendCooldownSec = 0;
   Timer? _resendTimer;
 
@@ -55,12 +53,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
     });
   }
 
-  void _clearApiError() {
-    if (_apiError != null) setState(() => _apiError = null);
-  }
-
   Future<void> _verify() async {
-    _clearApiError();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final auth = context.read<AuthState>();
     try {
@@ -75,13 +68,12 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      setState(() => _apiError = e.message);
+      AppFeedbackToast.error(context, e.message);
     }
   }
 
   Future<void> _resend() async {
     if (_resendCooldownSec > 0) return;
-    _clearApiError();
     final auth = context.read<AuthState>();
     try {
       await auth.resendOtp();
@@ -93,7 +85,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       _startResendCooldown();
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      setState(() => _apiError = e.message);
+      AppFeedbackToast.error(context, e.message);
     }
   }
 
@@ -112,16 +104,10 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
       children: [
         AuthInboxCallout(email: auth.pendingEmail ?? '—'),
         const SizedBox(height: 20),
-        AppFeedbackSlot(
-          message: _apiError,
-          kind: AppFeedbackKind.error,
-          onDismiss: _clearApiError,
-        ),
         AuthOtpField(
           controller: _code,
           showLabel: true,
           enabled: !auth.busy,
-          onChanged: (_) => _clearApiError(),
         ),
         const SizedBox(height: 20),
         AuthButton(

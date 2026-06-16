@@ -18,6 +18,7 @@ class UserSummary {
     this.github,
     this.instagram,
     this.youtube,
+    this.createdAt,
     List<String>? stackAndTools,
     List<TechStackItem>? stackAndToolsDisplay,
     List<SetupItem>? mySetup,
@@ -54,6 +55,7 @@ class UserSummary {
   final String? github;
   final String? instagram;
   final String? youtube;
+  final String? createdAt;
   final List<String>? _stackAndTools;
   final List<TechStackItem>? _stackAndToolsDisplay;
   final List<SetupItem>? _mySetup;
@@ -126,6 +128,7 @@ class UserSummary {
       github: _optionalString(json['github']),
       instagram: _optionalString(json['instagram']),
       youtube: _optionalString(json['youtube']),
+      createdAt: _optionalString(json['createdAt']),
       stackAndTools: _stringList(json['stackAndTools']),
       stackAndToolsDisplay: _techStackItems(json['stackAndToolsDisplay']),
       mySetup: _setupItems(json['mySetup']),

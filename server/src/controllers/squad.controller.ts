@@ -2,10 +2,8 @@ import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import type { AuthUser } from "../middlewares/auth/index.js";
 import type { RequestWithOptionalAuth } from "../middlewares/auth/optionalVerifyToken.js";
-import {
-  attachAchievementsToResponse,
-  dispatchAchievementEvents,
-} from "../achievements/achievement.service.js";
+import { attachAchievementsToResponse } from "../services/achievements/achievementEngine.service.js";
+import { dispatchAchievementEvents } from "../services/achievements/dispatchAchievementEvents.js";
 import { SquadModel } from "../models/Squad.js";
 import { SquadMemberModel } from "../models/SquadMember.js";
 import { UserModel } from "../models/User.js";

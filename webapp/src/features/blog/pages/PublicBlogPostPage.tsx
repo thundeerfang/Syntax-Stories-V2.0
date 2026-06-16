@@ -296,15 +296,11 @@ function HeadingBlock({
             : "text-2xl uppercase sm:text-3xl",
         )}
       >
-        {level === 3 ? (
-          <span className="shrink-0 font-mono text-[10px] font-black uppercase tracking-[0.28em] text-muted-foreground">
-            Field
-          </span>
-        ) : (
+        {level === 2 ? (
           <span className="shrink-0 animate-pulse text-primary" aria-hidden>
             {"///"}
           </span>
-        )}
+        ) : null}
         <span className="relative min-w-0 flex-1">
           <span
             className={level === 3 ? "font-black text-foreground" : "uppercase"}
@@ -1094,7 +1090,10 @@ export default function PublicBlogPostPage() {
                 </div>
                 {hasToc ? (
                   <div className="min-h-0 flex-1">
-                    <BlogPostTableOfContents items={tocItems} />
+                    <BlogPostTableOfContents
+                      items={tocItems}
+                      compact={sidebarExpanded}
+                    />
                   </div>
                 ) : null}
               </div>

@@ -14,6 +14,7 @@ export function LayoutShell({
   const { isOpen } = useSidebar();
   return (
     <div
+      id="ss-app-shell"
       className="shell-layout relative flex min-h-screen min-h-[100dvh] flex-col"
       data-sidebar-expanded={isOpen}
     >

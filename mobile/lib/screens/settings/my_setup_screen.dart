@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/setup_item.dart';
 import '../../state/auth_state.dart';
 import '../../utils/my_setup_limits.dart';
@@ -13,7 +12,7 @@ import '../../widgets/settings/settings_inventory_header.dart';
 import '../../widgets/settings/settings_save_reset_row.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
 import '../../widgets/ui/app_confirm_dialog.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import 'my_setup_component_editor_screen.dart';
 
 class MySetupScreen extends StatefulWidget {
@@ -28,7 +27,6 @@ class _MySetupScreenState extends State<MySetupScreen> {
 
   List<SetupItem> _items = [];
   bool _saving = false;
-  String? _feedback;
 
   @override
   void initState() {
@@ -55,16 +53,16 @@ class _MySetupScreenState extends State<MySetupScreen> {
 
   Future<void> _openAddComponent() async {
     if (_atMax) {
-      setState(() => _feedback = 'You can add up to $mySetupMax setup components.');
+      AppFeedbackToast.error(
+        context,
+        'You can add up to $mySetupMax setup components.',
+      );
       return;
     }
 
     final item = await MySetupComponentEditorScreen.open(context);
     if (item == null || !mounted) return;
-    setState(() {
-      _items = [..._items, item].take(mySetupMax).toList();
-      _feedback = null;
-    });
+    setState(() => _items = [..._items, item].take(mySetupMax).toList());
   }
 
   Future<void> _openEditComponent(int index) async {
@@ -73,10 +71,7 @@ class _MySetupScreenState extends State<MySetupScreen> {
       initialItem: _items[index],
     );
     if (item == null || !mounted) return;
-    setState(() {
-      _items = List<SetupItem>.from(_items)..[index] = item;
-      _feedback = null;
-    });
+    setState(() => _items = List<SetupItem>.from(_items)..[index] = item);
   }
 
   Future<void> _confirmRemove(int index) async {
@@ -89,21 +84,15 @@ class _MySetupScreenState extends State<MySetupScreen> {
       cancelLabel: 'Cancel',
     );
     if (confirmed != true || !mounted) return;
-    setState(() {
-      _items = List<SetupItem>.from(_items)..removeAt(index);
-      _feedback = null;
-    });
+    setState(() => _items = List<SetupItem>.from(_items)..removeAt(index));
   }
 
   Future<void> _save() async {
     if (!_dirty) {
-      setState(() => _feedback = 'No changes to save.');
+      AppFeedbackToast.warning(context, 'No changes to save.');
       return;
     }
-    setState(() {
-      _saving = true;
-      _feedback = null;
-    });
+    setState(() => _saving = true);
 
     final payload = _items.take(mySetupMax).map((e) => e.toJson()).toList();
     final err = await context.read<AuthState>().updateProfileSection('setup', {
@@ -111,14 +100,15 @@ class _MySetupScreenState extends State<MySetupScreen> {
     });
 
     if (!mounted) return;
-    setState(() {
-      _saving = false;
-      _feedback = err == null ? _saveSuccessMessage : formatUserMessage(err);
-    });
+    setState(() => _saving = false);
+    if (err == null) {
+      AppFeedbackToast.success(context, _saveSuccessMessage);
+    } else {
+      AppFeedbackToast.error(context, formatUserMessage(err));
+    }
   }
 
   Future<void> _reset() async {
-    setState(() => _feedback = null);
     await context.read<AuthState>().refreshUser();
     if (!mounted) return;
     setState(() => _applyFromUser(context.read<AuthState>().user?.mySetup));
@@ -128,12 +118,6 @@ class _MySetupScreenState extends State<MySetupScreen> {
     await context.read<AuthState>().refreshUser();
     if (!mounted) return;
     setState(() => _applyFromUser(context.read<AuthState>().user?.mySetup));
-  }
-
-  AppFeedbackKind _feedbackKindFor(String message) {
-    if (message == _saveSuccessMessage) return AppFeedbackKind.success;
-    if (message == 'No changes to save.') return AppFeedbackKind.warning;
-    return AppFeedbackKind.error;
   }
 
   @override
@@ -152,10 +136,6 @@ class _MySetupScreenState extends State<MySetupScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppFeedbackSlot(
-            message: _feedback == null ? null : formatUserMessage(_feedback!),
-            kind: _feedback == null ? AppFeedbackKind.error : _feedbackKindFor(_feedback!),
-          ),
           SettingsInventoryHeader(
             title: 'ACTIVE COMPONENTS',
             count: _items.length,

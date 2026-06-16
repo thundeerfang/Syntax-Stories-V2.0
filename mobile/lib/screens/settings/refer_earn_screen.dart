@@ -8,7 +8,10 @@ import '../../services/invite_api.dart';
 import '../../state/auth_state.dart';
 import '../../theme/app_color_tokens.dart';
 import '../../utils/resolve_profile_media_url.dart';
-import '../../widgets/ui/app_pull_to_refresh.dart';
+import '../../widgets/settings/settings_section_scaffold.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
+import '../../widgets/ui/app_loading_indicator.dart';
+import '../../widgets/ui/dashed_border_box.dart';
 
 class ReferEarnScreen extends StatefulWidget {
   const ReferEarnScreen({super.key});
@@ -74,15 +77,9 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     setState(() => _copiedKind = kind);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          kind == 'code' ? 'Referral code copied' : 'Invite link copied',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-        ),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
+    AppFeedbackToast.success(
+      context,
+      kind == 'code' ? 'Referral code copied' : 'Invite link copied',
     );
     Future<void>.delayed(const Duration(seconds: 2), () {
       if (mounted && _copiedKind == kind) setState(() => _copiedKind = null);
@@ -91,95 +88,110 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.appColors.background,
-      appBar: AppBar(
-        backgroundColor: context.appColors.background,
-        foregroundColor: context.appColors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'REFER & EARN',
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ),
-      body: _loading
-          ? Center(child: CircularProgressIndicator(color: context.appColors.primary))
-          : AppPullToRefresh(
-              onRefresh: () => _load(),
-              child: ListView(
-                physics: AppPullToRefresh.scrollPhysics,
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                children: [
-                  Text(
-                    'Share your link. Friends who sign up through your URL count toward your roster.',
-                    style: GoogleFonts.inter(fontSize: 14, height: 1.45, color: context.appColors.mutedForeground),
-                  ),
-                  const SizedBox(height: 20),
-                  if (_error != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: context.appColors.destructive.withValues(alpha: 0.08),
-                        border: Border.all(color: context.appColors.destructive.withValues(alpha: 0.45), width: 2),
+    return SettingsSectionScaffold(
+      title: 'Refer & Earn',
+      description:
+          'Share your link. Friends who sign up\nthrough your URL count toward your roster.',
+      icon: Icons.card_giftcard_rounded,
+      iconOnPrimary: true,
+      headerStyle: SettingsSectionHeaderStyle.centeredPlain,
+      showHeaderTitle: false,
+      onRefresh: () => _load(),
+      body: _loading && _me == null
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: AppLoadingCenter(color: context.appColors.primary),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_error != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: context.appColors.destructive.withValues(alpha: 0.08),
+                      border: Border.all(
+                        color: context.appColors.destructive.withValues(alpha: 0.45),
+                        width: 2,
                       ),
-                      child: Text(_error!, style: GoogleFonts.inter(color: context.appColors.destructive)),
                     ),
-                  if (_me != null) ...[
+                    child: Text(
+                      _error!,
+                      style: GoogleFonts.inter(color: context.appColors.destructive),
+                    ),
+                  ),
+                if (_me != null) ...[
+                  _CopyBlock(
+                    label: 'Invite URL',
+                    value: _me!.inviteUrl,
+                    copied: _copiedKind == 'link',
+                    onCopy: () => _copy(_me!.inviteUrl, 'link'),
+                  ),
+                  if (_me!.referralCode.isNotEmpty) ...[
+                    const SizedBox(height: 16),
                     _CopyBlock(
-                      label: 'Invite URL',
-                      value: _me!.inviteUrl,
-                      copied: _copiedKind == 'link',
-                      onCopy: () => _copy(_me!.inviteUrl, 'link'),
+                      label: 'Referral code',
+                      value: _me!.referralCode,
+                      copied: _copiedKind == 'code',
+                      onCopy: () => _copy(_me!.referralCode, 'code'),
+                      mono: true,
                     ),
-                    if (_me!.referralCode.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      _CopyBlock(
-                        label: 'Referral code',
-                        value: _me!.referralCode,
-                        copied: _copiedKind == 'code',
-                        onCopy: () => _copy(_me!.referralCode, 'code'),
-                        mono: true,
-                      ),
-                    ],
                   ],
-                  const SizedBox(height: 20),
-                  _StatsRow(stats: _stats, referredTotal: _referredTotal),
-                  const SizedBox(height: 20),
-                  Text(
-                    'YOUR REFERRALS',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
-                      color: context.appColors.mutedForeground,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (_referred.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: context.appColors.muted.withValues(alpha: 0.08),
-                        border: Border.all(color: context.appColors.border.withValues(alpha: 0.45), width: 2),
-                      ),
-                      child: Text(
-                        'No referrals yet. Copy your invite link above.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(color: context.appColors.mutedForeground),
-                      ),
-                    )
-                  else
-                    ..._referred.map((row) => _ReferredRow(user: row)),
                 ],
-              ),
+                const SizedBox(height: 20),
+                _StatsRow(stats: _stats, referredTotal: _referredTotal),
+                const SizedBox(height: 20),
+                Text(
+                  'YOUR REFERRALS',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.4,
+                    color: context.appColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (_referred.isEmpty)
+                  const _ReferralsEmptyState()
+                else
+                  ..._referred.map((row) => _ReferredRow(user: row)),
+              ],
             ),
+    );
+  }
+}
+
+class _ReferralsEmptyState extends StatelessWidget {
+  const _ReferralsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return DashedBorderBox(
+      color: colors.border.withValues(alpha: 0.55),
+      backgroundColor: colors.muted.withValues(alpha: 0.08),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+      child: Column(
+        children: [
+          Icon(
+            Icons.group_off_outlined,
+            size: 32,
+            color: colors.mutedForeground.withValues(alpha: 0.7),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'No referrals yet.\nCopy your invite link above.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              height: 1.45,
+              color: colors.mutedForeground,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

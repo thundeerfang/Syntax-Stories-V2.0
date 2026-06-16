@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_color_tokens.dart';
+import '../utils/resolve_profile_media_url.dart';
 import 'paragraph_doc.dart';
+import 'paragraph_interactions.dart';
 
-/// Styled inline spans for paragraph editing / preview (bold, italic, underline, link, GIF).
+/// Styled inline spans for paragraph editing / preview (bold, italic, underline, link, GIF, @mention).
 List<InlineSpan> buildParagraphRichSpans({
   required ParagraphDoc doc,
   required TextStyle baseStyle,
@@ -20,8 +22,29 @@ List<InlineSpan> buildParagraphRichSpans({
   final text = displayText ?? doc.editingText;
   var cursor = 0;
   var gifIndex = 0;
+  var mentionIndex = 0;
 
   while (cursor < text.length) {
+    if (text[cursor] == kParagraphMentionPlaceholder) {
+      if (!forEditing &&
+          mentionIndex < doc.mentions.length &&
+          doc.mentions[mentionIndex].username.trim().isNotEmpty) {
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: _ParagraphMentionChip(
+              mention: doc.mentions[mentionIndex],
+              colors: colors,
+            ),
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: ' ', style: baseStyle));
+      }
+      mentionIndex++;
+      cursor = paragraphMentionSlotEnd(text, cursor);
+      continue;
+    }
     if (text[cursor] == kParagraphGifPlaceholder) {
       if (gifIndex < doc.gifs.length && doc.gifs[gifIndex].url.isNotEmpty) {
         if (forEditing) {
@@ -40,21 +63,11 @@ List<InlineSpan> buildParagraphRichSpans({
         } else {
           spans.add(
             WidgetSpan(
-              alignment: PlaceholderAlignment.baseline,
-              baseline: TextBaseline.alphabetic,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 2),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: Image.network(
-                    doc.gifs[gifIndex].url,
-                    height: gifSize,
-                    width: gifSize,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Icon(Icons.gif, size: gifSize * 0.85, color: colors.primary),
-                  ),
-                ),
+              alignment: PlaceholderAlignment.middle,
+              child: ParagraphInlineGifThumb(
+                gif: doc.gifs[gifIndex],
+                size: gifSize,
+                colors: colors,
               ),
             ),
           );
@@ -67,8 +80,8 @@ List<InlineSpan> buildParagraphRichSpans({
       continue;
     }
 
-    final nextGif = text.indexOf(kParagraphGifPlaceholder, cursor);
-    final end = nextGif == -1 ? text.length : nextGif;
+    final nextAtom = nextParagraphInlineAtomIndex(text, cursor);
+    final end = nextAtom ?? text.length;
     spans.addAll(_spansForTextRange(
       doc,
       cursor,
@@ -85,6 +98,29 @@ List<InlineSpan> buildParagraphRichSpans({
     spans.add(TextSpan(text: '', style: baseStyle));
   }
   return spans;
+}
+
+/// Rich spans for a substring of [doc] (used for wrap layout around inline GIFs).
+List<InlineSpan> buildParagraphRichSpansForRange({
+  required ParagraphDoc doc,
+  required TextStyle baseStyle,
+  required AppColorTokens colors,
+  required int start,
+  required int end,
+  String? displayText,
+  bool forEditing = false,
+}) {
+  final text = displayText ?? doc.editingText;
+  if (start >= end) return [TextSpan(text: '', style: baseStyle)];
+  return _spansForTextRange(
+    doc,
+    start,
+    end,
+    baseStyle,
+    colors,
+    text,
+    forEditing: forEditing,
+  );
 }
 
 bool _stylesEqual(ParagraphTextStyle a, ParagraphTextStyle b) {
@@ -113,10 +149,21 @@ List<InlineSpan> _spansForTextRange(
       i++;
       continue;
     }
+    if (text[i] == kParagraphMentionPlaceholder) {
+      i = paragraphMentionSlotEnd(text, i);
+      continue;
+    }
+    if (text[i] == kParagraphGifPlaceholder) {
+      i = paragraphGifSlotEnd(text, i);
+      continue;
+    }
 
     final style = doc.styleForRange(i, i + 1);
     var j = i + 1;
     while (j < rangeEnd && !isParagraphGifSlotTailIndex(text, j)) {
+      if (text[j] == kParagraphMentionPlaceholder || text[j] == kParagraphGifPlaceholder) {
+        break;
+      }
       if (text[j] == '\n' &&
           style.linkHref != null &&
           style.linkHref!.isNotEmpty) {
@@ -215,6 +262,77 @@ List<InlineSpan> _linkSpansForSegment({
   }
 
   return spans;
+}
+
+class _ParagraphMentionChip extends StatelessWidget {
+  const _ParagraphMentionChip({
+    required this.mention,
+    required this.colors,
+  });
+
+  final ParagraphMention mention;
+  final AppColorTokens colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = resolveProfileMediaUrl(mention.profileImg);
+    final handle = mention.username.trim();
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => openParagraphMentionProfile(context, mention),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(4, 1, 6, 1),
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.1),
+              border: Border.all(color: colors.primary.withValues(alpha: 0.6)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  child: avatarUrl.isNotEmpty
+                      ? Image.network(
+                          avatarUrl,
+                          width: 14,
+                          height: 14,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _mentionAvatarFallback(handle),
+                        )
+                      : _mentionAvatarFallback(handle),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  mention.displayLabel,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    height: 1.2,
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mentionAvatarFallback(String handle) {
+    final seed = handle.isNotEmpty ? handle : 'user';
+    return Image.network(
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=${Uri.encodeComponent(seed)}',
+      width: 14,
+      height: 14,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => Icon(Icons.person, size: 12, color: colors.primary),
+    );
+  }
 }
 
 class _ParagraphLinkChip extends StatelessWidget {

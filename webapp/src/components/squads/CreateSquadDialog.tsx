@@ -245,9 +245,7 @@ export function CreateSquadDialog({
           />
         }
         subtitle={
-          isEdit
-            ? "Update look and rules. Visibility stays fixed."
-            : "Create a group where you can learn and interact with other developers around topics that matter to you."
+          isEdit ? "Update look and rules. Visibility stays fixed." : undefined
         }
         subtitleClassName="line-clamp-1 min-w-0 truncate whitespace-nowrap"
         interactionLock={busy}

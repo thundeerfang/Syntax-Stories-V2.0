@@ -30,7 +30,7 @@ class AuthTextField extends StatefulWidget {
     this.maxLines,
     this.textAlign = TextAlign.start,
     this.textStyle,
-    this.showCounter = true,
+    this.showCounter = false,
     this.showFieldLabel = true,
     this.required = false,
   });

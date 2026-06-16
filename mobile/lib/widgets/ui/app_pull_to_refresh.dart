@@ -9,11 +9,13 @@ class AppPullToRefresh extends StatelessWidget {
     required this.onRefresh,
     required this.child,
     this.displacement = 48,
+    this.edgeOffset = 0,
   });
 
   final Future<void> Function() onRefresh;
   final Widget child;
   final double displacement;
+  final double edgeOffset;
 
   static const scrollPhysics = AlwaysScrollableScrollPhysics(
     parent: BouncingScrollPhysics(),
@@ -25,6 +27,7 @@ class AppPullToRefresh extends StatelessWidget {
       color: context.appColors.primary,
       backgroundColor: context.appColors.card,
       displacement: displacement,
+      edgeOffset: edgeOffset,
       onRefresh: onRefresh,
       child: child,
     );

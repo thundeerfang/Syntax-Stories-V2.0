@@ -11,6 +11,8 @@ import '../../utils/project_limits.dart';
 import '../../utils/user_message_case.dart';
 import '../../widgets/projects/project_draft_form.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/app_pull_to_refresh.dart';
 
 class ProjectEditorScreen extends StatefulWidget {
@@ -64,7 +66,6 @@ class _ProjectEditorScreenState extends State<ProjectEditorScreen> {
   List<ProfileMediaItem> _media = [];
   bool _showValidationErrors = false;
   bool _saving = false;
-  String? _saveError;
 
   @override
   void initState() {
@@ -105,10 +106,7 @@ class _ProjectEditorScreenState extends State<ProjectEditorScreen> {
     _publicationYear = pub.year;
     _endMonth = end.month;
     _endYear = end.year;
-    setState(() {
-      _showValidationErrors = false;
-      _saveError = null;
-    });
+    setState(() => _showValidationErrors = false);
   }
 
   @override
@@ -159,10 +157,7 @@ class _ProjectEditorScreenState extends State<ProjectEditorScreen> {
       endYear: _endYear,
     );
 
-    setState(() {
-      _showValidationErrors = true;
-      _saveError = null;
-    });
+    setState(() => _showValidationErrors = true);
     if (errors.hasErrors) return;
 
     final item = buildProjectItemFromForm(
@@ -207,7 +202,7 @@ class _ProjectEditorScreenState extends State<ProjectEditorScreen> {
     setState(() => _saving = false);
 
     if (err != null) {
-      setState(() => _saveError = formatUserMessage(err));
+      AppFeedbackToast.error(context, formatUserMessage(err));
       return;
     }
 
@@ -220,15 +215,8 @@ class _ProjectEditorScreenState extends State<ProjectEditorScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.background,
-        foregroundColor: colors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          (widget._editing ? 'Edit Project' : 'Add Project').toUpperCase(),
-          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1),
-        ),
+      appBar: ScreenAppBar(
+        title: widget._editing ? 'Edit Project' : 'Add Project',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -271,24 +259,6 @@ class _ProjectEditorScreenState extends State<ProjectEditorScreen> {
               title: widget._editing ? 'Update project' : 'Add a project or publication',
               description: 'Title, publisher, publication date, optional URL, description, and media.',
             ),
-            if (_saveError != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colors.destructive.withValues(alpha: 0.08),
-                  border: Border.all(color: colors.destructive.withValues(alpha: 0.45), width: 2),
-                ),
-                child: Text(
-                  _saveError!,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: colors.destructive,
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 24),
             ProjectDraftForm(
               type: _type,

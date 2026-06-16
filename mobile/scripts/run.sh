@@ -309,6 +309,9 @@ prepare_ios_pods() {
   if [[ ! -d "${ROOT}/ios" ]]; then
     return 0
   fi
+  # Firebase + flutter_local_notifications mix requires CocoaPods (not SPM).
+  # SPM fails on paths with spaces and skips Firebase pod integration.
+  flutter config --no-enable-swift-package-manager >/dev/null 2>&1 || true
   echo "==> pod install (ios/) — may take a minute after flutter clean..."
   (
     cd "${ROOT}/ios"

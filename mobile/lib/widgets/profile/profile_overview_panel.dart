@@ -10,28 +10,55 @@ import '../certifications/certification_entry_badge.dart';
 import '../my_setup/setup_component_badge.dart';
 import '../open_source/open_source_repo_card.dart';
 import '../projects/project_entry_badge.dart';
+import 'profile_overview_blogs_section.dart';
 import 'profile_overview_section_card.dart';
+import 'profile_overview_skeleton.dart';
 
-/// Profile overview tab — stack, setup, certs, projects, open source.
-class ProfileOverviewPanel extends StatelessWidget {
+/// Profile overview tab — blogs, stack, setup, certs, projects, open source.
+class ProfileOverviewPanel extends StatefulWidget {
   const ProfileOverviewPanel({
     super.key,
     required this.user,
+    this.loading = false,
+    this.pageScrollController,
   });
 
   final UserSummary? user;
+  final bool loading;
+  final ScrollController? pageScrollController;
+
+  @override
+  State<ProfileOverviewPanel> createState() => ProfileOverviewPanelState();
+}
+
+class ProfileOverviewPanelState extends State<ProfileOverviewPanel> {
+  final _blogsKey = GlobalKey<ProfileOverviewBlogsSectionState>();
+
+  void reload() {
+    _blogsKey.currentState?.reload();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final stack = user?.stackAndTools ?? const [];
-    final stackDisplay = user?.stackAndToolsDisplay ?? const [];
-    final setup = user?.mySetup ?? const [];
-    final certifications = user?.certifications ?? const [];
-    final allProjects = user?.projects ?? const [];
+    if (widget.loading || widget.user == null) {
+      return const ProfileOverviewSkeleton(sectionCount: 4);
+    }
+
+    final profile = widget.user!;
+    final stack = profile.stackAndTools;
+    final stackDisplay = profile.stackAndToolsDisplay;
+    final setup = profile.mySetup;
+    final certifications = profile.certifications;
+    final allProjects = profile.projects;
     final projects = ProjectItem.manualOnly(allProjects);
     final openSource = ProjectItem.githubOnly(allProjects);
 
     final sections = <Widget>[
+      ProfileOverviewBlogsSection(
+        key: _blogsKey,
+        username: profile.username,
+        pageScrollController: widget.pageScrollController,
+      ),
       ProfileOverviewSectionCard(
         title: 'Stack & Tools',
         icon: Icons.memory_outlined,

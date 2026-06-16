@@ -1,0 +1,5 @@
+import { MOBILE_BROWSER_LOCK_CLASS } from "./isMobileBrowser";
+
+export { MOBILE_BROWSER_LOCK_CLASS };
+
+export const MOBILE_BROWSER_LOCK_BOOTSTRAP_SCRIPT = `(function(){try{var c="${MOBILE_BROWSER_LOCK_CLASS}";var minEdge=768;function lock(){document.documentElement.classList.add(c);document.documentElement.style.overflow="hidden";}var standalone=matchMedia("(display-mode:standalone)").matches||navigator.standalone===true;if(standalone)return;var ua=navigator.userAgent;var uad=navigator.userAgentData;if(/iPhone|iPod/i.test(ua)){lock();return;}if(/Android/i.test(ua)&&/Mobile/i.test(ua)){lock();return;}if(/webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)){lock();return;}if(/Windows NT|Win64|WOW64/i.test(ua)&&!/Phone|IEMobile/i.test(ua))return;if(/CrOS/i.test(ua))return;if(/Macintosh|Mac OS X/i.test(ua)&&!/iPhone|iPod|iPad/i.test(ua)&&screen.width>=minEdge)return;if(uad&&uad.mobile===false)return;if(matchMedia("(hover:hover) and (pointer:fine)").matches)return;if(uad&&uad.mobile===true){lock();return;}}catch(e){}})();`;

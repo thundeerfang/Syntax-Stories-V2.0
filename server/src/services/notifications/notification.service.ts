@@ -18,6 +18,7 @@ import type {
   NotificationType,
 } from "./notification.types.js";
 import { enqueueNotificationWebhookDelivery } from "./notificationWebhookOutbox.service.js";
+import { sendPushNotificationToUser } from "./pushNotification.service.js";
 const DEFAULT_ICON: NotificationIcon = "bell";
 function formatRelativeTime(date: Date): string {
   const diffMs = Date.now() - date.getTime();
@@ -158,6 +159,10 @@ export async function createNotification(
     metadata: { kind: input.type },
   });
   void publishNotificationRealtime(input.userId, item);
+  void (async () => {
+    const unread = await countUnreadNotifications(input.userId);
+    await sendPushNotificationToUser(input.userId, item, unread);
+  })();
   if (!input.skipWebhook) {
     void enqueueNotificationWebhookDelivery(input.userId, item);
   }

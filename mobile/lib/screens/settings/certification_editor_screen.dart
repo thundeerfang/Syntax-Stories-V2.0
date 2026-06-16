@@ -11,6 +11,8 @@ import '../../utils/profile_month_year.dart';
 import '../../utils/user_message_case.dart';
 import '../../widgets/certifications/certification_draft_form.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/app_pull_to_refresh.dart';
 
 class CertificationEditorScreen extends StatefulWidget {
@@ -63,7 +65,6 @@ class _CertificationEditorScreenState extends State<CertificationEditorScreen> {
   List<ProfileMediaItem> _media = [];
   bool _showValidationErrors = false;
   bool _saving = false;
-  String? _saveError;
 
   @override
   void initState() {
@@ -108,10 +109,7 @@ class _CertificationEditorScreenState extends State<CertificationEditorScreen> {
     _issueYear = issue.year;
     _expMonth = exp.month;
     _expYear = exp.year;
-    setState(() {
-      _showValidationErrors = false;
-      _saveError = null;
-    });
+    setState(() => _showValidationErrors = false);
   }
 
   @override
@@ -172,10 +170,7 @@ class _CertificationEditorScreenState extends State<CertificationEditorScreen> {
       skills: _skills,
     );
 
-    setState(() {
-      _showValidationErrors = true;
-      _saveError = null;
-    });
+    setState(() => _showValidationErrors = true);
     if (errors.hasErrors) return;
 
     final item = buildCertificationItemFromForm(
@@ -219,7 +214,7 @@ class _CertificationEditorScreenState extends State<CertificationEditorScreen> {
     setState(() => _saving = false);
 
     if (err != null) {
-      setState(() => _saveError = formatUserMessage(err));
+      AppFeedbackToast.error(context, formatUserMessage(err));
       return;
     }
 
@@ -232,15 +227,8 @@ class _CertificationEditorScreenState extends State<CertificationEditorScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.background,
-        foregroundColor: colors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          (widget._editing ? 'Edit Certification' : 'Add Certification').toUpperCase(),
-          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1),
-        ),
+      appBar: ScreenAppBar(
+        title: widget._editing ? 'Edit Certification' : 'Add Certification',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -284,24 +272,6 @@ class _CertificationEditorScreenState extends State<CertificationEditorScreen> {
               description:
                   'Name, issuing organization, issue date, skills, and optional credential details.',
             ),
-            if (_saveError != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colors.destructive.withValues(alpha: 0.08),
-                  border: Border.all(color: colors.destructive.withValues(alpha: 0.45), width: 2),
-                ),
-                child: Text(
-                  _saveError!,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: colors.destructive,
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 24),
             CertificationDraftForm(
               nameController: _name,

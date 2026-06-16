@@ -7,6 +7,8 @@ import '../../utils/my_setup_limits.dart';
 import '../../utils/setup_url.dart';
 import '../../utils/user_message_case.dart';
 import '../../widgets/my_setup/setup_draft_form.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
 
 /// Full-screen add / edit flow for a single setup component.
@@ -88,15 +90,7 @@ class _MySetupComponentEditorScreenState extends State<MySetupComponentEditorScr
     if (item == null) return;
 
     if (widget.initialItem != null && item == widget.initialItem) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            formatUserMessage('No changes to save.'),
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedbackToast.warning(context, formatUserMessage('No changes to save.'));
       return;
     }
 
@@ -109,20 +103,7 @@ class _MySetupComponentEditorScreenState extends State<MySetupComponentEditorScr
 
     return Scaffold(
       backgroundColor: context.appColors.background,
-      appBar: AppBar(
-        backgroundColor: context.appColors.background,
-        foregroundColor: context.appColors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          (editing ? 'Edit Component' : 'Add Component').toUpperCase(),
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
-      ),
+      appBar: ScreenAppBar(title: editing ? 'Edit Component' : 'Add Component'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [

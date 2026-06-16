@@ -33,4 +33,3 @@ export function achievementAuditAction(
 export function achievementEventAction(eventType: string): string {
   return `achievement.event.${eventType}`;
 }
-export { ACHIEVEMENT_EVENT_LOG_TTL_SEC } from "../../variable/constants.js";

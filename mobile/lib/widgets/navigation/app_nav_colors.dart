@@ -20,6 +20,13 @@ abstract final class AppNavColors {
   static Color barShadow(BuildContext context) =>
       context.appColors.shadow.withValues(alpha: 0.18);
 
+  /// Subtle hairline under the main dashboard app bar.
+  static Color headerDivider(BuildContext context) {
+    final tokens = context.appColors;
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    return tokens.foreground.withValues(alpha: isLight ? 0.1 : 0.14);
+  }
+
   static Color writeButtonBackground(BuildContext context) =>
       Theme.of(context).colorScheme.primary;
 

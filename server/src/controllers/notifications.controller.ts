@@ -10,6 +10,10 @@ import {
   updateNotificationPreferences,
   type NotificationListItem,
 } from "../services/notifications/notification.service.js";
+import {
+  registerDevicePushToken,
+  unregisterDevicePushToken,
+} from "../services/notifications/devicePushToken.service.js";
 export type { NotificationListItem };
 export async function listNotifications(
   req: Request,
@@ -131,4 +135,55 @@ export async function patchNotificationPreferences(
       success: true,
       preferences: serializeNotificationPreferences(prefs),
     });
+}
+
+export async function registerDevicePushTokenHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const user = (
+    req as Request & {
+      user: AuthUser;
+    }
+  ).user;
+  if (!user?._id) {
+    res.status(401).json({ success: false, message: "Unauthorized" });
+    return;
+  }
+  const body = req.body as Record<string, unknown>;
+  const token = typeof body.token === "string" ? body.token.trim() : "";
+  const platform = body.platform;
+  if (!token) {
+    res.status(400).json({ success: false, message: "token is required" });
+    return;
+  }
+  if (platform !== "ios" && platform !== "android") {
+    res.status(400).json({ success: false, message: "Invalid platform" });
+    return;
+  }
+  await registerDevicePushToken(user._id, token, platform);
+  res.status(200).json({ success: true });
+}
+
+export async function unregisterDevicePushTokenHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const user = (
+    req as Request & {
+      user: AuthUser;
+    }
+  ).user;
+  if (!user?._id) {
+    res.status(401).json({ success: false, message: "Unauthorized" });
+    return;
+  }
+  const body = req.body as Record<string, unknown>;
+  const token = typeof body.token === "string" ? body.token.trim() : "";
+  if (!token) {
+    res.status(400).json({ success: false, message: "token is required" });
+    return;
+  }
+  await unregisterDevicePushToken(user._id, token);
+  res.status(200).json({ success: true });
 }

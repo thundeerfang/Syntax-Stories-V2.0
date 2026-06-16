@@ -37,6 +37,8 @@ export {
   TrendingPageSkeletonInner,
   InvitePageSkeletonInner,
   AchievementsPageSkeletonInner,
+  PricingPageSkeletonInner,
+  PricingPlansGridSkeleton,
 } from "./PageSkeletons";
 export {
   SquadDetailPageSkeleton,

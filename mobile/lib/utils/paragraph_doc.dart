@@ -3,6 +3,29 @@ import 'dart:convert';
 /// Inline GIF marker — one object-replacement char per GIF ([ExtendedTextField] ImageSpan).
 const kParagraphGifPlaceholder = '\uFFFC';
 
+/// Inline @mention marker — private-use char (preview + TipTap round-trip).
+const kParagraphMentionPlaceholder = '\uE000';
+
+const int kParagraphMentionSlotLength = 1;
+
+int paragraphMentionSlotEnd(String text, int index) {
+  if (index < 0 ||
+      index >= text.length ||
+      text[index] != kParagraphMentionPlaceholder) {
+    return index;
+  }
+  return (index + kParagraphMentionSlotLength).clamp(0, text.length);
+}
+
+int? nextParagraphInlineAtomIndex(String text, int from) {
+  final gifAt = text.indexOf(kParagraphGifPlaceholder, from);
+  final mentionAt = text.indexOf(kParagraphMentionPlaceholder, from);
+  if (gifAt == -1 && mentionAt == -1) return null;
+  if (gifAt == -1) return mentionAt;
+  if (mentionAt == -1) return gifAt;
+  return gifAt < mentionAt ? gifAt : mentionAt;
+}
+
 /// Display size for inline GIFs while editing (matches text line height for cursor alignment).
 const double kParagraphInlineGifEditSize = 21;
 
@@ -99,6 +122,43 @@ class ParagraphGif {
   }
 }
 
+class ParagraphMention {
+  const ParagraphMention({
+    required this.username,
+    this.fullName = '',
+    this.profileImg = '',
+  });
+
+  final String username;
+  final String fullName;
+  final String profileImg;
+
+  String get displayLabel {
+    final name = fullName.trim();
+    if (name.isNotEmpty) return name;
+    final handle = username.trim();
+    return handle.isNotEmpty ? '@$handle' : '@user';
+  }
+
+  Map<String, dynamic> toMentionNode() => {
+        'type': 'mention',
+        'attrs': {
+          'username': username,
+          'fullName': fullName,
+          'profileImg': profileImg,
+        },
+      };
+
+  factory ParagraphMention.fromAttrs(Map<String, dynamic>? attrs) {
+    if (attrs == null) return const ParagraphMention(username: '');
+    return ParagraphMention(
+      username: attrs['username']?.toString() ?? '',
+      fullName: attrs['fullName']?.toString() ?? '',
+      profileImg: attrs['profileImg']?.toString() ?? '',
+    );
+  }
+}
+
 class _MarkRange {
   _MarkRange({
     required this.start,
@@ -146,12 +206,15 @@ class ParagraphDoc {
     required this.editingText,
     required List<_MarkRange> marks,
     required List<ParagraphGif> gifs,
+    required List<ParagraphMention> mentions,
   })  : _marks = marks,
-        _gifs = gifs;
+        _gifs = gifs,
+        _mentions = mentions;
 
   String editingText;
   final List<_MarkRange> _marks;
   final List<ParagraphGif> _gifs;
+  final List<ParagraphMention> _mentions;
 
   bool pendingBold = false;
   bool pendingItalic = false;
@@ -162,6 +225,7 @@ class ParagraphDoc {
         editingText: '',
         marks: [],
         gifs: [],
+        mentions: [],
       );
 
   factory ParagraphDoc.fromPayload(Map<String, dynamic> payload) {
@@ -174,6 +238,7 @@ class ParagraphDoc {
       editingText: text,
       marks: [],
       gifs: [],
+      mentions: [],
     );
   }
 
@@ -181,24 +246,59 @@ class ParagraphDoc {
     final buffer = StringBuffer();
     final marks = <_MarkRange>[];
     final gifs = <ParagraphGif>[];
+    final mentions = <ParagraphMention>[];
 
     final content = doc['content'];
     if (content is! List) {
-      return ParagraphDoc._(editingText: '', marks: marks, gifs: gifs);
+      return ParagraphDoc._(
+        editingText: '',
+        marks: marks,
+        gifs: gifs,
+        mentions: mentions,
+      );
     }
 
+    var paragraphIndex = 0;
     for (final block in content) {
       if (block is! Map) continue;
       if (block['type']?.toString() != 'paragraph') continue;
       final nodes = block['content'];
       if (nodes is! List) continue;
 
+      if (paragraphIndex > 0) {
+        final current = buffer.toString();
+        if (current.endsWith('\n\n')) {
+          // Gap already present from an empty paragraph block.
+        } else if (current.endsWith('\n')) {
+          buffer.write('\n');
+        } else {
+          buffer.write('\n\n');
+        }
+      }
+      paragraphIndex++;
+
+      if (nodes.isEmpty) {
+        buffer.write('\n');
+        continue;
+      }
+
       for (final node in nodes) {
         if (node is! Map) continue;
         final type = node['type']?.toString();
+        if (type == 'hardBreak') {
+          buffer.write('\n');
+          continue;
+        }
         if (type == 'inlineGif') {
           buffer.write(kParagraphGifEditingSlot);
           gifs.add(ParagraphGif.fromAttrs(
+            node['attrs'] is Map ? Map<String, dynamic>.from(node['attrs'] as Map) : null,
+          ));
+          continue;
+        }
+        if (type == 'mention') {
+          buffer.write(kParagraphMentionPlaceholder);
+          mentions.add(ParagraphMention.fromAttrs(
             node['attrs'] is Map ? Map<String, dynamic>.from(node['attrs'] as Map) : null,
           ));
           continue;
@@ -249,10 +349,19 @@ class ParagraphDoc {
       }
     }
 
+    var editing = buffer.toString();
+    if (marks.isEmpty &&
+        gifs.isEmpty &&
+        mentions.isEmpty &&
+        editing.replaceAll('\n', '').isEmpty) {
+      editing = '';
+    }
+
     return ParagraphDoc._(
-      editingText: buffer.toString(),
+      editingText: editing,
       marks: marks,
       gifs: gifs,
+      mentions: mentions,
     );
   }
 
@@ -270,6 +379,7 @@ class ParagraphDoc {
     final text = editingText;
     var cursor = 0;
     var gifIndex = 0;
+    var mentionIndex = 0;
 
     while (cursor < text.length) {
       if (text[cursor] == kParagraphGifPlaceholder) {
@@ -283,9 +393,20 @@ class ParagraphDoc {
         cursor = paragraphGifSlotEnd(text, cursor);
         continue;
       }
+      if (text[cursor] == kParagraphMentionPlaceholder) {
+        if (mentionIndex < _mentions.length) {
+          final mention = _mentions[mentionIndex];
+          if (mention.username.trim().isNotEmpty) {
+            paragraphContent.add(mention.toMentionNode());
+          }
+        }
+        mentionIndex++;
+        cursor = paragraphMentionSlotEnd(text, cursor);
+        continue;
+      }
 
-      final nextGif = text.indexOf(kParagraphGifPlaceholder, cursor);
-      final end = nextGif == -1 ? text.length : nextGif;
+      final nextAtom = nextParagraphInlineAtomIndex(text, cursor);
+      final end = nextAtom ?? text.length;
       final chunk = text.substring(cursor, end);
       paragraphContent.addAll(_textChunkToNodes(chunk, cursor));
       cursor = end;
@@ -297,6 +418,13 @@ class ParagraphDoc {
         paragraphContent.add(gif.toInlineGifNode());
       }
       gifIndex++;
+    }
+    while (mentionIndex < _mentions.length) {
+      final mention = _mentions[mentionIndex];
+      if (mention.username.trim().isNotEmpty) {
+        paragraphContent.add(mention.toMentionNode());
+      }
+      mentionIndex++;
     }
 
     return {
@@ -398,6 +526,10 @@ class ParagraphDoc {
         i = paragraphGifSlotEnd(editingText, i);
         continue;
       }
+      if (editingText[i] == kParagraphMentionPlaceholder) {
+        i = paragraphMentionSlotEnd(editingText, i);
+        continue;
+      }
       buffer.write(editingText[i]);
       i++;
     }
@@ -442,6 +574,7 @@ class ParagraphDoc {
     if (start == end) return false;
     for (var i = start; i < end; i++) {
       if (editingText[i] == kParagraphGifPlaceholder) continue;
+      if (editingText[i] == kParagraphMentionPlaceholder) continue;
       if (isParagraphGifSlotTailIndex(editingText, i)) continue;
       final style = _styleAt(i, i + 1);
       if (bold && !_safeBool(() => style.bold)) return false;
@@ -853,6 +986,8 @@ class ParagraphDoc {
   }
 
   List<ParagraphGif> get gifs => List.unmodifiable(_gifs);
+
+  List<ParagraphMention> get mentions => List.unmodifiable(_mentions);
 }
 
 String paragraphPlainTextFromPayload(Map<String, dynamic> payload) {

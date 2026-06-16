@@ -11,8 +11,13 @@ import '../../theme/app_color_tokens.dart';
 import '../../utils/squad_category.dart';
 import '../../widgets/navigation/main_app_bar.dart';
 import '../../widgets/squads/squad_discover_card.dart';
+import '../../widgets/squads/squad_discover_card_skeleton.dart';
+import '../../widgets/squads/squad_featured_hero_rail.dart';
 import '../../widgets/squads/squad_filter_chips.dart';
+import '../../utils/squad_navigation.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/app_pull_to_refresh.dart';
+import '../../widgets/ui/feed_list_end_marker.dart';
 
 List<SquadSummary> mergeSquadCatalog(List<SquadSummary> publicSquads, List<SquadSummary> mine) {
   final byId = <String, SquadSummary>{};
@@ -48,7 +53,7 @@ class SquadsScreen extends StatefulWidget {
   State<SquadsScreen> createState() => SquadsScreenState();
 }
 
-class SquadsScreenState extends State<SquadsScreen> {
+class SquadsScreenState extends State<SquadsScreen> with SingleTickerProviderStateMixin {
   final _api = SquadApi();
   SquadBrowseFilter _filter = const SquadBrowseFilterAll();
   List<SquadSummary> _publicSquads = const [];
@@ -56,12 +61,44 @@ class SquadsScreenState extends State<SquadsScreen> {
   bool _loading = true;
   String? _error;
   String? _joinBusySlug;
+  AnimationController? _filterAnim;
+  CurvedAnimation? _filterFade;
+
+  void _ensureFilterAnimation() {
+    if (_filterAnim != null) return;
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _filterAnim = controller;
+    _filterFade = CurvedAnimation(parent: controller, curve: Curves.easeOutCubic);
+    controller.value = 1;
+  }
 
   @override
   void initState() {
     super.initState();
+    _ensureFilterAnimation();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
+
+  @override
+  void dispose() {
+    _filterAnim?.dispose();
+    super.dispose();
+  }
+
+  void _onFilterSelected(SquadBrowseFilter next) {
+    if (_filter == next) return;
+    setState(() => _filter = next);
+    _filterAnim?.forward(from: 0);
+  }
+
+  String get _filterKey => switch (_filter) {
+        SquadBrowseFilterAll() => 'all',
+        SquadBrowseFilterMine() => 'mine',
+        SquadBrowseFilterCategory(:final categoryId) => 'cat:$categoryId',
+      };
 
   /// Reload squads after create/join from another route.
   Future<void> reload() => _load();
@@ -113,107 +150,139 @@ class SquadsScreenState extends State<SquadsScreen> {
   Future<void> _onJoin(SquadSummary squad) async {
     final token = context.read<AuthState>().accessToken;
     if (token == null || token.isEmpty) {
-      _showSnack('Sign in to join squads.');
+      AppFeedbackToast.warning(context, 'Sign in to join squads.');
       return;
     }
     if (squad.isPrivate) {
-      _showSnack('Squad detail coming soon.');
+      openSquadSummary(context, squad);
       return;
     }
     setState(() => _joinBusySlug = squad.slug);
     try {
       await _api.join(slug: squad.slug, bearer: token);
       if (!mounted) return;
-      _showSnack('Joined squad');
+      AppFeedbackToast.success(context, 'Joined squad');
       await _load();
     } catch (e) {
       if (!mounted) return;
-      _showSnack(e is AuthApiException ? e.message : kGenericUserError);
+      AppFeedbackToast.error(
+        context,
+        e is AuthApiException ? e.message : kGenericUserError,
+      );
     } finally {
       if (mounted) setState(() => _joinBusySlug = null);
     }
   }
 
   void _onOpen(SquadSummary squad) {
-    _showSnack('Squad detail coming soon.');
-  }
-
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    openSquadSummary(context, squad);
   }
 
   @override
   Widget build(BuildContext context) {
+    _ensureFilterAnimation();
     final topInset = MainAppBar.totalHeight(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     const navReserve = 96.0;
+    final showFeaturedHero =
+        _error == null && _filter is SquadBrowseFilterAll && (!_loading || _merged.isNotEmpty);
+    final showInitialSkeleton = _loading && _merged.isEmpty;
 
     return AppPullToRefresh(
       onRefresh: _load,
+      edgeOffset: topInset,
+      displacement: 40,
       child: CustomScrollView(
         physics: AppPullToRefresh.scrollPhysics,
         slivers: [
           SliverToBoxAdapter(child: SizedBox(height: topInset)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(top: 12, bottom: 12),
               child: SquadFilterChips(
                 selected: _filter,
-                onSelected: (next) => setState(() => _filter = next),
+                onSelected: _onFilterSelected,
               ),
             ),
           ),
-          if (_loading)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_error != null)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _SquadsEmptyState(
-                icon: Icons.error_outline_rounded,
-                title: 'Could not load squads',
-                message: _error!,
-                actionLabel: 'Try again',
-                onAction: _load,
-              ),
-            )
-          else if (_showMineAuthGate)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: _SquadsEmptyState(
-                icon: Icons.groups_rounded,
-                title: 'Sign in to see your squads',
-                message: 'All squads and categories stay available without an account.',
-              ),
-            )
-          else if (_filteredSquads.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _SquadsEmptyState(
-                icon: Icons.groups_rounded,
-                title: _emptyTitle(),
-                message: _emptyMessage(),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + navReserve),
-              sliver: SliverList.separated(
-                itemCount: _filteredSquads.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 20),
-                itemBuilder: (context, index) {
-                  final squad = _filteredSquads[index];
-                  return SquadDiscoverCard(
-                    squad: squad,
-                    joinBusy: _joinBusySlug == squad.slug,
-                    onJoin: () => _onJoin(squad),
-                    onOpen: () => _onOpen(squad),
-                  );
-                },
-              ),
+          SliverFadeTransition(
+            opacity: _filterFade!,
+            sliver: SliverMainAxisGroup(
+              key: ValueKey(_filterKey),
+              slivers: [
+                if (showFeaturedHero) ...[
+                  SliverToBoxAdapter(
+                    child: SquadFeaturedHeroRail(
+                      squads: _merged,
+                      joinBusySlug: _joinBusySlug,
+                      onJoin: _onJoin,
+                      onOpen: _onOpen,
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+                if (showInitialSkeleton)
+                  SliverToBoxAdapter(
+                    child: SquadDiscoverCardListSkeleton(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset + navReserve),
+                    ),
+                  )
+                else if (_error != null)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _SquadsEmptyState(
+                      icon: Icons.error_outline_rounded,
+                      title: 'Could not load squads',
+                      message: _error!,
+                      actionLabel: 'Try again',
+                      onAction: _load,
+                    ),
+                  )
+                else if (_showMineAuthGate)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _SquadsEmptyState(
+                      icon: Icons.groups_rounded,
+                      title: 'Sign in to see your squads',
+                      message: 'All squads and categories stay available without an account.',
+                    ),
+                  )
+                else if (_filteredSquads.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _SquadsEmptyState(
+                      icon: Icons.groups_rounded,
+                      title: _emptyTitle(),
+                      message: _emptyMessage(),
+                    ),
+                  )
+                else ...[
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    sliver: SliverList.separated(
+                      itemCount: _filteredSquads.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 20),
+                      itemBuilder: (context, index) {
+                        final squad = _filteredSquads[index];
+                        return SquadDiscoverCard(
+                          squad: squad,
+                          joinBusy: _joinBusySlug == squad.slug,
+                          onJoin: () => _onJoin(squad),
+                          onOpen: () => _onOpen(squad),
+                        );
+                      },
+                    ),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: FeedListEndMarker(
+                      message: "You've reached the end",
+                      icon: Icons.groups_outlined,
+                    ),
+                  ),
+                ],
+              ],
             ),
+          ),
         ],
       ),
     );

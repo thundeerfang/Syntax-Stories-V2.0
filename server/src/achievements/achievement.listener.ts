@@ -1,6 +1,6 @@
 import { env } from "../config/env.js";
 import { onAppEvent } from "../shared/events/appEvents.js";
-import { dispatchAchievementEvents } from "./achievement.service.js";
+import { dispatchAchievementEvents } from "../services/achievements/dispatchAchievementEvents.js";
 import { qualifyReferralByRefereeId } from "../services/gamification/referralProcessor.service.js";
 export function registerAchievementListener(): void {
   onAppEvent("profile.updated", (payload) => {

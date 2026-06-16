@@ -3,7 +3,7 @@ import type { AuthUser } from "../middlewares/auth/index.js";
 import {
   getAchievementsForUser,
   getAchievementSummary,
-} from "./achievement.service.js";
+} from "../services/achievements/achievementEngine.service.js";
 import {
   getLeaderboardTop,
   getLeaderboardRank,

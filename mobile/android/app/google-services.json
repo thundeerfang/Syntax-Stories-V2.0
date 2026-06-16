@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "787137570403",
+    "project_id": "syntax-stories-v2",
+    "storage_bucket": "syntax-stories-v2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:787137570403:android:33de4d57aa23c2d2bffa56",
+        "android_client_info": {
+          "package_name": "com.syntax_stories.syntaxstoriesv2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAl1QE7C18wq005eCrIh6iGiO27KUmWXuY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

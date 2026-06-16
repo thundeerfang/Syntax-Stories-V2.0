@@ -20,6 +20,7 @@ class MainDashboardScaffold extends StatefulWidget {
     required this.onSettings,
     this.onCreate,
     this.showNotifications = true,
+    this.notificationUnreadCount = 0,
   });
 
   final String title;
@@ -31,6 +32,7 @@ class MainDashboardScaffold extends StatefulWidget {
   final VoidCallback onSettings;
   final VoidCallback? onCreate;
   final bool showNotifications;
+  final int notificationUnreadCount;
 
   @override
   State<MainDashboardScaffold> createState() => _MainDashboardScaffoldState();
@@ -166,6 +168,9 @@ class _MainDashboardScaffoldState extends State<MainDashboardScaffold>
     if (notification is ScrollUpdateNotification) {
       final delta = notification.scrollDelta;
       if (delta != null) {
+        if (metrics.pixels <= metrics.minScrollExtent + 0.5 && delta < 0) {
+          return false;
+        }
         _applyScrollDelta(delta, metrics);
       }
     }
@@ -215,6 +220,7 @@ class _MainDashboardScaffoldState extends State<MainDashboardScaffold>
                 onSettings: widget.onSettings,
                 onCreate: widget.onCreate,
                 showNotifications: widget.showNotifications,
+                notificationUnreadCount: widget.notificationUnreadCount,
               ),
             ),
           ),

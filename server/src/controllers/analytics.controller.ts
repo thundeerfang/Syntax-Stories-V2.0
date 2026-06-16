@@ -5,8 +5,8 @@ import { UserModel } from "../models/User.js";
 import {
   ProfileViewEventModel,
   ProfileDailyMetricsModel,
-  AnalyticsEventModel,
-} from "../models/index.js";
+} from "../models/ProfileAnalytics.js";
+import { AnalyticsEventModel } from "../models/AnalyticsEvent.js";
 import type { AuthUser } from "../middlewares/auth/index.js";
 import { getRedis } from "../config/redis.js";
 import { writeAuditLog } from "../shared/audit/auditLog.js";

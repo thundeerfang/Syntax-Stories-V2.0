@@ -14,7 +14,6 @@ import {
 } from "../streak/calendarUtc.js";
 import { tryAnchoredDailyReadStreakFromRedis } from "./readStreakRedisDisplay.js";
 type RedisClient = ReturnType<typeof createClient> | null;
-export { streakUtcDayBucket } from "../streak/calendarUtc.js";
 export type ReadStreakMode = "daily" | "weekly" | "monthly";
 export type ReadStreakCounts = {
   current: number;

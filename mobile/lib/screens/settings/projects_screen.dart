@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/project_item.dart';
 import '../../state/auth_state.dart';
 import '../../utils/project_limits.dart';
@@ -12,7 +11,7 @@ import '../../widgets/settings/settings_empty_inventory.dart';
 import '../../widgets/settings/settings_inventory_header.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
 import '../../widgets/ui/app_confirm_dialog.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import 'project_editor_screen.dart';
 
 class ProjectsScreen extends StatefulWidget {
@@ -25,11 +24,12 @@ class ProjectsScreen extends StatefulWidget {
 class _ProjectsScreenState extends State<ProjectsScreen> {
   static const _saveSuccessMessage = 'Projects saved.';
 
-  String? _feedback;
-
   Future<void> _openAdd(List<ProjectItem> allItems) async {
     if (allItems.length >= projectMax) {
-      setState(() => _feedback = 'You can add up to $projectMax projects and publications total.');
+      AppFeedbackToast.error(
+        context,
+        'You can add up to $projectMax projects and publications total.',
+      );
       return;
     }
     final saved = await ProjectEditorScreen.open(
@@ -38,7 +38,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
     if (!mounted) return;
     if (saved == true) {
-      setState(() => _feedback = _saveSuccessMessage);
+      AppFeedbackToast.success(context, _saveSuccessMessage);
     }
   }
 
@@ -50,7 +50,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
     if (!mounted) return;
     if (saved == true) {
-      setState(() => _feedback = _saveSuccessMessage);
+      AppFeedbackToast.success(context, _saveSuccessMessage);
     }
   }
 
@@ -70,26 +70,21 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       github: ProjectItem.githubOnly(allItems),
       manual: nextManual,
     );
-    setState(() => _feedback = null);
 
     final err = await context.read<AuthState>().updateProfileSection('projects', {
       'projects': next.map((e) => e.toJson()).toList(),
     });
 
     if (!mounted) return;
-    setState(() {
-      _feedback = err == null ? _saveSuccessMessage : formatUserMessage(err);
-    });
+    if (err == null) {
+      AppFeedbackToast.success(context, _saveSuccessMessage);
+    } else {
+      AppFeedbackToast.error(context, formatUserMessage(err));
+    }
   }
 
   Future<void> _pullRefresh() async {
-    setState(() => _feedback = null);
     await context.read<AuthState>().refreshUser();
-  }
-
-  AppFeedbackKind _feedbackKindFor(String message) {
-    if (message == _saveSuccessMessage) return AppFeedbackKind.success;
-    return AppFeedbackKind.error;
   }
 
   @override
@@ -112,10 +107,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppFeedbackSlot(
-            message: _feedback == null ? null : formatUserMessage(_feedback!),
-            kind: _feedback == null ? AppFeedbackKind.error : _feedbackKindFor(_feedback!),
-          ),
           SettingsInventoryHeader(
             title: 'PROJECT ENTRIES',
             count: manualItems.length,

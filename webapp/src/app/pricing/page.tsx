@@ -12,6 +12,7 @@ import {
 } from "@/api/billing";
 import { useAuthStore } from "@/store/auth";
 import { BlockShadowButton } from "@/components/ui";
+import { PricingPlansGridSkeleton } from "@/components/skeletons";
 import { shell } from "@/lib/styles";
 import { cn } from "@/lib/core/utils";
 
@@ -189,10 +190,7 @@ export default function PricingPage() {
             Subscription plans
           </h2>
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" aria-hidden />
-              Loading plans…
-            </div>
+            <PricingPlansGridSkeleton />
           ) : error ? (
             <p className="rounded border-2 border-destructive/40 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
               {error}

@@ -9,7 +9,7 @@ import {
 import {
   MIN_READ_COMMIT_DWELL_MS,
   READ_VIEW_ACK_TTL_SEC,
-} from "../services/blogReadView.constants.js";
+} from "../variable/constants.js";
 const runRedis =
   process.env.RUN_REDIS_TESTS === "1" && Boolean(process.env.REDIS_URL);
 const describeRedis = runRedis ? describe : describe.skip;

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/notification_preferences.dart';
 import '../../services/api_errors.dart';
 import '../../services/auth_api.dart';
@@ -13,7 +12,8 @@ import '../../utils/notification_pref_config.dart';
 import '../../utils/user_message_case.dart';
 import '../../widgets/notifications/notification_pref_tile.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
+import '../../widgets/ui/app_loading_indicator.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -29,8 +29,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   NotificationPreferences? _prefs;
   bool _loading = true;
   String? _savingKey;
-  String? _feedback;
-  AppFeedbackKind _feedbackKind = AppFeedbackKind.error;
+  String? _error;
 
   @override
   void initState() {
@@ -50,7 +49,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final prefs = await _api.fetchPreferences(token);
       if (!mounted) return;
@@ -62,21 +64,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _feedback = formatUserMessage(e.message);
-        _feedbackKind = AppFeedbackKind.error;
+        _error = formatUserMessage(e.message);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _feedback = formatUserMessage(kGenericUserError);
-        _feedbackKind = AppFeedbackKind.error;
+        _error = formatUserMessage(kGenericUserError);
       });
     }
   }
 
   Future<void> _pullRefresh() async {
-    setState(() => _feedback = null);
     await _loadPreferences();
   }
 
@@ -88,7 +87,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final previous = prefs;
     setState(() {
       _savingKey = key;
-      _feedback = null;
       _prefs = prefs.withKey(key, value);
     });
 
@@ -98,25 +96,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       setState(() {
         _prefs = updated;
         _savingKey = null;
-        _feedback = _savedMessage;
-        _feedbackKind = AppFeedbackKind.success;
       });
+      AppFeedbackToast.success(context, _savedMessage);
     } on AuthApiException catch (e) {
       if (!mounted) return;
       setState(() {
         _prefs = previous;
         _savingKey = null;
-        _feedback = formatUserMessage(e.message);
-        _feedbackKind = AppFeedbackKind.error;
       });
+      AppFeedbackToast.error(context, formatUserMessage(e.message));
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _prefs = previous;
         _savingKey = null;
-        _feedback = formatUserMessage(kGenericUserError);
-        _feedbackKind = AppFeedbackKind.error;
       });
+      AppFeedbackToast.error(context, formatUserMessage(kGenericUserError));
     }
   }
 
@@ -139,20 +134,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppFeedbackSlot(
-            message: _feedback == null ? null : formatUserMessage(_feedback!),
-            kind: _feedbackKind,
-            onDismiss: () => setState(() => _feedback = null),
-          ),
           if (_loading && prefs == null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: CircularProgressIndicator(color: colors.primary)),
+              child: AppLoadingCenter(color: colors.primary),
             )
           else if (prefs == null)
             Text(
-              'Could not load notification preferences.',
-              style: GoogleFonts.inter(fontSize: 13, color: colors.mutedForeground),
+              _error ?? 'Could not load notification preferences.',
+              style: GoogleFonts.inter(fontSize: 13, color: colors.destructive),
             )
           else ...[
             NotificationPrefTile(

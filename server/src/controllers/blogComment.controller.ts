@@ -6,6 +6,7 @@ import { BlogCommentModel } from "../models/BlogComment.js";
 import { BlogPostModel } from "../models/BlogPost.js";
 import { publishBlogPostStatsSnapshot } from "../services/blogStatsPublish.service.js";
 import { UserModel, normalizeProfileImg } from "../models/User.js";
+import { validateBlogCommentText } from "../utils/blogCommentLimits.js";
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -92,7 +93,37 @@ function shapePublicComment(c: LeanPopulatedComment, viewerId?: string) {
     likeCount,
     likedByViewer,
     author,
+    directReplyCount: 0,
   };
+}
+async function attachDirectReplyCounts(
+  postId: mongoose.Types.ObjectId,
+  comments: ReturnType<typeof shapePublicComment>[],
+): Promise<ReturnType<typeof shapePublicComment>[]> {
+  if (comments.length === 0) return comments;
+  const parentOids = comments.map((c) => new mongoose.Types.ObjectId(c._id));
+  const rows = await BlogCommentModel.aggregate<{ _id: mongoose.Types.ObjectId; count: number }>([
+    { $match: { postId, parentId: { $in: parentOids } } },
+    { $group: { _id: "$parentId", count: { $sum: 1 } } },
+  ]);
+  const countByParent = new Map(
+    rows.map((r) => [String(r._id), r.count] as const),
+  );
+  return comments.map((c) => ({
+    ...c,
+    directReplyCount: countByParent.get(c._id) ?? 0,
+  }));
+}
+function parseQueryInt(
+  raw: string | string[] | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const text = paramString(raw);
+  const n = text != null ? Number.parseInt(text, 10) : Number.NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
 }
 export async function listBlogComments(
   req: Request,
@@ -110,27 +141,82 @@ export async function listBlogComments(
       res.status(404).json({ success: false, message: "Post not found" });
       return;
     }
-    const rawLimit = Number.parseInt(String(req.query.limit ?? ""), 10);
-    const limit = Number.isFinite(rawLimit)
-      ? Math.min(100, Math.max(1, rawLimit))
-      : 80;
-    const rows = await BlogCommentModel.find({ postId: resolved.postId })
-      .sort({ createdAt: 1 })
-      .limit(limit)
-      .populate({
-        path: "userId",
-        select: "username fullName profileImg",
-        model: "users",
+    const offset = parseQueryInt(
+      req.query.offset as string | string[] | undefined,
+      0,
+      0,
+      10_000,
+    );
+    const limit = parseQueryInt(
+      req.query.limit as string | string[] | undefined,
+      10,
+      1,
+      100,
+    );
+    const parentIdRaw = paramString(
+      req.query.parentId as string | string[] | undefined,
+    );
+    const rootSort =
+      paramString(req.query.sort as string | string[] | undefined) === "newest"
+        ? -1
+        : 1;
+    let parentOid: mongoose.Types.ObjectId | null = null;
+    if (
+      parentIdRaw != null &&
+      parentIdRaw.trim() !== "" &&
+      parentIdRaw.trim().toLowerCase() !== "null"
+    ) {
+      const pid = parentIdRaw.trim();
+      if (!mongoose.isValidObjectId(pid)) {
+        res.status(400).json({ success: false, message: "Invalid parentId" });
+        return;
+      }
+      parentOid = new mongoose.Types.ObjectId(pid);
+      const parent = await BlogCommentModel.findOne({
+        _id: parentOid,
+        postId: resolved.postId,
       })
-      .lean();
+        .select("_id")
+        .lean();
+      if (!parent) {
+        res
+          .status(404)
+          .json({ success: false, message: "Parent comment not found" });
+        return;
+      }
+    }
+    const filter =
+      parentOid != null
+        ? { postId: resolved.postId, parentId: parentOid }
+        : { postId: resolved.postId, parentId: null };
+    const [rows, total, postTotal] = await Promise.all([
+      BlogCommentModel.find(filter)
+        .sort({ createdAt: parentOid != null ? 1 : rootSort })
+        .skip(offset)
+        .limit(limit)
+        .populate({
+          path: "userId",
+          select: "username fullName profileImg",
+          model: "users",
+        })
+        .lean(),
+      BlogCommentModel.countDocuments(filter),
+      BlogCommentModel.countDocuments({ postId: resolved.postId }),
+    ]);
     const viewerId = (req as RequestWithOptionalAuth).authUser?._id;
-    const comments = rows.map((c) =>
+    const shaped = rows.map((c) =>
       shapePublicComment(c as LeanPopulatedComment, viewerId),
     );
-    const total = await BlogCommentModel.countDocuments({
-      postId: resolved.postId,
+    const comments = await attachDirectReplyCounts(resolved.postId, shaped);
+    res.status(200).json({
+      success: true,
+      comments,
+      total,
+      postTotal,
+      offset,
+      limit,
+      hasMore: offset + comments.length < total,
     });
-    res.status(200).json({ success: true, comments, total });
   } catch (err) {
     console.error(err);
     res
@@ -168,13 +254,9 @@ export async function addBlogComment(
       parentId?: string | null;
     };
     const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text || text.length > 50000) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          message: "Comment must be 1–50000 characters",
-        });
+    const commentError = validateBlogCommentText(text);
+    if (commentError) {
+      res.status(400).json({ success: false, message: commentError });
       return;
     }
     let parentOid: mongoose.Types.ObjectId | null = null;
@@ -283,13 +365,9 @@ export async function updateBlogComment(
       text?: string;
     };
     const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text || text.length > 50000) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          message: "Comment must be 1–50000 characters",
-        });
+    const commentError = validateBlogCommentText(text);
+    if (commentError) {
+      res.status(400).json({ success: false, message: commentError });
       return;
     }
     const found = await loadCommentOnPublishedPost(

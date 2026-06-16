@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import '../models/squad_feed_row.dart';
+import '../models/squad_member.dart';
 import '../models/squad_summary.dart';
 import 'auth_api.dart';
 import 'auth_retry.dart';
@@ -100,6 +102,45 @@ class SquadApi {
     }
   }
 
+  /// `GET /api/squads/u/:username` — public squads for a profile (optional auth).
+  Future<SquadListResult> listForUser(
+    String username, {
+    String? bearer,
+  }) async {
+    final slug = username.trim().toLowerCase();
+    if (slug.isEmpty) return const SquadListResult(squads: []);
+
+    final uri = _u('/api/squads/u/${Uri.encodeComponent(slug)}');
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (bearer != null && bearer.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $bearer';
+    }
+
+    try {
+      final res = await http.get(uri, headers: headers);
+      final text = res.body;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AuthApiException.fromHttp(
+          method: 'GET',
+          url: uri,
+          statusCode: res.statusCode,
+          body: text,
+        );
+      }
+      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      if (data['success'] != true) {
+        throw AuthApiException.internal(
+          context: 'Invalid user squads response',
+          debugDetails: text,
+        );
+      }
+      return SquadListResult(squads: _parseSquads(data['squads']));
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'GET', url: uri, cause: e);
+    }
+  }
+
   /// `POST /api/squads` — create squad (creator becomes admin).
   Future<SquadCreateResult> create({
     required String bearer,
@@ -162,6 +203,175 @@ class SquadApi {
     } catch (e) {
       if (e is AuthApiException) rethrow;
       throw AuthApiException.network(method: 'POST', url: uri, cause: e);
+    }
+  }
+
+  /// `GET /api/squads/s/:slug` — squad detail (optional auth).
+  Future<SquadSummary> getBySlug({required String slug, String? bearer}) async {
+    final encoded = Uri.encodeComponent(slug);
+    final uri = _u('/api/squads/s/$encoded');
+    try {
+      final res = bearer != null && bearer.isNotEmpty
+          ? await AuthRetry.get(uri, bearer: bearer)
+          : await http.get(uri, headers: {'Accept': 'application/json'});
+      final text = res.body;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AuthApiException.fromHttp(
+          method: 'GET',
+          url: uri,
+          statusCode: res.statusCode,
+          body: text,
+        );
+      }
+      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      if (data['success'] != true) {
+        throw AuthApiException.internal(
+          context: 'Invalid squad detail response',
+          debugDetails: text,
+        );
+      }
+      final squadRaw = data['squad'];
+      if (squadRaw is! Map) {
+        throw AuthApiException.internal(
+          context: 'Squad detail missing squad payload',
+          debugDetails: text,
+        );
+      }
+      return SquadSummary.fromJson(Map<String, dynamic>.from(squadRaw));
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'GET', url: uri, cause: e);
+    }
+  }
+
+  /// `GET /api/squads/s/:slug/feed` — squad feed (optional auth).
+  Future<SquadFeedResult> getFeed({
+    required String slug,
+    String? bearer,
+    int limit = 30,
+  }) async {
+    final encoded = Uri.encodeComponent(slug);
+    final uri = _u('/api/squads/s/$encoded/feed').replace(
+      queryParameters: {'limit': '$limit'},
+    );
+    try {
+      final res = bearer != null && bearer.isNotEmpty
+          ? await AuthRetry.get(uri, bearer: bearer)
+          : await http.get(uri, headers: {'Accept': 'application/json'});
+      final text = res.body;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AuthApiException.fromHttp(
+          method: 'GET',
+          url: uri,
+          statusCode: res.statusCode,
+          body: text,
+        );
+      }
+      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      if (data['success'] != true) {
+        throw AuthApiException.internal(
+          context: 'Invalid squad feed response',
+          debugDetails: text,
+        );
+      }
+      final feedRaw = data['feed'];
+      final feed = feedRaw is List
+          ? feedRaw
+              .whereType<Map>()
+              .map((e) => SquadFeedRow.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+          : <SquadFeedRow>[];
+      return SquadFeedResult(
+        feed: feed,
+        pinnedCount: (data['pinnedCount'] as num?)?.toInt() ?? 0,
+      );
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'GET', url: uri, cause: e);
+    }
+  }
+
+  /// `GET /api/squads/s/:slug/members` — squad members (optional auth).
+  Future<List<SquadMember>> listMembers({required String slug, String? bearer}) async {
+    final encoded = Uri.encodeComponent(slug);
+    final uri = _u('/api/squads/s/$encoded/members');
+    try {
+      final res = bearer != null && bearer.isNotEmpty
+          ? await AuthRetry.get(uri, bearer: bearer)
+          : await http.get(uri, headers: {'Accept': 'application/json'});
+      final text = res.body;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AuthApiException.fromHttp(
+          method: 'GET',
+          url: uri,
+          statusCode: res.statusCode,
+          body: text,
+        );
+      }
+      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      if (data['success'] != true) {
+        throw AuthApiException.internal(
+          context: 'Invalid squad members response',
+          debugDetails: text,
+        );
+      }
+      final membersRaw = data['members'];
+      if (membersRaw is! List) return const [];
+      return membersRaw
+          .whereType<Map>()
+          .map((e) => SquadMember.fromJson(Map<String, dynamic>.from(e)))
+          .where((m) => m.userId.isNotEmpty)
+          .toList();
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'GET', url: uri, cause: e);
+    }
+  }
+
+  /// `POST /api/squads/s/:slug/leave` — leave a squad you belong to.
+  Future<void> leave({required String slug, required String bearer}) async {
+    final encoded = Uri.encodeComponent(slug);
+    final uri = _u('/api/squads/s/$encoded/leave');
+    try {
+      final res = await AuthRetry.post(
+        uri,
+        bearer: bearer,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(<String, dynamic>{}),
+      );
+      final text = res.body;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AuthApiException.fromHttp(
+          method: 'POST',
+          url: uri,
+          statusCode: res.statusCode,
+          body: text,
+        );
+      }
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'POST', url: uri, cause: e);
+    }
+  }
+
+  /// `DELETE /api/squads/s/:slug` — delete squad (admin only).
+  Future<void> delete({required String slug, required String bearer}) async {
+    final encoded = Uri.encodeComponent(slug);
+    final uri = _u('/api/squads/s/$encoded');
+    try {
+      final res = await AuthRetry.delete(uri, bearer: bearer);
+      final text = res.body;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AuthApiException.fromHttp(
+          method: 'DELETE',
+          url: uri,
+          statusCode: res.statusCode,
+          body: text,
+        );
+      }
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'DELETE', url: uri, cause: e);
     }
   }
 

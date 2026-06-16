@@ -1,9 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import {
   AUDIT_DOMAINS,
-  ACHIEVEMENT_EVENT_LOG_TTL_SEC,
   type AuditDomain,
 } from "../shared/audit/domains.js";
+import { ACHIEVEMENT_EVENT_LOG_TTL_SEC } from "../variable/constants.js";
 export const AUDIT_ACTIONS = [
   "user_signup",
   "user_signin",
@@ -89,7 +89,7 @@ const AuditLogSchema = new Schema<IAuditLog>(
     metadata: { type: Schema.Types.Mixed },
     ip: { type: String },
     userAgent: { type: String },
-    timestamp: { type: Date, default: Date.now, index: true },
+    timestamp: { type: Date, default: Date.now },
   },
   { timestamps: false },
 );

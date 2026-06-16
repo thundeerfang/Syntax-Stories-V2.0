@@ -6,7 +6,6 @@ import {
 } from "../../../variable/constants.js";
 export const LEGAL_KINDS = LEGAL_POLICY_KINDS;
 export type LegalKind = LegalPolicyKind;
-export { ACCEPT_POLICY_KINDS } from "../../../variable/constants.js";
 export const KIND_TO_SLUG: Record<LegalKind, string> = {
   terms: "terms-of-service",
   privacy: "privacy-policy",

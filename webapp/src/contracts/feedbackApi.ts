@@ -3,7 +3,10 @@
  * Keep in sync with `server/src/routes/feedback.routes.ts`.
  */
 
-export const FEEDBACK_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+import { IMAGE_UPLOAD_MAX_BYTES } from "@syntax-stories/shared";
+
+export { IMAGE_UPLOAD_MAX_BYTES };
+export const FEEDBACK_MAX_IMAGE_BYTES = IMAGE_UPLOAD_MAX_BYTES.feedback;
 
 export type FeedbackClientMeta = {
   pageUrl?: string;

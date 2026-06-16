@@ -12,6 +12,7 @@ import '../../utils/github_project_identity.dart';
 import '../../utils/open_source_limits.dart';
 import '../../utils/user_message_case.dart';
 import '../auth/auth_text_field.dart';
+import '../ui/app_loading_indicator.dart';
 
 class OpenSourceImportSheet extends StatefulWidget {
   const OpenSourceImportSheet({
@@ -255,7 +256,7 @@ class _OpenSourceImportSheetState extends State<OpenSourceImportSheet> {
             const SizedBox(height: 10),
             Expanded(
               child: _loading
-                  ? Center(child: CircularProgressIndicator(color: colors.primary))
+                  ? AppLoadingCenter(color: colors.primary)
                   : filtered.isEmpty
                   ? Center(
                       child: Text(

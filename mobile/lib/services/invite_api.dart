@@ -29,17 +29,14 @@ class InviteMe {
   const InviteMe({
     required this.referralCode,
     required this.inviteUrl,
-    this.attachUrl,
   });
 
   final String referralCode;
   final String inviteUrl;
-  final String? attachUrl;
 
   factory InviteMe.fromJson(Map<String, dynamic> json) => InviteMe(
         referralCode: json['referralCode'] as String? ?? '',
         inviteUrl: json['inviteUrl'] as String? ?? '',
-        attachUrl: json['attachUrl'] as String?,
       );
 }
 

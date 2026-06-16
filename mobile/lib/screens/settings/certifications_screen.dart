@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/certification_item.dart';
 import '../../state/auth_state.dart';
 import '../../utils/certification_limits.dart';
@@ -12,7 +11,7 @@ import '../../widgets/settings/settings_empty_inventory.dart';
 import '../../widgets/settings/settings_inventory_header.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
 import '../../widgets/ui/app_confirm_dialog.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import 'certification_editor_screen.dart';
 
 class CertificationsScreen extends StatefulWidget {
@@ -25,11 +24,12 @@ class CertificationsScreen extends StatefulWidget {
 class _CertificationsScreenState extends State<CertificationsScreen> {
   static const _saveSuccessMessage = 'Certifications saved.';
 
-  String? _feedback;
-
   Future<void> _openAdd(List<CertificationItem> items) async {
     if (items.length >= certificationMax) {
-      setState(() => _feedback = 'You can add up to $certificationMax certifications.');
+      AppFeedbackToast.error(
+        context,
+        'You can add up to $certificationMax certifications.',
+      );
       return;
     }
     final saved = await CertificationEditorScreen.open(
@@ -38,7 +38,7 @@ class _CertificationsScreenState extends State<CertificationsScreen> {
     );
     if (!mounted) return;
     if (saved == true) {
-      setState(() => _feedback = _saveSuccessMessage);
+      AppFeedbackToast.success(context, _saveSuccessMessage);
     }
   }
 
@@ -50,7 +50,7 @@ class _CertificationsScreenState extends State<CertificationsScreen> {
     );
     if (!mounted) return;
     if (saved == true) {
-      setState(() => _feedback = _saveSuccessMessage);
+      AppFeedbackToast.success(context, _saveSuccessMessage);
     }
   }
 
@@ -65,26 +65,21 @@ class _CertificationsScreenState extends State<CertificationsScreen> {
     if (confirmed != true || !mounted) return;
 
     final next = List<CertificationItem>.from(items)..removeAt(index);
-    setState(() => _feedback = null);
 
     final err = await context.read<AuthState>().updateProfileSection('certifications', {
       'certifications': next.map((e) => e.toJson()).toList(),
     });
 
     if (!mounted) return;
-    setState(() {
-      _feedback = err == null ? _saveSuccessMessage : formatUserMessage(err);
-    });
+    if (err == null) {
+      AppFeedbackToast.success(context, _saveSuccessMessage);
+    } else {
+      AppFeedbackToast.error(context, formatUserMessage(err));
+    }
   }
 
   Future<void> _pullRefresh() async {
-    setState(() => _feedback = null);
     await context.read<AuthState>().refreshUser();
-  }
-
-  AppFeedbackKind _feedbackKindFor(String message) {
-    if (message == _saveSuccessMessage) return AppFeedbackKind.success;
-    return AppFeedbackKind.error;
   }
 
   @override
@@ -105,10 +100,6 @@ class _CertificationsScreenState extends State<CertificationsScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppFeedbackSlot(
-            message: _feedback == null ? null : formatUserMessage(_feedback!),
-            kind: _feedback == null ? AppFeedbackKind.error : _feedbackKindFor(_feedback!),
-          ),
           SettingsInventoryHeader(
             title: 'CERTIFICATION ENTRIES',
             count: items.length,

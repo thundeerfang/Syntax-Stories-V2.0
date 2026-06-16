@@ -59,7 +59,8 @@ export function SquadDiscoverCard({
   return (
     <div
       className={cn(
-        "relative mx-auto flex w-full max-w-[22.5rem] flex-col overflow-hidden ",
+        "relative mx-auto flex flex-col overflow-hidden",
+        squads.discoverCardMax,
         "border-[3px] border-border bg-background text-left",
         "shadow",
         'before:pointer-events-none before:absolute before:-inset-2 before:-z-10 before:content-[""]',

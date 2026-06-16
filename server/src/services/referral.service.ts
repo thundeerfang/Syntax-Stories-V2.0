@@ -41,18 +41,6 @@ export function normalizeReferralCode(raw: unknown): string | null {
   if (!REFERRAL_CODE_REGEX.test(code)) return null;
   return code;
 }
-function signReferralCookiePayload(code: string): string | null {
-  const secret = referralSigningSecret();
-  if (!secret) return null;
-  const exp = Date.now() + REFERRAL_COOKIE_MAX_MS;
-  const payload = JSON.stringify({ c: code, exp });
-  const b64 = Buffer.from(payload, "utf8").toString("base64url");
-  const sig = crypto
-    .createHmac("sha256", secret)
-    .update(b64)
-    .digest("base64url");
-  return `${b64}.${sig}`;
-}
 function readSignedReferralCookie(raw: unknown): string | null {
   if (typeof raw !== "string" || !raw.includes(".")) return null;
   const secret = referralSigningSecret();
@@ -334,6 +322,3 @@ export const REFERRAL_COOKIE = {
   name: REFERRAL_COOKIE_NAME,
   maxMs: REFERRAL_COOKIE_MAX_MS,
 } as const;
-export function buildSignedReferralCookieValue(code: string): string | null {
-  return signReferralCookiePayload(code);
-}
