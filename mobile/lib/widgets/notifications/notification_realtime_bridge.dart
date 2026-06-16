@@ -34,7 +34,16 @@ class _NotificationRealtimeBridgeState extends State<NotificationRealtimeBridge>
     final token = auth.accessToken;
     notif.bindAccessToken(token);
     if (_boundToken == token) return;
+    final previousToken = _boundToken;
     _boundToken = token;
+
+    if (previousToken != null && previousToken.isNotEmpty) {
+      unawaited(() async {
+        final ready = await _ensurePush();
+        if (!ready || !mounted) return;
+        await _push.unregisterFromServer(previousToken);
+      }());
+    }
 
     if (token == null || token.isEmpty) return;
 
