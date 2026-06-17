@@ -226,6 +226,11 @@ export const env = {
   ),
   GIPHY_API_KEY: process.env.GIPHY_API_KEY?.trim() || "",
   UNSPLASH_ACCESS_KEY: process.env.UNSPLASH_ACCESS_KEY?.trim() || "",
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME?.trim() || "",
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY?.trim() || "",
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET?.trim() || "",
+  CLOUDINARY_UPLOAD_FOLDER:
+    process.env.CLOUDINARY_UPLOAD_FOLDER?.trim() || "syntax-stories",
   STORAGE_FULL_MODE: (() => {
     const v = (process.env.STORAGE_FULL_MODE ?? "auto").toLowerCase();
     if (v === "force_on" || v === "force_off") return v;

@@ -1,6 +1,4 @@
 import { Request, Response } from "express";
-import fs from "node:fs/promises";
-import path from "node:path";
 import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import {
@@ -15,13 +13,15 @@ import { UserModel } from "../models/User.js";
 import { FeedbackSubmissionModel } from "../models/FeedbackSubmission.js";
 import { FeedbackCategoryModel } from "../models/FeedbackCategory.js";
 import { formatDateTimeIst, istTimeZoneLabel } from "../utils/ist.js";
-import { getDefaultUploadStorage } from "../services/storage/localDiskUploadStorage.js";
 import {
   processUploadedImageBuffer,
   ImageMasterError,
 } from "../services/image/imageMasterHandler.js";
 import { sendImageMasterError } from "../services/image/imageMasterDelivery.js";
 import { buildUploadImageMeta } from "../utils/uploadImageMeta.js";
+import {
+  uploadImageBufferToCloudinary,
+} from "../services/storage/cloudinaryUpload.js";
 import {
   assertFeedbackWeeklyQuota,
   getFeedbackWeeklyQuota,
@@ -311,12 +311,12 @@ export async function submitFeedback(
         mReq.file.mimetype,
         "feedback",
       );
-      const dir = getDefaultUploadStorage().dirs.feedback;
-      await fs.mkdir(dir, { recursive: true });
-      const base = `feedback-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.webp`;
-      const diskPath = path.join(dir, base);
-      await fs.writeFile(diskPath, processed.buffer);
-      attachmentUrl = `/uploads/feedback/${base}`;
+      const uploaded = await uploadImageBufferToCloudinary(processed.buffer, {
+        folderSuffix: "feedback",
+        publicIdPrefix: "feedback",
+        originalName: mReq.file.originalname,
+      });
+      attachmentUrl = uploaded.secure_url;
       attachmentMeta = {
         mime: processed.mime,
         width: processed.width,

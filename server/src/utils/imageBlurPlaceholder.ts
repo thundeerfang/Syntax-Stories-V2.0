@@ -1,5 +1,18 @@
 import sharp from "sharp";
+
 const BLUR_EDGE = 12;
+
+export async function jpegBlurDataUrlFromBuffer(
+  buffer: Buffer,
+): Promise<string> {
+  const buf = await sharp(buffer)
+    .rotate()
+    .resize(BLUR_EDGE, BLUR_EDGE, { fit: "inside" })
+    .jpeg({ quality: 22, mozjpeg: true })
+    .toBuffer();
+  return `data:image/jpeg;base64,${buf.toString("base64")}`;
+}
+
 export async function jpegBlurDataUrlFromFile(
   imagePath: string,
 ): Promise<string> {

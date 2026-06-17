@@ -256,6 +256,8 @@ export function isStorageGateExempt(
   if (p === "/webhooks/stripe") return true;
   if (p.startsWith("/api/internal/")) return true;
   if (p.startsWith("/api/v1/admin/")) return true;
+  if (p.startsWith("/api/upload")) return true;
+  if (p.startsWith("/api/feedback")) return true;
   if (p.startsWith("/uploads/")) return true;
   return false;
 }
