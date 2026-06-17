@@ -106,8 +106,9 @@ class _BlogPostDetailScreenState extends State<BlogPostDetailScreen> {
   }
 
   void _resetScrollControllerForHotReload() {
-    final offset =
-        _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final offset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _scrollController = ScrollController(initialScrollOffset: offset);
@@ -342,7 +343,9 @@ class _BlogPostDetailScreenState extends State<BlogPostDetailScreen> {
   Future<void> _scrollToComments() async {
     if (!mounted || !_scrollController.hasClients) return;
 
-    Future<bool> revealComments({Duration duration = const Duration(milliseconds: 420)}) async {
+    Future<bool> revealComments({
+      Duration duration = const Duration(milliseconds: 420),
+    }) async {
       if (!mounted || !_scrollController.hasClients) return false;
 
       for (final key in [_composerKey, _commentsKey]) {
@@ -351,7 +354,9 @@ class _BlogPostDetailScreenState extends State<BlogPostDetailScreen> {
         if (ctx == null || !ctx.mounted) continue;
 
         final renderObject = ctx.findRenderObject();
-        if (renderObject is! RenderBox || !renderObject.hasSize || !renderObject.attached) {
+        if (renderObject is! RenderBox ||
+            !renderObject.hasSize ||
+            !renderObject.attached) {
           continue;
         }
 
@@ -542,54 +547,54 @@ class _BlogPostDetailScreenState extends State<BlogPostDetailScreen> {
                   controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(0, 0, 0, 110),
                   children: [
-                  _DetailHeader(
-                    post: post,
-                    commentCount: commentCount,
-                    loading: _loading && post.content.isEmpty,
-                  ),
-                  if (post.content.isNotEmpty) ...[
+                    _DetailHeader(
+                      post: post,
+                      commentCount: commentCount,
+                      loading: _loading && post.content.isEmpty,
+                    ),
+                    if (post.content.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: BlogPublicBody(content: post.content),
+                      ),
+                    ] else if (_loading)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: const AppLoadingCenter(),
+                      ),
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: BlogPublicBody(content: post.content),
-                    ),
-                  ] else if (_loading)
-                    const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: const AppLoadingCenter(),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                    child: Container(
-                      key: _commentsKey,
-                      child: BlogCommentsSection(
-                        thread: _thread,
-                        fallbackCommentCount: post.commentCount,
-                        composerKey: _composerKey,
-                        onSubmit: _submitComment,
-                        submitting: _commentSubmitting,
-                        viewerUserId: viewerUserId,
-                        viewerUsername: viewerUsername,
-                        isSignedIn: isSignedIn,
-                        onRequireAuth: () => _requireToken(),
-                        onLike: _toggleCommentLike,
-                        onDelete: _deleteComment,
-                        onUpdate: _updateComment,
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                      child: Container(
+                        key: _commentsKey,
+                        child: BlogCommentsSection(
+                          thread: _thread,
+                          fallbackCommentCount: post.commentCount,
+                          composerKey: _composerKey,
+                          onSubmit: _submitComment,
+                          submitting: _commentSubmitting,
+                          viewerUserId: viewerUserId,
+                          viewerUsername: viewerUsername,
+                          isSignedIn: isSignedIn,
+                          onRequireAuth: () => _requireToken(),
+                          onLike: _toggleCommentLike,
+                          onDelete: _deleteComment,
+                          onUpdate: _updateComment,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  _Footer(
-                    colors: colors,
-                    primary: primary,
-                    onScrollTop: () {
-                      _scrollController.animateTo(
-                        0,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOutCubic,
-                      );
-                    },
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    _Footer(
+                      colors: colors,
+                      primary: primary,
+                      onScrollTop: () {
+                        _scrollController.animateTo(
+                          0,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOutCubic,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -648,10 +653,11 @@ class _DetailHeader extends StatelessWidget {
     final displayTitle = titleCaseEveryWord(post.title);
     final summaryPlain = bioToPlainText(post.summary);
     final coverUrl = resolveProfileMediaUrl(post.thumbnailUrl);
-    final authorName = (post.author.fullName.trim().isNotEmpty
-            ? post.author.fullName.trim()
-            : post.author.username.trim())
-        .toUpperCase();
+    final authorName =
+        (post.author.fullName.trim().isNotEmpty
+                ? post.author.fullName.trim()
+                : post.author.username.trim())
+            .toUpperCase();
     final avatarUrl = resolveProfileMediaUrl(post.author.profileImg);
     final readMinutes = blogReadMinutes(post.toFeedPost());
 
@@ -664,11 +670,12 @@ class _DetailHeader extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              if (dateLabel.isNotEmpty) _MetaChip(
-                icon: Icons.calendar_today_outlined,
-                label: dateLabel,
-                colors: colors,
-              ),
+              if (dateLabel.isNotEmpty)
+                _MetaChip(
+                  icon: Icons.calendar_today_outlined,
+                  label: dateLabel,
+                  colors: colors,
+                ),
               _MetaChip(
                 icon: Icons.layers_outlined,
                 label: categoryLabel,
@@ -720,7 +727,10 @@ class _DetailHeader extends StatelessWidget {
                     ),
                     Text(
                       '@${post.author.username}',
-                      style: GoogleFonts.inter(fontSize: 10, color: colors.mutedForeground),
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: colors.mutedForeground,
+                      ),
                     ),
                   ],
                 ),
@@ -767,9 +777,7 @@ class _DetailHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
               decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: primary, width: 4),
-                ),
+                border: Border(left: BorderSide(color: primary, width: 4)),
                 color: primary.withValues(alpha: 0.06),
               ),
               padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
@@ -810,7 +818,13 @@ class _DetailHeader extends StatelessWidget {
         if (loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
-            child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))),
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
           ),
       ],
     );
@@ -839,8 +853,13 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        border: Border.all(color: filled ? (primary ?? colors.primary) : colors.border, width: 2),
-        color: filled ? (primary ?? colors.primary) : colors.muted.withValues(alpha: 0.25),
+        border: Border.all(
+          color: filled ? (primary ?? colors.primary) : colors.border,
+          width: 2,
+        ),
+        color: filled
+            ? (primary ?? colors.primary)
+            : colors.muted.withValues(alpha: 0.25),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -848,7 +867,9 @@ class _MetaChip extends StatelessWidget {
           Icon(
             icon,
             size: 12,
-            color: filled ? (onPrimary ?? colors.primaryForeground) : colors.primary,
+            color: filled
+                ? (onPrimary ?? colors.primaryForeground)
+                : colors.primary,
           ),
           const SizedBox(width: 6),
           Text(
@@ -857,7 +878,9 @@ class _MetaChip extends StatelessWidget {
               fontSize: 9,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.6,
-              color: filled ? (onPrimary ?? colors.primaryForeground) : colors.foreground,
+              color: filled
+                  ? (onPrimary ?? colors.primaryForeground)
+                  : colors.foreground,
             ),
           ),
         ],
@@ -899,20 +922,32 @@ class _StoryHeaderStats extends StatelessWidget {
         _StoryHeaderStat(
           colors: colors,
           count: repostCount,
-          icon: Icon(Icons.repeat_rounded, size: 13, color: colors.mutedForeground),
+          icon: Icon(
+            Icons.repeat_rounded,
+            size: 13,
+            color: colors.mutedForeground,
+          ),
         ),
         const SizedBox(width: 8),
         _StoryHeaderStat(
           colors: colors,
           count: commentCount,
-          icon: Icon(Icons.chat_bubble_outline_rounded, size: 13, color: colors.mutedForeground),
+          icon: Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 13,
+            color: colors.mutedForeground,
+          ),
         ),
         if (viewCount > 0) ...[
           const SizedBox(width: 8),
           _StoryHeaderStat(
             colors: colors,
             count: viewCount,
-            icon: Icon(Icons.visibility_outlined, size: 13, color: colors.mutedForeground),
+            icon: Icon(
+              Icons.visibility_outlined,
+              size: 13,
+              color: colors.mutedForeground,
+            ),
           ),
         ],
       ],
@@ -952,7 +987,11 @@ class _StoryHeaderStat extends StatelessWidget {
 }
 
 class _AuthorAvatar extends StatelessWidget {
-  const _AuthorAvatar({required this.url, required this.label, required this.colors});
+  const _AuthorAvatar({
+    required this.url,
+    required this.label,
+    required this.colors,
+  });
 
   final String url;
   final String label;
@@ -974,11 +1013,17 @@ class _AuthorAvatar extends StatelessWidget {
               url,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => Center(
-                child: Text(letter, style: GoogleFonts.inter(fontWeight: FontWeight.w900)),
+                child: Text(
+                  letter,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w900),
+                ),
               ),
             )
           : Center(
-              child: Text(letter, style: GoogleFonts.inter(fontWeight: FontWeight.w900)),
+              child: Text(
+                letter,
+                style: GoogleFonts.inter(fontWeight: FontWeight.w900),
+              ),
             ),
     );
   }
@@ -1001,7 +1046,9 @@ class _Footer extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: colors.border.withValues(alpha: 0.5))),
+        border: Border(
+          top: BorderSide(color: colors.border.withValues(alpha: 0.5)),
+        ),
       ),
       child: Row(
         children: [
@@ -1023,7 +1070,10 @@ class _Footer extends StatelessWidget {
             icon: const Icon(Icons.arrow_upward, size: 14),
             label: Text(
               'TOP',
-              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900),
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -1047,7 +1097,11 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: colors.foreground)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(color: colors.foreground),
+            ),
             const SizedBox(height: 16),
             FilledButton(onPressed: onRetry, child: const Text('Retry')),
           ],

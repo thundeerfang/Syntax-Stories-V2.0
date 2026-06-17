@@ -70,7 +70,8 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
         padding: const EdgeInsets.only(left: MainAppBar.edgePadding),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: leading ??
+          child:
+              leading ??
               IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(
@@ -83,7 +84,8 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
         ),
       ),
-      title: titleWidget ??
+      title:
+          titleWidget ??
           Text(
             title.toUpperCase(),
             maxLines: 1,

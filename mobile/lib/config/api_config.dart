@@ -5,20 +5,47 @@ import '../services/api_errors.dart';
 /// Default local API port (matches project server `PORT=7373`).
 const kDefaultLocalApiPort = 7373;
 
+/// Production API (Render) — used for release builds unless overridden.
+const kProductionApiBaseUrl = 'https://syntax-stories-v2.onrender.com';
+
 /// macOS AirPlay Receiver binds :5000 — not the Syntax Stories API.
 const _legacyWrongLocalPort = 5000;
 
+/// When `true`, use platform-local defaults (127.0.0.1 / Android 10.0.2.2).
+///
+/// Local dev:
+/// `flutter run --dart-define=USE_LOCAL_API=true`
+///
+/// Release / production builds should omit this and use [kProductionApiBaseUrl]
+/// (or pass `--dart-define=API_BASE_URL=...`).
+const useLocalApi = bool.fromEnvironment('USE_LOCAL_API');
+
 /// Backend base URL **without** trailing slash (same server as webapp `NEXT_PUBLIC_API_BASE_URL`).
 ///
-/// Override at build/run time:
-/// `flutter run --dart-define=API_BASE_URL=http://127.0.0.1:7373`
-///
-/// Local defaults: iOS/macOS/desktop use loopback; Android emulator uses `10.0.2.2`
-/// to reach the host machine.
+/// Priority:
+/// 1. `API_BASE_URL` dart-define (explicit override)
+/// 2. `USE_LOCAL_API=true` → local loopback / emulator host
+/// 3. [kProductionApiBaseUrl]
 String resolveApiBaseUrl() {
   const fromEnv = String.fromEnvironment('API_BASE_URL');
-  final resolved = fromEnv.isNotEmpty ? _normalizeBaseUrl(fromEnv) : _platformDefaultBaseUrl();
-  return _correctKnownBadLocalPort(resolved);
+  if (fromEnv.isNotEmpty) {
+    return _correctKnownBadLocalPort(_normalizeBaseUrl(fromEnv));
+  }
+  if (useLocalApi) {
+    return _correctKnownBadLocalPort(_platformDefaultBaseUrl());
+  }
+  return kProductionApiBaseUrl;
+}
+
+/// Whether the resolved API host is a local dev machine.
+bool isLocalApiBaseUrl([String? baseUrl]) {
+  final uri = Uri.tryParse(baseUrl ?? resolveApiBaseUrl());
+  if (uri == null) return false;
+  final host = uri.host.toLowerCase();
+  return host == '127.0.0.1' ||
+      host == 'localhost' ||
+      host == '10.0.2.2' ||
+      host == '0.0.0.0';
 }
 
 String _platformDefaultBaseUrl() {

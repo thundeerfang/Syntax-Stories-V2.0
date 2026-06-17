@@ -39,3 +39,11 @@ server/coverage/
 
 # Mobile APK output (built via mobile/scripts/build_apk.sh)
 build/apk/*.apk
+
+mobile/scripts/run.sh
+mobile/scripts/run.sh android
+mobile/scripts/run.sh ios
+mobile/scripts/run.sh --clean ios
+mobile/scripts/run.sh --clean
+mobile/scripts/run.sh ios -- --release
+mobile/scripts/run.sh --local ios

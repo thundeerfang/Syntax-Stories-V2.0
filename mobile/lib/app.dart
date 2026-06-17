@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'models/app_feedback.dart';
 import 'screens/auth_gate.dart';
+import 'screens/server_connect_gate.dart';
 import 'screens/two_factor_screen.dart';
 import 'services/api_errors.dart';
 import 'services/auth_api.dart';
@@ -102,7 +103,9 @@ class _SyntaxStoriesAppState extends State<SyntaxStoriesApp> {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: theme.mode,
-            home: const NotificationRealtimeBridge(child: AuthGate()),
+            home: const ServerConnectGate(
+              child: NotificationRealtimeBridge(child: AuthGate()),
+            ),
           );
         },
       ),

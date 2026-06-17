@@ -19,10 +19,7 @@ import '../../widgets/ui/dashed_border_box.dart';
 
 /// Full tag feed — mirrors web `/topics/:slug`.
 class TopicsTagFeedScreen extends StatefulWidget {
-  const TopicsTagFeedScreen({
-    super.key,
-    required this.tag,
-  });
+  const TopicsTagFeedScreen({super.key, required this.tag});
 
   final BlogTaxonomyRow tag;
 
@@ -45,7 +42,9 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() => setState(() => _search = _searchController.text));
+    _searchController.addListener(
+      () => setState(() => _search = _searchController.text),
+    );
     _load(reset: true);
   }
 
@@ -144,7 +143,11 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context, List<BlogFeedPost> filtered, String title) {
+  Widget _buildBody(
+    BuildContext context,
+    List<BlogFeedPost> filtered,
+    String title,
+  ) {
     final colors = context.appColors;
 
     if (_loading) {
@@ -177,8 +180,15 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
             padding: const EdgeInsets.all(32),
             child: Column(
               children: [
-                Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: colors.mutedForeground)),
-                TextButton(onPressed: () => _load(reset: true), child: const Text('Try again')),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: colors.mutedForeground),
+                ),
+                TextButton(
+                  onPressed: () => _load(reset: true),
+                  child: const Text('Try again'),
+                ),
               ],
             ),
           ),
@@ -194,9 +204,7 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
           _buildIntro(title),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: _TagFeedEmptyState(
-              searching: _search.trim().isNotEmpty,
-            ),
+            child: _TagFeedEmptyState(searching: _search.trim().isNotEmpty),
           ),
         ],
       );
@@ -205,7 +213,10 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
     return ListView.separated(
       physics: AppPullToRefresh.scrollPhysics,
       padding: const EdgeInsets.only(bottom: 32),
-      itemCount: filtered.length + 1 + (_loadingMore && _search.trim().isEmpty ? 1 : 0),
+      itemCount:
+          filtered.length +
+          1 +
+          (_loadingMore && _search.trim().isEmpty ? 1 : 0),
       separatorBuilder: (context, index) {
         if (index == 0) return const SizedBox(height: 16);
         return const SizedBox(height: 16);
@@ -223,7 +234,10 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
         final post = filtered[postIndex];
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: BlogCard(post: post, onTap: () => openBlogFeedPost(context, post)),
+          child: BlogCard(
+            post: post,
+            onTap: () => openBlogFeedPost(context, post),
+          ),
         );
       },
     );

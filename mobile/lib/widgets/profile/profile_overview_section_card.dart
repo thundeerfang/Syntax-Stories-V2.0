@@ -37,9 +37,16 @@ class ProfileOverviewSectionCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
           decoration: BoxDecoration(
             color: colors.card,
-            border: Border.all(color: colors.border.withValues(alpha: 0.85), width: 3),
+            border: Border.all(
+              color: colors.border.withValues(alpha: 0.85),
+              width: 3,
+            ),
             boxShadow: [
-              BoxShadow(color: colors.shadow, offset: const Offset(3, 3), blurRadius: 0),
+              BoxShadow(
+                color: colors.shadow,
+                offset: const Offset(3, 3),
+                blurRadius: 0,
+              ),
             ],
           ),
           child: Column(
@@ -74,7 +81,10 @@ class ProfileOverviewSectionCard extends StatelessWidget {
                   DashedBorderBox(
                     color: colors.border.withValues(alpha: 0.55),
                     backgroundColor: colors.muted.withValues(alpha: 0.05),
-                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 28,
+                      horizontal: 16,
+                    ),
                     child: Text(
                       emptyMessage!.toUpperCase(),
                       textAlign: TextAlign.center,
@@ -127,7 +137,10 @@ class _ViewAllButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            border: Border.all(color: colors.border.withValues(alpha: 0.85), width: 2),
+            border: Border.all(
+              color: colors.border.withValues(alpha: 0.85),
+              width: 2,
+            ),
             boxShadow: [
               BoxShadow(
                 color: colors.shadow.withValues(alpha: 0.1),
@@ -158,7 +171,8 @@ class _PrimaryBlinkDot extends StatefulWidget {
   State<_PrimaryBlinkDot> createState() => _PrimaryBlinkDotState();
 }
 
-class _PrimaryBlinkDotState extends State<_PrimaryBlinkDot> with SingleTickerProviderStateMixin {
+class _PrimaryBlinkDotState extends State<_PrimaryBlinkDot>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
@@ -181,9 +195,10 @@ class _PrimaryBlinkDotState extends State<_PrimaryBlinkDot> with SingleTickerPro
     final primary = context.appColors.primary;
 
     return FadeTransition(
-      opacity: Tween<double>(begin: 0.35, end: 1).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-      ),
+      opacity: Tween<double>(
+        begin: 0.35,
+        end: 1,
+      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut)),
       child: Container(
         width: 8,
         height: 8,
@@ -191,10 +206,7 @@ class _PrimaryBlinkDotState extends State<_PrimaryBlinkDot> with SingleTickerPro
           color: primary,
           border: Border.all(color: primary.withValues(alpha: 0.45), width: 1),
           boxShadow: [
-            BoxShadow(
-              color: primary.withValues(alpha: 0.45),
-              blurRadius: 6,
-            ),
+            BoxShadow(color: primary.withValues(alpha: 0.45), blurRadius: 6),
           ],
         ),
       ),
