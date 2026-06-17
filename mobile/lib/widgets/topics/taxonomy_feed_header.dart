@@ -30,7 +30,70 @@ List<CategoryMemberPreview> uniqueAuthorsFromPosts(
   return out;
 }
 
-/// Left-aligned taxonomy hero — icon card, title, optional action, and meta row.
+/// Compact icon + title on one row — app bar and feed headers.
+class TaxonomyInlineTitleRow extends StatelessWidget {
+  const TaxonomyInlineTitleRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.iconBoxSize = 32,
+    this.iconSize = 18,
+    this.fontSize = 14,
+    this.maxLines = 1,
+  });
+
+  final IconData icon;
+  final String title;
+  final double iconBoxSize;
+  final double iconSize;
+  final double fontSize;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Row(
+      children: [
+        Container(
+          width: iconBoxSize,
+          height: iconBoxSize,
+          decoration: BoxDecoration(
+            color: colors.card,
+            border: Border.all(color: colors.border.withValues(alpha: 0.85), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: colors.shadow.withValues(alpha: 0.1),
+                offset: const Offset(2, 2),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: iconSize, color: primary),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            title.toUpperCase(),
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.6,
+              height: 1.15,
+              color: colors.foreground,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Left-aligned taxonomy hero — inline icon + title, optional action, meta row below.
 class TaxonomyFeedHeroHeader extends StatelessWidget {
   const TaxonomyFeedHeroHeader({
     super.key,
@@ -47,43 +110,20 @@ class TaxonomyFeedHeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: colors.card,
-            border: Border.all(color: colors.border.withValues(alpha: 0.85), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: colors.shadow.withValues(alpha: 0.12),
-                offset: const Offset(2, 2),
-                blurRadius: 0,
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 22, color: primary),
-        ),
-        const SizedBox(height: 12),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: Text(
-                title.toUpperCase(),
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.6,
-                  height: 1.15,
-                  color: colors.foreground,
-                ),
+              child: TaxonomyInlineTitleRow(
+                icon: icon,
+                title: title,
+                iconBoxSize: 48,
+                iconSize: 22,
+                fontSize: 18,
+                maxLines: 2,
               ),
             ),
             if (headerAction != null) ...[
@@ -439,6 +479,7 @@ class TaxonomyFeedScrollIntro extends StatelessWidget {
     this.meta,
     this.headerAction,
     this.postCountLoading = false,
+    this.showTitleHeader = true,
   });
 
   final IconData icon;
@@ -450,6 +491,7 @@ class TaxonomyFeedScrollIntro extends StatelessWidget {
   final int postCount;
   final String postCountLabel;
   final bool postCountLoading;
+  final bool showTitleHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -458,13 +500,15 @@ class TaxonomyFeedScrollIntro extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TaxonomyFeedHeroHeader(
-            icon: icon,
-            title: title,
-            meta: meta,
-            headerAction: headerAction,
-          ),
-          const SizedBox(height: 16),
+          if (showTitleHeader) ...[
+            TaxonomyFeedHeroHeader(
+              icon: icon,
+              title: title,
+              meta: meta,
+              headerAction: headerAction,
+            ),
+            const SizedBox(height: 16),
+          ],
           TaxonomyFeedSearchSection(
             controller: searchController,
             hintText: searchHint,

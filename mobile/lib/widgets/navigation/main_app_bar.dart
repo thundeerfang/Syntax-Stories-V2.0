@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_color_tokens.dart';
 import 'app_nav_colors.dart';
+import 'app_bar_logo_button.dart';
 
 /// Fixed top bar below the status bar — equal left/right inset, centered title.
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -13,6 +14,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onNotifications,
     this.onSettings,
     this.onCreate,
+    this.onLogoTap,
+    this.aboutVisited = false,
     this.showNotifications = true,
     this.notificationUnreadCount = 0,
   });
@@ -22,6 +25,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onNotifications;
   final VoidCallback? onSettings;
   final VoidCallback? onCreate;
+  final VoidCallback? onLogoTap;
+  final bool aboutVisited;
   final bool showNotifications;
   final int notificationUnreadCount;
 
@@ -65,14 +70,19 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
                         padding: const EdgeInsets.only(left: edgePadding),
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: IgnorePointer(
-                            child: Image.asset(
-                              MainAppBar.logoAsset,
-                              width: logoSize,
-                              height: logoSize,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
+                          child: onLogoTap != null
+                              ? AppBarLogoButton(
+                                  onTap: onLogoTap!,
+                                  visited: aboutVisited,
+                                )
+                              : IgnorePointer(
+                                  child: Image.asset(
+                                    MainAppBar.logoAsset,
+                                    width: logoSize,
+                                    height: logoSize,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
                         ),
                       ),
                     ),

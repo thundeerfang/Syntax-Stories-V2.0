@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../state/auth_state.dart';
 import '../state/notification_state.dart';
 import '../widgets/ui/app_feedback_toast.dart';
+import '../services/about_visit_storage.dart';
 import '../widgets/navigation/main_dashboard_scaffold.dart';
 import '../widgets/navigation/main_nav_config.dart';
+import 'about_screen.dart';
 import 'account_profile_screen.dart';
 import 'blog/blog_create_screen.dart';
 import 'notifications_inbox_screen.dart';
@@ -28,6 +30,28 @@ class _MainShellState extends State<MainShell> {
 
   /// Stack index (not [MainTab]) so hot reload survives enum moves.
   int _stackIndex = 0;
+  bool _aboutVisited = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAboutVisited();
+  }
+
+  Future<void> _loadAboutVisited() async {
+    final visited = await AboutVisitStorage.hasVisited();
+    if (!mounted) return;
+    setState(() => _aboutVisited = visited);
+  }
+
+  Future<void> _openAbout() async {
+    await AboutVisitStorage.markVisited();
+    if (!mounted) return;
+    setState(() => _aboutVisited = true);
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
+    );
+  }
 
   MainTab get _tab => MainNavConfig.tabForStackIndex(_stackIndex);
 
@@ -97,6 +121,8 @@ class _MainShellState extends State<MainShell> {
       onSearch: _openSearch,
       onNotifications: _openNotifications,
       onSettings: _openSettings,
+      onLogoTap: _openAbout,
+      aboutVisited: _aboutVisited,
       onCreate: _tab == MainTab.squads ? _openCreateSquad : null,
       showNotifications: _tab != MainTab.account && _tab != MainTab.squads,
       notificationUnreadCount: unreadCount,

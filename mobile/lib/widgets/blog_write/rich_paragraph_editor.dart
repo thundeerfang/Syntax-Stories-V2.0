@@ -683,7 +683,7 @@ class _GifSearchSheetState extends State<_GifSearchSheet> {
           SizedBox(
             height: 220,
             child: _loading
-                ? const AppLoadingCenter(size: 36)
+                ? const AppLoadingCenter(size: 36, showQuote: false)
                 : _results.isEmpty
                     ? Center(
                         child: Text(

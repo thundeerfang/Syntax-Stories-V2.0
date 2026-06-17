@@ -130,11 +130,7 @@ class _TopicsCategoryFeedScreenState extends State<TopicsCategoryFeedScreen> {
     return TaxonomyFeedScrollIntro(
       icon: Icons.layers_outlined,
       title: widget.category.name,
-      headerAction: CategoryFollowButton(
-        slug: widget.category.slug,
-        name: widget.category.name,
-        compact: true,
-      ),
+      showTitleHeader: false,
       searchController: _searchController,
       searchHint: 'Search in ${widget.category.name}…',
       postCount: _displayCount,
@@ -234,7 +230,22 @@ class _TopicsCategoryFeedScreenState extends State<TopicsCategoryFeedScreen> {
 
     return Scaffold(
       backgroundColor: context.appColors.background,
-      appBar: const ScreenAppBar(title: 'Category'),
+      appBar: ScreenAppBar(
+        title: 'Category',
+        centerTitle: false,
+        narrowLeading: true,
+        titleWidget: TaxonomyInlineTitleRow(
+          icon: Icons.layers_outlined,
+          title: widget.category.name,
+        ),
+        actions: [
+          CategoryFollowButton(
+            slug: widget.category.slug,
+            name: widget.category.name,
+            compact: true,
+          ),
+        ],
+      ),
       body: AppPullToRefresh(
         onRefresh: () => _load(reset: true),
         child: _buildBody(context, filtered),

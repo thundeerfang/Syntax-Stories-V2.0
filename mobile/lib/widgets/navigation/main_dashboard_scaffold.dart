@@ -19,6 +19,8 @@ class MainDashboardScaffold extends StatefulWidget {
     required this.onNotifications,
     required this.onSettings,
     this.onCreate,
+    this.onLogoTap,
+    this.aboutVisited = false,
     this.showNotifications = true,
     this.notificationUnreadCount = 0,
   });
@@ -31,6 +33,8 @@ class MainDashboardScaffold extends StatefulWidget {
   final VoidCallback onNotifications;
   final VoidCallback onSettings;
   final VoidCallback? onCreate;
+  final VoidCallback? onLogoTap;
+  final bool aboutVisited;
   final bool showNotifications;
   final int notificationUnreadCount;
 
@@ -219,6 +223,8 @@ class _MainDashboardScaffoldState extends State<MainDashboardScaffold>
                 onNotifications: widget.onNotifications,
                 onSettings: widget.onSettings,
                 onCreate: widget.onCreate,
+                onLogoTap: widget.onLogoTap,
+                aboutVisited: widget.aboutVisited,
                 showNotifications: widget.showNotifications,
                 notificationUnreadCount: widget.notificationUnreadCount,
               ),

@@ -17,16 +17,7 @@ class AuthGate extends StatelessWidget {
     if (auth.bootstrapping) {
       final colors = context.appColors;
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppLoadingIndicator(color: colors.primary),
-              const SizedBox(height: 16),
-              const Text('Loading…'),
-            ],
-          ),
-        ),
+        body: AppLoadingCenter(color: colors.primary),
       );
     }
 

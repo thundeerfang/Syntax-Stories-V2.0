@@ -135,6 +135,7 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
     return TaxonomyFeedScrollIntro(
       icon: Icons.tag_outlined,
       title: title,
+      showTitleHeader: false,
       searchController: _searchController,
       searchHint: 'Search in $title…',
       postCount: _displayCount,
@@ -235,7 +236,15 @@ class _TopicsTagFeedScreenState extends State<TopicsTagFeedScreen> {
 
     return Scaffold(
       backgroundColor: context.appColors.background,
-      appBar: const ScreenAppBar(title: 'Tag'),
+      appBar: ScreenAppBar(
+        title: 'Tag',
+        centerTitle: false,
+        narrowLeading: true,
+        titleWidget: TaxonomyInlineTitleRow(
+          icon: Icons.tag_outlined,
+          title: title,
+        ),
+      ),
       body: AppPullToRefresh(
         onRefresh: () => _load(reset: true),
         child: _buildBody(context, filtered, title),

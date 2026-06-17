@@ -17,6 +17,9 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onBack,
     this.leading,
     this.extraBottom,
+    this.titleWidget,
+    this.centerTitle = true,
+    this.narrowLeading = false,
   });
 
   final String title;
@@ -24,6 +27,9 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBack;
   final Widget? leading;
   final PreferredSizeWidget? extraBottom;
+  final Widget? titleWidget;
+  final bool centerTitle;
+  final bool narrowLeading;
 
   static const bottomBorderHeight = MainAppBar.bottomBorderHeight;
 
@@ -54,9 +60,11 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
       automaticallyImplyLeading: false,
-      centerTitle: true,
+      centerTitle: centerTitle,
       toolbarHeight: kToolbarHeight,
-      leadingWidth: MainAppBar.sideRailWidth,
+      leadingWidth: narrowLeading
+          ? MainAppBar.edgePadding + MainAppBar.iconHitSize
+          : MainAppBar.sideRailWidth,
       titleSpacing: 0,
       leading: Padding(
         padding: const EdgeInsets.only(left: MainAppBar.edgePadding),
@@ -75,12 +83,13 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
         ),
       ),
-      title: Text(
-        title.toUpperCase(),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: titleStyle(context),
-      ),
+      title: titleWidget ??
+          Text(
+            title.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: titleStyle(context),
+          ),
       actions: [
         SizedBox(
           width: MainAppBar.sideRailWidth,
