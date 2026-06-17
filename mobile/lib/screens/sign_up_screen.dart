@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/app_feedback.dart';
 import '../services/api_errors.dart';
 import '../services/auth_api.dart';
 import '../state/auth_state.dart';
@@ -13,7 +12,7 @@ import '../widgets/auth/auth_text_field.dart';
 import '../widgets/auth/auth_ui.dart';
 import '../widgets/auth/legal_consent.dart';
 import '../widgets/auth/referral_field.dart';
-import '../widgets/ui/app_feedback_banner.dart';
+import '../widgets/ui/app_feedback_toast.dart';
 import 'verify_code_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -31,8 +30,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   ReferralValidationState _referralState = ReferralValidationState.idle;
   bool _terms = false;
   bool _privacy = false;
-  String? _pageMessage;
-  AppFeedbackKind _pageMessageKind = AppFeedbackKind.error;
   bool _showLegalError = false;
 
   @override
@@ -45,40 +42,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   String? get _oauthRef => resolvedReferralCode(_referral.text, _referralState);
 
-  void _clearPageMessage() {
-    if (_pageMessage != null) setState(() => _pageMessage = null);
-  }
-
   void _setPageError(String message) {
-    setState(() {
-      _pageMessage = message;
-      _pageMessageKind = AppFeedbackKind.error;
-    });
+    AppFeedbackToast.error(context, message);
   }
 
   bool _validateSignupRequirements() {
     var ok = true;
 
     if (!_terms || !_privacy) {
-      setState(() {
-        _showLegalError = true;
-        _pageMessage = !_terms && !_privacy
+      setState(() => _showLegalError = true);
+      AppFeedbackToast.warning(
+        context,
+        !_terms && !_privacy
             ? 'Accept the Terms of Service and Privacy Policy to continue.'
             : !_terms
                 ? 'Accept the Terms of Service to continue.'
-                : 'Accept the Privacy Policy to continue.';
-        _pageMessageKind = AppFeedbackKind.warning;
-      });
+                : 'Accept the Privacy Policy to continue.',
+      );
       ok = false;
     }
 
     if (referralBlocksSignup(_referral.text, _referralState)) {
-      setState(() {
-        _pageMessage = _referralState == ReferralValidationState.checking
+      AppFeedbackToast.warning(
+        context,
+        _referralState == ReferralValidationState.checking
             ? 'Still verifying referral code…'
-            : 'Enter a valid referral code or clear the field.';
-        _pageMessageKind = AppFeedbackKind.warning;
-      });
+            : 'Enter a valid referral code or clear the field.',
+      );
       ok = false;
     }
 
@@ -86,7 +76,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _send() async {
-    _clearPageMessage();
     final formOk = _formKey.currentState?.validate() ?? false;
     final requirementsOk = _validateSignupRequirements();
     if (!formOk || !requirementsOk) return;
@@ -124,17 +113,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       title: 'Sign up',
       subtitle: 'Enter your details below',
       children: [
-        AppFeedbackSlot(
-          message: _pageMessage,
-          kind: _pageMessageKind,
-          onDismiss: _clearPageMessage,
-        ),
         AuthTextField(
           controller: _name,
           label: 'FULL NAME',
           rule: AppFieldRule.fullNameSignup,
           textCapitalization: TextCapitalization.words,
-          onChanged: (_) => _clearPageMessage(),
         ),
         const SizedBox(height: 12),
         AuthTextField(
@@ -143,7 +126,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           rule: AppFieldRule.email,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
-          onChanged: (_) => _clearPageMessage(),
         ),
         const SizedBox(height: 12),
         AuthReferralField(
@@ -151,7 +133,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           disabled: auth.busy,
           onStateChanged: (state, _, _) {
             setState(() => _referralState = state);
-            _clearPageMessage();
           },
         ),
         const SizedBox(height: 12),
@@ -165,14 +146,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
               _terms = v;
               _showLegalError = false;
             });
-            _clearPageMessage();
           },
           onPrivacyChanged: (v) {
             setState(() {
               _privacy = v;
               _showLegalError = false;
             });
-            _clearPageMessage();
           },
         ),
         const SizedBox(height: 16),
@@ -187,10 +166,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           mode: OAuthMode.signup,
           referralCode: _oauthRef,
           disabled: oauthDisabled,
-          onError: (msg) => setState(() {
-            _pageMessage = msg;
-            _pageMessageKind = AppFeedbackKind.error;
-          }),
+          onError: (msg) => AppFeedbackToast.error(context, msg),
         ),
       ],
     );

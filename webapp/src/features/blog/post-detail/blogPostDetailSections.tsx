@@ -1,4 +1,5 @@
 "use client";
+import { useBlogCommentThread } from "./useBlogCommentThread";
 import React, {
   createContext,
   useCallback,
@@ -48,7 +49,14 @@ import { LinkPreviewCardContent } from "@/components/ui/popover";
 import { RichParagraphEditor } from "@/components/ui/editor";
 import { RetroSortDropdown } from "@/components/ui/retro";
 import { BookmarkLottie, SparkLottie } from "@/components/ui/lottie";
+import { Alert } from "@/components/retroui/Alert";
 import { highlightCodeToHtml } from "@/lib/blog/codeHighlight";
+import {
+  BLOG_COMMENT_MAX_WORDS,
+  countCommentWordsFromPlainText,
+  isCommentDraftSubmittable,
+  validateCommentDraft,
+} from "@/lib/blog/blogCommentLimits";
 import type { BlogHeadingTocItem } from "@/lib/extractBlogHeadingToc";
 import { formatShortRelativeTime } from "@/lib/format/formatShortRelativeTime";
 import { resolveProfileMediaUrl } from "@/lib/profile/resolveProfileMediaUrl";
@@ -311,9 +319,11 @@ export function BlogPostSidebarStats({
 export function BlogPostTableOfContents({
   items,
   className,
+  compact = false,
 }: Readonly<{
   items: BlogHeadingTocItem[];
   className?: string;
+  compact?: boolean;
 }>) {
   if (items.length === 0) return null;
   const scrollTo = (anchorId: string) => {
@@ -329,32 +339,63 @@ export function BlogPostTableOfContents({
         className={cn(
           blog.railCard,
           "flex min-h-0 flex-1 flex-col overflow-hidden",
+          compact && "w-fit max-w-[4.75rem] p-2 shadow-sm",
         )}
       >
-        <div className="mb-3 flex shrink-0 items-center gap-2 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+        <div
+          className={cn(
+            "mb-3 flex shrink-0 items-center font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground",
+            compact ? "mb-1.5 justify-center" : "gap-2",
+          )}
+        >
           <ListTree
             className="size-3.5 shrink-0 text-primary"
             strokeWidth={2.5}
             aria-hidden
           />
-          Index
+          <span className={compact ? "sr-only" : undefined}>Index</span>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1 ss-scrollbar-hide">
-          <ol className="m-0 list-none space-y-1.5 p-0">
-            {items.map((item) => (
-              <li key={item.anchorId}>
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto ss-scrollbar-hide",
+            compact ? "overflow-x-hidden pr-0" : "pr-1",
+          )}
+        >
+          <ol
+            className={cn(
+              "m-0 list-none p-0",
+              compact
+                ? "flex flex-col items-center gap-1.5"
+                : "space-y-1.5",
+            )}
+          >
+            {items.map((item, index) => (
+              <li
+                key={item.anchorId}
+                className={compact ? "flex w-full justify-center" : undefined}
+              >
                 <button
                   type="button"
                   onClick={() => scrollTo(item.anchorId)}
+                  title={item.text}
+                  aria-label={`${index + 1}. ${item.text}`}
                   className={cn(
-                    "w-full text-left font-sans text-xs font-semibold leading-snug text-foreground transition-colors",
-                    "hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
-                    item.level === 3
-                      ? "pl-3 text-[11px] text-muted-foreground hover:text-primary"
-                      : "",
+                    "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                    compact
+                      ? "flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-primary/35 bg-background font-mono text-[10px] font-black tabular-nums leading-none text-primary hover:border-primary hover:bg-primary/10"
+                      : cn(
+                          "w-full text-left font-sans text-xs font-semibold leading-snug text-foreground hover:text-primary",
+                          item.level === 3
+                            ? "pl-3 text-[11px] text-muted-foreground hover:text-primary"
+                            : "",
+                        ),
                   )}
                 >
-                  {item.text}
+                  {compact ? (
+                    <span aria-hidden>{index + 1}.</span>
+                  ) : (
+                    item.text
+                  )}
                 </button>
               </li>
             ))}
@@ -458,9 +499,12 @@ function PostMiniList({
       <ul className="m-0 list-none space-y-4 p-0" aria-hidden>
         {Array.from({ length: 4 }, (_, i) => (
           <li key={`sk-${i}`} className="animate-pulse space-y-2">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-start gap-2.5">
               <div className="size-8 shrink-0 bg-muted" />
-              <div className="h-3.5 flex-1 max-w-[8rem] bg-muted" />
+              <div className="space-y-1">
+                <div className="h-3.5 w-24 bg-muted" />
+                <div className="h-2.5 w-16 bg-muted/80" />
+              </div>
             </div>
             <div className="h-3.5 w-full bg-muted/90" />
             <div className="h-3.5 w-4/5 bg-muted/80" />
@@ -493,7 +537,7 @@ function PostMiniList({
       {posts.map((p) => {
         const href = `/blogs/${encodeURIComponent(p.author.username)}/${encodeURIComponent(p.slug)}`;
         const a = p.author;
-        const byline = (a.fullName || a.username).trim() || a.username;
+        const displayName = (a.fullName || a.username).trim() || a.username;
         const dateLabel = formatMoreByDate(p.createdAt || p.updatedAt);
         return (
           <li key={p._id}>
@@ -501,7 +545,7 @@ function PostMiniList({
               href={`/u/${a.username}`}
               className="group/byline block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <img
                   src={resolveProfileMediaUrl(a.profileImg, a.username)}
                   alt=""
@@ -509,9 +553,14 @@ function PostMiniList({
                   width={20}
                   height={20}
                 />
-                <span className="min-w-0 truncate font-sans text-[9px] font-semibold uppercase text-muted-foreground decoration-primary underline-offset-2 transition-colors group-hover/byline:underline">
-                  {byline}
-                </span>
+                <div className="min-w-0">
+                  <span className="block truncate font-mono text-[9px] font-black uppercase leading-tight text-muted-foreground decoration-primary underline-offset-2 transition-colors group-hover/byline:underline">
+                    {displayName}
+                  </span>
+                  <span className="mt-0.5 block truncate font-mono text-[7px] font-medium text-muted-foreground/70">
+                    @{a.username}
+                  </span>
+                </div>
               </div>
             </Link>
             <Link
@@ -1230,87 +1279,6 @@ function CommentLikeButton({
     </button>
   );
 }
-function orderThreadComments(
-  flat: PublicBlogComment[],
-  sort: ThreadSort,
-): PublicBlogComment[] {
-  const byParent = new Map<string | null, PublicBlogComment[]>();
-  for (const c of flat) {
-    const pk: string | null = c.parentId;
-    if (!byParent.has(pk)) byParent.set(pk, []);
-    byParent.get(pk)!.push(c);
-  }
-  const cmp =
-    sort === "oldest"
-      ? (a: PublicBlogComment, b: PublicBlogComment) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      : (a: PublicBlogComment, b: PublicBlogComment) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  for (const arr of byParent.values()) {
-    arr.sort(cmp);
-  }
-  const out: PublicBlogComment[] = [];
-  function dfs(parentKey: string | null) {
-    for (const item of byParent.get(parentKey) ?? []) {
-      out.push(item);
-      dfs(item._id);
-    }
-  }
-  dfs(null);
-  return out;
-}
-function splitIntoThreads(ordered: PublicBlogComment[]): {
-  root: PublicBlogComment;
-  replies: PublicBlogComment[];
-}[] {
-  const threads: {
-    root: PublicBlogComment;
-    replies: PublicBlogComment[];
-  }[] = [];
-  let i = 0;
-  while (i < ordered.length) {
-    const item = ordered[i];
-    if (item.parentId != null) {
-      i++;
-      continue;
-    }
-    const root = item;
-    const replies: PublicBlogComment[] = [];
-    i++;
-    while (i < ordered.length && ordered[i].parentId != null) {
-      replies.push(ordered[i]);
-      i++;
-    }
-    threads.push({ root, replies });
-  }
-  return threads;
-}
-function replyDepthFromRoot(
-  rootId: string,
-  comment: PublicBlogComment,
-  byId: Map<string, PublicBlogComment>,
-): number {
-  let levelsBelowRoot = 0;
-  let pid: string | null | undefined = comment.parentId;
-  while (pid && pid !== rootId) {
-    levelsBelowRoot += 1;
-    pid = byId.get(pid)?.parentId ?? null;
-  }
-  return levelsBelowRoot + 1;
-}
-function threadRootIdContainingComment(
-  threadList: {
-    root: PublicBlogComment;
-    replies: PublicBlogComment[];
-  }[],
-  commentId: string,
-): string | null {
-  for (const t of threadList) {
-    if (t.root._id === commentId) return t.root._id;
-    if (t.replies.some((r) => r._id === commentId)) return t.root._id;
-  }
-  return null;
-}
 function paragraphPayloadFromCommentText(text: string): ParagraphPayload {
   const t = text.trim();
   if (t.startsWith("{") && t.includes('"type"')) {
@@ -1380,6 +1348,7 @@ type CommentCardViewProps = Readonly<{
   setDeleteTarget: (c: PublicBlogComment) => void;
   threadReplyCount?: number;
   threadRepliesExpanded?: boolean;
+  repliesLoading?: boolean;
   onToggleThreadReplies?: () => void;
   replyParentAuthor?: {
     username: string;
@@ -1408,6 +1377,7 @@ function CommentCardView({
   setDeleteTarget,
   threadReplyCount,
   threadRepliesExpanded,
+  repliesLoading,
   onToggleThreadReplies,
   replyParentAuthor,
   onNavigateToParentComment,
@@ -1526,8 +1496,10 @@ function CommentCardView({
               onClick={() => void saveEdit()}
               disabled={
                 editSaving ||
-                collectDocText(editDoc).trim().length === 0 ||
-                JSON.stringify(editDoc).length > 50000
+                !isCommentDraftSubmittable(
+                  collectDocText(editDoc).trim(),
+                  editDoc,
+                )
               }
               className="border-2 border-border bg-primary px-2.5 py-1 font-mono text-[10px] font-bold uppercase text-primary-foreground shadow disabled:opacity-50 hover:brightness-110"
             >
@@ -1566,34 +1538,65 @@ function CommentCardView({
             <MessageSquareReply className="h-3.5 w-3.5" strokeWidth={2.5} />
             Reply
           </button>
-          {variant === "root" &&
-          threadReplyCount != null &&
-          threadReplyCount > 0 &&
-          onToggleThreadReplies ? (
-            <button
-              type="button"
-              aria-expanded={threadRepliesExpanded === true}
-              onClick={() => {
-                onToggleThreadReplies();
-              }}
-              className={cn(
-                "inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground",
-                threadRepliesExpanded && "text-primary",
-              )}
-            >
-              <ChevronDown
+          {((c.directReplyCount ?? threadReplyCount ?? 0) > 0 &&
+          onToggleThreadReplies) ? (
+            threadRepliesExpanded ? (
+              <button
+                type="button"
+                aria-expanded
+                onClick={() => {
+                  onToggleThreadReplies();
+                }}
+                className="inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase text-primary hover:text-foreground"
+              >
+                <span
+                  className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
+                  aria-hidden
+                >
+                  <MessageSquare
+                    className="h-3.5 w-3.5"
+                    strokeWidth={2.5}
+                  />
+                  <ChevronDown
+                    className="absolute -bottom-0.5 -right-1 h-2.5 w-2.5 rotate-180"
+                    strokeWidth={2.5}
+                  />
+                </span>
+                Hide replies
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-expanded={false}
+                aria-busy={repliesLoading === true}
+                disabled={repliesLoading === true}
+                onClick={() => {
+                  onToggleThreadReplies();
+                }}
                 className={cn(
-                  "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
-                  threadRepliesExpanded && "rotate-180",
+                  "inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground",
+                  repliesLoading && "opacity-60",
                 )}
-                strokeWidth={2.5}
-                aria-hidden
-              />
-              {threadRepliesExpanded ? "Hide" : "View"} replies
-              <span className="tabular-nums text-muted-foreground">
-                ({threadReplyCount})
-              </span>
-            </button>
+              >
+                <span
+                  className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
+                  aria-hidden
+                >
+                  <MessageSquare
+                    className="h-3.5 w-3.5"
+                    strokeWidth={2.5}
+                  />
+                  <ChevronDown
+                    className="absolute -bottom-0.5 -right-1 h-2.5 w-2.5"
+                    strokeWidth={2.5}
+                  />
+                </span>
+                View replies
+                <span className="tabular-nums text-muted-foreground">
+                  ({c.directReplyCount ?? threadReplyCount})
+                </span>
+              </button>
+            )
           ) : null}
           <CommentLikeButton
             comment={c}
@@ -1665,6 +1668,158 @@ function CommentCardView({
     </article>
   );
 }
+type CommentThreadNodeProps = Readonly<{
+  commentId: string;
+  depth: number;
+  byId: Map<string, PublicBlogComment>;
+  branches: Map<
+    string,
+    {
+      expanded: boolean;
+      childIds: string[];
+      offset: number;
+      hasMore: boolean;
+      loading: boolean;
+    }
+  >;
+  viewerId: string;
+  token: string | null;
+  editingId: string | null;
+  editDoc: unknown | null;
+  editSaving: boolean;
+  startEdit: (c: PublicBlogComment) => void;
+  cancelEdit: () => void;
+  saveEdit: () => void | Promise<void>;
+  setEditDoc: (doc: unknown) => void;
+  onToggleLike: (c: PublicBlogComment) => void | Promise<void>;
+  openAuth: (view?: AuthDialogView) => void;
+  setReplyParentId: (id: string | null) => void;
+  setDeleteTarget: (c: PublicBlogComment) => void;
+  onToggleReplies: (parentId: string) => void | Promise<void>;
+  onLoadMoreReplies: (parentId: string) => void | Promise<void>;
+  onNavigateToParentComment: (parentCommentId: string) => void;
+}>;
+function CommentThreadNode({
+  commentId,
+  depth,
+  byId,
+  branches,
+  viewerId,
+  token,
+  editingId,
+  editDoc,
+  editSaving,
+  startEdit,
+  cancelEdit,
+  saveEdit,
+  setEditDoc,
+  onToggleLike,
+  openAuth,
+  setReplyParentId,
+  setDeleteTarget,
+  onToggleReplies,
+  onLoadMoreReplies,
+  onNavigateToParentComment,
+}: CommentThreadNodeProps) {
+  const c = byId.get(commentId);
+  if (!c) return null;
+  const branch = branches.get(commentId);
+  const childIds = branch?.childIds ?? [];
+  const expanded = branch?.expanded === true;
+  const directCount = c.directReplyCount ?? 0;
+  const isRoot = depth === 0;
+  const indent = Math.min(Math.max(depth - 1, 0), 4) * 8;
+  const parentComment = c.parentId ? byId.get(c.parentId) : undefined;
+  const replyParentAuthor = parentComment
+    ? {
+        username: parentComment.author.username,
+        fullName: parentComment.author.fullName,
+      }
+    : null;
+  return (
+    <li className={cn(isRoot ? "space-y-2" : undefined)}>
+      <CommentCardView
+        c={c}
+        variant={isRoot ? "root" : "reply"}
+        compact
+        showTimelineDot={!isRoot}
+        extraIndentPx={isRoot ? 0 : indent}
+        replyParentAuthor={isRoot ? null : replyParentAuthor}
+        onNavigateToParentComment={onNavigateToParentComment}
+        viewerId={viewerId}
+        token={token}
+        editingId={editingId}
+        editDoc={editDoc}
+        editSaving={editSaving}
+        startEdit={startEdit}
+        cancelEdit={cancelEdit}
+        saveEdit={saveEdit}
+        setEditDoc={setEditDoc}
+        onToggleLike={onToggleLike}
+        openAuth={openAuth}
+        setReplyParentId={setReplyParentId}
+        setDeleteTarget={setDeleteTarget}
+        threadReplyCount={directCount}
+        threadRepliesExpanded={expanded}
+        repliesLoading={branch?.loading === true}
+        onToggleThreadReplies={() => void onToggleReplies(commentId)}
+      />
+      {directCount > 0 ? (
+        <AnimatePresence initial={false}>
+          {expanded ? (
+            <motion.div
+              key={`thread-${commentId}-replies`}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              className={cn("overflow-hidden", !isRoot && "pt-1")}
+              style={!isRoot ? { marginLeft: indent } : undefined}
+            >
+              <ul className="space-y-2">
+                {childIds.map((childId, idx) => (
+                  <CommentThreadNode
+                    key={childId}
+                    commentId={childId}
+                    depth={depth + 1}
+                    byId={byId}
+                    branches={branches}
+                    viewerId={viewerId}
+                    token={token}
+                    editingId={editingId}
+                    editDoc={editDoc}
+                    editSaving={editSaving}
+                    startEdit={startEdit}
+                    cancelEdit={cancelEdit}
+                    saveEdit={saveEdit}
+                    setEditDoc={setEditDoc}
+                    onToggleLike={onToggleLike}
+                    openAuth={openAuth}
+                    setReplyParentId={setReplyParentId}
+                    setDeleteTarget={setDeleteTarget}
+                    onToggleReplies={onToggleReplies}
+                    onLoadMoreReplies={onLoadMoreReplies}
+                    onNavigateToParentComment={onNavigateToParentComment}
+                  />
+                ))}
+              </ul>
+              {branch?.hasMore ? (
+                <button
+                  type="button"
+                  disabled={branch.loading}
+                  onClick={() => void onLoadMoreReplies(commentId)}
+                  className="mt-2 border-2 border-dashed border-border bg-muted/20 px-3 py-1.5 font-mono text-[10px] font-bold uppercase text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                  {branch.loading ? "Loading…" : "Load more replies"}
+                </button>
+              ) : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      ) : null}
+    </li>
+  );
+}
 export function BlogCommentsSection({
   username,
   slug,
@@ -1680,9 +1835,6 @@ export function BlogCommentsSection({
   const user = useAuthStore((s) => s.user);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const openAuth = useAuthDialogStore((s) => s.open);
-  const [comments, setComments] = useState<PublicBlogComment[]>([]);
-  const [commentTotal, setCommentTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [draftDoc, setDraftDoc] = useState<unknown>(() => emptyTipTapDoc());
@@ -1695,53 +1847,64 @@ export function BlogCommentsSection({
     null,
   );
   const [deleteWorking, setDeleteWorking] = useState(false);
+  const [composerError, setComposerError] = useState<string | null>(null);
   const viewerId = user?.id ?? user?._id ?? "";
-  const ordered = useMemo(
-    () => orderThreadComments(comments, threadSort),
-    [comments, threadSort],
-  );
-  const commentById = useMemo(
-    () => new Map(comments.map((x) => [x._id, x])),
-    [comments],
-  );
-  const threads = useMemo(() => splitIntoThreads(ordered), [ordered]);
-  const [expandedReplyRootId, setExpandedReplyRootId] = useState<string | null>(
-    null,
-  );
+  const thread = useBlogCommentThread({ username, slug, token, threadSort });
+  const {
+    byId,
+    rootIds,
+    postTotal,
+    rootsLoading,
+    rootsLoadingMore,
+    rootHasMore,
+    branches,
+    loadRoots,
+    loadMoreRoots,
+    toggleReplies,
+    loadMoreReplies,
+    expandAncestors,
+    onCommentPosted,
+    patchCommentInState,
+    patchCommentLike,
+    optimisticLike,
+  } = thread;
+  const loadMoreRootsRef = useRef<HTMLDivElement | null>(null);
   const viewerAvatar = user?.username
     ? resolveProfileMediaUrl(user.profileImg, user.username)
     : null;
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { comments: list, total } = await blogApi.getComments(
-        username,
-        slug,
-        80,
-        token,
-      );
-      setComments(list);
-      setCommentTotal(total);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to load comments", {
-        id: "syntax-blog-comments-load",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [username, slug, token]);
   useEffect(() => {
-    void load();
-  }, [load]);
+    onCommentStatsChange?.({ total: postTotal, loading: rootsLoading });
+  }, [postTotal, rootsLoading, onCommentStatsChange]);
   useEffect(() => {
-    onCommentStatsChange?.({ total: commentTotal, loading });
-  }, [commentTotal, loading, onCommentStatsChange]);
+    const el = loadMoreRootsRef.current;
+    if (!el || rootsLoading || !rootHasMore) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          void loadMoreRoots();
+        }
+      },
+      { rootMargin: "240px 0px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMoreRoots, rootHasMore, rootsLoading, rootIds.length]);
   const draftPlain = collectDocText(draftDoc).trim();
-  const draftSerialized = JSON.stringify(draftDoc ?? emptyTipTapDoc());
-  const canSubmitNew = draftPlain.length > 0 && draftSerialized.length <= 50000;
+  const draftWordCount = countCommentWordsFromPlainText(draftPlain);
+  const handleDraftChange = useCallback((doc: unknown) => {
+    setComposerError(null);
+    setDraftDoc(doc);
+  }, []);
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !canSubmitNew) return;
+    if (!token || submitting) return;
+    const validationError = validateCommentDraft(draftPlain, draftDoc);
+    if (validationError) {
+      setComposerError(validationError);
+      return;
+    }
+    const draftSerialized = JSON.stringify(draftDoc ?? emptyTipTapDoc());
+    setComposerError(null);
     setSubmitting(true);
     try {
       const { comment } = await blogApi.postComment(
@@ -1751,13 +1914,11 @@ export function BlogCommentsSection({
         token,
         replyParentId ?? undefined,
       );
-      setComments((prev) =>
-        orderThreadComments([...prev, comment], threadSort),
-      );
-      setCommentTotal((t) => t + 1);
+      await onCommentPosted(comment);
       setReplyParentId(null);
       setFormKey((k) => k + 1);
       setDraftDoc(emptyTipTapDoc());
+      setComposerError(null);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Could not post comment",
@@ -1771,50 +1932,22 @@ export function BlogCommentsSection({
   };
   const replyLabel = useMemo(() => {
     if (!replyParentId) return null;
-    const target = comments.find((c) => c._id === replyParentId);
+    const target = byId.get(replyParentId);
     if (!target) return null;
     return target.author.username;
-  }, [replyParentId, comments]);
+  }, [replyParentId, byId]);
   const canPost = Boolean(isHydrated && token);
   const onToggleLike = async (c: PublicBlogComment) => {
     if (!token) {
       openAuth("login");
       return;
     }
-    const was = c.likedByViewer === true;
-    const prevCount = c.likeCount;
-    setComments((list) =>
-      list.map((x) =>
-        x._id !== c._id
-          ? x
-          : {
-              ...x,
-              likedByViewer: !was,
-              likeCount: Math.max(0, prevCount + (was ? -1 : 1)),
-            },
-      ),
-    );
+    const { was, prevCount } = optimisticLike(c);
     try {
       const r = await blogApi.toggleCommentLike(username, slug, c._id, token);
-      setComments((list) =>
-        list.map((x) =>
-          x._id !== c._id
-            ? x
-            : {
-                ...x,
-                likeCount: r.likeCount,
-                likedByViewer: r.likedByViewer,
-              },
-        ),
-      );
+      patchCommentLike(c._id, r.likeCount, r.likedByViewer);
     } catch {
-      setComments((list) =>
-        list.map((x) =>
-          x._id !== c._id
-            ? x
-            : { ...x, likedByViewer: was, likeCount: prevCount },
-        ),
-      );
+      patchCommentLike(c._id, prevCount, was);
       toast.error("Could not update like", { id: "syntax-blog-comments-like" });
     }
   };
@@ -1828,55 +1961,36 @@ export function BlogCommentsSection({
     setEditingId(null);
     setEditDoc(null);
   };
-  const toggleThreadReplies = useCallback((rootId: string) => {
-    setExpandedReplyRootId((prev) => (prev === rootId ? null : rootId));
-  }, []);
   const navigateToParentComment = useCallback(
     (parentCommentId: string) => {
-      const threadRootId = threadRootIdContainingComment(
-        threads,
-        parentCommentId,
-      );
-      if (!threadRootId) return;
-      const parentIsThreadRoot = threads.some(
-        (t) => t.root._id === parentCommentId,
-      );
-      const needsExpandReplies =
-        !parentIsThreadRoot && expandedReplyRootId !== threadRootId;
-      if (needsExpandReplies) {
-        setExpandedReplyRootId(threadRootId);
-      }
-      const delay = needsExpandReplies ? 340 : 0;
-      window.setTimeout(() => {
-        const el = document.getElementById(`blog-comment-${parentCommentId}`);
-        if (!el) return;
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add(
-          "ring-2",
-          "ring-primary",
-          "ring-offset-2",
-          "ring-offset-background",
-        );
+      void expandAncestors(parentCommentId).then(() => {
         window.setTimeout(() => {
-          el.classList.remove(
+          const el = document.getElementById(`blog-comment-${parentCommentId}`);
+          if (!el) return;
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add(
             "ring-2",
             "ring-primary",
             "ring-offset-2",
             "ring-offset-background",
           );
-        }, 1800);
-      }, delay);
+          window.setTimeout(() => {
+            el.classList.remove(
+              "ring-2",
+              "ring-primary",
+              "ring-offset-2",
+              "ring-offset-background",
+            );
+          }, 1800);
+        }, 280);
+      });
     },
-    [threads, expandedReplyRootId],
+    [expandAncestors],
   );
   const saveEdit = async () => {
     if (!token || !editingId || editDoc == null) return;
     const serialized = JSON.stringify(editDoc);
-    if (
-      collectDocText(editDoc).trim().length === 0 ||
-      serialized.length > 50000
-    )
-      return;
+    if (!isCommentDraftSubmittable(collectDocText(editDoc).trim(), editDoc)) return;
     setEditSaving(true);
     try {
       const { comment } = await blogApi.patchComment(
@@ -1886,9 +2000,7 @@ export function BlogCommentsSection({
         serialized,
         token,
       );
-      setComments((prev) =>
-        prev.map((x) => (x._id === comment._id ? comment : x)),
-      );
+      patchCommentInState(comment);
       cancelEdit();
     } catch (err) {
       toast.error(
@@ -1907,7 +2019,7 @@ export function BlogCommentsSection({
     try {
       await blogApi.deleteComment(username, slug, deleteTarget._id, token);
       setDeleteTarget(null);
-      await load();
+      await loadRoots(true);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Could not delete comment",
@@ -1934,15 +2046,15 @@ export function BlogCommentsSection({
         "flex h-10 min-w-10 shrink-0 items-center justify-center  border-2 border-border bg-card px-2",
         "font-mono text-xs font-black tabular-nums text-foreground shadow",
       )}
-      title={loading ? "Loading count…" : `${commentTotal} comments`}
+      title={rootsLoading ? "Loading count…" : `${postTotal} comments`}
       aria-label={
-        loading ? "Comment count loading" : `${commentTotal} comments`
+        rootsLoading ? "Comment count loading" : `${postTotal} comments`
       }
     >
-      {loading ? "…" : commentTotal > 99 ? "99+" : commentTotal}
+      {rootsLoading ? "…" : postTotal > 99 ? "99+" : postTotal}
     </span>
   );
-  const composerCompactBottom = !loading && comments.length === 0;
+  const composerCompactBottom = !rootsLoading && rootIds.length === 0;
   const composer = (
     <div
       id="blog-comment-composer-anchor"
@@ -1964,6 +2076,11 @@ export function BlogCommentsSection({
                 Cancel
               </button>
             </div>
+          ) : null}
+          {composerError ? (
+            <Alert status="error" className="p-3 font-mono text-[11px] leading-snug">
+              {composerError}
+            </Alert>
           ) : null}
           <div className="flex items-start gap-3">
             <div className="shrink-0 pt-1">
@@ -1996,20 +2113,18 @@ export function BlogCommentsSection({
                 <RichParagraphEditor
                   key={formKey}
                   initialDoc={draftDoc}
-                  onChange={setDraftDoc}
-                  editorPlaceholder="Share your thoughts…"
+                  onChange={handleDraftChange}
+                  editorPlaceholder="Share your thoughts… (max 80 words)"
                   className="min-h-[4.5rem] border-0 bg-transparent p-0 font-mono text-sm shadow-none focus-within:ring-0"
                 />
               </div>
-              {draftSerialized.length > 50000 ? (
-                <p className="font-mono text-[10px] text-destructive">
-                  Comment is too long.
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                  {draftWordCount} / {BLOG_COMMENT_MAX_WORDS} words
                 </p>
-              ) : null}
-              <div className="flex flex-wrap items-center justify-end gap-2">
                 <button
                   type="submit"
-                  disabled={submitting || !canSubmitNew}
+                  disabled={submitting}
                   className="border-2 border-border bg-primary px-5 py-2 font-mono text-xs font-black uppercase text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
                 >
                   {submitting ? "Posting…" : "Post"}
@@ -2071,13 +2186,13 @@ export function BlogCommentsSection({
 
       {composer}
 
-      {loading && (
+      {rootsLoading && (
         <p className="font-mono text-xs text-muted-foreground">
           Loading comments…
         </p>
       )}
 
-      {!loading && comments.length === 0 ? (
+      {!rootsLoading && rootIds.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center gap-2 py-2 text-center"
           role="status"
@@ -2094,112 +2209,44 @@ export function BlogCommentsSection({
         </div>
       ) : null}
 
-      {!loading && threads.length > 0 ? (
+      {!rootsLoading && rootIds.length > 0 ? (
         <ul className="space-y-3">
-          {threads.map(({ root, replies }) => {
-            const open = expandedReplyRootId === root._id;
-            const n = replies.length;
-            return (
-              <li key={root._id} className="space-y-2">
-                <CommentCardView
-                  c={root}
-                  variant="root"
-                  compact
-                  showTimelineDot={false}
-                  extraIndentPx={0}
-                  viewerId={viewerId}
-                  token={token}
-                  editingId={editingId}
-                  editDoc={editDoc}
-                  editSaving={editSaving}
-                  startEdit={startEdit}
-                  cancelEdit={cancelEdit}
-                  saveEdit={saveEdit}
-                  setEditDoc={setEditDoc}
-                  onToggleLike={onToggleLike}
-                  openAuth={openAuth}
-                  setReplyParentId={setReplyParentId}
-                  setDeleteTarget={setDeleteTarget}
-                  threadReplyCount={n}
-                  threadRepliesExpanded={open}
-                  onToggleThreadReplies={() => toggleThreadReplies(root._id)}
-                />
-
-                {n > 0 ? (
-                  <AnimatePresence initial={false}>
-                    {open ? (
-                      <motion.div
-                        key={`thread-${root._id}-replies`}
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <ul className="space-y-2 pt-1">
-                          {replies.map((reply, idx) => {
-                            const depth = replyDepthFromRoot(
-                              root._id,
-                              reply,
-                              commentById,
-                            );
-                            const indent =
-                              Math.min(Math.max(depth - 1, 0), 4) * 8;
-                            const parentComment = reply.parentId
-                              ? commentById.get(reply.parentId)
-                              : undefined;
-                            const replyParentAuthor = parentComment
-                              ? {
-                                  username: parentComment.author.username,
-                                  fullName: parentComment.author.fullName,
-                                }
-                              : null;
-                            return (
-                              <motion.li
-                                key={reply._id}
-                                initial={{ opacity: 0, x: -8 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{
-                                  duration: 0.18,
-                                  delay: idx * 0.035,
-                                }}
-                              >
-                                <CommentCardView
-                                  c={reply}
-                                  variant="reply"
-                                  compact
-                                  showTimelineDot
-                                  extraIndentPx={indent}
-                                  replyParentAuthor={replyParentAuthor}
-                                  onNavigateToParentComment={
-                                    navigateToParentComment
-                                  }
-                                  viewerId={viewerId}
-                                  token={token}
-                                  editingId={editingId}
-                                  editDoc={editDoc}
-                                  editSaving={editSaving}
-                                  startEdit={startEdit}
-                                  cancelEdit={cancelEdit}
-                                  saveEdit={saveEdit}
-                                  setEditDoc={setEditDoc}
-                                  onToggleLike={onToggleLike}
-                                  openAuth={openAuth}
-                                  setReplyParentId={setReplyParentId}
-                                  setDeleteTarget={setDeleteTarget}
-                                />
-                              </motion.li>
-                            );
-                          })}
-                        </ul>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                ) : null}
-              </li>
-            );
-          })}
+          {rootIds.map((rootId) => (
+            <CommentThreadNode
+              key={rootId}
+              commentId={rootId}
+              depth={0}
+              byId={byId}
+              branches={branches}
+              viewerId={viewerId}
+              token={token}
+              editingId={editingId}
+              editDoc={editDoc}
+              editSaving={editSaving}
+              startEdit={startEdit}
+              cancelEdit={cancelEdit}
+              saveEdit={saveEdit}
+              setEditDoc={setEditDoc}
+              onToggleLike={onToggleLike}
+              openAuth={openAuth}
+              setReplyParentId={setReplyParentId}
+              setDeleteTarget={setDeleteTarget}
+              onToggleReplies={toggleReplies}
+              onLoadMoreReplies={loadMoreReplies}
+              onNavigateToParentComment={navigateToParentComment}
+            />
+          ))}
         </ul>
+      ) : null}
+
+      {rootHasMore ? (
+        <div
+          ref={loadMoreRootsRef}
+          className="flex justify-center py-4 font-mono text-[10px] uppercase text-muted-foreground"
+          aria-hidden={!rootsLoadingMore}
+        >
+          {rootsLoadingMore ? "Loading more comments…" : ""}
+        </div>
       ) : null}
 
       <ConfirmDialog

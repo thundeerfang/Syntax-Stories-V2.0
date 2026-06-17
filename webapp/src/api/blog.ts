@@ -441,16 +441,38 @@ export const blogApi = {
   getComments: async (
     username: string,
     slug: string,
-    limit = 80,
-    accessToken?: string | null,
+    options?: {
+      limit?: number;
+      offset?: number;
+      parentId?: string | null;
+      sort?: "oldest" | "newest";
+      accessToken?: string | null;
+    },
   ): Promise<{
     success: boolean;
     comments: PublicBlogComment[];
     total: number;
+    postTotal: number;
+    offset: number;
+    limit: number;
+    hasMore: boolean;
   }> => {
     const u = encodeURIComponent(username);
     const s = encodeURIComponent(slug);
-    const url = `${getApiBase()}/api/blog/p/${u}/${s}/comments?limit=${encodeURIComponent(String(limit))}`;
+    const limit = options?.limit ?? 10;
+    const offset = options?.offset ?? 0;
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (options?.parentId != null && options.parentId.trim() !== "") {
+      params.set("parentId", options.parentId.trim());
+    }
+    if (options?.sort === "newest") {
+      params.set("sort", "newest");
+    }
+    const url = `${getApiBase()}/api/blog/p/${u}/${s}/comments?${params.toString()}`;
+    const accessToken = options?.accessToken;
     const r =
       accessToken && accessToken.trim() !== ""
         ? await blogAuthFetch(url, { method: "GET" }, accessToken)
@@ -460,12 +482,25 @@ export const blogApi = {
       message?: string;
       comments?: PublicBlogComment[];
       total?: number;
+      postTotal?: number;
+      offset?: number;
+      limit?: number;
+      hasMore?: boolean;
     };
     if (!r.ok) throw new Error(data.message ?? r.statusText);
     return {
       success: true,
       comments: data.comments ?? [],
       total: typeof data.total === "number" ? data.total : 0,
+      postTotal:
+        typeof data.postTotal === "number"
+          ? data.postTotal
+          : typeof data.total === "number"
+            ? data.total
+            : 0,
+      offset: typeof data.offset === "number" ? data.offset : offset,
+      limit: typeof data.limit === "number" ? data.limit : limit,
+      hasMore: data.hasMore === true,
     };
   },
   postComment: async (

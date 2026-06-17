@@ -13,6 +13,7 @@ class DashedBorderBox extends StatelessWidget {
     this.dashGap = 8,
     this.backgroundColor,
     this.padding,
+    this.expandWidth = true,
   });
 
   final Widget child;
@@ -22,6 +23,7 @@ class DashedBorderBox extends StatelessWidget {
   final double dashGap;
   final Color? backgroundColor;
   final EdgeInsetsGeometry? padding;
+  final bool expandWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -35,12 +37,100 @@ class DashedBorderBox extends StatelessWidget {
         dashGap: dashGap,
       ),
       child: Container(
-        width: double.infinity,
+        width: expandWidth ? double.infinity : null,
         color: backgroundColor,
         padding: padding,
         child: child,
       ),
     );
+  }
+}
+
+/// Circular dashed stroke — app bar logo ring.
+class DashedBorderCircle extends StatelessWidget {
+  const DashedBorderCircle({
+    super.key,
+    required this.size,
+    required this.child,
+    this.color,
+    this.strokeWidth = 2,
+    this.dashLength = 5,
+    this.dashGap = 4,
+  });
+
+  final double size;
+  final Widget child;
+  final Color? color;
+  final double strokeWidth;
+  final double dashLength;
+  final double dashGap;
+
+  @override
+  Widget build(BuildContext context) {
+    final strokeColor = color ?? Theme.of(context).colorScheme.primary;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _DashedCirclePainter(
+          color: strokeColor,
+          strokeWidth: strokeWidth,
+          dashLength: dashLength,
+          dashGap: dashGap,
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+}
+
+class _DashedCirclePainter extends CustomPainter {
+  _DashedCirclePainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.dashGap,
+  });
+
+  final Color color;
+  final double strokeWidth;
+  final double dashLength;
+  final double dashGap;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
+    final center = Offset(size.width / 2, size.height / 2);
+    final circumference = 2 * math.pi * radius;
+    final dashAngle = (dashLength / circumference) * 2 * math.pi;
+    final gapAngle = (dashGap / circumference) * 2 * math.pi;
+    var angle = -math.pi / 2;
+
+    while (angle < 3 * math.pi / 2) {
+      final end = math.min(angle + dashAngle, 3 * math.pi / 2);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        angle,
+        end - angle,
+        false,
+        paint,
+      );
+      angle += dashAngle + gapAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.dashLength != dashLength ||
+        oldDelegate.dashGap != dashGap;
   }
 }
 

@@ -17,7 +17,7 @@ import {
   resolveReferralInput,
   applyReferralOnNewUser,
 } from "../services/referral.service.js";
-import { LEGAL_SIGNUP_ACK_COOKIE } from "../admin-platform/cms/legal/legalSignupCookie.js";
+import { LEGAL_SIGNUP_ACK_COOKIE } from "../variable/constants.js";
 import { recordSignupLegalAcceptances } from "../admin-platform/cms/legal/recordLegalAcceptances.js";
 const PROVIDER_LABEL: Record<OAuthProviderKey, string> = {
   google: "Google",

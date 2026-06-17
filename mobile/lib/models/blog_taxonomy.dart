@@ -80,3 +80,33 @@ class BlogTaxonomyPage {
   final int limit;
   final bool hasMore;
 }
+
+class BlogTagsExplore {
+  const BlogTagsExplore({
+    this.trending = const [],
+    this.popular = const [],
+    this.recent = const [],
+  });
+
+  factory BlogTagsExplore.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const BlogTagsExplore();
+    List<BlogTaxonomyRow> rows(dynamic value) {
+      if (value is! List) return const [];
+      return value
+          .whereType<Map>()
+          .map((e) => BlogTaxonomyRow.fromJson(Map<String, dynamic>.from(e)))
+          .where((r) => r.slug.isNotEmpty)
+          .toList();
+    }
+
+    return BlogTagsExplore(
+      trending: rows(json['trending']),
+      popular: rows(json['popular']),
+      recent: rows(json['recent']),
+    );
+  }
+
+  final List<BlogTaxonomyRow> trending;
+  final List<BlogTaxonomyRow> popular;
+  final List<BlogTaxonomyRow> recent;
+}

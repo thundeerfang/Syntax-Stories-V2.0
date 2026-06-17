@@ -501,36 +501,36 @@ function ReadOnlyGifHoverLayer({
   }, [open, gif, measureGifPopoverPosition]);
   useEffect(() => {
     const root = editor.view.dom;
+    const openFromElement = (el: HTMLElement) => {
+      anchorRef.current = el;
+      const rect = el.getBoundingClientRect();
+      const img = el.querySelector("img");
+      const url = img?.getAttribute("src")?.trim() ?? "";
+      const sourceUrl = el.getAttribute("data-gif-source")?.trim() || null;
+      if (!url) return;
+      const nw = img?.naturalWidth ?? 0;
+      const nh = img?.naturalHeight ?? 0;
+      const { width: estW, height: estH } = estimateGifPopoverDimensions(
+        nw,
+        nh,
+      );
+      const { top, left, side } = computeHoverCardPositionAuto(
+        rect,
+        "bottom",
+        "center",
+        estH,
+        estW,
+      );
+      setPosition({ top, left });
+      setResolvedSide(side);
+      setGif({ url, sourceUrl });
+      setOpen(true);
+      setIsClosing(false);
+    };
     const scheduleOpen = (el: HTMLElement) => {
       clearTimers();
       openTimerRef.current = setTimeout(() => {
-        anchorRef.current = el;
-        const rect = el.getBoundingClientRect();
-        const img = el.querySelector("img");
-        const url = img?.getAttribute("src")?.trim() ?? "";
-        const sourceUrl = el.getAttribute("data-gif-source")?.trim() || null;
-        if (!url) {
-          openTimerRef.current = null;
-          return;
-        }
-        const nw = img?.naturalWidth ?? 0;
-        const nh = img?.naturalHeight ?? 0;
-        const { width: estW, height: estH } = estimateGifPopoverDimensions(
-          nw,
-          nh,
-        );
-        const { top, left, side } = computeHoverCardPositionAuto(
-          rect,
-          "bottom",
-          "center",
-          estH,
-          estW,
-        );
-        setPosition({ top, left });
-        setResolvedSide(side);
-        setGif({ url, sourceUrl });
-        setOpen(true);
-        setIsClosing(false);
+        openFromElement(el);
         openTimerRef.current = null;
       }, 200);
     };
@@ -565,11 +565,23 @@ function ReadOnlyGifHoverLayer({
         }, LINK_HOVER_EXIT_MS);
       }, 100);
     };
+    const onClickCapture = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest(
+        READONLY_GIF_SEL,
+      ) as HTMLElement | null;
+      if (!el) return;
+      if (portalRef.current?.contains(e.target as Node)) return;
+      clearTimers();
+      activeGifRef.current = el;
+      openFromElement(el);
+    };
     root.addEventListener("mouseover", onMouseOver);
     root.addEventListener("mouseout", onMouseOut);
+    root.addEventListener("click", onClickCapture, true);
     return () => {
       root.removeEventListener("mouseover", onMouseOver);
       root.removeEventListener("mouseout", onMouseOut);
+      root.removeEventListener("click", onClickCapture, true);
       clearTimers();
     };
   }, [editor, clearTimers]);

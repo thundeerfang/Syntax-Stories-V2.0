@@ -150,7 +150,7 @@ export function stripLegacyGifBlocks(blocks: Block[]): Block[] {
       ).type !== "gif",
   );
 }
-const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/gif,image/webp";
+import { rasterAcceptAttribute } from "@syntax-stories/shared";
 import { BLOG_INLINE_IMAGE_MAX_MB } from "@/variable";
 const VIDEO_EMBED_MAX = 3;
 function ParagraphBlockEditor({
@@ -673,7 +673,7 @@ function ImageBlockEditor({
     <input
       ref={inputRef}
       type="file"
-      accept={IMAGE_ACCEPT}
+      accept={rasterAcceptAttribute()}
       className="hidden"
       onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
     />

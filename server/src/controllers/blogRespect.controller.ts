@@ -6,10 +6,8 @@ import {
   viewerRespectStatesForPosts,
 } from "../services/blogRespect.service.js";
 import { publishBlogPostStatsSnapshot } from "../services/blogStatsPublish.service.js";
-import {
-  attachAchievementsToResponse,
-  dispatchAchievementEvents,
-} from "../achievements/achievement.service.js";
+import { attachAchievementsToResponse } from "../services/achievements/achievementEngine.service.js";
+import { dispatchAchievementEvents } from "../services/achievements/dispatchAchievementEvents.js";
 function paramString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
   if (Array.isArray(v)) return v[0];

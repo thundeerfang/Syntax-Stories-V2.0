@@ -5,7 +5,7 @@ import { FollowModel } from "../models/Follow.js";
 import { BlogRepostModel } from "../models/BlogRepost.js";
 import type { AuthUser } from "../middlewares/auth/index.js";
 import { getRedis } from "../config/redis.js";
-import { AnalyticsEventModel } from "../models/index.js";
+import { AnalyticsEventModel } from "../models/AnalyticsEvent.js";
 import { writeAuditLog } from "../shared/audit/auditLog.js";
 import { AuditAction } from "../shared/audit/events.js";
 import { redisKeys } from "../shared/redis/keys.js";
@@ -15,10 +15,8 @@ import {
   computeReadStreakPayload,
   loadReadDayBucketsForHeatmap,
 } from "../services/readStreak.service.js";
-import {
-  attachAchievementsToResponse,
-  dispatchAchievementEvents,
-} from "../achievements/achievement.service.js";
+import { attachAchievementsToResponse } from "../services/achievements/achievementEngine.service.js";
+import { dispatchAchievementEvents } from "../services/achievements/dispatchAchievementEvents.js";
 import { attachStackAndToolsDisplay } from "../modules/profile/profile.enrich.js";
 import { PAGINATION, parseLimit } from "../shared/http/pagination.js";
 const FOLLOWED_FIELDS = "username fullName profileImg";

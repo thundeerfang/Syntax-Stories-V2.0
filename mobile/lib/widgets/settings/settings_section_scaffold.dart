@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_color_tokens.dart';
+import '../navigation/screen_app_bar.dart';
 import '../ui/app_pull_to_refresh.dart';
 
 /// Shared settings detail scaffold — title, description, body.
@@ -33,21 +34,7 @@ class SettingsSectionScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appColors.background,
-      appBar: AppBar(
-        backgroundColor: context.appColors.background,
-        foregroundColor: context.appColors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          title.toUpperCase(),
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
-        actions: actions,
-      ),
+      appBar: ScreenAppBar(title: title, actions: actions),
       body: _buildBody(context),
     );
   }

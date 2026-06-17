@@ -51,6 +51,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.2",
     "express-session": "^1.18.1",
+    "firebase-admin": "^13.10.0",
     "flexsearch": "^0.8.212",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",

@@ -39,6 +39,7 @@ const BlogCommentSchema = new Schema<IBlogComment>(
   { timestamps: true },
 );
 BlogCommentSchema.index({ postId: 1, createdAt: -1 });
+BlogCommentSchema.index({ postId: 1, parentId: 1, createdAt: 1 });
 export const BlogCommentModel: Model<IBlogComment> =
   mongoose.models?.blogcomments ??
   mongoose.model<IBlogComment>("blogcomments", BlogCommentSchema);

@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_color_tokens.dart';
 
-/// Reusable destructive confirmation dialog — mirrors webapp `ConfirmDialog` danger tone.
+enum AppConfirmDialogVariant { danger, warning }
+
+/// Reusable confirmation dialog — mirrors webapp `ConfirmDialog` danger/warning tones.
 class AppConfirmDialog extends StatelessWidget {
   const AppConfirmDialog({
     super.key,
@@ -12,6 +14,7 @@ class AppConfirmDialog extends StatelessWidget {
     this.confirmLabel = 'CONFIRM',
     this.cancelLabel = 'CANCEL',
     this.confirming = false,
+    this.variant = AppConfirmDialogVariant.danger,
   });
 
   final String title;
@@ -19,6 +22,7 @@ class AppConfirmDialog extends StatelessWidget {
   final String confirmLabel;
   final String cancelLabel;
   final bool confirming;
+  final AppConfirmDialogVariant variant;
 
   /// Returns `true` when confirmed, `false` when cancelled, `null` when dismissed.
   static Future<bool?> show(
@@ -28,6 +32,7 @@ class AppConfirmDialog extends StatelessWidget {
     String confirmLabel = 'CONFIRM',
     String cancelLabel = 'CANCEL',
     bool barrierDismissible = true,
+    AppConfirmDialogVariant variant = AppConfirmDialogVariant.danger,
   }) {
     return showDialog<bool>(
       context: context,
@@ -37,13 +42,33 @@ class AppConfirmDialog extends StatelessWidget {
         message: message,
         confirmLabel: confirmLabel,
         cancelLabel: cancelLabel,
+        variant: variant,
       ),
     );
+  }
+
+  static Color _accentFor(AppConfirmDialogVariant variant, Color destructive) {
+    switch (variant) {
+      case AppConfirmDialogVariant.danger:
+        return destructive;
+      case AppConfirmDialogVariant.warning:
+        return const Color(0xFFFFB000);
+    }
+  }
+
+  static IconData _iconFor(AppConfirmDialogVariant variant) {
+    switch (variant) {
+      case AppConfirmDialogVariant.danger:
+        return Icons.delete_outline_rounded;
+      case AppConfirmDialogVariant.warning:
+        return Icons.warning_amber_rounded;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final accent = _accentFor(variant, colors.destructive);
     const panelBlack = Color(0xFF111111);
     const panelBlackDeep = Color(0xFF0A0A0A);
 
@@ -56,13 +81,13 @@ class AppConfirmDialog extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: panelBlack,
-            border: Border.all(color: colors.destructive.withValues(alpha: 0.45), width: 2),
+            border: Border.all(color: accent.withValues(alpha: 0.45), width: 2),
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color.lerp(panelBlack, colors.destructive, 0.42)!,
-                Color.lerp(panelBlack, colors.destructive, 0.22)!,
+                Color.lerp(panelBlack, accent, 0.42)!,
+                Color.lerp(panelBlack, accent, 0.22)!,
                 panelBlackDeep,
               ],
               stops: const [0.0, 0.42, 1.0],
@@ -77,8 +102,8 @@ class AppConfirmDialog extends StatelessWidget {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: colors.destructive.withValues(alpha: 0.18),
-                    border: Border.all(color: colors.destructive.withValues(alpha: 0.55), width: 2),
+                    color: accent.withValues(alpha: 0.18),
+                    border: Border.all(color: accent.withValues(alpha: 0.55), width: 2),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.35),
@@ -88,9 +113,9 @@ class AppConfirmDialog extends StatelessWidget {
                     ],
                   ),
                   child: Icon(
-                    Icons.delete_outline_rounded,
+                    _iconFor(variant),
                     size: 32,
-                    color: colors.destructive,
+                    color: accent,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -137,9 +162,11 @@ class AppConfirmDialog extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: confirming ? null : () => Navigator.of(context).pop(true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: colors.destructive,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: colors.destructive.withValues(alpha: 0.45),
+                          backgroundColor: accent,
+                          foregroundColor: variant == AppConfirmDialogVariant.warning
+                              ? const Color(0xFF1A1200)
+                              : Colors.white,
+                          disabledBackgroundColor: accent.withValues(alpha: 0.45),
                           disabledForegroundColor: Colors.white.withValues(alpha: 0.85),
                         ),
                         child: confirming

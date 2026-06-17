@@ -14,6 +14,7 @@ import '../../theme/app_color_tokens.dart';
 import '../../utils/gallery_image_picker.dart';
 import '../../utils/upload_image_formats.dart';
 import '../../utils/user_message_case.dart';
+import 'app_feedback_toast.dart';
 
 class ImageUploadAssetResult {
   const ImageUploadAssetResult({required this.url, this.imageAlt});
@@ -126,16 +127,8 @@ class _ImageUploadCropDialogState extends State<ImageUploadCropDialog> {
         return;
       }
 
+      AppFeedbackToast.success(context, _kind.successMessage);
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _kind.successMessage,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
       return;
     }
 

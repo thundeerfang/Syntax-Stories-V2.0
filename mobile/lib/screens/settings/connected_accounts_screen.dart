@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../services/auth_api.dart';
 import '../../services/oauth_launcher.dart';
 import '../../services/oauth_urls.dart';
@@ -12,7 +11,7 @@ import '../../widgets/connected_accounts/connected_account_card.dart';
 import '../../widgets/settings/settings_inventory_header.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
 import '../../widgets/ui/app_confirm_dialog.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 
 class ConnectedAccountsScreen extends StatefulWidget {
   const ConnectedAccountsScreen({super.key});
@@ -24,7 +23,6 @@ class ConnectedAccountsScreen extends StatefulWidget {
 class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
   final _api = AuthApi();
   String? _busyProviderId;
-  String? _feedback;
 
   Future<void> _pullRefresh() async {
     await context.read<AuthState>().refreshUser();
@@ -33,14 +31,11 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
   Future<void> _connect(OAuthProvider provider) async {
     final token = context.read<AuthState>().accessToken;
     if (token == null || token.isEmpty) {
-      setState(() => _feedback = 'Not signed in.');
+      AppFeedbackToast.error(context, 'Not signed in.');
       return;
     }
 
-    setState(() {
-      _busyProviderId = provider.name;
-      _feedback = null;
-    });
+    setState(() => _busyProviderId = provider.name);
 
     try {
       final redirectUrl = await _api.getLinkRedirectUrl(
@@ -49,22 +44,19 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
       );
       await launchOAuthUrl(OAuthUrls.withMobileReturnOrigin(redirectUrl));
       if (!mounted) return;
-      setState(() {
-        _busyProviderId = null;
-        _feedback = 'Complete linking in your browser, then return to the app.';
-      });
+      setState(() => _busyProviderId = null);
+      AppFeedbackToast.warning(
+        context,
+        'Complete linking in your browser, then return to the app.',
+      );
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      setState(() {
-        _busyProviderId = null;
-        _feedback = e.message;
-      });
+      setState(() => _busyProviderId = null);
+      AppFeedbackToast.error(context, formatUserMessage(e.message));
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _busyProviderId = null;
-        _feedback = 'Could not start linking.';
-      });
+      setState(() => _busyProviderId = null);
+      AppFeedbackToast.error(context, 'Could not start linking.');
     }
   }
 
@@ -81,43 +73,28 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
     final auth = context.read<AuthState>();
     final token = auth.accessToken;
     if (token == null || token.isEmpty) {
-      setState(() => _feedback = 'Not signed in.');
+      AppFeedbackToast.error(context, 'Not signed in.');
       return;
     }
 
-    setState(() {
-      _busyProviderId = provider.name;
-      _feedback = null;
-    });
+    setState(() => _busyProviderId = provider.name);
 
     try {
       await _api.disconnectProvider(accessToken: token, provider: provider.name);
       if (!mounted) return;
-      setState(() => _feedback = 'Connection removed. Logging out…');
+      AppFeedbackToast.success(context, 'Connection removed. Logging out…');
       await Future<void>.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
       await auth.logout();
     } on AuthApiException catch (e) {
       if (!mounted) return;
-      setState(() {
-        _busyProviderId = null;
-        _feedback = e.message;
-      });
+      setState(() => _busyProviderId = null);
+      AppFeedbackToast.error(context, formatUserMessage(e.message));
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _busyProviderId = null;
-        _feedback = 'Could not disconnect.';
-      });
+      setState(() => _busyProviderId = null);
+      AppFeedbackToast.error(context, 'Could not disconnect.');
     }
-  }
-
-  AppFeedbackKind _feedbackKindFor(String message) {
-    if (message.contains('Complete linking')) return AppFeedbackKind.warning;
-    if (message.contains('removed') || message.contains('Logging out')) {
-      return AppFeedbackKind.success;
-    }
-    return AppFeedbackKind.error;
   }
 
   @override
@@ -136,10 +113,6 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppFeedbackSlot(
-            message: _feedback == null ? null : formatUserMessage(_feedback!),
-            kind: _feedback == null ? AppFeedbackKind.error : _feedbackKindFor(_feedback!),
-          ),
           SettingsInventoryHeader(
             title: 'LINKED PROVIDERS',
             count: linkedCount,

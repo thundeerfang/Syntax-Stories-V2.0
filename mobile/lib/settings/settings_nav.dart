@@ -70,7 +70,7 @@ const settingsNavItems = <SettingsNavItem>[
   ),
   SettingsNavItem(
     id: 'blog-streak',
-    label: 'Blog read streak',
+    label: 'Blog Read Streak',
     icon: Icons.local_fire_department_outlined,
     description: 'How your reading streak is calculated and displayed.',
     group: SettingsGroup.account,
@@ -93,7 +93,7 @@ const settingsNavItems = <SettingsNavItem>[
     id: 'syntax-card',
     label: 'Syntax card',
     icon: Icons.credit_card_outlined,
-    description: 'Your Syntax Stories membership card.',
+    description: 'Your square developer identity card — share on social.',
     group: SettingsGroup.other,
   ),
   SettingsNavItem(

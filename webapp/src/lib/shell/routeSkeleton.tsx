@@ -12,6 +12,7 @@ import {
   TrendingPageSkeletonInner,
   InvitePageSkeletonInner,
   AchievementsPageSkeletonInner,
+  PricingPageSkeletonInner,
 } from "@/components/skeletons";
 import {
   SquadDetailPageSkeleton,
@@ -78,10 +79,12 @@ export function pickRouteSkeleton(pathname: string): ReactNode {
   if (path.startsWith("/u/")) {
     return <ProfilePageSkeletonInner variant="public" />;
   }
+  if (path === "/pricing") {
+    return <PricingPageSkeletonInner />;
+  }
   if (
     path === "/" ||
     path === "/about" ||
-    path === "/pricing" ||
     path === "/wallet" ||
     path === "/feedback"
   ) {

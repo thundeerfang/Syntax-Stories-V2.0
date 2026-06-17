@@ -1,11 +1,6 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
-import { env } from "../config/env.js";
-import {
-  getFrontendRedirectBase,
-  getProductionAllowedOrigins,
-  isOriginAllowed,
-} from "../config/frontendUrl.js";
+import { getFrontendRedirectBase } from "../config/frontendUrl.js";
 import type { AuthUser } from "../middlewares/auth/verifyToken.js";
 import { UserModel, normalizeProfileImg } from "../models/User.js";
 import { ReferralShareEventModel } from "../models/ReferralShareEvent.js";
@@ -13,9 +8,6 @@ import {
   normalizeReferralCode,
   resolveCodeForDisplay,
   ensureReferralCodeForUser,
-  lookupReferrerIdByCode,
-  buildSignedReferralCookieValue,
-  REFERRAL_COOKIE,
 } from "../services/referral.service.js";
 import { listReferralConversions } from "../services/referral/referralConversion.service.js";
 import {
@@ -23,81 +15,14 @@ import {
   getReferralLeaderboardTop,
 } from "../services/referral/referralStatsCache.service.js";
 import { emitAppEvent } from "../shared/events/appEvents.js";
-function sanitizeRedirectTarget(raw: unknown): string {
-  const defaultPath = "/";
-  const base = getFrontendRedirectBase();
-  if (typeof raw !== "string" || !raw.trim()) return defaultPath;
-  const t = raw.trim();
-  if (t.startsWith("/")) {
-    if (t.includes("//")) return defaultPath;
-    return t;
-  }
-  try {
-    const u = new URL(t);
-    const allowedOrigins =
-      env.NODE_ENV === "production"
-        ? getProductionAllowedOrigins()
-        : base
-          ? [new URL(base).origin]
-          : [];
-    if (env.NODE_ENV === "production") {
-      if (!isOriginAllowed(u.origin, allowedOrigins)) return defaultPath;
-    } else if (base) {
-      const b = new URL(base).origin;
-      if (u.origin !== b) return defaultPath;
-    }
-    const path = u.pathname + u.search + u.hash;
-    return path || defaultPath;
-  } catch {
-    return defaultPath;
-  }
-}
 const SHARE_CHANNELS = new Set([
   "copy_link",
   "copy_code",
-  "copy_attach",
   "twitter",
   "whatsapp",
   "email",
   "other",
 ]);
-export async function attachReferralCookie(
-  req: Request,
-  res: Response,
-): Promise<void> {
-  try {
-    const nextPath = sanitizeRedirectTarget(req.query.next);
-    const base = (getFrontendRedirectBase() || "").replace(/\/$/, "");
-    const target = `${base}${nextPath.startsWith("/") ? nextPath : `/${nextPath}`}`;
-    const code = normalizeReferralCode(req.query.code);
-    if (!code) {
-      res.redirect(target);
-      return;
-    }
-    const referrerId = await lookupReferrerIdByCode(code);
-    const signed = referrerId ? buildSignedReferralCookieValue(code) : null;
-    if (signed) {
-      res.cookie(REFERRAL_COOKIE.name, signed, {
-        maxAge: REFERRAL_COOKIE.maxMs,
-        httpOnly: true,
-        secure: env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-      });
-      if (referrerId) {
-        emitAppEvent("referral.attached", {
-          referrerId,
-          code,
-        });
-      }
-    }
-    res.redirect(target);
-  } catch (err) {
-    console.error(err);
-    const fb = (getFrontendRedirectBase() || "/").replace(/\/$/, "") + "/";
-    res.redirect(fb);
-  }
-}
 export async function getInviteResolve(
   req: Request,
   res: Response,
@@ -133,18 +58,12 @@ export async function getInviteMe(req: Request, res: Response): Promise<void> {
     }
     const code = await ensureReferralCodeForUser(String(user._id));
     const fe = (getFrontendRedirectBase() || "").replace(/\/$/, "");
-    const be = (env.BACKEND_URL || "").replace(/\/$/, "");
     const invitePath = `/invite/${encodeURIComponent(code)}`;
     const inviteUrl = fe ? `${fe}${invitePath}` : invitePath;
-    const attachParams = new URLSearchParams({ code, next: "/" });
-    const attachUrl = be
-      ? `${be}/api/invites/attach?${attachParams}`
-      : `/api/invites/attach?${attachParams}`;
     res.status(200).json({
       success: true,
       referralCode: code,
       inviteUrl,
-      attachUrl,
     });
   } catch (err) {
     console.error(err);

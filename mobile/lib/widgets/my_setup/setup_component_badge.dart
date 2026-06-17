@@ -6,6 +6,7 @@ import '../../models/setup_item.dart';
 import '../../theme/app_color_tokens.dart';
 import '../../utils/resolve_profile_media_url.dart';
 import '../../utils/setup_url.dart';
+import '../ui/app_feedback_toast.dart';
 
 /// Active setup component card — square image, title, product link, top-right actions.
 class SetupComponentBadge extends StatelessWidget {
@@ -44,15 +45,7 @@ class SetupComponentBadge extends StatelessWidget {
     if (uri == null) return;
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not open link.',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppFeedbackToast.error(context, 'Could not open link.');
     }
   }
 

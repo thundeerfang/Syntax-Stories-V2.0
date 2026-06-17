@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_color_tokens.dart';
 import 'app_nav_colors.dart';
+import 'app_bar_logo_button.dart';
 
 /// Fixed top bar below the status bar — equal left/right inset, centered title.
 class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -13,7 +14,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onNotifications,
     this.onSettings,
     this.onCreate,
+    this.onLogoTap,
+    this.aboutVisited = false,
     this.showNotifications = true,
+    this.notificationUnreadCount = 0,
   });
 
   final String title;
@@ -21,10 +25,14 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onNotifications;
   final VoidCallback? onSettings;
   final VoidCallback? onCreate;
+  final VoidCallback? onLogoTap;
+  final bool aboutVisited;
   final bool showNotifications;
+  final int notificationUnreadCount;
 
   static const toolbarHeight = kToolbarHeight;
   static const edgePadding = 16.0;
+  static const logoAsset = 'assets/favicon.png';
   static const logoSize = 34.0;
   static const iconSize = 22.0;
   static const iconHitSize = 40.0;
@@ -40,7 +48,6 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final inactive = AppNavColors.inactive(context);
-    final primary = Theme.of(context).colorScheme.primary;
     final topInset = MediaQuery.paddingOf(context).top;
 
     return Material(
@@ -63,26 +70,35 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
                         padding: const EdgeInsets.only(left: edgePadding),
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Image.asset(
-                            'assets/logo.png',
-                            width: logoSize,
-                            height: logoSize,
-                            fit: BoxFit.contain,
-                          ),
+                          child: onLogoTap != null
+                              ? AppBarLogoButton(
+                                  onTap: onLogoTap!,
+                                  visited: aboutVisited,
+                                )
+                              : IgnorePointer(
+                                  child: Image.asset(
+                                    MainAppBar.logoAsset,
+                                    width: logoSize,
+                                    height: logoSize,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
                     Expanded(
-                      child: Text(
-                        title.toUpperCase(),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.4,
-                          color: context.appColors.foreground,
+                      child: IgnorePointer(
+                        child: Text(
+                          title.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.4,
+                            color: context.appColors.foreground,
+                          ),
                         ),
                       ),
                     ),
@@ -107,6 +123,7 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 tooltip: 'Notifications',
                                 color: inactive,
                                 onTap: onNotifications,
+                                badgeCount: notificationUnreadCount,
                               )
                             else
                               _TopNavIcon(
@@ -123,7 +140,10 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ),
-            Container(height: bottomBorderHeight, color: primary),
+            Container(
+              height: bottomBorderHeight,
+              color: AppNavColors.headerDivider(context),
+            ),
           ],
         ),
       ),
@@ -163,24 +183,58 @@ class _TopNavIcon extends StatelessWidget {
     required this.tooltip,
     required this.color,
     this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String tooltip;
   final Color color;
   final VoidCallback? onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onPrimary = context.appColors.primaryForeground;
+    final badgeLabel = badgeCount > 99 ? '99+' : '$badgeCount';
+
     return SizedBox(
       width: MainAppBar.iconHitSize,
       height: MainAppBar.iconHitSize,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        icon: Icon(icon, color: color, size: MainAppBar.iconSize),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IconButton(
+            tooltip: tooltip,
+            onPressed: onTap,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(icon, color: color, size: MainAppBar.iconSize),
+          ),
+          if (badgeCount > 0)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: primary,
+                  border: Border.all(color: onPrimary.withValues(alpha: 0.25)),
+                ),
+                child: Text(
+                  badgeLabel,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: onPrimary,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

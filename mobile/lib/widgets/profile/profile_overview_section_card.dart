@@ -4,22 +4,26 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_color_tokens.dart';
 import '../ui/dashed_border_box.dart';
 
-/// Industrial left-accent frame used on profile overview sections.
+/// Industrial bordered frame used on profile overview sections.
 class ProfileOverviewSectionCard extends StatelessWidget {
   const ProfileOverviewSectionCard({
     super.key,
     required this.title,
     required this.icon,
-    required this.child,
+    this.child,
     this.emptyMessage,
     this.isEmpty = false,
+    this.onViewAll,
+    this.headerOnly = false,
   });
 
   final String title;
   final IconData icon;
-  final Widget child;
+  final Widget? child;
   final String? emptyMessage;
   final bool isEmpty;
+  final VoidCallback? onViewAll;
+  final bool headerOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +37,7 @@ class ProfileOverviewSectionCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
           decoration: BoxDecoration(
             color: colors.card,
-            border: Border(
-              left: BorderSide(color: colors.primary, width: 4),
-              top: BorderSide(color: colors.border.withValues(alpha: 0.85), width: 3),
-              right: BorderSide(color: colors.border.withValues(alpha: 0.85), width: 3),
-              bottom: BorderSide(color: colors.border.withValues(alpha: 0.85), width: 3),
-            ),
+            border: Border.all(color: colors.border.withValues(alpha: 0.85), width: 3),
             boxShadow: [
               BoxShadow(color: colors.shadow, offset: const Offset(3, 3), blurRadius: 0),
             ],
@@ -63,27 +62,33 @@ class ProfileOverviewSectionCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (onViewAll != null) ...[
+                    const SizedBox(width: 8),
+                    _ViewAllButton(onTap: onViewAll!),
+                  ],
                 ],
               ),
-              const SizedBox(height: 14),
-              if (isEmpty && emptyMessage != null)
-                DashedBorderBox(
-                  color: colors.border.withValues(alpha: 0.55),
-                  backgroundColor: colors.muted.withValues(alpha: 0.05),
-                  padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-                  child: Text(
-                    emptyMessage!.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                      color: colors.mutedForeground,
+              if (!headerOnly) ...[
+                const SizedBox(height: 14),
+                if (isEmpty && emptyMessage != null)
+                  DashedBorderBox(
+                    color: colors.border.withValues(alpha: 0.55),
+                    backgroundColor: colors.muted.withValues(alpha: 0.05),
+                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                    child: Text(
+                      emptyMessage!.toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: colors.mutedForeground,
+                      ),
                     ),
-                  ),
-                )
-              else
-                child,
+                  )
+                else if (child != null)
+                  child!,
+              ],
             ],
           ),
         ),
@@ -102,6 +107,46 @@ class ProfileOverviewSectionCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ViewAllButton extends StatelessWidget {
+  const _ViewAllButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Material(
+      color: colors.card,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: colors.border.withValues(alpha: 0.85), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: colors.shadow.withValues(alpha: 0.1),
+                offset: const Offset(2, 2),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: Text(
+            'VIEW ALL',
+            style: GoogleFonts.inter(
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+              color: colors.foreground,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

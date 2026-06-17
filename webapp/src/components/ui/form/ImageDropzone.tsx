@@ -1,13 +1,16 @@
 "use client";
 import { useDropzone, type Accept } from "react-dropzone";
 import { toast } from "sonner";
+import {
+  RASTER_ACCEPT_EXTENSIONS,
+  RASTER_UPLOAD_REJECT_MESSAGE,
+} from "@syntax-stories/shared";
 import { cn } from "@/lib/core/utils";
+
 export const IMAGE_ACCEPT_RASTER: Accept = {
-  "image/jpeg": [".jpg", ".jpeg"],
-  "image/png": [".png"],
-  "image/gif": [".gif"],
-  "image/webp": [".webp"],
+  ...RASTER_ACCEPT_EXTENSIONS,
 };
+
 export type ImageDropzoneProps = {
   disabled?: boolean;
   maxSizeBytes: number;
@@ -17,6 +20,7 @@ export type ImageDropzoneProps = {
   dragActiveClassName?: string;
   children: React.ReactNode;
 };
+
 export function ImageDropzone({
   disabled,
   maxSizeBytes,
@@ -41,9 +45,7 @@ export function ImageDropzone({
       if (code === "file-too-large") {
         toast.error(`Image must be under ${maxMb}MB.`);
       } else if (code === "file-invalid-type") {
-        toast.error(
-          "Please use a supported image type (JPEG, PNG, GIF, WebP).",
-        );
+        toast.error(RASTER_UPLOAD_REJECT_MESSAGE);
       } else {
         toast.error("Could not use this file.");
       }

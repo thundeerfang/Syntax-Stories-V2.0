@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/project_item.dart';
 import '../../state/auth_state.dart';
 import '../../theme/app_color_tokens.dart';
@@ -15,7 +14,7 @@ import '../../widgets/settings/settings_empty_inventory.dart';
 import '../../widgets/settings/settings_inventory_header.dart';
 import '../../widgets/settings/settings_section_scaffold.dart';
 import '../../widgets/ui/app_confirm_dialog.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/github_connect_lottie.dart';
 import 'connected_accounts_screen.dart';
 
@@ -29,8 +28,6 @@ class OpenSourceScreen extends StatefulWidget {
 class _OpenSourceScreenState extends State<OpenSourceScreen> {
   static const _saveSuccessMessage = 'Open source updated.';
 
-  String? _feedback;
-
   List<ProjectItem> _githubProjects(List<ProjectItem> all) => ProjectItem.githubOnly(all);
 
   Future<void> _openConnectedAccounts() async {
@@ -41,8 +38,9 @@ class _OpenSourceScreenState extends State<OpenSourceScreen> {
 
   Future<void> _openImport(List<ProjectItem> allProjects) async {
     if (_githubProjects(allProjects).length >= openSourceMaxGithubRepos) {
-      setState(
-        () => _feedback = 'You can link up to $openSourceMaxGithubRepos repositories.',
+      AppFeedbackToast.error(
+        context,
+        'You can link up to $openSourceMaxGithubRepos repositories.',
       );
       return;
     }
@@ -51,7 +49,7 @@ class _OpenSourceScreenState extends State<OpenSourceScreen> {
       context,
       existingProjects: allProjects,
       onImported: () {
-        if (mounted) setState(() => _feedback = _saveSuccessMessage);
+        if (mounted) AppFeedbackToast.success(context, _saveSuccessMessage);
       },
     );
   }
@@ -76,26 +74,21 @@ class _OpenSourceScreenState extends State<OpenSourceScreen> {
 
     final repoFullName = item.repoFullName ?? repoName;
     final next = removeGithubRepoFromProjects(allProjects, repoFullName);
-    setState(() => _feedback = null);
 
     final err = await context.read<AuthState>().updateProfileSection('projects', {
       'projects': next.map((e) => e.toJson()).toList(),
     });
 
     if (!mounted) return;
-    setState(() {
-      _feedback = err == null ? _saveSuccessMessage : formatUserMessage(err);
-    });
+    if (err == null) {
+      AppFeedbackToast.success(context, _saveSuccessMessage);
+    } else {
+      AppFeedbackToast.error(context, formatUserMessage(err));
+    }
   }
 
   Future<void> _pullRefresh() async {
-    setState(() => _feedback = null);
     await context.read<AuthState>().refreshUser();
-  }
-
-  AppFeedbackKind _feedbackKindFor(String message) {
-    if (message == _saveSuccessMessage) return AppFeedbackKind.success;
-    return AppFeedbackKind.error;
   }
 
   @override
@@ -118,10 +111,6 @@ class _OpenSourceScreenState extends State<OpenSourceScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppFeedbackSlot(
-            message: _feedback == null ? null : formatUserMessage(_feedback!),
-            kind: _feedback == null ? AppFeedbackKind.error : _feedbackKindFor(_feedback!),
-          ),
           SettingsInventoryHeader(
             title: 'LINKED REPOSITORIES',
             count: linked.length,

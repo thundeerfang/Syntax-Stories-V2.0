@@ -8,6 +8,7 @@ import { SubscriptionModel } from "../../models/Subscription.js";
 import { PaymentLedgerModel } from "../../models/PaymentLedger.js";
 import { FollowModel } from "../../models/Follow.js";
 import { env } from "../../config/env.js";
+import { NOT_DELETED_FILTER } from "../../shared/db/notDeleted.js";
 import {
   encodeAdminUserRef,
   resolveManagementUserParam,
@@ -27,11 +28,6 @@ import {
   resolveEmailVerificationForAdmin,
 } from "./managementUserActivity.service.js";
 const ADMIN_PROFILE_ALLOWED = new Set(["fullName", "bio", "job"]);
-function notDeleted(): FilterQuery<IUser> {
-  return {
-    $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }],
-  };
-}
 function accountTypeFilter(
   accountType: string | undefined,
 ): FilterQuery<IUser> | Record<string, never> {
@@ -68,7 +64,7 @@ export async function searchUsers(req: Request, res: Response): Promise<void> {
     typeof req.query.accountType === "string"
       ? req.query.accountType.trim()
       : "";
-  const base = { ...notDeleted(), ...accountTypeFilter(accountType) };
+  const base = { ...NOT_DELETED_FILTER, ...accountTypeFilter(accountType) };
   let items: Array<Record<string, unknown>> = [];
   const exactEmail = await UserModel.findOne({
     ...base,
@@ -138,7 +134,7 @@ export async function getUsers(req: Request, res: Response): Promise<void> {
     }
   }
   const filter: FilterQuery<IUser> = {
-    ...notDeleted(),
+    ...NOT_DELETED_FILTER,
     ...accountTypeFilter(accountType),
   };
   if (cursorId) {
@@ -190,7 +186,7 @@ export async function getUserById(req: Request, res: Response): Promise<void> {
   }
   const user = await UserModel.findOne({
     _id: targetId,
-    ...notDeleted(),
+    ...NOT_DELETED_FILTER,
   })
     .select(
       "-googleToken -githubToken -facebookToken -xToken -appleToken -discordToken -twoFactorSecret -staffPasswordHash",
@@ -404,7 +400,7 @@ export async function patchUserProfile(
     }
     patch[key] = v;
   }
-  const user = await UserModel.findOne({ _id: id, ...notDeleted() }).select(
+  const user = await UserModel.findOne({ _id: id, ...NOT_DELETED_FILTER }).select(
     "profileVersion",
   );
   if (!user) {
@@ -448,7 +444,7 @@ export async function postLockUser(req: Request, res: Response): Promise<void> {
     return;
   }
   const result = await UserModel.updateOne(
-    { _id: id, ...notDeleted() },
+    { _id: id, ...NOT_DELETED_FILTER },
     { $set: { isActive: false } },
   );
   if (result.matchedCount === 0) {
@@ -474,7 +470,7 @@ export async function postUnlockUser(
     return;
   }
   const result = await UserModel.updateOne(
-    { _id: id, ...notDeleted() },
+    { _id: id, ...NOT_DELETED_FILTER },
     { $set: { isActive: true } },
   );
   if (result.matchedCount === 0) {

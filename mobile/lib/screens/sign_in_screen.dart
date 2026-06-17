@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/app_feedback.dart';
 import '../services/api_errors.dart';
 import '../services/auth_api.dart';
 import '../state/auth_state.dart';
@@ -11,7 +10,7 @@ import '../widgets/auth/auth_oauth_icon_row.dart';
 import '../widgets/auth/auth_screen_layout.dart';
 import '../widgets/auth/auth_text_field.dart';
 import '../widgets/auth/auth_ui.dart';
-import '../widgets/ui/app_feedback_banner.dart';
+import '../widgets/ui/app_feedback_toast.dart';
 import 'verify_code_screen.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -24,7 +23,6 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _email = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  String? _apiError;
 
   @override
   void dispose() {
@@ -32,16 +30,11 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  void _clearApiError() {
-    if (_apiError != null) setState(() => _apiError = null);
-  }
-
   void _setApiError(String message) {
-    setState(() => _apiError = message);
+    AppFeedbackToast.error(context, message);
   }
 
   Future<void> _send() async {
-    _clearApiError();
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final auth = context.read<AuthState>();
     try {
@@ -69,18 +62,12 @@ class _SignInScreenState extends State<SignInScreen> {
       title: 'Sign in',
       subtitle: 'Enter your email address',
       children: [
-        AppFeedbackSlot(
-          message: _apiError,
-          kind: AppFeedbackKind.error,
-          onDismiss: _clearApiError,
-        ),
         AuthTextField(
           controller: _email,
           label: 'EMAIL ADDRESS',
           rule: AppFieldRule.email,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
-          onChanged: (_) => _clearApiError(),
         ),
         const SizedBox(height: 16),
         AuthButton(

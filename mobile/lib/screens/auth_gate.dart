@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../widgets/ui/app_loading_indicator.dart';
 import '../state/auth_state.dart';
 import '../theme/app_color_tokens.dart';
 import 'auth_home_screen.dart';
@@ -16,16 +17,7 @@ class AuthGate extends StatelessWidget {
     if (auth.bootstrapping) {
       final colors = context.appColors;
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: colors.primary),
-              const SizedBox(height: 16),
-              const Text('Loading…'),
-            ],
-          ),
-        ),
+        body: AppLoadingCenter(color: colors.primary),
       );
     }
 

@@ -207,6 +207,7 @@ export interface PublicBlogComment {
   likeCount: number;
   likedByViewer?: boolean;
   author: PublicFeedPostAuthor;
+  directReplyCount?: number;
 }
 export function coerceParagraphDoc(payload: ParagraphPayload): any {
   if (payload.doc) return payload.doc;

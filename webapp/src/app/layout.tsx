@@ -9,7 +9,7 @@ import { SonnerToaster } from "@/components/retroui";
 import { UiProcessingShield } from "@/components/ui/feedback";
 import { Providers } from "./providers";
 import { ConnectivityGate } from "@/features/connectivity";
-import { StorageGate } from "@/features/platform";
+import { MobileAppScreenLock, StorageGate } from "@/features/platform";
 import { NotificationRealtimeBridge } from "@/components/notifications/NotificationRealtimeBridge";
 import { GlobalEngagementEffects } from "@/components/effects";
 import {
@@ -17,6 +17,8 @@ import {
   AchievementRealtimeBridge,
 } from "@/components/achievements";
 import { NavigationRecovery } from "@/components/shell/NavigationRecovery";
+
+import { MOBILE_BROWSER_LOCK_BOOTSTRAP_SCRIPT } from "@/lib/dom/mobileBrowserLockBootstrap";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -50,6 +52,12 @@ export default function RootLayout({
           id="syntax-stories-theme-init"
           dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
         />
+        <script
+          id="syntax-stories-mobile-lock-init"
+          dangerouslySetInnerHTML={{
+            __html: MOBILE_BROWSER_LOCK_BOOTSTRAP_SCRIPT,
+          }}
+        />
       </head>
       <body className={`${inter.variable} antialiased`}>
         <Providers>
@@ -64,6 +72,7 @@ export default function RootLayout({
           <AchievementCelebrationHost />
           <AchievementRealtimeBridge />
           <GlobalEngagementEffects />
+          <MobileAppScreenLock />
           <ConnectivityGate />
           <StorageGate />
         </Providers>

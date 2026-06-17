@@ -4,7 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/app_feedback.dart';
 import '../../theme/app_color_tokens.dart';
 
-/// Inline page feedback — use instead of SnackBars on auth screens.
+/// Inline page feedback — used for composer/field-scoped messages. For transient
+/// action feedback app-wide, prefer [AppFeedbackToast].
 class AppFeedbackBanner extends StatelessWidget {
   const AppFeedbackBanner({
     super.key,

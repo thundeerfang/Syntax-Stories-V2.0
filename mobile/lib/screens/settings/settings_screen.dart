@@ -16,7 +16,9 @@ import '../../widgets/profile/edit_profile_hero.dart';
 import '../../widgets/profile/edit_profile_portfolio_card.dart';
 import '../../widgets/profile/edit_profile_social_card.dart';
 import '../../widgets/profile/profile_image_upload_dialog.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
 import '../../widgets/ui/app_pull_to_refresh.dart';
 import 'refer_earn_screen.dart';
 import 'settings_section_screen.dart';
@@ -29,6 +31,7 @@ import 'blog_streak_screen.dart';
 import 'update_email_screen.dart';
 import 'notifications_screen.dart';
 import 'projects_screen.dart';
+import 'syntax_card_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -100,13 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await Clipboard.setData(ClipboardData(text: url));
     if (!mounted) return;
     setState(() => _linkCopied = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Invite link copied', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    AppFeedbackToast.success(context, 'Invite link copied');
     Future<void>.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _linkCopied = false);
     });
@@ -189,6 +186,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       return;
     }
+    if (item.id == 'syntax-card') {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(builder: (_) => const SyntaxCardScreen()),
+      );
+      return;
+    }
     if (item.id == 'notifications') {
       Navigator.of(context).push<void>(
         MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
@@ -230,20 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appColors.background,
-      appBar: AppBar(
-        backgroundColor: context.appColors.background,
-        foregroundColor: context.appColors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'SETTINGS',
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ),
+      appBar: const ScreenAppBar(title: 'Settings'),
       body: AppPullToRefresh(
         onRefresh: _refreshSettings,
         child: ListView(
@@ -681,7 +671,6 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
   late final TextEditingController _youtube;
 
   bool _saving = false;
-  String? _feedback;
 
   @override
   void initState() {
@@ -723,10 +712,7 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _saving = true;
-      _feedback = null;
-    });
+    setState(() => _saving = true);
 
     final auth = context.read<AuthState>();
     final basicErr = await auth.updateProfileSection('basic', {
@@ -737,10 +723,8 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
     });
     if (!mounted) return;
     if (basicErr != null) {
-      setState(() {
-        _saving = false;
-        _feedback = basicErr;
-      });
+      setState(() => _saving = false);
+      AppFeedbackToast.error(context, basicErr);
       return;
     }
 
@@ -751,10 +735,12 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
       'youtube': _youtube.text.trim(),
     });
     if (!mounted) return;
-    setState(() {
-      _saving = false;
-      _feedback = socialErr ?? 'Profile saved.';
-    });
+    setState(() => _saving = false);
+    if (socialErr != null) {
+      AppFeedbackToast.error(context, socialErr);
+      return;
+    }
+    AppFeedbackToast.success(context, 'Profile saved.');
   }
 
   void _openImageUpload(ProfileImageUploadKind kind) {
@@ -762,7 +748,6 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
   }
 
   Future<void> _reset() async {
-    setState(() => _feedback = null);
     await context.read<AuthState>().refreshUser();
     if (!mounted) return;
     _applyUserToForm(context.read<AuthState>().user);
@@ -783,20 +768,7 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
 
     return Scaffold(
       backgroundColor: context.appColors.background,
-      appBar: AppBar(
-        backgroundColor: context.appColors.background,
-        foregroundColor: context.appColors.foreground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'EDIT PROFILE',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
-      ),
+      appBar: const ScreenAppBar(title: 'Edit Profile'),
       body: AppPullToRefresh(
         onRefresh: _pullRefresh,
         child: Form(
@@ -817,33 +789,6 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_feedback != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: _feedback == 'Profile saved.'
-                            ? context.appColors.muted.withValues(alpha: 0.35)
-                            : context.appColors.destructive.withValues(alpha: 0.08),
-                        border: Border.all(
-                          color: _feedback == 'Profile saved.'
-                              ? context.appColors.border.withValues(alpha: 0.45)
-                              : context.appColors.destructive.withValues(alpha: 0.45),
-                          width: 2,
-                        ),
-                      ),
-                      child: Text(
-                        _feedback!,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: _feedback == 'Profile saved.'
-                              ? context.appColors.foreground
-                              : context.appColors.destructive,
-                        ),
-                      ),
-                    ),
-                  ],
                   AuthTextField(
                     controller: _fullName,
                     label: 'FULL NAME',

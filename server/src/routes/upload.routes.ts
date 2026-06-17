@@ -36,8 +36,9 @@ const {
   media: MEDIA_DIR,
   orgLogos: ORG_LOGOS_DIR,
 } = getDefaultUploadStorage().dirs;
-const LOGO_UPLOAD_REJECT_MESSAGE =
-  "Please upload a JPEG, PNG, WebP, or iPhone photo (HEIC) for logos.";
+import {
+  LOGO_UPLOAD_REJECT_MESSAGE,
+} from "@syntax-stories/shared";
 const uploadAvatarMw = createImageMasterMulter("avatar");
 const uploadCoverMw = createImageMasterMulter("cover");
 const uploadMediaMw = createImageMasterMulter("media");

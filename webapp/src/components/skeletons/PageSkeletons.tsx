@@ -9,7 +9,7 @@ import {
   BLOG_FEED_GRID_CLASS,
   BLOG_FEED_GRID_ITEM_CLASS,
 } from "@/lib/styles/blog";
-import { dashboard, layout, shell, squads } from "@/lib/styles";
+import { dashboard, layout, retro, shell, squads } from "@/lib/styles";
 export function ProfileCardSkeleton(
   props: Readonly<{
     lines?: number;
@@ -1037,6 +1037,72 @@ export function ContactPageSkeletonInner() {
     </div>
   );
 }
+
+function PricingPlanCardSkeleton({ featured = false }: { featured?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-col border-4 border-border bg-card shadow",
+        featured && "border-primary",
+      )}
+      aria-hidden
+    >
+      <div className="flex flex-1 flex-col gap-5 p-6 pt-8 sm:p-7">
+        <div className="space-y-2 border-b-2 border-border pb-5">
+          <SkBar className="h-5 w-32" />
+          <SkBar className="h-3 w-full" />
+          <SkBar className="h-3 w-[88%]" />
+        </div>
+        <div className="space-y-2">
+          <SkBar className="h-10 w-28" />
+          <SkBar className="h-3 w-20" />
+        </div>
+        <ul className="flex flex-1 flex-col gap-3">
+          {["pf-0", "pf-1", "pf-2", "pf-3", "pf-4"].map((id) => (
+            <li key={id} className="flex gap-3">
+              <SkBlock className="size-6 shrink-0 animate-pulse border-2 border-border bg-muted/40" />
+              <SkBar className="h-3 w-full" />
+            </li>
+          ))}
+        </ul>
+        <div className="mt-auto border-t-2 border-dashed border-border pt-5">
+          <SkBlock className="h-12 w-full animate-pulse border-2 border-border bg-muted/30 shadow" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PricingPlansGridSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3 md:gap-8"
+      aria-hidden
+    >
+      <PricingPlanCardSkeleton />
+      <PricingPlanCardSkeleton featured />
+      <PricingPlanCardSkeleton />
+    </div>
+  );
+}
+
+export function PricingPageSkeletonInner() {
+  return (
+    <div className={shell.contentRail}>
+      <div className="w-full space-y-6 md:space-y-8">
+        <header className="w-full space-y-3">
+          <SkBar className="h-2.5 w-36" />
+          <SkBar className="h-10 w-full max-w-xl" />
+          <SkBar className="h-10 w-full max-w-lg md:h-12" />
+        </header>
+        <section aria-hidden className="space-y-6">
+          <PricingPlansGridSkeleton />
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsSidebarSkeleton({ itemCount }: { itemCount: number }) {
   return (
     <div className="space-y-4">
@@ -1183,35 +1249,46 @@ export function FollowingToolbarSkeleton() {
 }
 function FollowingBlogCardSkeletonTile() {
   return (
-    <div className="flex min-h-0 w-full flex-col overflow-hidden border-[3px] border-border bg-card text-card-foreground">
-      <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 sm:gap-2 sm:p-2.5">
+    <article
+      className={cn(
+        "flex h-full min-h-0 w-full max-w-full flex-col overflow-hidden bg-card text-card-foreground",
+        retro.borderThick,
+        retro.shadowBlogCard,
+      )}
+      aria-hidden
+    >
+      <div className="flex min-h-0 flex-col gap-2 p-2 sm:gap-2 sm:p-2.5">
         <div className="-mx-2 -mt-2 w-[calc(100%+1rem)] shrink-0 overflow-hidden sm:-mx-2.5 sm:-mt-2.5 sm:w-[calc(100%+1.25rem)]">
-          <SkBlock className="h-[160px] w-full animate-pulse border-0 bg-muted/40 sm:h-[178px]" />
+          <SkBlock className="h-[160px] w-full animate-pulse border-b-[3px] border-border bg-muted/15 sm:h-[178px]" />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 items-center justify-between gap-3 pb-2.5">
-            <SkBlock className="h-5 w-24 animate-pulse border-2 border-border/60 bg-muted/25" />
-            <SkBar className="h-2 w-8" />
+
+        <div className="flex shrink-0 items-center justify-between gap-3 pb-2.5">
+          <SkBlock className="h-[22px] w-24 animate-pulse border-2 border-primary/30 bg-muted/25" />
+          <SkBar className="h-2 w-8" />
+        </div>
+
+        <div className="h-[38px] shrink-0 sm:h-[40px]">
+          <SkBar className="h-[15px] w-full sm:h-4" />
+          <SkBar className="mt-1 h-[15px] w-[72%] sm:h-4" />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 pt-1">
+          <SkBlock className="size-8 shrink-0 animate-pulse border-2 border-border bg-muted/30" />
+          <div className="min-w-0 flex-1 space-y-1">
+            <SkBar className="h-2.5 w-24" />
+            <SkBar className="h-2 w-20" />
           </div>
-          <div className="space-y-2">
-            <SkBar className="h-3 w-full" />
-            <SkBar className="h-3 w-[88%]" />
-          </div>
-          <div className="flex items-center gap-2 pt-1.5 sm:pt-2">
-            <SkBlock className="size-8 shrink-0 animate-pulse border border-border bg-muted/30 sm:size-9" />
-            <div className="min-w-0 flex-1 space-y-1">
-              <SkBar className="h-2 w-28" />
-              <SkBar className="h-2 w-20" />
-            </div>
-            <div className="ml-auto flex shrink-0 gap-1.5" aria-hidden>
-              {["eng-a", "eng-b", "eng-c", "eng-d"].map((id) => (
-                <SkBar key={id} className="size-9 shrink-0" />
-              ))}
-            </div>
+          <div className="ml-auto flex shrink-0 gap-1.5" aria-hidden>
+            {["eng-a", "eng-b", "eng-c", "eng-d"].map((id) => (
+              <SkBlock
+                key={id}
+                className="size-9 shrink-0 animate-pulse bg-muted/20"
+              />
+            ))}
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 export function FollowingPostsGridSkeleton({

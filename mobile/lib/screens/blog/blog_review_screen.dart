@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/blog_post.dart';
 import '../../models/blog_taxonomy.dart';
 import '../../models/blog_write_draft.dart';
@@ -22,7 +21,8 @@ import '../../utils/resolve_profile_media_url.dart';
 import '../../utils/user_message_case.dart';
 import '../../widgets/auth/auth_button.dart';
 import '../../widgets/auth/auth_text_field.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/dashed_border_box.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
 import 'blog_publish_result_screen.dart';
@@ -51,8 +51,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
   var _categoryPage = 0;
   var _categoryPageWindowStart = 0;
   final List<String> _tags = [];
-  String? _feedback;
-  AppFeedbackKind _feedbackKind = AppFeedbackKind.error;
   bool _submitting = false;
   String? _submitAction;
   Uint8List? _coverBytes;
@@ -92,13 +90,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     return filtered.sublist(start, end);
   }
 
-  void _setFeedback(String? message, {AppFeedbackKind kind = AppFeedbackKind.error}) {
-    setState(() {
-      _feedback = message;
-      _feedbackKind = kind;
-    });
-  }
-
   Future<void> _loadTaxonomy() async {
     setState(() => _loadingTaxonomy = true);
     try {
@@ -111,7 +102,8 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingTaxonomy = false);
-      _setFeedback(
+      AppFeedbackToast.error(
+        context,
         formatUserMessage(e is AuthApiException ? e.message : kGenericUserError),
       );
     }
@@ -166,7 +158,10 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     final next = toggleBlogCategory(_categories, row.slug);
     if (next.length == _categories.length) {
       if (!_categories.contains(row.slug)) {
-        _setFeedback('You can pick up to $blogMaxCategories categories.');
+        AppFeedbackToast.error(
+          context,
+          'You can pick up to $blogMaxCategories categories.',
+        );
       }
       return;
     }
@@ -180,7 +175,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
         _categoryLabels.remove(row.slug);
       }
     });
-    _setFeedback(null);
   }
 
   void _removeCategory(String slug) {
@@ -193,7 +187,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
   void _addTagFromInput() {
     final next = addBlogTag(_tags, _tagInput.text);
     if (next.length == _tags.length) {
-      _setFeedback('Could not add that tag.');
+      AppFeedbackToast.error(context, 'Could not add that tag.');
       return;
     }
     setState(() {
@@ -202,7 +196,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
         ..addAll(next);
       _tagInput.clear();
     });
-    _setFeedback(null);
   }
 
   void _addSuggestedTag(String slug) {
@@ -227,12 +220,11 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
   }
 
   Future<void> _pickCover() async {
-    _setFeedback(null);
     final result = await pickGalleryImageBytes();
     if (!mounted) return;
     if (result.cancelled) return;
     if (result.error != null) {
-      _setFeedback(formatUserMessage(result.error!));
+      AppFeedbackToast.error(context, formatUserMessage(result.error!));
       return;
     }
     setState(() {
@@ -266,22 +258,21 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
 
   Future<void> _submit({required bool publish}) async {
     if (_submitting) return;
-    _setFeedback(null);
 
     final blockError = validateBlogBlocksForPublish(widget.draft.blocks);
     if (blockError != null) {
-      _setFeedback(blockError);
+      AppFeedbackToast.error(context, blockError);
       return;
     }
 
     final token = context.read<AuthState>().accessToken;
     if (token == null || token.isEmpty) {
-      _setFeedback('Not signed in.');
+      AppFeedbackToast.error(context, 'Not signed in.');
       return;
     }
 
     if (_categories.length > blogMaxCategories) {
-      _setFeedback('Pick at most $blogMaxCategories categories.');
+      AppFeedbackToast.error(context, 'Pick at most $blogMaxCategories categories.');
       return;
     }
 
@@ -335,7 +326,10 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      _setFeedback(formatUserMessage(e is AuthApiException ? e.message : kGenericUserError));
+      AppFeedbackToast.error(
+        context,
+        formatUserMessage(e is AuthApiException ? e.message : kGenericUserError),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -355,20 +349,7 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     return UnfocusTapRegion(
       child: Scaffold(
         backgroundColor: colors.background,
-        appBar: AppBar(
-          backgroundColor: colors.background,
-          foregroundColor: colors.foreground,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          title: Text(
-            'REVIEW POST',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
+        appBar: const ScreenAppBar(title: 'Review Post'),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
@@ -391,7 +372,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            AppFeedbackSlot(message: _feedback, kind: _feedbackKind),
             _SectionLabel(label: 'Cover image'),
             const SizedBox(height: 10),
             if (_coverBytes != null)
@@ -586,7 +566,6 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                     hintText: 'Add tag',
                     showFieldLabel: false,
                     showCounter: false,
-                    onChanged: (_) => _setFeedback(null),
                   ),
                 ),
                 const SizedBox(width: 8),

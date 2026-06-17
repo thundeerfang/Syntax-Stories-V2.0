@@ -1,22 +1,27 @@
-import {
-  LEGAL_INLINE_CODE,
-  LEGAL_UNAVAILABLE_BODY,
-  LEGAL_UNAVAILABLE_TITLE,
-} from "./legalUi";
+import { LEGAL_UNAVAILABLE_BODY, LEGAL_UNAVAILABLE_TITLE } from "./legalUi";
+
 type Props = {
   title: string;
 };
+
+function unavailableMessage(title: string): string {
+  switch (title) {
+    case "Terms of Service":
+      return "No terms and conditions for now.";
+    case "Privacy Policy":
+      return "No privacy policy for now.";
+    case "User Data Deletion":
+      return "No user data deletion information for now.";
+    default:
+      return "No content available for now.";
+  }
+}
+
 export function LegalPolicyUnavailable({ title }: Props) {
   return (
     <div className="space-y-4">
       <h2 className={LEGAL_UNAVAILABLE_TITLE}>{title}</h2>
-      <p className={LEGAL_UNAVAILABLE_BODY}>
-        Legal content could not be loaded. Set{" "}
-        <code className={LEGAL_INLINE_CODE}>NEXT_PUBLIC_API_BASE_URL</code> to
-        your API origin (e.g.{" "}
-        <code className={LEGAL_INLINE_CODE}>http://localhost:7373</code>) and
-        ensure this policy is published (seed or admin).
-      </p>
+      <p className={LEGAL_UNAVAILABLE_BODY}>{unavailableMessage(title)}</p>
     </div>
   );
 }

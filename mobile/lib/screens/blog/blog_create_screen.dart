@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../models/app_feedback.dart';
 import '../../models/blog_block.dart';
 import '../../models/blog_write_draft.dart';
 import '../../theme/app_color_tokens.dart';
@@ -11,7 +10,8 @@ import '../../widgets/auth/auth_button.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../widgets/blog_write/blog_write_block_list.dart';
 import '../../widgets/blog_write/blog_write_orbit_fab.dart';
-import '../../widgets/ui/app_feedback_banner.dart';
+import '../../widgets/ui/app_feedback_toast.dart';
+import '../../widgets/navigation/screen_app_bar.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
 import 'blog_review_screen.dart';
 
@@ -30,21 +30,12 @@ class _BlogCreateScreenState extends State<BlogCreateScreen> {
   final _summary = TextEditingController();
 
   List<BlogBlock> _blocks = [createBlogBlock(BlogBlockType.paragraph)];
-  String? _feedback;
-  AppFeedbackKind _feedbackKind = AppFeedbackKind.error;
 
   @override
   void dispose() {
     _title.dispose();
     _summary.dispose();
     super.dispose();
-  }
-
-  void _setFeedback(String? message, {AppFeedbackKind kind = AppFeedbackKind.error}) {
-    setState(() {
-      _feedback = message;
-      _feedbackKind = kind;
-    });
   }
 
   void _addBlock(String type) {
@@ -57,17 +48,16 @@ class _BlogCreateScreenState extends State<BlogCreateScreen> {
   }
 
   void _continueToReview() {
-    _setFeedback(null);
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (!blogBlocksHaveContent(_blocks)) {
-      _setFeedback('Add at least one content block before continuing.');
+      AppFeedbackToast.error(context, 'Add at least one content block before continuing.');
       return;
     }
 
     final blockError = validateBlogBlocksForPublish(_blocks);
     if (blockError != null) {
-      _setFeedback(blockError);
+      AppFeedbackToast.error(context, blockError);
       return;
     }
 
@@ -91,20 +81,7 @@ class _BlogCreateScreenState extends State<BlogCreateScreen> {
     return UnfocusTapRegion(
       child: Scaffold(
         backgroundColor: colors.background,
-        appBar: AppBar(
-          backgroundColor: colors.background,
-          foregroundColor: colors.foreground,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          title: Text(
-            'NEW POST',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
+        appBar: const ScreenAppBar(title: 'New Post'),
         body: Stack(
           children: [
             Form(
@@ -131,7 +108,6 @@ class _BlogCreateScreenState extends State<BlogCreateScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              AppFeedbackSlot(message: _feedback, kind: _feedbackKind),
               AuthTextField(
                 controller: _title,
                 label: 'Title',

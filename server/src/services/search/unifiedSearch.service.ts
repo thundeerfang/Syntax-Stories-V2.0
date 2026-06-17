@@ -13,10 +13,10 @@ import {
 } from "./searchTaxonomy.service.js";
 import { searchUsersForUnified } from "./searchUsers.service.js";
 import type { SearchGroups, UnifiedSearchResult } from "./search.types.js";
+import { SEARCH_MIN_CHARS } from "@syntax-stories/shared";
 import {
   hashSearchQuery,
   normalizeSearchQuery,
-  SEARCH_MIN_CHARS,
 } from "./searchQuery.util.js";
 type SearchTypeKey = keyof SearchGroups;
 async function searchTagsIndexed(q: string, limit: number) {

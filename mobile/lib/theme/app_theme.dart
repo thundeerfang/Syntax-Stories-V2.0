@@ -46,6 +46,7 @@ class AppTheme {
     );
 
     return base.copyWith(
+      splashFactory: InkRipple.splashFactory,
       textTheme: text,
       appBarTheme: AppBarTheme(
         backgroundColor: tokens.background,
@@ -99,6 +100,16 @@ class AppTheme {
             fontWeight: FontWeight.w900,
             letterSpacing: 1.4,
           ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return tokens.primaryForeground.withValues(alpha: 0.22);
+            }
+            if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+              return tokens.primaryForeground.withValues(alpha: 0.1);
+            }
+            return null;
+          }),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -113,6 +124,38 @@ class AppTheme {
             fontWeight: FontWeight.w900,
             letterSpacing: 1.4,
           ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return tokens.primary.withValues(alpha: 0.16);
+            }
+            if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+              return tokens.primary.withValues(alpha: 0.08);
+            }
+            return null;
+          }),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(tokens.foreground),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return tokens.primary.withValues(alpha: 0.14);
+            }
+            return null;
+          }),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          splashFactory: InkRipple.splashFactory,
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return tokens.primary.withValues(alpha: 0.16);
+            }
+            return null;
+          }),
         ),
       ),
       checkboxTheme: CheckboxThemeData(

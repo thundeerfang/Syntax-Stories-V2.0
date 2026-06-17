@@ -97,7 +97,7 @@ export function BlogStreakSettingsContent() {
     <SettingsTabRoot className="w-full min-w-0">
       <SettingsSectionHeading
         icon={<Flame className="size-5" />}
-        title="Blog read streak"
+        title="Blog Read Streak"
         description="One UTC day = you view one published post. Your profile shows your streak (daily/weekly/monthly) from the same history."
       />
 

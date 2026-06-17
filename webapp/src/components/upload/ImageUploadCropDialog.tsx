@@ -20,6 +20,10 @@ import { cn } from "@/lib/core/utils";
 import { upload } from "@/lib/styles";
 import { FullWidthSegmentedControl } from "@/components/ui/layout";
 import {
+  type ImageClientValidationProfile,
+  validateImageFileClient,
+} from "@syntax-stories/shared";
+import {
   exportCroppedImageFile,
   imageAdjustmentsPreviewFilter,
   NEUTRAL_IMAGE_ADJUSTMENTS,
@@ -41,6 +45,7 @@ export type ImageUploadCropDialogProps = {
   aspect?: number;
   cropMinHeightClass?: string;
   accept?: Accept;
+  validationProfile?: ImageClientValidationProfile;
   passthroughWhen?: (file: File) => boolean;
   secondaryDropzoneHint?: string;
   onConfirm: (
@@ -105,6 +110,7 @@ export function ImageUploadCropDialog({
   aspect = 1,
   cropMinHeightClass = upload.cropMinHeight,
   accept,
+  validationProfile = "raster",
   passthroughWhen,
   secondaryDropzoneHint = "Crop to frame, then confirm",
   onConfirm,
@@ -157,39 +163,39 @@ export function ImageUploadCropDialog({
   const handleFile = useCallback(
     (file: File | null) => {
       if (!file) return;
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file.");
-        return;
-      }
-      if (file.size > maxSizeBytes) {
-        toast.error(
-          `Image must be under ${Math.round(maxSizeBytes / (1024 * 1024))} MB.`,
-        );
-        return;
-      }
-      const usePassthrough = passthroughWhen?.(file) ?? false;
-      setPassthrough(usePassthrough);
-      setSelectedFile(file);
-      if (usePassthrough) {
+      void (async () => {
+        const result = await validateImageFileClient(file, {
+          profile: validationProfile,
+          maxBytes: maxSizeBytes,
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        const usePassthrough = passthroughWhen?.(file) ?? false;
+        setPassthrough(usePassthrough);
+        setSelectedFile(file);
+        if (usePassthrough) {
+          setImageUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(file);
+          });
+          setCroppedAreaPixels(null);
+          return;
+        }
         setImageUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
           return URL.createObjectURL(file);
         });
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setRotation(0);
+        setAdjustments({ ...NEUTRAL_IMAGE_ADJUSTMENTS });
+        setEditorTab("crop");
         setCroppedAreaPixels(null);
-        return;
-      }
-      setImageUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return URL.createObjectURL(file);
-      });
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
-      setRotation(0);
-      setAdjustments({ ...NEUTRAL_IMAGE_ADJUSTMENTS });
-      setEditorTab("crop");
-      setCroppedAreaPixels(null);
+      })();
     },
-    [maxSizeBytes, passthroughWhen],
+    [maxSizeBytes, passthroughWhen, validationProfile],
   );
   const onCropComplete = useCallback((_area: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels);

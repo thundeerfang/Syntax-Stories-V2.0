@@ -9,10 +9,8 @@ import {
 } from "../infrastructure/mail/sendAuthEmail.js";
 import type { AuthUser } from "../middlewares/auth/verifyToken.js";
 import { parseMultipartFeedback } from "../middlewares/feedback/feedbackMultipart.validation.js";
-import {
-  attachAchievementsToResponse,
-  dispatchAchievementEvents,
-} from "../achievements/achievement.service.js";
+import { attachAchievementsToResponse } from "../services/achievements/achievementEngine.service.js";
+import { dispatchAchievementEvents } from "../services/achievements/dispatchAchievementEvents.js";
 import { UserModel } from "../models/User.js";
 import { FeedbackSubmissionModel } from "../models/FeedbackSubmission.js";
 import { FeedbackCategoryModel } from "../models/FeedbackCategory.js";

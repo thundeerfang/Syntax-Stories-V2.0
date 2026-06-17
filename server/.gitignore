@@ -9,6 +9,9 @@ node_modules/
 dist
 coverage/
 
+# Firebase / local secrets (never commit)
+secrets/
+
 privateKey.pem
 publicKey.pem
 keys/

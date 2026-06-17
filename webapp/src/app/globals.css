@@ -330,11 +330,11 @@ altcha-widget {
 }
 
 @utility squad-discover-card-slide {
-  @apply flex-none shrink-0 snap-start snap-always w-[min(22.5rem,calc(100vw-2rem))];
+  @apply flex-none shrink-0 snap-start snap-always w-[min(23.5rem,calc(100vw-2rem))] lg:w-[27.2rem];
 }
 
 @utility squad-discover-card-grid {
-  @apply flex w-full flex-wrap justify-items-center gap-4;
+  @apply grid w-full grid-cols-1 justify-items-center gap-4 sm:grid-cols-2 lg:grid-cols-3;
 }
 
 @utility legal-icon-tile-base {
@@ -744,6 +744,10 @@ html * {
   cursor: pointer;
 }
 
+.ss-read-only-rich [data-inline-gif='true'] {
+  cursor: pointer;
+}
+
 .ss-rich-paragraph-editor [data-inline-gif='true'] {
   cursor: default;
 }
@@ -904,6 +908,38 @@ html * {
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+
+html.ss-mobile-browser-lock {
+  overflow: hidden !important;
+  height: 100%;
+  background-color: var(--background);
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+html.ss-mobile-browser-lock.dark {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+
+html.ss-mobile-browser-lock body {
+  overflow: hidden !important;
+  height: 100%;
+  touch-action: none;
+}
+
+html.ss-mobile-browser-lock #ss-app-shell {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.ss-mobile-browser-lock [data-ss-mobile-lock] {
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 /* Rail / feed empty & not-found panels — soft primary wash; layout grid stays visible. */

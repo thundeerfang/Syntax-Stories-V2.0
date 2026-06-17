@@ -11,7 +11,6 @@ import {
   Users,
   Link2,
   Hash,
-  ChevronDown,
   Sparkles,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
@@ -29,7 +28,6 @@ type InviteMeResponse = {
   success: boolean;
   referralCode?: string;
   inviteUrl?: string;
-  attachUrl?: string;
   message?: string;
 };
 
@@ -59,7 +57,7 @@ type InviteReferredResponse = {
 /** Max friends shown in the roster (fixed layout). */
 const MAX_ROSTER = 10;
 
-type CopyKind = "link" | "attach" | "code";
+type CopyKind = "link" | "code";
 
 function CopyButton({
   label,
@@ -148,7 +146,6 @@ export default function InviteDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [referredError, setReferredError] = useState<string | null>(null);
   const [copied, setCopied] = useState<CopyKind | null>(null);
-  const [showAttach, setShowAttach] = useState(false);
 
   const load = useCallback(async () => {
     const t = useAuthStore.getState().token;
@@ -234,7 +231,6 @@ export default function InviteDashboardPage() {
       setTimeout(() => setCopied(null), 2000);
       const channelMap: Record<CopyKind, InviteShareChannel> = {
         link: "copy_link",
-        attach: "copy_attach",
         code: "copy_code",
       };
       const t = useAuthStore.getState().token;
@@ -288,7 +284,7 @@ export default function InviteDashboardPage() {
         {/* Share & copy + stats side-by-side */}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,300px)] lg:items-stretch xl:gap-6">
           <section className="border-4 border-border bg-card shadow min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-border bg-muted/30 px-4 py-3 sm:px-5">
+            <div className="flex flex-wrap items-center gap-3 border-b-4 border-border bg-muted/30 px-4 py-3 sm:px-5">
               <div className="flex items-center gap-2">
                 <span className="flex size-8 items-center justify-center border-2 border-border bg-background shadow-sm">
                   <Link2 className="size-4 text-primary" aria-hidden />
@@ -298,20 +294,10 @@ export default function InviteDashboardPage() {
                     Share &amp; copy
                   </p>
                   <p className="text-[10px] font-medium text-muted-foreground">
-                    Invite URL · code · direct signup link
+                    Invite URL · referral code
                   </p>
                 </div>
               </div>
-              {me?.inviteUrl && (
-                <CopyButton
-                  primary
-                  label="Copy invite link"
-                  copied={copied === "link"}
-                  onCopy={() =>
-                    void copyText(me.inviteUrl!, "link", "Invite link copied")
-                  }
-                />
-              )}
             </div>
 
             <div className="space-y-5 p-4 sm:p-5 md:p-6">
@@ -333,7 +319,8 @@ export default function InviteDashboardPage() {
                         {me.inviteUrl}
                       </div>
                       <CopyButton
-                        label="Copy URL"
+                        primary
+                        label="Copy invite link"
                         copied={copied === "link"}
                         onCopy={() =>
                           void copyText(
@@ -370,71 +357,42 @@ export default function InviteDashboardPage() {
                       </div>
                     </div>
                   )}
-
-                  {me.attachUrl && (
-                    <div className="border-t-2 border-dashed border-border pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowAttach((v) => !v)}
-                        className="flex w-full items-center justify-between gap-2 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Sparkles className="size-3.5" aria-hidden />
-                          Direct signup URL (sets referral cookie)
-                        </span>
-                        <ChevronDown
-                          className={cn(
-                            "size-4 transition-transform",
-                            showAttach && "rotate-180",
-                          )}
-                          aria-hidden
-                        />
-                      </button>
-                      {showAttach && (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-[11px] leading-relaxed text-muted-foreground">
-                            For email buttons or deep links — hits the API
-                            first, then redirects with your referral cookie set.
-                          </p>
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-                            <div className="min-w-0 flex-1 break-all border-2 border-border bg-muted/15 px-3 py-2 font-mono text-[10px] leading-snug">
-                              {me.attachUrl}
-                            </div>
-                            <CopyButton
-                              label="Copy signup URL"
-                              copied={copied === "attach"}
-                              onCopy={() =>
-                                void copyText(
-                                  me.attachUrl!,
-                                  "attach",
-                                  "Signup URL copied",
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </>
               )}
             </div>
           </section>
 
           <aside className="flex min-w-0 flex-col gap-3 lg:min-h-full">
-            <div className="border-4 border-border bg-card p-4 shadow-sm flex-1">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                <Users className="size-4 shrink-0 text-primary" aria-hidden />
-                Friends joined
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex aspect-square min-h-0 flex-col border-4 border-border bg-card p-3 shadow-sm sm:p-4">
+                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground sm:gap-2 sm:text-[10px]">
+                  <Users className="size-3.5 shrink-0 text-primary sm:size-4" aria-hidden />
+                  Friends joined
+                </div>
+                <p className="mt-auto text-2xl font-black tabular-nums text-foreground sm:text-3xl">
+                  {converted}
+                </p>
+                <p className="mt-1 text-[9px] font-medium text-muted-foreground sm:text-[10px]">
+                  Completed signups
+                </p>
               </div>
-              <p className="mt-2 text-3xl font-black tabular-nums text-foreground">
-                {converted}
-              </p>
-              <p className="mt-1 text-[10px] font-medium text-muted-foreground">
-                Completed signups
-              </p>
+              <div className="flex aspect-square min-h-0 flex-col border-4 border-border bg-card p-3 shadow-sm sm:p-4">
+                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground sm:gap-2 sm:text-[10px]">
+                  <Sparkles
+                    className="size-3.5 shrink-0 text-primary sm:size-4"
+                    aria-hidden
+                  />
+                  Open slots
+                </div>
+                <p className="mt-auto text-2xl font-black tabular-nums text-foreground sm:text-3xl">
+                  {emptySlots}
+                </p>
+                <p className="mt-1 text-[9px] font-medium text-muted-foreground sm:text-[10px]">
+                  {emptySlots > 0 ? "until roster is full" : "roster is full"}
+                </p>
+              </div>
             </div>
-            <div className="border-4 border-border bg-card p-4 shadow-sm flex-1">
+            <div className="border-4 border-border bg-card p-4 shadow-sm">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 <UserPlus
                   className="size-4 shrink-0 text-primary"
@@ -447,21 +405,6 @@ export default function InviteDashboardPage() {
               </p>
               <p className="mt-1 text-[10px] font-medium text-muted-foreground">
                 Shown in your directory
-              </p>
-            </div>
-            <div className="border-4 border-border bg-card p-4 shadow-sm flex-1">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                <Sparkles
-                  className="size-4 shrink-0 text-primary"
-                  aria-hidden
-                />
-                Open slots
-              </div>
-              <p className="mt-2 text-3xl font-black tabular-nums text-foreground">
-                {emptySlots}
-              </p>
-              <p className="mt-1 text-[10px] font-medium text-muted-foreground">
-                Until roster is full
               </p>
             </div>
           </aside>

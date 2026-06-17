@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app_nav_colors.dart';
+import '../../theme/app_color_tokens.dart';
+import '../ui/app_tappable.dart';
 
 class CurvedBottomNavItem {
   const CurvedBottomNavItem({
@@ -87,6 +89,7 @@ class CurvedBottomNavBar extends StatelessWidget {
                 }
 
                 final selected = index == selectedIndex;
+                final colors = context.appColors;
                 return SizedBox(
                   width: width / items.length,
                   height: _barHeight,
@@ -94,6 +97,8 @@ class CurvedBottomNavBar extends StatelessWidget {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () => onTap(index),
+                      splashColor: appRippleOnSurface(colors),
+                      highlightColor: appRippleOnSurface(colors).withValues(alpha: 0.08),
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 6),
                         child: Column(
@@ -178,6 +183,8 @@ class _WriteButton extends StatelessWidget {
       shadowColor: background.withValues(alpha: 0.4),
       child: InkWell(
         onTap: onTap,
+        splashColor: foreground.withValues(alpha: 0.28),
+        highlightColor: foreground.withValues(alpha: 0.12),
         child: SizedBox(
           width: squareSize,
           height: squareSize,

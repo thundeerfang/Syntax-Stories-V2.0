@@ -11,6 +11,8 @@ import '../../utils/paragraph_extended_span_builder.dart';
 import '../../utils/url_normalize.dart';
 import '../../utils/user_message_case.dart';
 import '../auth/auth_button.dart';
+import '../ui/app_loading_indicator.dart';
+import '../ui/app_tappable.dart';
 import '../ui/unfocus_tap_region.dart';
 
 /// Web-style rich paragraph block editor: textarea + bold / italic / link / GIF.
@@ -19,10 +21,18 @@ class RichParagraphEditor extends StatefulWidget {
     super.key,
     required this.payload,
     required this.onPayloadChanged,
+    this.minLines = 4,
+    this.hintText = 'Write your paragraph…',
+    this.showInputBorder = true,
+    this.trailing,
   });
 
   final Map<String, dynamic> payload;
   final ValueChanged<Map<String, dynamic>> onPayloadChanged;
+  final int minLines;
+  final String hintText;
+  final bool showInputBorder;
+  final Widget? trailing;
 
   @override
   State<RichParagraphEditor> createState() => _RichParagraphEditorState();
@@ -248,11 +258,36 @@ class _RichParagraphEditorState extends State<RichParagraphEditor> {
             ],
           ),
           const SizedBox(height: 8),
-          _RichParagraphInput(
-            controller: _controller,
-            doc: _doc,
-            onChanged: _onTextChanged,
-          ),
+          if (widget.trailing != null)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: _RichParagraphInput(
+                    controller: _controller,
+                    doc: _doc,
+                    onChanged: _onTextChanged,
+                    minLines: widget.minLines,
+                    hintText: widget.hintText,
+                    showInputBorder: widget.showInputBorder,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: widget.trailing!,
+                ),
+              ],
+            )
+          else
+            _RichParagraphInput(
+              controller: _controller,
+              doc: _doc,
+              onChanged: _onTextChanged,
+              minLines: widget.minLines,
+              hintText: widget.hintText,
+              showInputBorder: widget.showInputBorder,
+            ),
         ],
       ),
     );
@@ -268,11 +303,17 @@ class _RichParagraphInput extends StatefulWidget {
     required this.controller,
     required this.doc,
     required this.onChanged,
+    required this.minLines,
+    required this.hintText,
+    required this.showInputBorder,
   });
 
   final TextEditingController controller;
   final ParagraphDoc doc;
   final ValueChanged<String> onChanged;
+  final int minLines;
+  final String hintText;
+  final bool showInputBorder;
 
   @override
   State<_RichParagraphInput> createState() => _RichParagraphInputState();
@@ -330,6 +371,45 @@ class _RichParagraphInputState extends State<_RichParagraphInput> {
     final borderColor = _focusNode.hasFocus ? colors.primary : colors.border;
     final contentPadding = _padding;
 
+    final field = TextSelectionTheme(
+      data: TextSelectionThemeData(
+        cursorColor: colors.primary,
+        selectionColor: colors.primary.withValues(alpha: 0.25),
+      ),
+      child: ExtendedTextField(
+        controller: widget.controller,
+        focusNode: _focusNode,
+        minLines: widget.minLines,
+        maxLines: null,
+        textCapitalization: TextCapitalization.sentences,
+        onChanged: widget.onChanged,
+        style: baseStyle,
+        strutStyle: strutStyle,
+        cursorHeight: fontSize * lineHeight,
+        specialTextSpanBuilder: ParagraphExtendedSpanBuilder(
+          doc: widget.doc,
+          colors: colors,
+          baseStyle: baseStyle,
+        ),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: colors.background,
+          hintText: widget.hintText,
+          hintStyle: GoogleFonts.inter(
+            fontSize: 14,
+            height: 1.5,
+            color: colors.mutedForeground.withValues(alpha: 0.7),
+          ),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: contentPadding,
+        ),
+      ),
+    );
+
+    if (!widget.showInputBorder) return field;
+
     return Container(
       decoration: BoxDecoration(
         color: colors.background,
@@ -337,42 +417,7 @@ class _RichParagraphInputState extends State<_RichParagraphInput> {
         border: Border.all(color: borderColor, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
-      child: TextSelectionTheme(
-        data: TextSelectionThemeData(
-          cursorColor: colors.primary,
-          selectionColor: colors.primary.withValues(alpha: 0.25),
-        ),
-        child: ExtendedTextField(
-          controller: widget.controller,
-          focusNode: _focusNode,
-          minLines: 4,
-          maxLines: null,
-          textCapitalization: TextCapitalization.sentences,
-          onChanged: widget.onChanged,
-          style: baseStyle,
-          strutStyle: strutStyle,
-          cursorHeight: fontSize * lineHeight,
-          specialTextSpanBuilder: ParagraphExtendedSpanBuilder(
-            doc: widget.doc,
-            colors: colors,
-            baseStyle: baseStyle,
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: colors.background,
-            hintText: 'Write your paragraph…',
-            hintStyle: GoogleFonts.inter(
-              fontSize: 14,
-              height: 1.5,
-              color: colors.mutedForeground.withValues(alpha: 0.7),
-            ),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            contentPadding: contentPadding,
-          ),
-        ),
-      ),
+      child: field,
     );
   }
 }
@@ -397,38 +442,36 @@ class _ToolbarButton extends StatelessWidget {
     final colors = context.appColors;
     return Tooltip(
       message: tooltip,
-      child: Material(
-      color: active ? colors.primary.withValues(alpha: 0.15) : colors.muted.withValues(alpha: 0.35),
-      child: InkWell(
+      child: AppTappable(
         onTap: onPressed,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: label == null ? 8 : 10, vertical: 7),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: active ? colors.primary : colors.border,
-              width: 1.5,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: active ? colors.primary : colors.mutedForeground),
-              if (label != null) ...[
-                const SizedBox(width: 4),
-                Text(
-                  label!,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: active ? colors.primary : colors.mutedForeground,
-                  ),
-                ),
-              ],
-            ],
+        splashColor: appRippleOnSurface(colors),
+        color: active ? colors.primary.withValues(alpha: 0.15) : colors.muted.withValues(alpha: 0.35),
+        decoration: BoxDecoration(
+          color: active ? colors.primary.withValues(alpha: 0.15) : colors.muted.withValues(alpha: 0.35),
+          border: Border.all(
+            color: active ? colors.primary : colors.border,
+            width: 1.5,
           ),
         ),
+        padding: EdgeInsets.symmetric(horizontal: label == null ? 8 : 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: active ? colors.primary : colors.mutedForeground),
+            if (label != null) ...[
+              const SizedBox(width: 4),
+              Text(
+                label!,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: active ? colors.primary : colors.mutedForeground,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -640,7 +683,7 @@ class _GifSearchSheetState extends State<_GifSearchSheet> {
           SizedBox(
             height: 220,
             child: _loading
-                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                ? const AppLoadingCenter(size: 36, showQuote: false)
                 : _results.isEmpty
                     ? Center(
                         child: Text(

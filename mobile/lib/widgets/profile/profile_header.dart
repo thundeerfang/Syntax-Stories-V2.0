@@ -4,6 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/user_summary.dart';
 import '../../theme/app_color_tokens.dart';
 import '../../utils/resolve_profile_media_url.dart';
+import 'profile_followed_categories_stack.dart';
+import 'profile_followed_interests_row.dart';
+import 'profile_followed_squads_stack.dart';
 import 'profile_social_links.dart';
 import 'profile_stats_bar.dart';
 import 'syntax_bio_card.dart';
@@ -14,17 +17,29 @@ class ProfileHeader extends StatelessWidget {
   const ProfileHeader({
     super.key,
     required this.user,
+    this.followedSquadsKey,
+    this.followedCategoriesKey,
     this.coverImageUrl,
     this.bannerHeight = 112,
     this.avatarSize = 76,
     this.horizontalPadding = 20,
+    this.showFollowedInterests = true,
+    this.showFollowedCategories = true,
+    this.squadsUsername,
+    this.headerAction,
   });
 
   final UserSummary? user;
+  final GlobalKey<ProfileFollowedSquadsStackState>? followedSquadsKey;
+  final GlobalKey<ProfileFollowedCategoriesStackState>? followedCategoriesKey;
   final String? coverImageUrl;
   final double bannerHeight;
   final double avatarSize;
   final double horizontalPadding;
+  final bool showFollowedInterests;
+  final bool showFollowedCategories;
+  final String? squadsUsername;
+  final Widget? headerAction;
 
   static const _frameBorder = 2.0;
 
@@ -111,7 +126,16 @@ class ProfileHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              ProfileSocialLinks(user: user),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  ProfileSocialLinks(user: user),
+                  if (headerAction != null) ...[
+                    const SizedBox(height: 8),
+                    headerAction!,
+                  ],
+                ],
+              ),
             ],
           ),
         ),
@@ -119,6 +143,14 @@ class ProfileHeader extends StatelessWidget {
           username: username,
           horizontalPadding: horizontalPadding,
         ),
+        if (showFollowedInterests)
+          ProfileFollowedInterestsRow(
+            squadsKey: followedSquadsKey,
+            categoriesKey: followedCategoriesKey,
+            horizontalPadding: horizontalPadding,
+            squadsUsername: squadsUsername ?? username,
+            showFollowedCategories: showFollowedCategories,
+          ),
         SyntaxBioCard(
           bio: user?.bio,
           horizontalPadding: horizontalPadding,

@@ -17,16 +17,17 @@ import { NOT_DELETED_FILTER } from "../shared/db/notDeleted.js";
 import {
   assertTodayIsNextUtcDayAfterYesterday,
   previousUtcCalendarDay,
+  streakUtcDayBucket,
 } from "../streak/calendarUtc.js";
 import {
   MIN_READ_COMMIT_DWELL_MS,
   READ_VIEW_ACK_TTL_SEC,
   READ_VIEW_SESSION_TTL_SEC,
-} from "../services/blogReadView.constants.js";
+  SOFT_DELETE_RETENTION_MS,
+} from "../variable/constants.js";
 import { bumpReadStreakLongestFromMongo } from "../services/readStreakDurability.service.js";
 import { incrementReadStreakMetric } from "../services/readStreakMetrics.js";
 import { consumeReadViewStartRateLimit } from "../services/readStreakRateLimit.js";
-import { streakUtcDayBucket } from "../services/readStreak.service.js";
 import {
   readDayZsetScoreMs,
   readDaysTrimMinRetainMsUtc,
@@ -51,12 +52,9 @@ import {
 } from "../services/blogRespect.service.js";
 import { publishBlogPostStatsSnapshot } from "../services/blogStatsPublish.service.js";
 import { fanoutNewPublishedPost } from "../services/notifications/notificationFanout.service.js";
-import {
-  attachAchievementsToResponse,
-  dispatchAchievementEvents,
-} from "../achievements/achievement.service.js";
+import { attachAchievementsToResponse } from "../services/achievements/achievementEngine.service.js";
+import { dispatchAchievementEvents } from "../services/achievements/dispatchAchievementEvents.js";
 import { estimateReadMinutesFromBlogFields } from "../modules/blog/readTimeEstimate.js";
-import { SOFT_DELETE_RETENTION_MS } from "../variable/constants.js";
 import { BLOG_LIMITS } from "@syntax-stories/shared";
 async function respondReadCommit(
   res: Response,

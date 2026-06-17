@@ -7,7 +7,7 @@ import { ImageUploadCropDialog } from "@/components/upload";
 import { buildUploadImageMeta } from "@/lib/media/uploadImageMeta";
 import type { MediaItem } from "@/lib/profile/profileMediaForm";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+import { IMAGE_UPLOAD_MAX_BYTES } from "@syntax-stories/shared";
 
 export type SettingsStagedMediaUploadDialogProps = Readonly<{
   open: boolean;
@@ -39,7 +39,7 @@ export function SettingsStagedMediaUploadDialog({
       }
       subtitle={subtitle}
       subtitleClassName="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
-      maxSizeBytes={MAX_BYTES}
+      maxSizeBytes={IMAGE_UPLOAD_MAX_BYTES.media}
       aspect={1}
       confirmLabel="Save & add"
       chooseAnotherLabel="Choose another"

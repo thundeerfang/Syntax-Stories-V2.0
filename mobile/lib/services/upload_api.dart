@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../models/image_upload_kind.dart';
+import '../utils/upload_image_formats.dart';
 import 'api_errors.dart';
 import 'auth_api.dart';
 import 'auth_retry.dart';
@@ -171,48 +173,9 @@ class UploadApi {
 }
 
 String _resolveUploadFilename(List<int> bytes, String filename) {
-  final detected = _detectImageMime(bytes);
+  final detected = detectImageMimeFromBytes(Uint8List.fromList(bytes));
   if (detected == null) return filename;
   return _withImageExtension(filename, detected);
-}
-
-String? _detectImageMime(List<int> bytes) {
-  if (bytes.length >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff) {
-    return 'image/jpeg';
-  }
-  if (bytes.length >= 8 &&
-      bytes[0] == 0x89 &&
-      bytes[1] == 0x50 &&
-      bytes[2] == 0x4e &&
-      bytes[3] == 0x47 &&
-      bytes[4] == 0x0d &&
-      bytes[5] == 0x0a &&
-      bytes[6] == 0x1a &&
-      bytes[7] == 0x0a) {
-    return 'image/png';
-  }
-  if (bytes.length >= 6) {
-    final sig = String.fromCharCodes(bytes.sublist(0, 6));
-    if (sig == 'GIF87a' || sig == 'GIF89a') return 'image/gif';
-  }
-  if (bytes.length >= 12) {
-    final riff = String.fromCharCodes(bytes.sublist(0, 4));
-    final webp = String.fromCharCodes(bytes.sublist(8, 12));
-    if (riff == 'RIFF' && webp == 'WEBP') return 'image/webp';
-    final ftyp = String.fromCharCodes(bytes.sublist(4, 8));
-    if (ftyp == 'ftyp') {
-      final brand = String.fromCharCodes(bytes.sublist(8, 12)).toLowerCase();
-      if (brand.startsWith('heic') ||
-          brand.startsWith('heix') ||
-          brand.startsWith('hevc') ||
-          brand.startsWith('hevx') ||
-          brand.startsWith('mif1') ||
-          brand.startsWith('msf1')) {
-        return 'image/heic';
-      }
-    }
-  }
-  return null;
 }
 
 String _withImageExtension(String filename, String mime) {

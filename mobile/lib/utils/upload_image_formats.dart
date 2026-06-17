@@ -1,12 +1,18 @@
 import 'dart:typed_data';
 
+// Keep in sync with webapp/packages/shared/uploadValidation.ts
+
 const logoUploadRejectMessage =
     'Please upload a JPEG, PNG, WebP, or iPhone photo (HEIC).';
 
 const profileRasterUploadRejectMessage =
     'Please upload a JPEG, PNG, GIF, WebP, or iPhone photo (HEIC).';
 
-/// Magic-byte MIME sniffing — aligned with [UploadApi] and server uploadValidation.
+const feedbackUploadRejectMessage = 'Use a JPEG, PNG, GIF, or WebP image.';
+
+enum ImageClientValidationProfile { raster, logo, feedback }
+
+/// Magic-byte MIME sniffing — shared with server uploadValidation.
 String? detectImageMimeFromBytes(Uint8List bytes) {
   if (bytes.length >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff) {
     return 'image/jpeg';
@@ -72,26 +78,57 @@ bool _isAllowedProfileRasterMime(String? mime) {
   return _isAllowedLogoMime(mime) || mime == 'image/gif';
 }
 
+String _rejectMessageForProfile(ImageClientValidationProfile profile) {
+  return switch (profile) {
+    ImageClientValidationProfile.logo => logoUploadRejectMessage,
+    ImageClientValidationProfile.feedback => feedbackUploadRejectMessage,
+    ImageClientValidationProfile.raster => profileRasterUploadRejectMessage,
+  };
+}
+
+bool _isAllowedMimeForProfile(String? mime, ImageClientValidationProfile profile) {
+  return switch (profile) {
+    ImageClientValidationProfile.logo => _isAllowedLogoMime(mime),
+    ImageClientValidationProfile.feedback => _isAllowedProfileRasterMime(mime),
+    ImageClientValidationProfile.raster => _isAllowedProfileRasterMime(mime),
+  };
+}
+
 /// Returns a user-facing error, or null when the pick is allowed.
-String? validateLogoUploadImage(Uint8List bytes, {String? fileName}) {
+String? validateImageBytesClient(
+  Uint8List bytes, {
+  required ImageClientValidationProfile profile,
+  String? fileName,
+}) {
+  final reject = _rejectMessageForProfile(profile);
   if (isSvgUpload(bytes, fileName: fileName)) {
-    return 'SVG files are not supported. $logoUploadRejectMessage';
+    return 'SVG files are not supported. $reject';
   }
   final mime = detectImageMimeFromBytes(bytes);
   if (mime != null) {
-    return _isAllowedLogoMime(mime) ? null : logoUploadRejectMessage;
+    return _isAllowedMimeForProfile(mime, profile) ? null : reject;
   }
-  return _isHeicFileName(fileName) ? null : logoUploadRejectMessage;
+  if (profile == ImageClientValidationProfile.logo ||
+      profile == ImageClientValidationProfile.raster) {
+    return _isHeicFileName(fileName) ? null : reject;
+  }
+  return reject;
+}
+
+/// Returns a user-facing error, or null when the pick is allowed.
+String? validateLogoUploadImage(Uint8List bytes, {String? fileName}) {
+  return validateImageBytesClient(
+    bytes,
+    profile: ImageClientValidationProfile.logo,
+    fileName: fileName,
+  );
 }
 
 /// Returns a user-facing error, or null when the pick is allowed.
 String? validateProfileRasterUploadImage(Uint8List bytes, {String? fileName}) {
-  if (isSvgUpload(bytes, fileName: fileName)) {
-    return 'SVG files are not supported. $profileRasterUploadRejectMessage';
-  }
-  final mime = detectImageMimeFromBytes(bytes);
-  if (mime != null) {
-    return _isAllowedProfileRasterMime(mime) ? null : profileRasterUploadRejectMessage;
-  }
-  return _isHeicFileName(fileName) ? null : profileRasterUploadRejectMessage;
+  return validateImageBytesClient(
+    bytes,
+    profile: ImageClientValidationProfile.raster,
+    fileName: fileName,
+  );
 }

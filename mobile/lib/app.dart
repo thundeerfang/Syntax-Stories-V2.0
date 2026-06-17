@@ -8,8 +8,10 @@ import 'screens/two_factor_screen.dart';
 import 'services/api_errors.dart';
 import 'services/auth_api.dart';
 import 'state/auth_state.dart';
+import 'state/notification_state.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
+import 'widgets/notifications/notification_realtime_bridge.dart';
 
 class SyntaxStoriesApp extends StatefulWidget {
   const SyntaxStoriesApp({super.key});
@@ -89,6 +91,7 @@ class _SyntaxStoriesAppState extends State<SyntaxStoriesApp> {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthState()..bootstrap()),
         ChangeNotifierProvider(create: (_) => ThemeController()),
+        ChangeNotifierProvider(create: (_) => NotificationState()),
       ],
       child: Consumer<ThemeController>(
         builder: (context, theme, _) {
@@ -99,7 +102,7 @@ class _SyntaxStoriesAppState extends State<SyntaxStoriesApp> {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: theme.mode,
-            home: const AuthGate(),
+            home: const NotificationRealtimeBridge(child: AuthGate()),
           );
         },
       ),

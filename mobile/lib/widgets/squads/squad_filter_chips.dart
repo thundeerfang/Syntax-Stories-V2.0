@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_color_tokens.dart';
 import '../../utils/squad_category.dart';
+import '../ui/app_tappable.dart';
 
 /// Squads browse filter — `all`, `mine`, or a [squadCategoryValues] id.
 sealed class SquadBrowseFilter {
@@ -90,26 +91,23 @@ class SquadChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Material(
-      color: selected ? colors.primary.withValues(alpha: 0.12) : colors.card,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: selected ? colors.primary : colors.border, width: selected ? 1.5 : 1),
-          ),
-          child: Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: selected ? colors.primary : colors.foreground,
-            ),
-          ),
+    return AppTappable(
+      onTap: onTap,
+      splashColor: appRippleOnSurface(colors),
+      decoration: BoxDecoration(
+        color: selected ? colors.primary.withValues(alpha: 0.12) : colors.card,
+        border: Border.all(
+          color: selected ? colors.primary : colors.border,
+          width: selected ? 1.5 : 1,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: selected ? colors.primary : colors.foreground,
         ),
       ),
     );

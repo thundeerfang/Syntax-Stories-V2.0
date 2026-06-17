@@ -1,9 +1,7 @@
 import mongoose from "mongoose";
 import { Request, Response } from "express";
-import {
-  attachAchievementsToResponse,
-  dispatchAchievementEvents,
-} from "../achievements/achievement.service.js";
+import { attachAchievementsToResponse } from "../services/achievements/achievementEngine.service.js";
+import { dispatchAchievementEvents } from "../services/achievements/dispatchAchievementEvents.js";
 import { BlogCategoryFollowModel } from "../models/BlogCategoryFollow.js";
 import { UserModel, normalizeProfileImg } from "../models/User.js";
 import type { AuthUser } from "../middlewares/auth/index.js";

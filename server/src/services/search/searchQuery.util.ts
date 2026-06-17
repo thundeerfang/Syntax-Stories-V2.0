@@ -5,7 +5,6 @@ import {
   SEARCH_MAX_QUERY_LEN,
   SEARCH_MIN_CHARS,
 } from "@syntax-stories/shared";
-export { SEARCH_MIN_CHARS } from "@syntax-stories/shared";
 export function normalizeSearchQuery(raw: string): string {
   return raw.trim().replace(/\s+/g, " ").slice(0, SEARCH_MAX_QUERY_LEN);
 }

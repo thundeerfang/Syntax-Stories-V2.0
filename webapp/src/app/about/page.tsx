@@ -296,6 +296,7 @@ export default function AboutPage() {
                           size="sm"
                           href={dev.resumeUrl}
                           download
+                          className="font-semibold uppercase"
                         >
                           <Download className="size-4" aria-hidden />
                           Download resume

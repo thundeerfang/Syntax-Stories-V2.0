@@ -110,7 +110,8 @@ export const ABOUT_PAGE_SEED: AboutPageContent = {
       imageSrc: developerImages.harshit,
       githubUrl: "https://github.com/harshitkushwah5910",
       linkedinUrl: "https://www.linkedin.com/in/harshitkushwah",
-      resumeUrl: "/developers/resumes/harshit-kushwah.pdf",
+      resumeUrl:
+        "https://dl.dropboxusercontent.com/scl/fi/vf6000p3s3p7s6de88u3g/HARSHIT_RESUME_1.0.pdf?rlkey=s27b9ugylnav1ltyyt53rhkpv&st=ci7htn50&dl=0",
       featured: true,
     },
     {

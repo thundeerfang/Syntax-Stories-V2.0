@@ -1,6 +1,9 @@
 "use client";
 import { useId } from "react";
-import type { Accept } from "react-dropzone";
+import {
+  IMAGE_UPLOAD_MAX_BYTES,
+  LOGO_ACCEPT_EXTENSIONS,
+} from "@syntax-stories/shared";
 import { Building2 } from "lucide-react";
 import { ImageUploadCropDialog } from "@/components/upload/ImageUploadCropDialog";
 import { toast } from "sonner";
@@ -14,14 +17,6 @@ export interface UploadLogoDialogProps {
   kind: SettingsLogoUploadKind;
   onSuccess: (result: { url: string; imageTitle?: string }) => void;
 }
-const MAX_BYTES = 5 * 1024 * 1024;
-const LOGO_ACCEPT: Accept = {
-  "image/jpeg": [".jpg", ".jpeg"],
-  "image/png": [".png"],
-  "image/webp": [".webp"],
-  "image/heic": [".heic"],
-  "image/heif": [".heif"],
-};
 const TITLES: Record<SettingsLogoUploadKind, string> = {
   "org-logo": "Upload issuer logo",
 };
@@ -44,10 +39,11 @@ export function UploadLogoDialog({
       }
       subtitle="Square crop, then upload. JPEG, PNG, WebP, or iPhone photo (HEIC) · max 5 MB."
       subtitleClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-widest"
-      maxSizeBytes={MAX_BYTES}
+      maxSizeBytes={IMAGE_UPLOAD_MAX_BYTES.orgLogo}
       aspect={1}
       cropMinHeightClass="min-h-[12rem] h-48"
-      accept={LOGO_ACCEPT}
+      accept={LOGO_ACCEPT_EXTENSIONS}
+      validationProfile="logo"
       secondaryDropzoneHint="Square crop · iPhone photos supported"
       confirmLabel="Save & upload"
       chooseAnotherLabel="Choose another"

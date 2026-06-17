@@ -1,9 +1,10 @@
-export type ImageMasterProfile =
-  | "feedback"
-  | "avatar"
-  | "cover"
-  | "media"
-  | "orgLogo";
+import {
+  IMAGE_UPLOAD_MAX_BYTES,
+  type ImageUploadProfile,
+} from "@syntax-stories/shared";
+
+export type ImageMasterProfile = ImageUploadProfile;
+
 export const IMAGE_MASTER_PROFILES: Record<
   ImageMasterProfile,
   {
@@ -16,7 +17,7 @@ export const IMAGE_MASTER_PROFILES: Record<
   }
 > = {
   feedback: {
-    maxInputBytes: 5 * 1024 * 1024,
+    maxInputBytes: IMAGE_UPLOAD_MAX_BYTES.feedback,
     maxEdgePx: 4096,
     outputFormat: "webp",
     webpQuality: 82,
@@ -24,7 +25,7 @@ export const IMAGE_MASTER_PROFILES: Record<
     maxMegapixels: 16000000,
   },
   avatar: {
-    maxInputBytes: 5 * 1024 * 1024,
+    maxInputBytes: IMAGE_UPLOAD_MAX_BYTES.avatar,
     maxEdgePx: 4096,
     outputFormat: "jpeg",
     webpQuality: 85,
@@ -32,7 +33,7 @@ export const IMAGE_MASTER_PROFILES: Record<
     maxMegapixels: 25000000,
   },
   cover: {
-    maxInputBytes: 10 * 1024 * 1024,
+    maxInputBytes: IMAGE_UPLOAD_MAX_BYTES.cover,
     maxEdgePx: 8192,
     outputFormat: "jpeg",
     webpQuality: 85,
@@ -40,7 +41,7 @@ export const IMAGE_MASTER_PROFILES: Record<
     maxMegapixels: 120000000,
   },
   media: {
-    maxInputBytes: 5 * 1024 * 1024,
+    maxInputBytes: IMAGE_UPLOAD_MAX_BYTES.media,
     maxEdgePx: 8192,
     outputFormat: "jpeg",
     webpQuality: 85,
@@ -48,7 +49,7 @@ export const IMAGE_MASTER_PROFILES: Record<
     maxMegapixels: 120000000,
   },
   orgLogo: {
-    maxInputBytes: 5 * 1024 * 1024,
+    maxInputBytes: IMAGE_UPLOAD_MAX_BYTES.orgLogo,
     maxEdgePx: 4096,
     outputFormat: "png",
     webpQuality: 90,
