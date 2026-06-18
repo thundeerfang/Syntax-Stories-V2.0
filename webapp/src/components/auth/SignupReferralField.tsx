@@ -1,5 +1,4 @@
 "use client";
-import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/core/utils";
 import { authInputClassName } from "./authDialogUi";
 import type { ReferralValidationState } from "@/hooks/useSignupReferralCode";
@@ -12,6 +11,7 @@ type SignupReferralFieldProps = Readonly<{
   errorMessage: string | null;
   disabled?: boolean;
   id?: string;
+  compact?: boolean;
 }>;
 export function SignupReferralField({
   value,
@@ -21,39 +21,31 @@ export function SignupReferralField({
   errorMessage,
   disabled = false,
   id = "auth-signup-referral",
+  compact = false,
 }: SignupReferralFieldProps) {
   const showError =
     (validationState === "format-error" || validationState === "invalid") &&
     errorMessage;
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2 ml-1">
-        <UserPlus className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-        <label
-          htmlFor={id}
-          className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground"
-        >
-          Invite friends{" "}
-          <span className="font-medium normal-case tracking-normal">
-            (optional)
-          </span>
-        </label>
-      </div>
+    <div className={cn("space-y-1.5", compact && "text-center")}>
+      <label htmlFor={id} className="sr-only">
+        Referral code
+      </label>
       <input
         id={id}
         type="text"
         inputMode="text"
         autoComplete="off"
         spellCheck={false}
-        placeholder="Enter referral code"
+        placeholder="👥  Enter referral code"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         maxLength={16}
         className={cn(
-          authInputClassName(),
-          showError &&
-            "border-destructive/70 focus-visible:ring-destructive/40",
+          authInputClassName("text-left placeholder:text-left"),
+          compact && "mt-2 border-border/70 bg-background/30 text-left text-xs",
+          showError && "border-destructive/70 focus-visible:ring-destructive/40",
           validationState === "valid" &&
             "border-emerald-600/50 focus-visible:ring-emerald-600/30",
         )}

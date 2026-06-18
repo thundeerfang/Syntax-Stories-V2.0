@@ -1,13 +1,13 @@
 "use client";
 import React from "react";
 import { X } from "lucide-react";
-import { Skeleton } from "../feedback/Skeleton";
 import {
   Dialog,
   DIALOG_FOOTER_TOP_BORDER,
   DIALOG_TITLE_HEADER_CLASS,
   DIALOG_TITLE_ICON_BOX_CLASS,
 } from "./dialogs";
+import { DialogInteractionLoader } from "./DialogInteractionLoader";
 import { cn } from "@/lib/core/utils";
 export interface FormDialogProps {
   open: boolean;
@@ -27,21 +27,6 @@ export interface FormDialogProps {
   bodyClassName?: string;
   interactionLock?: boolean;
   interactionLockContent?: React.ReactNode;
-}
-function FormDialogDefaultInteractionSkeleton() {
-  return (
-    <div className="flex w-full max-w-md flex-col gap-4">
-      <div className="grid gap-1.5">
-        <Skeleton className="h-2.5 w-24" />
-        <Skeleton className="h-9 w-full" />
-      </div>
-      <Skeleton className="min-h-[14rem] w-full" />
-      <div className="flex flex-wrap justify-end gap-2">
-        <Skeleton className="h-12 min-h-12 w-28" />
-        <Skeleton className="h-12 min-h-12 w-36" />
-      </div>
-    </div>
-  );
 }
 export function FormDialog({
   open,
@@ -154,7 +139,7 @@ export function FormDialog({
         {interactionLock && (
           <div
             className={cn(
-              "absolute inset-0 z-[20] flex min-h-0 flex-col pointer-events-auto",
+              "absolute inset-0 z-[50] flex min-h-0 flex-col pointer-events-auto",
               "bg-background/90 backdrop-blur-[2px]",
               "dark:bg-black/88 dark:backdrop-blur-md",
             )}
@@ -167,8 +152,8 @@ export function FormDialog({
                 {interactionLockContent}
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-6">
-                <FormDialogDefaultInteractionSkeleton />
+              <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-8">
+                <DialogInteractionLoader />
               </div>
             )}
           </div>

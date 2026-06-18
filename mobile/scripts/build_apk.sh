@@ -45,7 +45,10 @@ fi
 echo "==> flutter pub get"
 flutter pub get
 
-mapfile -d '' -t DART_DEFINES < <(mobile_dart_defines_array "$API_MODE")
+DART_DEFINES=()
+while IFS= read -r line; do
+  [[ -n "$line" ]] && DART_DEFINES+=("$line")
+done < <(mobile_dart_defines_array "$API_MODE")
 echo "==> API mode: $API_MODE"
 
 if [[ "$MODE" == "debug" ]]; then

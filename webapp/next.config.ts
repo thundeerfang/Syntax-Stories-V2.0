@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -5,6 +6,9 @@ const isDesktop = process.env.NEXT_PUBLIC_IS_DESKTOP === '1';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   /** Desktop dev (:3010) can run alongside browser dev (:3001) without lock conflicts. */
   ...(isDesktop ? { distDir: '.next-desktop' } : {}),
   async redirects() {

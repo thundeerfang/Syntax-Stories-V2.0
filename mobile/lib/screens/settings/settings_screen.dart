@@ -9,6 +9,7 @@ import '../../services/invite_api.dart';
 import '../../settings/settings_nav.dart';
 import '../../state/auth_state.dart';
 import '../../theme/app_color_tokens.dart';
+import '../../utils/auth_navigation.dart';
 import '../../utils/field_validation_rules.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../models/profile_image_upload_kind.dart';
@@ -16,6 +17,7 @@ import '../../widgets/profile/edit_profile_hero.dart';
 import '../../widgets/profile/edit_profile_portfolio_card.dart';
 import '../../widgets/profile/edit_profile_social_card.dart';
 import '../../widgets/profile/profile_image_upload_dialog.dart';
+import '../../widgets/ui/app_confirm_dialog.dart';
 import '../../widgets/ui/app_feedback_toast.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
 import '../../widgets/navigation/screen_app_bar.dart';
@@ -204,29 +206,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _confirmLogout() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'LOG OUT?',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w900, letterSpacing: 0.8),
-        ),
-        content: Text(
-          'You will need to sign in again to access your account.',
-          style: GoogleFonts.inter(color: context.appColors.mutedForeground),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: context.appColors.destructive),
-            child: const Text('LOG OUT'),
-          ),
-        ],
-      ),
+    final confirmed = await AppConfirmDialog.show(
+      context,
+      title: 'Log out?',
+      message: 'You will need to sign in again to access your account.',
+      confirmLabel: 'Log out',
+      cancelLabel: 'Cancel',
+      variant: AppConfirmDialogVariant.logout,
     );
     if (confirmed != true || !mounted) return;
     await context.read<AuthState>().logout();
+    if (!mounted) return;
+    popToAppRoot(context);
   }
 
   @override

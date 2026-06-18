@@ -1,0 +1,29 @@
+# Repo root — build: docker build -f server/Dockerfile -t syntax-stories-api .
+.git
+.gitignore
+**/.DS_Store
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.*
+
+# Exclude webapp except the shared package the server links to
+webapp/*
+!webapp/packages/
+webapp/packages/*
+!webapp/packages/shared/
+!webapp/packages/shared/**
+
+# Other monorepo apps
+mobile
+admin
+
+# Server runtime data & secrets (mount at run time)
+server/uploads
+server/secrets
+server/keys
+
+# Docs / IDE
+.cursor
+.agent-transcripts

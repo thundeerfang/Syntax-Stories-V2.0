@@ -32,6 +32,6 @@ mobile_dart_defines_array() {
   local mode="${1:-production}"
   local line
   while IFS= read -r line; do
-    [[ -n "$line" ]] && printf '%s\0' "$line"
+    [[ -n "$line" ]] && printf '%s\n' "$line"
   done < <(mobile_dart_defines "$mode")
 }

@@ -1,33 +1,12 @@
 "use client";
 import { FollowingPostsGridSkeleton } from "./PageSkeletons";
 import { SkBar, SkBlock, SkGradientFill } from "./primitives";
+import { SquadDiscoverCardSkeleton } from "./SquadDiscoverCardSkeleton";
 import { shell, squads } from "@/lib/styles";
 import { cn } from "@/lib/core/utils";
-function SquadCardSkeletonTile() {
-  return (
-    <div
-      className="flex h-full min-h-[13rem] flex-col border-2 border-border bg-card p-4 shadow"
-      aria-hidden
-    >
-      <div className="flex items-start gap-2">
-        <SkBlock className="size-14 shrink-0 animate-pulse border-2 border-border bg-muted/30" />
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <SkBar className="h-3.5 w-[70%]" />
-          <SkBar className="h-2 w-[45%]" />
-        </div>
-      </div>
-      <div className="mt-2 flex-1 space-y-1.5">
-        <SkBar className="h-2 w-full" />
-        <SkBar className="h-2 w-[92%]" />
-        <SkBar className="h-2 w-[60%]" />
-      </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        <SkBlock className="h-5 w-14 animate-pulse border border-border bg-muted/20" />
-        <SkBlock className="h-5 w-16 animate-pulse border border-border bg-muted/20" />
-      </div>
-    </div>
-  );
-}
+
+export { SquadDiscoverCardSkeleton } from "./SquadDiscoverCardSkeleton";
+
 export function SquadsPageBrowseSkeleton({
   className,
 }: Readonly<{
@@ -41,8 +20,8 @@ export function SquadsPageBrowseSkeleton({
       <div className="min-w-0 flex-1 space-y-3">
         <ul className={squads.discoverCardGrid}>
           {Array.from({ length: 8 }, (_, i) => `sq-sk-${i}`).map((id) => (
-            <li key={id} className="flex min-h-0">
-              <SquadCardSkeletonTile />
+            <li key={id} className="w-full">
+              <SquadDiscoverCardSkeleton />
             </li>
           ))}
         </ul>

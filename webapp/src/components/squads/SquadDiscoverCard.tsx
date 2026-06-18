@@ -59,8 +59,9 @@ export function SquadDiscoverCard({
   return (
     <div
       className={cn(
-        "relative mx-auto flex flex-col overflow-hidden",
+        "relative mx-auto flex w-full flex-col overflow-hidden",
         squads.discoverCardMax,
+        squads.discoverCardMinH,
         "border-[3px] border-border bg-background text-left",
         "shadow",
         'before:pointer-events-none before:absolute before:-inset-2 before:-z-10 before:content-[""]',
@@ -115,7 +116,7 @@ export function SquadDiscoverCard({
         )}
       </div>
 
-      <div className="relative h-[7rem] shrink-0 overflow-hidden md:h-[8rem]">
+      <div className={squads.discoverCardBanner}>
         {banner ? (
           <>
             <img src={banner} alt="" className="size-full object-cover" />
@@ -166,16 +167,14 @@ export function SquadDiscoverCard({
         )}
       </div>
 
-      <div className="relative -mt-14 flex flex-col bg-transparent px-4 pt-0 md:-mt-16 md:px-5">
+      <div className={squads.discoverCardBodyOverlap}>
         <div className="relative z-20 flex items-end gap-3.5 pb-2">
           <div
             className={cn(
-              "relative z-30 shrink-0 overflow-hidden ",
-              "border-[3px] border-border bg-card",
+              squads.discoverCardIcon,
               'after:pointer-events-none after:absolute after:-inset-3 after:-z-10 after:content-[""]',
               "after:bg-[radial-gradient(circle,color-mix(in_srgb,var(--primary)_22%,transparent)_0%,transparent_70%)]",
               "after:blur-xl",
-              "size-[3rem] md:size-[4rem]",
             )}
           >
             {icon ? (

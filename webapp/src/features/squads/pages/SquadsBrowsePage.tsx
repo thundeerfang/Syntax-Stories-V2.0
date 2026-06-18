@@ -343,7 +343,7 @@ export default function SquadsBrowsePage() {
               ) : (
                 <ul className={squads.discoverCardGrid}>
                   {filteredSquads.map((s) => (
-                    <li key={s._id}>
+                    <li key={s._id} className="w-full">
                       <SquadDirectoryCard
                         squad={s}
                         isMember={s.viewerRole != null}

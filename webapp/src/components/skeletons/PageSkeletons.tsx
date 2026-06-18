@@ -2,7 +2,9 @@
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { Skeleton, SkillIconSkeleton } from "@/components/ui/feedback";
+import { DialogInteractionLoader } from "@/components/ui/dialog";
 import { SkBar, SkBlock, SkGradientFill } from "./primitives";
+import { SquadDiscoverCardSkeleton } from "./SquadDiscoverCardSkeleton";
 import { profileCardSkeletonKeys } from "./constants";
 import { cn } from "@/lib/core/utils";
 import {
@@ -894,41 +896,13 @@ export function DialogPanelSkeleton({
   return (
     <div
       className={cn(
-        "flex w-full max-w-lg flex-col overflow-hidden  border-2 border-border bg-card shadow",
+        "flex w-full max-w-lg flex-col overflow-hidden border-2 border-border bg-card shadow",
         className,
       )}
     >
-      <header className="flex items-end gap-3 border-b-2 border-border bg-muted/20 px-4 py-3 sm:gap-4">
-        <SkBlock className="size-11 shrink-0 animate-pulse border-2 border-border" />
-        <div className="min-w-0 flex-1 space-y-2 pb-0.5">
-          <SkBar className="h-4 max-w-[220px] w-[60%]" />
-          <SkBar className="h-2 max-w-[280px] w-[75%]" />
-        </div>
-        <SkBlock className="size-8 shrink-0 animate-pulse" />
-      </header>
-      {statusLine != null && (
-        <div className="border-b border-border/60 bg-background/80 px-4 py-2 text-center text-xs font-medium text-muted-foreground">
-          {statusLine}
-        </div>
-      )}
-      <div className="min-h-[max(12rem,28vh)] space-y-4 p-4 sm:p-5">
-        <div className="space-y-2">
-          <SkBar className="h-2 w-24" />
-          <SkBlock className="h-10 w-full animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <SkBar className="h-2 w-28" />
-          <SkBlock className="h-10 w-full animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <SkBar className="h-2 w-20" />
-          <SkBlock className="h-24 w-full animate-pulse" />
-        </div>
+      <div className="flex min-h-[max(12rem,28vh)] items-center justify-center px-6 py-10">
+        <DialogInteractionLoader statusLine={statusLine} />
       </div>
-      <footer className="flex justify-end gap-2 border-t-2 border-border bg-muted/10 px-4 py-3">
-        <SkBlock className="h-9 w-20 animate-pulse" />
-        <SkBlock className="h-9 w-24 animate-pulse" />
-      </footer>
     </div>
   );
 }
@@ -1467,27 +1441,8 @@ export function TrendingPageSkeletonInner() {
 }
 export function ExploreSquadCardSkeleton() {
   return (
-    <div
-      className={cn(
-        squads.discoverCardSlide,
-        "h-[17.5rem] shrink-0 overflow-hidden border-[3px] border-border bg-background shadow",
-      )}
-      aria-hidden
-    >
-      <SkBlock className="h-[7rem] w-full border-0 bg-muted/35 md:h-[8rem]" />
-      <div className="relative -mt-14 space-y-2 px-4 pb-3 md:px-5">
-        <SkBlock className="size-12 border-[3px] bg-muted/30 md:size-16" />
-        <div className="flex -space-x-2 pl-14 md:pl-[4.5rem]">
-          {["sq-m0", "sq-m1", "sq-m2"].map((id) => (
-            <SkBlock
-              key={id}
-              className="size-7 border-2 border-background bg-muted/40"
-            />
-          ))}
-        </div>
-        <SkBar className="mt-2 h-5 w-[72%]" />
-        <SkBar className="h-3 w-[48%]" />
-      </div>
+    <div className={cn(squads.discoverCardSlide, "shrink-0")} aria-hidden>
+      <SquadDiscoverCardSkeleton />
     </div>
   );
 }

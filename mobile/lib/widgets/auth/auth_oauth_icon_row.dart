@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 
 import '../../services/auth_api.dart';
 import '../../services/oauth_launcher.dart';
 import '../../services/oauth_urls.dart';
+import '../../state/auth_state.dart';
 import '../../theme/app_color_tokens.dart';
 
 /// Circular icon-only OAuth buttons in a horizontal row.
@@ -36,12 +38,16 @@ class AuthOAuthIconRow extends StatelessWidget {
           onPressed: disabled
               ? null
               : () async {
+                  final auth = context.read<AuthState>();
                   try {
+                    auth.beginOAuthFlow();
                     await launchOAuthUrl(href);
                   } on AuthApiException catch (e) {
+                    auth.clearOAuthPending();
                     if (!context.mounted) return;
                     onError?.call(e.message);
                   } catch (_) {
+                    auth.clearOAuthPending();
                     if (!context.mounted) return;
                     onError?.call(
                       'Could not open the sign-in browser. Install or enable a browser app and try again.',

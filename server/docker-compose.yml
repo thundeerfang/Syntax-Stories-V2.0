@@ -1,0 +1,110 @@
+# Syntax Stories API — self-hosted stack
+#
+# From repo root:
+#   cp server/.env.docker.example server/.env   # edit MONGO_CONN, secrets, URLs
+#   docker compose -f server/docker-compose.yml up -d --build
+#
+# API only (external Redis / no ClamAV): set REDIS_URL + empty CLAMAV_HOST in .env, then:
+#   docker compose -f server/docker-compose.yml up -d --build api --no-deps
+#
+# Notification webhook worker (optional):
+#   docker compose -f server/docker-compose.yml --profile webhook up -d notification-webhook
+#
+# Host files (not in image):
+#   server/keys/privateKey.pem, server/keys/publicKey.pem
+#   server/secrets/firebase-service-account.json (optional)
+
+name: syntax-stories
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: syntax-stories-api:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT:-7373}:${PORT:-7373}"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-7373}
+      # Override localhost URLs from dev .env when using bundled deps:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      CLAMAV_AUTO_START: "false"
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-/app/server/secrets/firebase-service-account.json}
+      UPLOADS_ROOT: /app/server/uploads
+    volumes:
+      - api_uploads:/app/server/uploads
+      - ./keys:/app/server/keys:ro
+      - ./secrets:/app/server/secrets:ro
+    depends_on:
+      redis:
+        condition: service_started
+      clamav:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+(process.env.PORT||7373)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  notification-webhook:
+    image: syntax-stories-api:latest
+    restart: unless-stopped
+    profiles:
+      - webhook
+    ports:
+      - "${NOTIFICATION_WEBHOOK_PORT:-7380}:${NOTIFICATION_WEBHOOK_PORT:-7380}"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      NOTIFICATION_WEBHOOK_PORT: ${NOTIFICATION_WEBHOOK_PORT:-7380}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    command: ["node", "dist/workers/notificationWebhook.worker.js"]
+    depends_on:
+      redis:
+        condition: service_started
+      api:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    environment:
+      CLAMAV_NO_FRESHCLAMD: "false"
+    volumes:
+      - clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
+volumes:
+  api_uploads:
+  redis_data:
+  clamav_db:

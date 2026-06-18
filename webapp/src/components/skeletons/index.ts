@@ -42,6 +42,7 @@ export {
 } from "./PageSkeletons";
 export {
   SquadDetailPageSkeleton,
+  SquadDiscoverCardSkeleton,
   SquadsPageBrowseSkeleton,
   SquadsPageContentSkeleton,
 } from "./SquadsPageSkeleton";
