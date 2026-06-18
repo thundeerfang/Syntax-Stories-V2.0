@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_color_tokens.dart';
 
-enum AppConfirmDialogVariant { danger, warning }
+enum AppConfirmDialogVariant { danger, warning, logout }
 
 /// Reusable confirmation dialog — mirrors webapp `ConfirmDialog` danger/warning tones.
 class AppConfirmDialog extends StatelessWidget {
@@ -53,6 +53,8 @@ class AppConfirmDialog extends StatelessWidget {
         return destructive;
       case AppConfirmDialogVariant.warning:
         return const Color(0xFFFFB000);
+      case AppConfirmDialogVariant.logout:
+        return destructive;
     }
   }
 
@@ -62,6 +64,8 @@ class AppConfirmDialog extends StatelessWidget {
         return Icons.delete_outline_rounded;
       case AppConfirmDialogVariant.warning:
         return Icons.warning_amber_rounded;
+      case AppConfirmDialogVariant.logout:
+        return Icons.logout_rounded;
     }
   }
 

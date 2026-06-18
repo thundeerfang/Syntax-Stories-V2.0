@@ -9,17 +9,22 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=env.sh
+source "$(dirname "$0")/env.sh"
 OUT_DIR="$(cd "$ROOT/.." && pwd)/build/apk"
 MODE="release"
 CLEAN=false
+API_MODE="production"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --debug) MODE="debug"; shift ;;
     --release) MODE="release"; shift ;;
     --clean) CLEAN=true; shift ;;
+    --local) API_MODE="local"; shift ;;
+    --production|--prod) API_MODE="production"; shift ;;
     -h|--help)
-      echo "Usage: $0 [--clean] [--debug|--release]"
+      echo "Usage: $0 [--clean] [--debug|--release] [--local|--production]"
       exit 0
       ;;
     *)
@@ -40,14 +45,20 @@ fi
 echo "==> flutter pub get"
 flutter pub get
 
+DART_DEFINES=()
+while IFS= read -r line; do
+  [[ -n "$line" ]] && DART_DEFINES+=("$line")
+done < <(mobile_dart_defines_array "$API_MODE")
+echo "==> API mode: $API_MODE"
+
 if [[ "$MODE" == "debug" ]]; then
   echo "==> flutter build apk --debug"
-  flutter build apk --debug
+  flutter build apk --debug "${DART_DEFINES[@]}"
   SRC="$ROOT/build/app/outputs/flutter-apk/app-debug.apk"
   SUFFIX="debug"
 else
   echo "==> flutter build apk --release"
-  flutter build apk --release
+  flutter build apk --release "${DART_DEFINES[@]}"
   SRC="$ROOT/build/app/outputs/flutter-apk/app-release.apk"
   SUFFIX="release"
 fi

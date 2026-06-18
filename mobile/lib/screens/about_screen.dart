@@ -896,13 +896,17 @@ class _CtaSection extends StatelessWidget {
           OutlinedButton(
             onPressed: () => Navigator.maybePop(context),
             style: OutlinedButton.styleFrom(
-              foregroundColor: colors.primaryForeground,
-              side: BorderSide(color: colors.primaryForeground, width: 2),
+              foregroundColor: colors.foreground,
+              side: BorderSide(color: colors.border, width: 2),
               backgroundColor: colors.card,
             ),
             child: Text(
               cta.buttonLabel.toUpperCase(),
-              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: colors.foreground,
+              ),
             ),
           ),
         ],

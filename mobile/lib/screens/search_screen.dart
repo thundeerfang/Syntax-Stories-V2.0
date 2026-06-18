@@ -87,7 +87,9 @@ class _SearchScreenState extends State<SearchScreen> {
       final categoriesPage = results[0] as BlogTaxonomyPage;
       final tagsExplore = results[1] as BlogTagsExplore;
       setState(() {
-        _topCategories = categoriesPage.list.where((c) => c.postCount > 0).toList();
+        _topCategories = categoriesPage.list
+            .where((c) => c.postCount > 0)
+            .toList();
         _topTags = mergeHomeHotTags(tagsExplore, limit: 12);
         _discoverLoading = false;
       });
@@ -119,7 +121,10 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     setState(() => _loading = true);
-    _debounce = Timer(const Duration(milliseconds: searchDebounceMs), _runSearch);
+    _debounce = Timer(
+      const Duration(milliseconds: searchDebounceMs),
+      _runSearch,
+    );
   }
 
   Future<void> _runSearch() async {
@@ -188,7 +193,8 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _openCategory(BlogTaxonomyRow category) => openCategoryFeed(context, category);
+  void _openCategory(BlogTaxonomyRow category) =>
+      openCategoryFeed(context, category);
 
   void _openTag(BlogTaxonomyRow tag) => openTagFeed(context, tag);
 
@@ -256,8 +262,12 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       children: [
         for (final (groupKey, hits) in sections) ...[
-          _SearchGroupHeader(label: searchGroupLabels[groupKey] ?? groupKey.name),
-          ...hits.map((hit) => _SearchHitTile(hit: hit, onTap: () => _onHitTap(hit))),
+          _SearchGroupHeader(
+            label: searchGroupLabels[groupKey] ?? groupKey.name,
+          ),
+          ...hits.map(
+            (hit) => _SearchHitTile(hit: hit, onTap: () => _onHitTap(hit)),
+          ),
         ],
       ],
     );
@@ -283,7 +293,10 @@ class _SearchField extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.appColors.muted.withValues(alpha: 0.35),
         border: Border(
-          bottom: BorderSide(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+          bottom: BorderSide(
+            color: context.appColors.border.withValues(alpha: 0.85),
+            width: 2,
+          ),
         ),
       ),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -319,7 +332,9 @@ class _SearchField extends StatelessWidget {
                   hintStyle: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: context.appColors.mutedForeground.withValues(alpha: 0.45),
+                    color: context.appColors.mutedForeground.withValues(
+                      alpha: 0.45,
+                    ),
                   ),
                 ),
               ),
@@ -393,7 +408,11 @@ class _SearchDiscoverState extends StatelessWidget {
         if (hasRecent) ...[
           _DiscoverSectionHeader(
             label: 'Recent searches',
-            leading: Icon(Icons.history_rounded, size: 16, color: colors.foreground),
+            leading: Icon(
+              Icons.history_rounded,
+              size: 16,
+              color: colors.foreground,
+            ),
             trailing: TextButton(
               onPressed: onClearRecent,
               style: TextButton.styleFrom(
@@ -404,7 +423,11 @@ class _SearchDiscoverState extends StatelessWidget {
               ),
               child: Text(
                 'CLEAR',
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
           ),
@@ -419,13 +442,20 @@ class _SearchDiscoverState extends StatelessWidget {
         ],
         _DiscoverSectionHeader(
           label: 'Top categories',
-          leading: Icon(Icons.layers_outlined, size: 16, color: colors.foreground),
+          leading: Icon(
+            Icons.layers_outlined,
+            size: 16,
+            color: colors.foreground,
+          ),
         ),
         const SizedBox(height: 10),
         if (loading && !hasCategories)
           const _DiscoverChipSkeletonRow()
         else if (!hasCategories)
-          Text('No categories yet.', style: TextStyle(color: colors.mutedForeground, fontSize: 13))
+          Text(
+            'No categories yet.',
+            style: TextStyle(color: colors.mutedForeground, fontSize: 13),
+          )
         else
           Wrap(
             spacing: 8,
@@ -434,7 +464,11 @@ class _SearchDiscoverState extends StatelessWidget {
               for (final category in topCategories)
                 _DiscoverChip(
                   label: category.name,
-                  leading: Icon(Icons.layers_outlined, size: 14, color: primary),
+                  leading: Icon(
+                    Icons.layers_outlined,
+                    size: 14,
+                    color: primary,
+                  ),
                   onTap: () => onCategory(category),
                   primary: primary,
                   colors: colors,
@@ -452,7 +486,11 @@ class _SearchDiscoverState extends StatelessWidget {
             ),
             child: Text(
               'VIEW ALL CATEGORIES',
-              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+              ),
             ),
           ),
         ),
@@ -473,7 +511,10 @@ class _SearchDiscoverState extends StatelessWidget {
         if (loading && !hasTags)
           const _DiscoverChipSkeletonRow()
         else if (!hasTags)
-          Text('No tags yet.', style: TextStyle(color: colors.mutedForeground, fontSize: 13))
+          Text(
+            'No tags yet.',
+            style: TextStyle(color: colors.mutedForeground, fontSize: 13),
+          )
         else
           Wrap(
             spacing: 8,
@@ -514,7 +555,11 @@ class _SearchIdleHint extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_rounded, size: 48, color: context.appColors.mutedForeground.withValues(alpha: 0.25)),
+            Icon(
+              Icons.search_rounded,
+              size: 48,
+              color: context.appColors.mutedForeground.withValues(alpha: 0.25),
+            ),
             const SizedBox(height: 16),
             Text(
               'SEARCH STORIES, TAGS, SQUADS, AND PEOPLE',
@@ -523,7 +568,9 @@ class _SearchIdleHint extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.2,
-                color: context.appColors.mutedForeground.withValues(alpha: 0.55),
+                color: context.appColors.mutedForeground.withValues(
+                  alpha: 0.55,
+                ),
               ),
             ),
           ],
@@ -549,10 +596,7 @@ class _DiscoverSectionHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (leading != null) ...[
-          leading!,
-          const SizedBox(width: 8),
-        ],
+        if (leading != null) ...[leading!, const SizedBox(width: 8)],
         Expanded(
           child: Text(
             label.toUpperCase(),
@@ -597,15 +641,15 @@ class _DiscoverChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: outlined ? colors.border : primary, width: 2),
+            border: Border.all(
+              color: outlined ? colors.border : primary,
+              width: 2,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (leading != null) ...[
-                leading!,
-                const SizedBox(width: 6),
-              ],
+              if (leading != null) ...[leading!, const SizedBox(width: 6)],
               Text(
                 label.toUpperCase(),
                 style: GoogleFonts.inter(
@@ -639,7 +683,10 @@ class _DiscoverChipSkeletonRow extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: colors.muted.withValues(alpha: 0.28),
-              border: Border.all(color: colors.border.withValues(alpha: 0.5), width: 2),
+              border: Border.all(
+                color: colors.border.withValues(alpha: 0.5),
+                width: 2,
+              ),
             ),
           ),
       ],
@@ -662,13 +709,13 @@ class _RecentSearchTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (item) {
       RecentSearchQuery(:final query) => _RecentQueryRow(
-          query: query,
-          onTap: () => onQueryTap(query),
-        ),
+        query: query,
+        onTap: () => onQueryTap(query),
+      ),
       RecentSearchHitEntry(:final hit) => _RecentHitRow(
-          hit: hit,
-          onTap: () => onHitTap(hit),
-        ),
+        hit: hit,
+        onTap: () => onHitTap(hit),
+      ),
     };
   }
 }
@@ -690,12 +737,18 @@ class _RecentQueryRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             border: Border(
-              bottom: BorderSide(color: context.appColors.border.withValues(alpha: 0.2)),
+              bottom: BorderSide(
+                color: context.appColors.border.withValues(alpha: 0.2),
+              ),
             ),
           ),
           child: Row(
             children: [
-              Icon(Icons.search_rounded, size: 18, color: context.appColors.mutedForeground),
+              Icon(
+                Icons.search_rounded,
+                size: 18,
+                color: context.appColors.mutedForeground,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -725,7 +778,8 @@ class _RecentHitRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (hit.type == SearchEntityType.tag || hit.type == SearchEntityType.category) {
+    if (hit.type == SearchEntityType.tag ||
+        hit.type == SearchEntityType.category) {
       return Material(
         color: context.appColors.background,
         child: InkWell(
@@ -735,7 +789,9 @@ class _RecentHitRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: context.appColors.border.withValues(alpha: 0.2)),
+                bottom: BorderSide(
+                  color: context.appColors.border.withValues(alpha: 0.2),
+                ),
               ),
             ),
             child: Row(
@@ -771,7 +827,9 @@ class _RecentHitRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: context.appColors.border.withValues(alpha: 0.2)),
+                bottom: BorderSide(
+                  color: context.appColors.border.withValues(alpha: 0.2),
+                ),
               ),
             ),
             child: Row(
@@ -807,7 +865,9 @@ class _RecentHitRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: context.appColors.border.withValues(alpha: 0.2)),
+                bottom: BorderSide(
+                  color: context.appColors.border.withValues(alpha: 0.2),
+                ),
               ),
             ),
             child: Row(
@@ -866,7 +926,11 @@ class _SearchNoMatches extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off_rounded, size: 48, color: context.appColors.mutedForeground.withValues(alpha: 0.25)),
+            Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: context.appColors.mutedForeground.withValues(alpha: 0.25),
+            ),
             const SizedBox(height: 16),
             Text(
               'NO MATCHES FOR:',
@@ -931,7 +995,8 @@ class _SearchHitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showSublabel = !compact && hit.sublabel != null && hit.sublabel!.isNotEmpty;
+    final showSublabel =
+        !compact && hit.sublabel != null && hit.sublabel!.isNotEmpty;
 
     return Material(
       color: context.appColors.background,
@@ -939,10 +1004,16 @@ class _SearchHitTile extends StatelessWidget {
         canRequestFocus: false,
         onTap: onTap,
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: compact ? 10 : 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: compact ? 10 : 12,
+          ),
           decoration: BoxDecoration(
             border: Border(
-              bottom: BorderSide(color: context.appColors.border.withValues(alpha: 0.2), width: 1),
+              bottom: BorderSide(
+                color: context.appColors.border.withValues(alpha: 0.2),
+                width: 1,
+              ),
             ),
           ),
           child: Row(
@@ -979,7 +1050,12 @@ class _SearchHitTile extends StatelessWidget {
                 ),
               ),
               if (!compact)
-                Icon(Icons.chevron_right_rounded, color: context.appColors.mutedForeground.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: context.appColors.mutedForeground.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
             ],
           ),
         ),
@@ -995,8 +1071,10 @@ class _SearchHitLeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showAvatar = hit.type == SearchEntityType.user ||
-        (hit.type == SearchEntityType.squad && (hit.imageUrl?.isNotEmpty ?? false));
+    final showAvatar =
+        hit.type == SearchEntityType.user ||
+        (hit.type == SearchEntityType.squad &&
+            (hit.imageUrl?.isNotEmpty ?? false));
 
     if (showAvatar) {
       final img = resolveProfileMediaUrl(hit.imageUrl);
@@ -1005,12 +1083,20 @@ class _SearchHitLeading extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+          border: Border.all(
+            color: context.appColors.border.withValues(alpha: 0.85),
+            width: 2,
+          ),
           color: context.appColors.muted.withValues(alpha: 0.3),
         ),
         clipBehavior: Clip.hardEdge,
         child: img.isNotEmpty
-            ? Image.network(img, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _fallbackAvatar(seed))
+            ? Image.network(
+                img,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _fallbackAvatar(seed),
+              )
             : _fallbackAvatar(seed),
       );
     }
@@ -1019,10 +1105,17 @@ class _SearchHitLeading extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+        border: Border.all(
+          color: context.appColors.border.withValues(alpha: 0.85),
+          width: 2,
+        ),
         color: context.appColors.muted.withValues(alpha: 0.25),
       ),
-      child: Icon(_iconForType(hit.type), size: 18, color: context.appColors.primary),
+      child: Icon(
+        _iconForType(hit.type),
+        size: 18,
+        color: context.appColors.primary,
+      ),
     );
   }
 
@@ -1031,7 +1124,11 @@ class _SearchHitLeading extends StatelessWidget {
       'https://api.dicebear.com/7.x/avataaars/svg?seed=${Uri.encodeComponent(seed)}',
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => Center(
-        child: Icon(Icons.person_outline, size: 20, color: context.appColors.mutedForeground),
+        child: Icon(
+          Icons.person_outline,
+          size: 20,
+          color: context.appColors.mutedForeground,
+        ),
       ),
     );
   }

@@ -56,14 +56,12 @@ class TrendingTabState extends State<TrendingTab> {
   }
 
   Future<void> reload() async {
-    await Future.wait([
-      _loadHero(),
-      _loadCategories(reset: true),
-    ]);
+    await Future.wait([_loadHero(), _loadCategories(reset: true)]);
   }
 
   void _onScroll() {
-    if (!_categoriesHasMore || _categoriesLoadingMore || _categoriesLoading) return;
+    if (!_categoriesHasMore || _categoriesLoadingMore || _categoriesLoading)
+      return;
     final max = _scrollController.position.maxScrollExtent;
     if (_scrollController.position.pixels >= max - 280) {
       _loadCategories(reset: false);
@@ -186,7 +184,10 @@ class TrendingTabState extends State<TrendingTab> {
           else if (_categories.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Text(
                   'No categories with posts yet.',
                   textAlign: TextAlign.center,
@@ -197,7 +198,8 @@ class TrendingTabState extends State<TrendingTab> {
           else
             SliverList(
               delegate: SliverChildBuilderDelegate(
-                (context, index) => TrendingCategoryLane(category: _categories[index]),
+                (context, index) =>
+                    TrendingCategoryLane(category: _categories[index]),
                 childCount: _categories.length,
               ),
             ),

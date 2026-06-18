@@ -1,10 +1,9 @@
 import { Router, Request, Response } from "express";
-import path from "node:path";
-import fs from "node:fs/promises";
 import { verifyToken, type AuthUser } from "../middlewares/auth/index.js";
 import { UserModel } from "../models/User.js";
 import { buildUploadImageMeta } from "../utils/uploadImageMeta.js";
-import { jpegBlurDataUrlFromFile } from "../utils/imageBlurPlaceholder.js";
+import { jpegBlurDataUrlFromBuffer } from "../utils/imageBlurPlaceholder.js";
+import { uploadImageBufferToCloudinary } from "../services/storage/cloudinaryUpload.js";
 import { getDefaultUploadStorage } from "../services/storage/localDiskUploadStorage.js";
 import {
   applyImageDelivery,
@@ -21,14 +20,6 @@ import {
   activateStorageBlock,
   isEnospcError,
 } from "../services/platform/storageGuard.service.js";
-async function tryBlurDataUrl(imagePath: string): Promise<string | undefined> {
-  try {
-    return await jpegBlurDataUrlFromFile(imagePath);
-  } catch (e) {
-    console.warn("blur placeholder generation failed", e);
-    return undefined;
-  }
-}
 const router = Router();
 const {
   avatars: AVATARS_DIR,
@@ -46,14 +37,6 @@ const uploadOrgLogoMw = createImageMasterMulter("orgLogo", {
   rejectGif: true,
   rejectMessage: LOGO_UPLOAD_REJECT_MESSAGE,
 });
-function getPublicUrl(req: Request, pathSegment: string): string {
-  const host = req.get("host") ?? "localhost";
-  const protocol = req.protocol ?? "http";
-  const base = `${protocol}://${host}`;
-  return pathSegment.startsWith("http")
-    ? pathSegment
-    : `${base}/${pathSegment.replace(/^\/+/, "")}`;
-}
 async function resolveUploaderUsername(req: Request): Promise<string> {
   const userId = (
     req as Request & {
@@ -78,9 +61,6 @@ function uploadImageJson(
     alt,
     ...(blurDataUrl ? { blurDataUrl } : {}),
   };
-}
-function outputBasename(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 type UploadRouteConfig = {
   profile: ImageMasterProfile;
@@ -112,12 +92,13 @@ async function handleImageMasterUpload(
       crop,
       cfg.delivery,
     );
-    const outputFilename = `${outputBasename(cfg.prefix)}-processed${delivered.ext}`;
-    const outputPath = path.join(cfg.outDir, outputFilename);
-    await fs.writeFile(outputPath, delivered.buffer);
-    const pathSegment = `${cfg.urlSegment}/${outputFilename}`;
-    const url = getPublicUrl(req, pathSegment);
-    const blurDataUrl = await tryBlurDataUrl(outputPath);
+    const uploaded = await uploadImageBufferToCloudinary(delivered.buffer, {
+      folderSuffix: cfg.urlSegment,
+      publicIdPrefix: `${cfg.prefix}-processed`,
+      originalName: file.originalname,
+    });
+    const url = uploaded.secure_url;
+    const blurDataUrl = await jpegBlurDataUrlFromBuffer(delivered.buffer);
     const username = await resolveUploaderUsername(req);
     res
       .status(201)

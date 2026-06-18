@@ -20,13 +20,25 @@ if (!existsSync(pkgJson)) {
 }
 
 if (existsSync(lockfile)) {
-  execSync('npm ci', { cwd: sharedRoot, stdio: 'inherit' });
+  execSync('npm ci', {
+    cwd: sharedRoot,
+    stdio: 'inherit',
+    env: { ...process.env, NPM_CONFIG_PRODUCTION: 'false' },
+  });
 } else {
   console.warn(
-    '[install-shared-package] no package-lock.json in webapp/packages/shared — npm install --omit=dev',
+    '[install-shared-package] no package-lock.json in webapp/packages/shared — npm install',
   );
-  execSync('npm install --omit=dev', { cwd: sharedRoot, stdio: 'inherit' });
+  execSync('npm install', {
+    cwd: sharedRoot,
+    stdio: 'inherit',
+    env: { ...process.env, NPM_CONFIG_PRODUCTION: 'false' },
+  });
 }
 
 console.log('[install-shared-package] building @syntax-stories/shared…');
-execSync('npm run build', { cwd: sharedRoot, stdio: 'inherit' });
+execSync('npm run build', {
+  cwd: sharedRoot,
+  stdio: 'inherit',
+  env: { ...process.env, NPM_CONFIG_PRODUCTION: 'false' },
+});

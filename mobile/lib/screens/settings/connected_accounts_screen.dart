@@ -5,6 +5,7 @@ import '../../services/auth_api.dart';
 import '../../services/oauth_launcher.dart';
 import '../../services/oauth_urls.dart';
 import '../../state/auth_state.dart';
+import '../../utils/auth_navigation.dart';
 import '../../utils/connected_accounts.dart';
 import '../../utils/user_message_case.dart';
 import '../../widgets/connected_accounts/connected_account_card.dart';
@@ -86,6 +87,8 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
       await Future<void>.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
       await auth.logout();
+      if (!mounted) return;
+      popToAppRoot(context);
     } on AuthApiException catch (e) {
       if (!mounted) return;
       setState(() => _busyProviderId = null);

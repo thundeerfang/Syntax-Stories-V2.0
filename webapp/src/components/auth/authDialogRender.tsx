@@ -387,16 +387,6 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
     <>
       <AuthStepHeader title="Create account" variant="signup" />
       <div className="mt-3">
-        <SignupReferralField
-          value={p.referralInput}
-          onChange={p.setReferralInputValue}
-          validationState={p.referralValidationState}
-          referrer={p.referralReferrer}
-          errorMessage={p.referralErrorMessage}
-          disabled={p.isLoading}
-        />
-      </div>
-      <div className="mt-3">
         <AuthSocialGroup>
           <SocialButton
             icon={GoogleIcon}
@@ -448,6 +438,17 @@ function renderAuthSignupStep(p: AuthDialogRenderProps): ReactNode {
         disabled={!ok}
         onClick={() => p.goToStep("signup-email")}
       />
+      <div className="mt-3">
+        <SignupReferralField
+          value={p.referralInput}
+          onChange={p.setReferralInputValue}
+          validationState={p.referralValidationState}
+          referrer={p.referralReferrer}
+          errorMessage={p.referralErrorMessage}
+          disabled={p.isLoading}
+          compact
+        />
+      </div>
       <div className="mt-3">
         <AuthSignupLegalConsent
           termsAccepted={p.legalTermsAccepted}
@@ -516,15 +517,6 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
             className={authInputClassName()}
           />
         </div>
-        <SignupReferralField
-          id="auth-signup-email-referral"
-          value={p.referralInput}
-          onChange={p.setReferralInputValue}
-          validationState={p.referralValidationState}
-          referrer={p.referralReferrer}
-          errorMessage={p.referralErrorMessage}
-          disabled={p.isLoading}
-        />
         <div className="flex w-full flex-col">
           <AltchaField
             enabled={p.altchaOn}

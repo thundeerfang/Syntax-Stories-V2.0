@@ -11,6 +11,10 @@ export {
 } from "./dialogs";
 export { FormDialog, type FormDialogProps } from "./FormDialog";
 export {
+  DialogInteractionLoader,
+  type DialogInteractionLoaderProps,
+} from "./DialogInteractionLoader";
+export {
   InfoSwiperDialog,
   type InfoSwiperDialogProps,
   type InfoSwiperSlide,

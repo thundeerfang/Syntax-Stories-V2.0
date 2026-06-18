@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { squadsApi, type SquadSummary } from "@/api/squads";
 import { ShellPageIntroHeader } from "@/components/layout";
 import { SquadDirectoryCard } from "@/features/squads";
+import { SquadDiscoverCardSkeleton } from "@/components/skeletons/SquadDiscoverCardSkeleton";
 import {
   isSquadCategory,
   squadCategoryLabel,
@@ -156,8 +157,8 @@ export function SquadsDiscoverCategoryView({
         {loading ? (
           <ul className={squads.discoverCardGrid}>
             {Array.from({ length: 8 }).map((_, i) => (
-              <li key={i}>
-                <div className="min-h-[17rem] w-full animate-pulse border-2 border-border bg-muted/25 shadow" />
+              <li key={i} className="w-full">
+                <SquadDiscoverCardSkeleton />
               </li>
             ))}
           </ul>
@@ -168,7 +169,7 @@ export function SquadsDiscoverCategoryView({
         ) : (
           <ul className={squads.discoverCardGrid}>
             {rows.map((s) => (
-              <li key={s._id} className="flex min-h-0">
+              <li key={s._id} className="w-full">
                 <SquadDirectoryCard
                   squad={s}
                   isMember={isMember(s)}

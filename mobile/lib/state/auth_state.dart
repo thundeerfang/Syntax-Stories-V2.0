@@ -41,6 +41,11 @@ class AuthState extends ChangeNotifier {
   bool busy = false;
   String? errorMessage;
 
+  /// OAuth opened in system browser — show blocking overlay until exchange finishes.
+  bool oauthPending = false;
+  bool oauthExchanging = false;
+  DateTime? oauthStartedAt;
+
   UserSummary? user;
   String? accessToken;
   String? refreshToken;
@@ -68,6 +73,34 @@ class AuthState extends ChangeNotifier {
   void clearAuthBanner() {
     authBannerMessage = null;
     authBannerKind = null;
+    notifyListeners();
+  }
+
+  void beginOAuthFlow() {
+    oauthPending = true;
+    oauthExchanging = false;
+    oauthStartedAt = DateTime.now();
+    clearAuthBanner();
+    notifyListeners();
+  }
+
+  void clearOAuthPending() {
+    oauthPending = false;
+    oauthExchanging = false;
+    oauthStartedAt = null;
+    notifyListeners();
+  }
+
+  void failOAuth(String message, {AppFeedbackKind kind = AppFeedbackKind.error}) {
+    oauthPending = false;
+    oauthExchanging = false;
+    oauthStartedAt = null;
+    busy = false;
+    setAuthBanner(message, kind);
+  }
+
+  void markOAuthExchanging() {
+    oauthExchanging = true;
     notifyListeners();
   }
 
@@ -229,6 +262,7 @@ class AuthState extends ChangeNotifier {
 
   Future<void> completeOAuthExchange(String exchangeCode) async {
     busy = true;
+    oauthExchanging = true;
     errorMessage = null;
     notifyListeners();
     try {
@@ -250,6 +284,9 @@ class AuthState extends ChangeNotifier {
       rethrow;
     } finally {
       busy = false;
+      oauthPending = false;
+      oauthExchanging = false;
+      oauthStartedAt = null;
       notifyListeners();
     }
   }

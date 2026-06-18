@@ -67,13 +67,10 @@ export function AuthDialogTopBar({
           <button
             type="button"
             onClick={onBack}
-            className={cn(authDialog.chromeBtn, "gap-1 px-2.5 w-auto min-w-9")}
+            className={authDialog.chromeBtn}
             aria-label={backLabel}
           >
             <ArrowLeft className="size-4 shrink-0" aria-hidden />
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              {backLabel}
-            </span>
           </button>
         ) : null}
       </div>

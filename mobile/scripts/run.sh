@@ -8,6 +8,7 @@
 #   ./scripts/run.sh --clean ios     # flutter clean + pod install, then iOS
 #   ./scripts/run.sh --clean         # flutter clean, then both
 #   ./scripts/run.sh ios -- --release
+#   ./scripts/run.sh --local ios     # USE_LOCAL_API=true (127.0.0.1 / 10.0.2.2)
 #
 # Env:
 #   ANDROID_EMULATOR_ID=Pixel_8_Pro_API35
@@ -22,6 +23,7 @@ ANDROID_EMULATOR_ID="${ANDROID_EMULATOR_ID:-Pixel_8_Pro_API35}"
 IOS_SIMULATOR_DEVICE="${IOS_SIMULATOR_DEVICE:-iPhone 17}"
 PLATFORM="both"
 CLEAN=false
+USE_LOCAL_API=false
 FLUTTER_ARGS=()
 ANDROID_PID=""
 IOS_PID=""
@@ -49,7 +51,11 @@ Examples:
   $0 ios
   $0 --clean ios
   $0 --clean android
-  $0 ios -- --dart-define=API_BASE_URL=http://127.0.0.1:7373
+  $0 --local ios
+  $0 ios -- --dart-define=USE_LOCAL_API=true
+
+  --local   Point API at local dev server (127.0.0.1:7373 / emulator 10.0.2.2).
+            Without --local, app uses production Render API.
 
 Env:
   IOS_SIMULATOR_DEVICE='iPhone 17'   Pick a different iOS simulator
@@ -65,6 +71,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --clean)
       CLEAN=true
+      shift
+      ;;
+    --local)
+      USE_LOCAL_API=true
       shift
       ;;
     android|ios|both)
@@ -83,6 +93,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "${USE_LOCAL_API}" == true ]]; then
+  FLUTTER_ARGS=("--dart-define=USE_LOCAL_API=true" "${FLUTTER_ARGS[@]}")
+  echo "==> USE_LOCAL_API=true (local backend on port 7373)"
+fi
 
 cleanup() {
   [[ -n "${ANDROID_PID}" ]] && kill "${ANDROID_PID}" 2>/dev/null || true
