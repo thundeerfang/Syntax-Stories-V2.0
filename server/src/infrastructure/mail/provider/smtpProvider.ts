@@ -1,10 +1,12 @@
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport/index.js";
 import { env } from "../../../config/env.js";
 import { MailSendError } from "../types.js";
 let transporter: nodemailer.Transporter | null = null;
-export function buildSmtpTransportOptions(): Parameters<
-  typeof nodemailer.createTransport
->[0] {
+type SmtpTransportOptions = SMTPTransport.Options & {
+  family?: 4 | 6;
+};
+export function buildSmtpTransportOptions(): SmtpTransportOptions {
   const user = env.EMAIL_USER?.trim();
   const pass = (env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS)?.trim();
   return {
