@@ -37,14 +37,6 @@ const uploadOrgLogoMw = createImageMasterMulter("orgLogo", {
   rejectGif: true,
   rejectMessage: LOGO_UPLOAD_REJECT_MESSAGE,
 });
-function getPublicUrl(req: Request, pathSegment: string): string {
-  const host = req.get("host") ?? "localhost";
-  const protocol = req.protocol ?? "http";
-  const base = `${protocol}://${host}`;
-  return pathSegment.startsWith("http")
-    ? pathSegment
-    : `${base}/${pathSegment.replace(/^\/+/, "")}`;
-}
 async function resolveUploaderUsername(req: Request): Promise<string> {
   const userId = (
     req as Request & {

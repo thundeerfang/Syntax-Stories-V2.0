@@ -1,6 +1,4 @@
 import {
-  ALLOWED_IMAGE_MIMES,
-  IMAGE_UPLOAD_REJECT_MESSAGE,
   detectImageMimeFromBytes as detectFromShared,
   imageBytesMatchMime as bytesMatchShared,
   isAllowedImageMime as isAllowedImageMimeShared,

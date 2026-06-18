@@ -12,7 +12,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
-    exclude: ["node_modules", ".next", ".next-desktop", "coverage"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["**/node_modules/**", ".next/**", ".next-desktop/**", "coverage/**"],
     coverage: {
       provider: "v8",
       reportsDirectory: "coverage",
