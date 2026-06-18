@@ -12,7 +12,11 @@ class OAuthDeepLink {
     if (raw == null || raw.isEmpty) return null;
 
     final path = uri.path;
-    if (path.contains('/auth/callback/') || path == '/login' || path.endsWith('/login')) {
+    if (path.contains('/auth/callback/') ||
+        path == '/login' ||
+        path.endsWith('/login') ||
+        path == '/settings' ||
+        path.endsWith('/settings')) {
       return Uri.decodeComponent(raw);
     }
     return null;

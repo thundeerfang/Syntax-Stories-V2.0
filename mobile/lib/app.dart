@@ -24,7 +24,8 @@ class SyntaxStoriesApp extends StatefulWidget {
   State<SyntaxStoriesApp> createState() => _SyntaxStoriesAppState();
 }
 
-class _SyntaxStoriesAppState extends State<SyntaxStoriesApp> with WidgetsBindingObserver {
+class _SyntaxStoriesAppState extends State<SyntaxStoriesApp>
+    with WidgetsBindingObserver {
   final _appLinks = AppLinks();
   final _navigatorKey = GlobalKey<NavigatorState>();
 
@@ -52,7 +53,19 @@ class _SyntaxStoriesAppState extends State<SyntaxStoriesApp> with WidgetsBinding
     final started = auth.oauthStartedAt;
     if (started != null && DateTime.now().difference(started) > _oauthTimeout) {
       auth.failOAuth('Sign-in timed out. Please try again.');
+      return;
     }
+    if (started == null ||
+        DateTime.now().difference(started) < const Duration(seconds: 2)) {
+      return;
+    }
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      final latest = _auth;
+      if (latest == null || !latest.oauthPending || latest.oauthExchanging) {
+        return;
+      }
+      latest.failOAuth('Sign-in cancelled. Please try again.');
+    });
   }
 
   Future<void> _initDeepLinks() async {
@@ -81,7 +94,12 @@ class _SyntaxStoriesAppState extends State<SyntaxStoriesApp> with WidgetsBinding
 
     final error = OAuthDeepLink.errorMessage(uri);
     if (error != null) {
-      logApiError('OAuth callback error', method: 'GET', url: uri, cause: error);
+      logApiError(
+        'OAuth callback error',
+        method: 'GET',
+        url: uri,
+        cause: error,
+      );
       auth.failOAuth(error);
       return;
     }
@@ -142,12 +160,7 @@ class _SyntaxStoriesAppState extends State<SyntaxStoriesApp> with WidgetsBinding
             themeMode: theme.mode,
             builder: (context, child) {
               return AuthFeedbackListener(
-                child: Stack(
-                  children: [
-                    if (child != null) child,
-                    const AuthOAuthFlowOverlay(),
-                  ],
-                ),
+                child: Stack(children: [?child, const AuthOAuthFlowOverlay()]),
               );
             },
             home: const ServerConnectGate(

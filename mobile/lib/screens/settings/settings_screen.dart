@@ -19,6 +19,7 @@ import '../../widgets/profile/edit_profile_social_card.dart';
 import '../../widgets/profile/profile_image_upload_dialog.dart';
 import '../../widgets/ui/app_confirm_dialog.dart';
 import '../../widgets/ui/app_feedback_toast.dart';
+import '../../widgets/ui/app_loading_indicator.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
 import '../../widgets/navigation/screen_app_bar.dart';
 import '../../widgets/ui/app_pull_to_refresh.dart';
@@ -54,11 +55,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   InviteMe? _inviteMe;
   bool _inviteLoading = true;
   bool _linkCopied = false;
+  bool _loggingOut = false;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() => setState(() => _search = _searchController.text));
+    _searchController.addListener(
+      () => setState(() => _search = _searchController.text),
+    );
     _inviteMe = AccountPrefetch.inviteMe;
     _inviteLoading = _inviteMe == null;
     if (_inviteMe == null) {
@@ -122,7 +126,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final items = settingsItemsForGroup(group);
     if (q.isEmpty) return items;
     return items.where((item) {
-      return item.label.toLowerCase().contains(q) || item.description.toLowerCase().contains(q);
+      return item.label.toLowerCase().contains(q) ||
+          item.description.toLowerCase().contains(q);
     }).toList();
   }
 
@@ -136,7 +141,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _openSection(SettingsNavItem item) {
     if (item.id == 'edit-profile') {
       Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const SettingsEditProfileScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => const SettingsEditProfileScreen(),
+        ),
       );
       return;
     }
@@ -154,7 +161,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (item.id == 'connected-accounts') {
       Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const ConnectedAccountsScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => const ConnectedAccountsScreen(),
+        ),
       );
       return;
     }
@@ -201,7 +210,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
     Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => SettingsSectionScreen(item: item)),
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsSectionScreen(item: item),
+      ),
     );
   }
 
@@ -215,56 +226,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
       variant: AppConfirmDialogVariant.logout,
     );
     if (confirmed != true || !mounted) return;
-    await context.read<AuthState>().logout();
-    if (!mounted) return;
-    popToAppRoot(context);
+    setState(() => _loggingOut = true);
+    try {
+      await context.read<AuthState>().logout();
+      if (!mounted) return;
+      popToAppRoot(context);
+    } finally {
+      if (mounted) setState(() => _loggingOut = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.appColors.background,
-      appBar: const ScreenAppBar(title: 'Settings'),
-      body: AppPullToRefresh(
-        onRefresh: _refreshSettings,
-        child: ListView(
-          physics: AppPullToRefresh.scrollPhysics,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-          _ReferEarnHighlightCard(
-            inviteUrl: _inviteMe?.inviteUrl ?? '',
-            loading: _inviteLoading,
-            copied: _linkCopied,
-            onCopy: _copyInviteLink,
-            onOpenReferEarn: _openReferEarn,
+    final colors = context.appColors;
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: colors.background,
+          appBar: const ScreenAppBar(title: 'Settings'),
+          body: AppPullToRefresh(
+            onRefresh: _refreshSettings,
+            child: ListView(
+              physics: AppPullToRefresh.scrollPhysics,
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                _ReferEarnHighlightCard(
+                  inviteUrl: _inviteMe?.inviteUrl ?? '',
+                  loading: _inviteLoading,
+                  copied: _linkCopied,
+                  onCopy: _copyInviteLink,
+                  onOpenReferEarn: _openReferEarn,
+                ),
+                const SizedBox(height: 16),
+                _SettingsSearchField(controller: _searchController),
+                const SizedBox(height: 16),
+                if (!_hasVisibleGroups && _search.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'No settings match "${_search.trim()}".',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: context.appColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                for (final group in SettingsGroup.values) ...[
+                  if (_filteredItemsFor(group).isNotEmpty)
+                    _SettingsGroup(
+                      group: group,
+                      items: _filteredItemsFor(group),
+                      open: _openGroups[group] ?? true,
+                      onToggle: () => setState(
+                        () =>
+                            _openGroups[group] = !(_openGroups[group] ?? true),
+                      ),
+                      onItemTap: _openSection,
+                    ),
+                  if (_filteredItemsFor(group).isNotEmpty)
+                    const SizedBox(height: 12),
+                ],
+                _LogoutButton(onTap: _confirmLogout),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          _SettingsSearchField(controller: _searchController),
-          const SizedBox(height: 16),
-          if (!_hasVisibleGroups && _search.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                'No settings match "${_search.trim()}".',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(color: context.appColors.mutedForeground),
+        ),
+        if (_loggingOut)
+          Positioned.fill(
+            child: AbsorbPointer(
+              child: ColoredBox(
+                color: colors.background.withValues(alpha: 0.9),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppLoadingIndicator(size: 44, color: colors.primary),
+                      const SizedBox(height: 16),
+                      Text(
+                        'LOGGING OUT…',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1,
+                          color: colors.foreground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          for (final group in SettingsGroup.values) ...[
-            if (_filteredItemsFor(group).isNotEmpty)
-              _SettingsGroup(
-                group: group,
-                items: _filteredItemsFor(group),
-                open: _openGroups[group] ?? true,
-                onToggle: () => setState(() => _openGroups[group] = !(_openGroups[group] ?? true)),
-                onItemTap: _openSection,
-              ),
-            if (_filteredItemsFor(group).isNotEmpty) const SizedBox(height: 12),
-          ],
-          _LogoutButton(onTap: _confirmLogout),
-        ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 }
@@ -290,9 +343,16 @@ class _ReferEarnHighlightCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.appColors.card,
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+        border: Border.all(
+          color: context.appColors.border.withValues(alpha: 0.85),
+          width: 2,
+        ),
         boxShadow: [
-          BoxShadow(color: context.appColors.shadow, offset: Offset(2, 2), blurRadius: 0),
+          BoxShadow(
+            color: context.appColors.shadow,
+            offset: Offset(2, 2),
+            blurRadius: 0,
+          ),
         ],
       ),
       child: Column(
@@ -305,9 +365,16 @@ class _ReferEarnHighlightCard extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: context.appColors.primary,
-                  border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+                  border: Border.all(
+                    color: context.appColors.border.withValues(alpha: 0.85),
+                    width: 2,
+                  ),
                 ),
-                child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.card_giftcard_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -325,7 +392,10 @@ class _ReferEarnHighlightCard extends StatelessWidget {
                     ),
                     Text(
                       'Share your link and earn when friends join.',
-                      style: GoogleFonts.inter(fontSize: 12, color: context.appColors.mutedForeground),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: context.appColors.mutedForeground,
+                      ),
                     ),
                   ],
                 ),
@@ -348,15 +418,23 @@ class _ReferEarnHighlightCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: context.appColors.card.withValues(alpha: 0.92),
-                    border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+                    border: Border.all(
+                      color: context.appColors.border.withValues(alpha: 0.85),
+                      width: 2,
+                    ),
                   ),
                   child: loading
                       ? const _ReferralLinkSkeleton()
                       : Text(
-                          inviteUrl.isNotEmpty ? inviteUrl : 'Invite link unavailable',
+                          inviteUrl.isNotEmpty
+                              ? inviteUrl
+                              : 'Invite link unavailable',
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.jetBrainsMono(
@@ -370,13 +448,21 @@ class _ReferEarnHighlightCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Material(
-                color: loading || inviteUrl.isEmpty ? context.appColors.muted : context.appColors.primary,
+                color: loading || inviteUrl.isEmpty
+                    ? context.appColors.muted
+                    : context.appColors.primary,
                 child: InkWell(
                   onTap: loading || inviteUrl.isEmpty ? null : onCopy,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+                      border: Border.all(
+                        color: context.appColors.border.withValues(alpha: 0.85),
+                        width: 2,
+                      ),
                     ),
                     child: Icon(
                       copied ? Icons.check_rounded : Icons.copy_rounded,
@@ -395,7 +481,9 @@ class _ReferEarnHighlightCard extends StatelessWidget {
               backgroundColor: context.appColors.foreground,
               foregroundColor: context.appColors.background,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
               elevation: 0,
             ),
             child: Text(
@@ -493,19 +581,35 @@ class _SettingsSearchField extends StatelessWidget {
         style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           hintText: 'Search settings…',
-          hintStyle: GoogleFonts.inter(color: context.appColors.mutedForeground),
-          prefixIcon: Icon(Icons.search_rounded, color: context.appColors.mutedForeground, size: 22),
+          hintStyle: GoogleFonts.inter(
+            color: context.appColors.mutedForeground,
+          ),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: context.appColors.mutedForeground,
+            size: 22,
+          ),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.close_rounded, size: 20, color: context.appColors.mutedForeground),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: context.appColors.mutedForeground,
+                  ),
                   onPressed: controller.clear,
                 )
               : null,
           filled: true,
           fillColor: context.appColors.inputFill,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
           enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+            borderSide: BorderSide(
+              color: context.appColors.border.withValues(alpha: 0.85),
+              width: 2,
+            ),
             borderRadius: BorderRadius.zero,
           ),
           focusedBorder: OutlineInputBorder(
@@ -540,9 +644,16 @@ class _SettingsGroup extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: context.appColors.card,
-        border: Border.all(color: context.appColors.border.withValues(alpha: 0.85), width: 2),
+        border: Border.all(
+          color: context.appColors.border.withValues(alpha: 0.85),
+          width: 2,
+        ),
         boxShadow: [
-          BoxShadow(color: context.appColors.shadow, offset: Offset(2, 2), blurRadius: 0),
+          BoxShadow(
+            color: context.appColors.shadow,
+            offset: Offset(2, 2),
+            blurRadius: 0,
+          ),
         ],
       ),
       clipBehavior: Clip.hardEdge,
@@ -566,7 +677,9 @@ class _SettingsGroup extends StatelessWidget {
                     ),
                   ),
                   Icon(
-                    open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                    open
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
                     size: 20,
                     color: context.appColors.mutedForeground,
                   ),
@@ -576,7 +689,11 @@ class _SettingsGroup extends StatelessWidget {
           ),
           if (open)
             for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) Divider(height: 1, color: context.appColors.border.withValues(alpha: 0.25)),
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  color: context.appColors.border.withValues(alpha: 0.25),
+                ),
               _SettingsNavRow(item: items[i], onTap: () => onItemTap(items[i])),
             ],
         ],
@@ -613,7 +730,10 @@ class _SettingsNavRow extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: context.appColors.mutedForeground.withValues(alpha: 0.6)),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: context.appColors.mutedForeground.withValues(alpha: 0.6),
+              ),
             ],
           ),
         ),
@@ -635,7 +755,10 @@ class _LogoutButton extends StatelessWidget {
       label: const Text('LOG OUT'),
       style: OutlinedButton.styleFrom(
         foregroundColor: context.appColors.destructive,
-        side: BorderSide(color: context.appColors.destructive.withValues(alpha: 0.85), width: 2),
+        side: BorderSide(
+          color: context.appColors.destructive.withValues(alpha: 0.85),
+          width: 2,
+        ),
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
@@ -647,7 +770,8 @@ class SettingsEditProfileScreen extends StatefulWidget {
   const SettingsEditProfileScreen({super.key});
 
   @override
-  State<SettingsEditProfileScreen> createState() => _SettingsEditProfileScreenState();
+  State<SettingsEditProfileScreen> createState() =>
+      _SettingsEditProfileScreenState();
 }
 
 class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
@@ -768,88 +892,98 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
             physics: AppPullToRefresh.scrollPhysics,
             padding: EdgeInsets.zero,
             children: [
-            EditProfileHero(
-              user: user,
-              bannerHeight: bannerHeight,
-              avatarSize: avatarSize,
-              onEditCover: () => _openImageUpload(ProfileImageUploadKind.cover),
-              onEditAvatar: () => _openImageUpload(ProfileImageUploadKind.avatar),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AuthTextField(
-                    controller: _fullName,
-                    label: 'FULL NAME',
-                    rule: AppFieldRule.fullNameProfile,
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                  const SizedBox(height: 12),
-                  AuthTextField(
-                    controller: _username,
-                    label: 'USERNAME',
-                    rule: AppFieldRule.username,
-                  ),
-                  const SizedBox(height: 12),
-                  AuthTextField(
-                    controller: _bio,
-                    label: 'BIO',
-                    rule: AppFieldRule.bio,
-                    keyboardType: TextInputType.multiline,
-                    minLines: 4,
-                    maxLines: 8,
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 20),
-                  EditProfilePortfolioCard(controller: _portfolio),
-                  const SizedBox(height: 20),
-                  EditProfileSocialCard(
-                    linkedin: _linkedin,
-                    github: _github,
-                    instagram: _instagram,
-                    youtube: _youtube,
-                  ),
-                  const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _saving ? null : _reset,
-                          child: Text(
-                            'RESET',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w900, letterSpacing: 0.8),
+              EditProfileHero(
+                user: user,
+                bannerHeight: bannerHeight,
+                avatarSize: avatarSize,
+                onEditCover: () =>
+                    _openImageUpload(ProfileImageUploadKind.cover),
+                onEditAvatar: () =>
+                    _openImageUpload(ProfileImageUploadKind.avatar),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AuthTextField(
+                      controller: _fullName,
+                      label: 'FULL NAME',
+                      rule: AppFieldRule.fullNameProfile,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    AuthTextField(
+                      controller: _username,
+                      label: 'USERNAME',
+                      rule: AppFieldRule.username,
+                    ),
+                    const SizedBox(height: 12),
+                    AuthTextField(
+                      controller: _bio,
+                      label: 'BIO',
+                      rule: AppFieldRule.bio,
+                      keyboardType: TextInputType.multiline,
+                      minLines: 4,
+                      maxLines: 8,
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                    const SizedBox(height: 20),
+                    EditProfilePortfolioCard(controller: _portfolio),
+                    const SizedBox(height: 20),
+                    EditProfileSocialCard(
+                      linkedin: _linkedin,
+                      github: _github,
+                      instagram: _instagram,
+                      youtube: _youtube,
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _saving ? null : _reset,
+                            child: Text(
+                              'RESET',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _saving ? null : _save,
-                          child: _saving
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Theme.of(context).colorScheme.onPrimary,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _saving ? null : _save,
+                            child: _saving
+                                ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
+                                    ),
+                                  )
+                                : Text(
+                                    'SAVE CHANGES',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.8,
+                                    ),
                                   ),
-                                )
-                              : Text(
-                                  'SAVE CHANGES',
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.w900, letterSpacing: 0.8),
-                                ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

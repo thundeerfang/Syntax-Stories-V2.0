@@ -45,14 +45,18 @@ async function getMessaging(): Promise<FirebaseMessaging | null> {
       const raw = await loadServiceAccountJson();
       if (!raw) return null;
       try {
-        const admin = await import("firebase-admin");
-        if (!admin.apps.length) {
-          const serviceAccount = JSON.parse(raw) as Record<string, unknown>;
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+        const [{ cert, getApps, initializeApp }, { getMessaging }] =
+          await Promise.all([
+            import("firebase-admin/app"),
+            import("firebase-admin/messaging"),
+          ]);
+        const serviceAccount = JSON.parse(raw) as Record<string, unknown>;
+        if (!getApps().length) {
+          initializeApp({
+            credential: cert(serviceAccount),
           });
         }
-        return admin.messaging();
+        return getMessaging();
       } catch (e) {
         console.warn("[pushNotification] Firebase init failed:", String(e));
         return null;

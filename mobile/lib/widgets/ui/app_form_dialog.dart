@@ -15,6 +15,8 @@ class AppFormDialog extends StatelessWidget {
     this.onConfirm,
     this.confirmEnabled = true,
     this.submitting = false,
+    this.showActions = true,
+    this.showCloseButton = false,
   });
 
   final String title;
@@ -25,6 +27,8 @@ class AppFormDialog extends StatelessWidget {
   final VoidCallback? onConfirm;
   final bool confirmEnabled;
   final bool submitting;
+  final bool showActions;
+  final bool showCloseButton;
 
   static Future<T?> show<T>(
     BuildContext context, {
@@ -51,56 +55,89 @@ class AppFormDialog extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: colors.card,
-            border: Border.all(color: colors.border.withValues(alpha: 0.85), width: 2),
+            border: Border.all(
+              color: colors.border.withValues(alpha: 0.85),
+              width: 2,
+            ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  title.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  24,
+                  showCloseButton ? 56 : 20,
+                  20,
                 ),
-                const SizedBox(height: 16),
-                child,
-                const SizedBox(height: 20),
-                Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: submitting ? null : onCancel,
-                        child: Text(
-                          cancelLabel.toUpperCase(),
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w800),
-                        ),
+                    Text(
+                      title.toUpperCase(),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: submitting || !confirmEnabled ? null : onConfirm,
-                        child: submitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text(
-                                confirmLabel.toUpperCase(),
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                    const SizedBox(height: 16),
+                    child,
+                    if (showActions) ...[
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: submitting ? null : onCancel,
+                              child: Text(
+                                cancelLabel.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: submitting || !confirmEnabled
+                                  ? null
+                                  : onConfirm,
+                              child: submitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      confirmLabel.toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                    ],
                   ],
                 ),
-              ],
-            ),
+              ),
+              if (showCloseButton)
+                Positioned(
+                  right: 10,
+                  top: 10,
+                  child: IconButton(
+                    onPressed: submitting ? null : onCancel,
+                    icon: const Icon(Icons.close_rounded),
+                    color: colors.mutedForeground,
+                    tooltip: cancelLabel,
+                  ),
+                ),
+            ],
           ),
         ),
       ),
