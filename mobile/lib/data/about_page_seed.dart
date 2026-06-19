@@ -1,16 +1,7 @@
-import '../config/web_config.dart';
 import '../models/about_page_content.dart';
 
 /// Builds About content with absolute asset URLs — mirrors webapp seed.
 AboutPageContent buildAboutPageContent() {
-  final web = resolveWebBaseUrl();
-
-  String webAsset(String path) {
-    if (path.startsWith('http')) return path;
-    final p = path.startsWith('/') ? path : '/$path';
-    return '$web$p';
-  }
-
   return AboutPageContent(
     legacyV1Url: 'https://syntax-stories.vercel.app/',
     hero: const AboutHero(
@@ -88,17 +79,19 @@ AboutPageContent buildAboutPageContent() {
         name: 'Somya',
         role: 'Database architect & data structures',
         imageUrl: 'assets/developers/somya.png',
-        githubUrl: 'https://github.com/',
-        linkedinUrl: 'https://www.linkedin.com/in/',
-        resumeUrl: webAsset('/developers/resumes/somya.pdf'),
+        githubUrl: 'https://github.com/Somya170',
+        linkedinUrl: 'https://www.linkedin.com/in/somyajaiswal218',
+        resumeUrl:
+            'https://www.dropbox.com/scl/fi/05wy19m5lmkwjjdacq97l/somya.pdf?rlkey=loyugxm1s23jvxrxxpl6w9axd&st=4apd62x9&dl=0',
         shadowCard: true,
       ),
       AboutTeamMember(
         name: 'Harshit Kushwah',
-        role: 'Full-stack developer · cross-platform mobile app\nAPI architect · system design',
+        role:
+            'Full-stack developer · cross-platform mobile app\nAPI architect · system design',
         imageUrl: 'assets/developers/harshit.png',
-        githubUrl: 'https://github.com/harshitkushwah5910',
-        linkedinUrl: 'https://www.linkedin.com/in/harshitkushwah',
+        githubUrl: 'https://github.com/thundeerfang',
+        linkedinUrl: 'https://www.linkedin.com/in/harshitkushwah02/',
         resumeUrl:
             'https://dl.dropboxusercontent.com/scl/fi/vf6000p3s3p7s6de88u3g/HARSHIT_RESUME_1.0.pdf?rlkey=s27b9ugylnav1ltyyt53rhkpv&st=ci7htn50&dl=0',
         featured: true,
@@ -107,9 +100,10 @@ AboutPageContent buildAboutPageContent() {
         name: 'Vijay',
         role: 'UI/UX designer',
         imageUrl: 'assets/developers/vijay.png',
-        githubUrl: 'https://github.com/',
-        linkedinUrl: 'https://www.linkedin.com/in/',
-        resumeUrl: webAsset('/developers/resumes/vijay.pdf'),
+        githubUrl: 'https://github.com/vijaychouhan2211',
+        linkedinUrl: 'https://www.linkedin.com/in/vijay-chouhan-09b83a287/',
+        resumeUrl:
+            'https://www.dropbox.com/scl/fi/m8xgnkinr2rjvlgcxz2ar/vijay.pdf?rlkey=x4kdsj0gin4dy10qxwyegbb5c&st=io5zfh7z&dl=0',
         shadowCard: true,
       ),
     ],
