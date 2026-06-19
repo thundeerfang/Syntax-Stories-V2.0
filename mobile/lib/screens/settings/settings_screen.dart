@@ -19,7 +19,7 @@ import '../../widgets/profile/edit_profile_social_card.dart';
 import '../../widgets/profile/profile_image_upload_dialog.dart';
 import '../../widgets/ui/app_confirm_dialog.dart';
 import '../../widgets/ui/app_feedback_toast.dart';
-import '../../widgets/ui/app_loading_indicator.dart';
+import '../../widgets/ui/app_form_dialog.dart';
 import '../../widgets/ui/unfocus_tap_region.dart';
 import '../../widgets/navigation/screen_app_bar.dart';
 import '../../widgets/ui/app_pull_to_refresh.dart';
@@ -297,21 +297,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ColoredBox(
                 color: colors.background.withValues(alpha: 0.9),
                 child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppLoadingIndicator(size: 44, color: colors.primary),
-                      const SizedBox(height: 16),
-                      Text(
-                        'LOGGING OUT…',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.1,
-                          color: colors.foreground,
+                  child: AppFormDialog(
+                    title: 'Logging out',
+                    showActions: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 34,
+                          height: 34,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: colors.primary,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 18),
+                        Text(
+                          'Please wait while we secure your session.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                            color: colors.mutedForeground,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
