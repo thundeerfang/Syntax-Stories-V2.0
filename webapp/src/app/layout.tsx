@@ -21,14 +21,44 @@ import { NavigationRecovery } from "@/components/shell/NavigationRecovery";
 import { MOBILE_BROWSER_LOCK_BOOTSTRAP_SCRIPT } from "@/lib/dom/mobileBrowserLockBootstrap";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const SITE_URL = "https://syntax-stories.vercel.app";
+const META_IMAGE_URL =
+  "https://res.cloudinary.com/dr2bxpjjz/image/upload/v1781867420/SYNTAX_STORIES_ge81pp.png";
+const SITE_TITLE =
+  "Syntax Stories - Developer Blogs, Squads & Coding Community";
+const SITE_DESCRIPTION =
+  "Syntax Stories is a developer community for writing technical blogs, discovering coding stories, joining squads, tracking achievements, and sharing your programming journey.";
 
 /** Inline in <head> so it runs before paint; avoids next/script in <body> (React 19 + RSC warnings). */
 const THEME_BOOTSTRAP_SCRIPT = `(function(){try{var raw=localStorage.getItem('syntax-stories-theme');var resolved=null;if(raw){var p=JSON.parse(raw);var stored=p&&p.state&&p.state.theme;if(stored==='dark'||stored==='light')resolved=stored;else if(stored==='system'||!stored)resolved=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}if(!resolved)resolved=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.classList.toggle('dark',resolved==='dark');document.documentElement.style.colorScheme=resolved;}catch(e){var fb=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.classList.toggle('dark',fb==='dark');document.documentElement.style.colorScheme=fb;}})();`;
 
 export const metadata: Metadata = {
-  title: "Syntax Stories – Tech stories for developers",
-  description:
-    "Tech stories and ideas for developers. Read and share articles on programming, web development, and more.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: "%s | Syntax Stories",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: "Syntax Stories",
+  authors: [
+    { name: "Harshit Kushwah" },
+    { name: "Somya" },
+    { name: "Vijay" },
+  ],
+  creator: "Harshit Kushwah, Somya, Vijay",
+  publisher: "Syntax Stories",
+  keywords: [
+    "Syntax Stories",
+    "developer community",
+    "programming blogs",
+    "coding stories",
+    "web development",
+    "developer squads",
+    "tech articles",
+    "Flutter",
+    "Next.js",
+    "full-stack development",
+  ],
   icons: {
     icon: [
       { url: "/favicon/favicon.ico", sizes: "any" },
@@ -38,6 +68,35 @@ export const metadata: Metadata = {
     apple: "/favicon/apple-touch-icon.png",
   },
   manifest: "/favicon/site.webmanifest",
+  alternates: {
+    canonical: SITE_URL,
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Syntax Stories",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: META_IMAGE_URL,
+        width: 1024,
+        height: 576,
+        alt: "Syntax Stories developer community preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [META_IMAGE_URL],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Syntax Stories",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({

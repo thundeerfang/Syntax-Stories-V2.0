@@ -1,6 +1,9 @@
 {
   "name": "Syntax Stories",
   "short_name": "Syntax",
+  "description": "Syntax Stories is a developer community for writing technical blogs, discovering coding stories, joining squads, tracking achievements, and sharing your programming journey.",
+  "start_url": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png?v=20260617",
@@ -15,7 +18,17 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "screenshots": [
+    {
+      "src": "https://res.cloudinary.com/dr2bxpjjz/image/upload/v1781867420/SYNTAX_STORIES_ge81pp.png",
+      "sizes": "1024x576",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Syntax Stories developer community preview"
+    }
+  ],
+  "categories": ["developer", "education", "social", "productivity"],
+  "theme_color": "#0f0f12",
+  "background_color": "#0f0f12",
   "display": "standalone"
 }
