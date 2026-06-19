@@ -24,7 +24,19 @@ class AppFeedbackToast {
 
     _dismiss();
 
-    final overlay = Overlay.of(context, rootOverlay: true);
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) {
+      ScaffoldMessenger.maybeOf(context)
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(formatUserMessage(message)),
+            behavior: SnackBarBehavior.floating,
+            duration: duration,
+          ),
+        );
+      return;
+    }
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (overlayContext) {

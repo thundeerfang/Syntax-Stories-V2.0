@@ -130,11 +130,14 @@ class AppFormDialog extends StatelessWidget {
                 Positioned(
                   right: 10,
                   top: 10,
-                  child: IconButton(
-                    onPressed: submitting ? null : onCancel,
-                    icon: const Icon(Icons.close_rounded),
-                    color: colors.mutedForeground,
-                    tooltip: cancelLabel,
+                  child: Semantics(
+                    button: true,
+                    label: cancelLabel,
+                    child: IconButton(
+                      onPressed: submitting ? null : onCancel,
+                      icon: const Icon(Icons.close_rounded),
+                      color: colors.mutedForeground,
+                    ),
                   ),
                 ),
             ],

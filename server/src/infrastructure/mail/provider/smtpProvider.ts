@@ -1,10 +1,36 @@
+import { lookup } from "node:dns";
 import nodemailer from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport/index.js";
 import { env } from "../../../config/env.js";
 import { MailSendError } from "../types.js";
 let transporter: nodemailer.Transporter | null = null;
+type DnsLookupCallback = (
+  err: NodeJS.ErrnoException | null,
+  address: string,
+  family: number,
+) => void;
+type SmtpLookupOptions = {
+  family?: 0 | 4 | 6;
+  hints?: number;
+  all?: false;
+  verbatim?: boolean;
+  order?: "ipv4first" | "ipv6first" | "verbatim";
+};
+type SmtpLookup = (
+  hostname: string,
+  options: SmtpLookupOptions | DnsLookupCallback,
+  callback?: DnsLookupCallback,
+) => void;
+const lookupIpv4: SmtpLookup = (hostname, options, callback) => {
+  const cb = typeof options === "function" ? options : callback;
+  if (!cb) return;
+  const lookupOptions: SmtpLookupOptions =
+    typeof options === "function" ? { family: 4 } : { ...options, family: 4 };
+  lookup(hostname, lookupOptions, cb);
+};
 type SmtpTransportOptions = SMTPTransport.Options & {
   family?: 4 | 6;
+  lookup?: SmtpLookup;
 };
 export function buildSmtpTransportOptions(): SmtpTransportOptions {
   const user = env.EMAIL_USER?.trim();
@@ -14,6 +40,7 @@ export function buildSmtpTransportOptions(): SmtpTransportOptions {
     port: env.EMAIL_PORT,
     secure: env.EMAIL_PORT === 465,
     family: 4,
+    lookup: lookupIpv4,
     auth: user && pass ? { user, pass } : undefined,
   };
 }
