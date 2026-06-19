@@ -23,7 +23,8 @@ class NotificationsInboxScreen extends StatefulWidget {
   }
 
   @override
-  State<NotificationsInboxScreen> createState() => _NotificationsInboxScreenState();
+  State<NotificationsInboxScreen> createState() =>
+      _NotificationsInboxScreenState();
 }
 
 class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
@@ -63,19 +64,28 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
           if (token != null && notif.unreadCount > 0)
             IconButton(
               tooltip: 'Mark all read',
-              onPressed: notif.markingAllRead ? null : () => notif.markAllRead(token),
+              onPressed: notif.markingAllRead
+                  ? null
+                  : () => notif.markAllRead(token),
               icon: notif.markingAllRead
                   ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: primary),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: primary,
+                      ),
                     )
                   : Icon(Icons.done_all_rounded, color: primary, size: 22),
             ),
           IconButton(
             tooltip: 'Notification preferences',
             onPressed: _openPreferences,
-            icon: Icon(Icons.settings_outlined, color: colors.mutedForeground, size: 22),
+            icon: Icon(
+              Icons.settings_outlined,
+              color: colors.mutedForeground,
+              size: 22,
+            ),
           ),
         ],
       ),
@@ -128,7 +138,10 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                     border: Border.all(color: colors.border, width: 2),
                     color: colors.muted.withValues(alpha: 0.2),
                   ),
-                  child: Icon(Icons.notifications_none_rounded, color: colors.mutedForeground),
+                  child: Icon(
+                    Icons.notifications_none_rounded,
+                    color: colors.mutedForeground,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -143,7 +156,10 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                 Text(
                   'Milestones, follows, trending, and settings updates will appear here.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 12, color: colors.mutedForeground),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: colors.mutedForeground,
+                  ),
                 ),
               ],
             ),
@@ -155,7 +171,8 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
     return ListView.separated(
       physics: AppPullToRefresh.scrollPhysics,
       itemCount: notif.items.length,
-      separatorBuilder: (_, _) => Divider(height: 1, color: colors.border.withValues(alpha: 0.7)),
+      separatorBuilder: (_, _) =>
+          Divider(height: 1, color: colors.border.withValues(alpha: 0.7)),
       itemBuilder: (context, index) {
         final item = notif.items[index];
         return _NotificationRow(
@@ -185,6 +202,12 @@ class _NotificationRow extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final icon = notificationIconData(item.icon);
     final typeLabel = notificationTypeLabel(item.type);
+    final primaryText = item.type == 'settings_update'
+        ? item.message
+        : item.title;
+    final secondaryText = item.type == 'settings_update'
+        ? item.title
+        : item.message;
 
     return Material(
       color: item.unread ? primary.withValues(alpha: 0.06) : Colors.transparent,
@@ -234,7 +257,7 @@ class _NotificationRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      item.title,
+                      primaryText,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
@@ -245,7 +268,7 @@ class _NotificationRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      item.message,
+                      secondaryText,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(

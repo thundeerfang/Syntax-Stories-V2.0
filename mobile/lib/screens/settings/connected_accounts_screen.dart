@@ -18,7 +18,8 @@ class ConnectedAccountsScreen extends StatefulWidget {
   const ConnectedAccountsScreen({super.key});
 
   @override
-  State<ConnectedAccountsScreen> createState() => _ConnectedAccountsScreenState();
+  State<ConnectedAccountsScreen> createState() =>
+      _ConnectedAccountsScreenState();
 }
 
 class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
@@ -30,7 +31,8 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
   }
 
   Future<void> _connect(OAuthProvider provider) async {
-    final token = context.read<AuthState>().accessToken;
+    final auth = context.read<AuthState>();
+    final token = auth.accessToken;
     if (token == null || token.isEmpty) {
       AppFeedbackToast.error(context, 'Not signed in.');
       return;
@@ -43,19 +45,18 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
         accessToken: token,
         provider: provider.name,
       );
+      auth.beginOAuthFlow();
       await launchOAuthUrl(OAuthUrls.withMobileReturnOrigin(redirectUrl));
       if (!mounted) return;
       setState(() => _busyProviderId = null);
-      AppFeedbackToast.warning(
-        context,
-        'Complete linking in your browser, then return to the app.',
-      );
     } on AuthApiException catch (e) {
       if (!mounted) return;
+      auth.failOAuth(formatUserMessage(e.message));
       setState(() => _busyProviderId = null);
       AppFeedbackToast.error(context, formatUserMessage(e.message));
     } catch (_) {
       if (!mounted) return;
+      auth.failOAuth('Could not start linking.');
       setState(() => _busyProviderId = null);
       AppFeedbackToast.error(context, 'Could not start linking.');
     }
@@ -81,7 +82,10 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
     setState(() => _busyProviderId = provider.name);
 
     try {
-      await _api.disconnectProvider(accessToken: token, provider: provider.name);
+      await _api.disconnectProvider(
+        accessToken: token,
+        provider: provider.name,
+      );
       if (!mounted) return;
       AppFeedbackToast.success(context, 'Connection removed. Logging out…');
       await Future<void>.delayed(const Duration(milliseconds: 900));
@@ -128,7 +132,9 @@ class _ConnectedAccountsScreenState extends State<ConnectedAccountsScreen> {
                 ConnectedAccountCard(
                   provider: row.provider,
                   title: row.title,
-                  linked: user != null && connectedProviderIsLinked(row.provider, user),
+                  linked:
+                      user != null &&
+                      connectedProviderIsLinked(row.provider, user),
                   busy: _busyProviderId == row.provider.name,
                   onConnect: () => _connect(row.provider),
                   onDisconnect: () => _disconnect(row.provider, row.title),

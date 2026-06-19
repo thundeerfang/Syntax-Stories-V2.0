@@ -11,7 +11,7 @@ export const ABOUT_PAGE_SEED: AboutPageContent = {
   mobileApp: {
     name: "Syntax Stories",
     subtitle: "Mobile app",
-    iconSrc: "/favicon/android-chrome-512x512.png",
+    iconSrc: "/favicon/web-app-manifest-512x512.png",
     playStoreUrl:
       "https://play.google.com/store/apps/details?id=com.syntaxstories.syntax_stories_app",
     qrLabel: "Scan to download",

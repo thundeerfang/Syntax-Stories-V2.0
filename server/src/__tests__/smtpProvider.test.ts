@@ -9,7 +9,8 @@ const { buildSmtpTransportOptions } = await import(
 
 describe("buildSmtpTransportOptions", () => {
   it("prefers IPv4 for SMTP connections", () => {
-    expect(buildSmtpTransportOptions()).toMatchObject({
+    const options = buildSmtpTransportOptions();
+    expect(options).toMatchObject({
       host: "smtp.gmail.com",
       port: 587,
       secure: false,
@@ -19,5 +20,6 @@ describe("buildSmtpTransportOptions", () => {
         pass: "app-password-for-tests",
       },
     });
+    expect(typeof options.lookup).toBe("function");
   });
 });

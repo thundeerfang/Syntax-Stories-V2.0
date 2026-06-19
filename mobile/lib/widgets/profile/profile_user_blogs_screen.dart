@@ -3,13 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/blog_feed_post.dart';
+import '../../models/blog_block.dart';
 import '../../models/blog_post.dart';
+import '../../models/blog_write_draft.dart';
 import '../../models/user_summary.dart';
 import '../../services/auth_api.dart';
 import '../../services/blog_api.dart';
 import '../../state/auth_state.dart';
 import '../../theme/app_color_tokens.dart';
+import '../../utils/blog_block_factory.dart';
 import '../../utils/blog_navigation.dart';
+import '../../screens/blog/blog_create_screen.dart';
 import '../blog/blog_card.dart';
 import '../blog/blog_card_skeleton.dart';
 import '../ui/app_confirm_dialog.dart';
@@ -22,10 +26,7 @@ import 'profile_user_blog_card.dart';
 enum _BlogStatusTab { published, drafts, deleted }
 
 class ProfileUserBlogsScreen extends StatefulWidget {
-  const ProfileUserBlogsScreen({
-    super.key,
-    required this.username,
-  });
+  const ProfileUserBlogsScreen({super.key, required this.username});
 
   final String username;
 
@@ -251,8 +252,46 @@ class _ProfileUserBlogsScreenState extends State<ProfileUserBlogsScreen> {
     }
   }
 
-  void _onEdit(BlogPost post) {
-    AppFeedbackToast.warning(context, 'Blog editor coming soon on mobile.');
+  Future<void> _onEdit(BlogPost post) async {
+    final token = context.read<AuthState>().accessToken;
+    if (token == null || token.isEmpty) {
+      AppFeedbackToast.error(context, 'Not signed in.');
+      return;
+    }
+
+    try {
+      final latest = await _api.getMyPost(postId: post.id, accessToken: token);
+      if (!mounted) return;
+      final blocks = parseBlogBlocksJson(latest.content);
+      final draft = BlogWriteDraft(
+        title: latest.title,
+        summary: latest.summary ?? '',
+        blocks: blocks.isEmpty
+            ? [createBlogBlock(BlogBlockType.paragraph)]
+            : blocks,
+        thumbnailUrl: latest.thumbnailUrl,
+        editingPostId: latest.id,
+        originalStatus: latest.status,
+        categories: [
+          if (latest.category != null && latest.category!.trim().isNotEmpty)
+            latest.category!.trim(),
+        ],
+        tags: latest.tags,
+      );
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => BlogCreateScreen(initialDraft: draft),
+        ),
+      );
+      if (!mounted) return;
+      await _load();
+    } on AuthApiException catch (e) {
+      if (!mounted) return;
+      AppFeedbackToast.error(context, e.message);
+    } catch (_) {
+      if (!mounted) return;
+      AppFeedbackToast.error(context, 'Could not open editor.');
+    }
   }
 
   ProfileUserBlogCardMode _cardMode() {
@@ -278,9 +317,15 @@ class _ProfileUserBlogsScreenState extends State<ProfileUserBlogsScreen> {
     final primary = Theme.of(context).colorScheme.primary;
     final user = context.watch<AuthState>().user;
 
-    final ownerFiltered = _isOwner ? _sortOwnerPosts(_activeOwnerPosts) : const <BlogPost>[];
-    final publicFiltered = _isOwner ? const <BlogFeedPost>[] : _sortPublicPosts(_publicPosts);
-    final displayCount = _isOwner ? ownerFiltered.length : publicFiltered.length;
+    final ownerFiltered = _isOwner
+        ? _sortOwnerPosts(_activeOwnerPosts)
+        : const <BlogPost>[];
+    final publicFiltered = _isOwner
+        ? const <BlogFeedPost>[]
+        : _sortPublicPosts(_publicPosts);
+    final displayCount = _isOwner
+        ? ownerFiltered.length
+        : publicFiltered.length;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -334,9 +379,12 @@ class _ProfileUserBlogsScreenState extends State<ProfileUserBlogsScreen> {
                       _BlogStatusTab.deleted => 'Trash is empty',
                     },
                     message: switch (_tab) {
-                      _BlogStatusTab.published => 'Publish from the write workspace.',
-                      _BlogStatusTab.drafts => 'Autosave keeps drafts while you write.',
-                      _BlogStatusTab.deleted => 'Deleted posts stay here for 7 days.',
+                      _BlogStatusTab.published =>
+                        'Publish from the write workspace.',
+                      _BlogStatusTab.drafts =>
+                        'Autosave keeps drafts while you write.',
+                      _BlogStatusTab.deleted =>
+                        'Deleted posts stay here for 7 days.',
                     },
                   ),
                 ),
@@ -356,7 +404,9 @@ class _ProfileUserBlogsScreenState extends State<ProfileUserBlogsScreen> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                 sliver: SliverList.separated(
-                  itemCount: _isOwner ? ownerFiltered.length : publicFiltered.length,
+                  itemCount: _isOwner
+                      ? ownerFiltered.length
+                      : publicFiltered.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
                     if (_isOwner) {
@@ -366,7 +416,9 @@ class _ProfileUserBlogsScreenState extends State<ProfileUserBlogsScreen> {
                       return ProfileUserBlogCard(
                         post: feed,
                         mode: mode,
-                        deletedMeta: mode == ProfileUserBlogCardMode.deleted ? _deletedMeta(post) : null,
+                        deletedMeta: mode == ProfileUserBlogCardMode.deleted
+                            ? _deletedMeta(post)
+                            : null,
                         restoreBusy: _restoreBusyId == post.id,
                         onOpen: mode == ProfileUserBlogCardMode.published
                             ? () => openBlogFeedPost(context, feed)
@@ -533,7 +585,9 @@ class _StatusTabChip extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.8,
-                  color: active ? colors.primaryForeground : colors.mutedForeground,
+                  color: active
+                      ? colors.primaryForeground
+                      : colors.mutedForeground,
                 ),
               ),
             ],

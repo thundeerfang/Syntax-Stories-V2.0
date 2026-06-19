@@ -14,7 +14,10 @@ type FirebaseMessaging = {
     apns?: {
       payload: { aps: { sound: string; badge?: number } };
     };
-    android?: { priority: "high" };
+    android?: {
+      priority: "high";
+      notification?: { icon?: string };
+    };
   }): Promise<{
     responses: Array<{ success: boolean; error?: { code?: string } }>;
   }>;
@@ -45,14 +48,18 @@ async function getMessaging(): Promise<FirebaseMessaging | null> {
       const raw = await loadServiceAccountJson();
       if (!raw) return null;
       try {
-        const admin = await import("firebase-admin");
-        if (!admin.apps.length) {
-          const serviceAccount = JSON.parse(raw) as Record<string, unknown>;
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+        const [{ cert, getApps, initializeApp }, { getMessaging }] =
+          await Promise.all([
+            import("firebase-admin/app"),
+            import("firebase-admin/messaging"),
+          ]);
+        const serviceAccount = JSON.parse(raw) as Record<string, unknown>;
+        if (!getApps().length) {
+          initializeApp({
+            credential: cert(serviceAccount),
           });
         }
-        return admin.messaging();
+        return getMessaging();
       } catch (e) {
         console.warn("[pushNotification] Firebase init failed:", String(e));
         return null;
@@ -74,11 +81,15 @@ export async function sendPushNotificationToUser(
   if (!tokens.length) return;
 
   try {
+    const notificationTitle =
+      item.type === "settings_update" ? item.message : item.title;
+    const notificationBody =
+      item.type === "settings_update" ? item.title : item.message;
     const response = await fcm.sendEachForMulticast({
       tokens,
       notification: {
-        title: item.title,
-        body: item.message,
+        title: notificationTitle,
+        body: notificationBody,
       },
       data: {
         id: item.id,
@@ -95,7 +106,10 @@ export async function sendPushNotificationToUser(
           },
         },
       },
-      android: { priority: "high" },
+      android: {
+        priority: "high",
+        notification: { icon: "syntax_notification_logo" },
+      },
     });
 
     const invalid: string[] = [];

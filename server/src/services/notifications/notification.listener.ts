@@ -120,7 +120,7 @@ export function registerNotificationListeners(): void {
     void createNotification({
       userId: payload.actorId,
       type: "settings_update",
-      title: "Settings updated",
+      title: "Settings Updated",
       message: `Your ${sectionLabel} settings were saved.`,
       href: "/settings?section=edit-profile",
       icon: "settings",

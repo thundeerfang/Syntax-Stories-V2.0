@@ -4,16 +4,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'api_errors.dart';
 import 'auth_api.dart';
 
-/// Opens the server OAuth start URL in the system browser (Google, GitHub, etc.).
+/// Opens the server OAuth start URL in an in-app browser when available.
 Future<void> launchOAuthUrl(String url) async {
   final uri = Uri.parse(url);
   try {
     // canLaunchUrl often returns false on Android 11+ even when launchUrl works.
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!launched) {
+    final launched = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    final fallbackLaunched =
+        launched || await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!fallbackLaunched) {
       throw AuthApiException(
         'Could not open the sign-in browser. Install or enable a browser app and try again.',
         debugDetails: 'launchUrl returned false for: $url',
