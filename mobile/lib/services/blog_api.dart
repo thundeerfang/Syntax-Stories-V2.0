@@ -34,7 +34,8 @@ class BlogApi {
     final params = <String, String>{
       'limit': '$limit',
       if (offset > 0) 'offset': '$offset',
-      if (category != null && category.trim().isNotEmpty) 'category': category.trim().toLowerCase(),
+      if (category != null && category.trim().isNotEmpty)
+        'category': category.trim().toLowerCase(),
       if (tag != null && tag.trim().isNotEmpty) 'tag': tag.trim().toLowerCase(),
       if (sort == BlogFeedSort.views) 'sort': 'views',
     };
@@ -60,7 +61,9 @@ class BlogApi {
         body: text,
       );
     }
-    final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+    final data = text.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(text) as Map<String, dynamic>;
     if (data['success'] != true) {
       throw AuthApiException.internal(
         context: 'Invalid blog feed response',
@@ -78,9 +81,9 @@ class BlogApi {
     String? accessToken,
   }) async {
     final u = Uri.encodeComponent(username.trim());
-    final uri = _u('/api/blog/u/$u/posts').replace(
-      queryParameters: {'limit': '$limit'},
-    );
+    final uri = _u(
+      '/api/blog/u/$u/posts',
+    ).replace(queryParameters: {'limit': '$limit'});
     try {
       final res = accessToken != null && accessToken.isNotEmpty
           ? await AuthRetry.get(uri, bearer: accessToken)
@@ -94,7 +97,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid user posts response',
@@ -144,7 +149,9 @@ class BlogApi {
         body: text,
       );
     }
-    final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+    final data = text.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(text) as Map<String, dynamic>;
     if (data['success'] != true) {
       throw AuthApiException.internal(
         context: 'Invalid blog post response',
@@ -170,7 +177,8 @@ class BlogApi {
     required String accessToken,
   }) async {
     return _engagementToggle(
-      path: '/api/blog/p/${Uri.encodeComponent(username)}/${Uri.encodeComponent(slug)}/respect',
+      path:
+          '/api/blog/p/${Uri.encodeComponent(username)}/${Uri.encodeComponent(slug)}/respect',
       body: {'respecting': respecting},
       accessToken: accessToken,
       activeKey: 'respecting',
@@ -186,7 +194,8 @@ class BlogApi {
     required String accessToken,
   }) async {
     final result = await _engagementToggle(
-      path: '/api/blog/p/${Uri.encodeComponent(username)}/${Uri.encodeComponent(slug)}/repost',
+      path:
+          '/api/blog/p/${Uri.encodeComponent(username)}/${Uri.encodeComponent(slug)}/repost',
       body: {'reposting': reposting},
       accessToken: accessToken,
       activeKey: 'reposting',
@@ -203,7 +212,8 @@ class BlogApi {
     required String accessToken,
   }) async {
     final result = await _engagementToggle(
-      path: '/api/blog/p/${Uri.encodeComponent(username)}/${Uri.encodeComponent(slug)}/bookmark',
+      path:
+          '/api/blog/p/${Uri.encodeComponent(username)}/${Uri.encodeComponent(slug)}/bookmark',
       body: {'bookmarked': bookmarked},
       accessToken: accessToken,
       activeKey: 'bookmarked',
@@ -235,7 +245,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Engagement update failed',
@@ -245,7 +257,9 @@ class BlogApi {
       }
       return (
         respecting: data[activeKey] == true,
-        respectCount: data[countKey] is num ? (data[countKey] as num).toInt() : 0,
+        respectCount: data[countKey] is num
+            ? (data[countKey] as num).toInt()
+            : 0,
       );
     } catch (e) {
       if (e is AuthApiException) rethrow;
@@ -267,9 +281,12 @@ class BlogApi {
     final params = <String, String>{
       'limit': '$limit',
       'offset': '$offset',
-      if (parentId != null && parentId.trim().isNotEmpty) 'parentId': parentId.trim(),
+      if (parentId != null && parentId.trim().isNotEmpty)
+        'parentId': parentId.trim(),
     };
-    final uri = _u('/api/blog/p/$u/$s/comments').replace(queryParameters: params);
+    final uri = _u(
+      '/api/blog/p/$u/$s/comments',
+    ).replace(queryParameters: params);
     try {
       final res = accessToken != null && accessToken.isNotEmpty
           ? await AuthRetry.get(uri, bearer: accessToken)
@@ -283,7 +300,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid comments response',
@@ -471,7 +490,9 @@ class BlogApi {
         );
       }
       return (
-        likeCount: data['likeCount'] is num ? (data['likeCount'] as num).toInt() : 0,
+        likeCount: data['likeCount'] is num
+            ? (data['likeCount'] as num).toInt()
+            : 0,
         likedByViewer: data['likedByViewer'] == true,
       );
     } catch (e) {
@@ -493,7 +514,9 @@ class BlogApi {
       'sort': sort,
       if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
     };
-    final uri = _u('/api/blog/taxonomy/categories').replace(queryParameters: params);
+    final uri = _u(
+      '/api/blog/taxonomy/categories',
+    ).replace(queryParameters: params);
     try {
       final res = await http.get(uri, headers: {'Accept': 'application/json'});
       final text = res.body;
@@ -505,7 +528,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid categories response',
@@ -533,7 +558,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid taxonomy response',
@@ -548,7 +575,9 @@ class BlogApi {
   }
 
   /// `GET /api/blog/categories/following` — slugs the current user follows.
-  Future<List<String>> listFollowedCategories({required String accessToken}) async {
+  Future<List<String>> listFollowedCategories({
+    required String accessToken,
+  }) async {
     final uri = _u('/api/blog/categories/following');
     try {
       final res = await AuthRetry.get(uri, bearer: accessToken);
@@ -561,7 +590,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid followed categories response',
@@ -632,7 +663,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid tags explore response',
@@ -647,13 +680,15 @@ class BlogApi {
   }
 
   /// `GET /api/blog/categories/members-preview` — follower avatars for category lanes.
-  Future<CategoryMembersSnapshot> fetchCategoryMembersPreview(String slug) async {
+  Future<CategoryMembersSnapshot> fetchCategoryMembersPreview(
+    String slug,
+  ) async {
     final normalized = slug.trim().toLowerCase();
     if (normalized.isEmpty) return const CategoryMembersSnapshot();
 
-    final uri = _u('/api/blog/categories/members-preview').replace(
-      queryParameters: {'slugs': normalized},
-    );
+    final uri = _u(
+      '/api/blog/categories/members-preview',
+    ).replace(queryParameters: {'slugs': normalized});
     try {
       final res = await http.get(uri, headers: {'Accept': 'application/json'});
       final text = res.body;
@@ -665,7 +700,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid category members response',
@@ -708,7 +745,9 @@ class BlogApi {
           body: text,
         );
       }
-      final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+      final data = text.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(text) as Map<String, dynamic>;
       if (data['success'] != true) {
         throw AuthApiException.internal(
           context: 'Invalid tags list response',
@@ -741,11 +780,12 @@ class BlogApi {
       'content': content,
       'status': status,
       'language': language,
-      if (summary != null && summary.trim().isNotEmpty) 'summary': summary.trim(),
-      if (thumbnailUrl != null && thumbnailUrl.trim().isNotEmpty)
-        'thumbnailUrl': thumbnailUrl.trim(),
+      if (summary != null && summary.trim().isNotEmpty)
+        'summary': summary.trim(),
+      if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl.trim(),
       if (categories != null && categories.isNotEmpty) 'categories': categories,
-      if (category != null && category.trim().isNotEmpty) 'category': category.trim(),
+      if (category != null && category.trim().isNotEmpty)
+        'category': category.trim(),
       if (tags != null && tags.isNotEmpty) 'tags': tags,
     };
 
@@ -778,10 +818,12 @@ class BlogApi {
       'title': title.trim(),
       'content': content,
       'language': language,
-      if (summary != null && summary.trim().isNotEmpty) 'summary': summary.trim(),
+      if (summary != null && summary.trim().isNotEmpty)
+        'summary': summary.trim(),
       if (thumbnailUrl != null && thumbnailUrl.trim().isNotEmpty)
         'thumbnailUrl': thumbnailUrl.trim(),
-      if (category != null && category.trim().isNotEmpty) 'category': category.trim(),
+      if (category != null && category.trim().isNotEmpty)
+        'category': category.trim(),
       if (tags != null && tags.isNotEmpty) 'tags': tags,
     };
 
@@ -798,7 +840,11 @@ class BlogApi {
     }
   }
 
-  BlogPost _parsePostResponse(http.Response res, Uri uri, {required String method}) {
+  BlogPost _parsePostResponse(
+    http.Response res,
+    Uri uri, {
+    required String method,
+  }) {
     final text = res.body;
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw AuthApiException.fromHttp(
@@ -808,7 +854,9 @@ class BlogApi {
         body: text,
       );
     }
-    final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+    final data = text.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(text) as Map<String, dynamic>;
     if (data['success'] != true) {
       throw AuthApiException.internal(
         context: 'Blog API failed',
@@ -826,14 +874,72 @@ class BlogApi {
     return BlogPost.fromJson(post);
   }
 
+  /// `GET /api/blog/post/:id` — load one owned post for editing.
+  Future<BlogPost> getMyPost({
+    required String postId,
+    required String accessToken,
+  }) async {
+    final id = Uri.encodeComponent(postId.trim());
+    final uri = _u('/api/blog/post/$id');
+    try {
+      final res = await AuthRetry.get(uri, bearer: accessToken);
+      return _parsePostResponse(res, uri, method: 'GET');
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'GET', url: uri, cause: e);
+    }
+  }
+
+  /// `PUT /api/blog/post/:id` — update an existing draft or published post.
+  Future<BlogPost> updatePost({
+    required String postId,
+    required String accessToken,
+    required String title,
+    required String content,
+    String? summary,
+    String? thumbnailUrl,
+    required String status,
+    List<String>? categories,
+    String? category,
+    List<String>? tags,
+    String language = 'en',
+  }) async {
+    final id = Uri.encodeComponent(postId.trim());
+    final uri = _u('/api/blog/post/$id');
+    final body = <String, dynamic>{
+      'title': title.trim(),
+      'content': content,
+      'status': status,
+      'language': language,
+      if (summary != null && summary.trim().isNotEmpty)
+        'summary': summary.trim(),
+      if (thumbnailUrl != null && thumbnailUrl.trim().isNotEmpty)
+        'thumbnailUrl': thumbnailUrl.trim(),
+      if (categories != null && categories.isNotEmpty) 'categories': categories,
+      if (category != null && category.trim().isNotEmpty)
+        'category': category.trim(),
+      if (tags != null && tags.isNotEmpty) 'tags': tags,
+    };
+
+    try {
+      final res = await AuthRetry.put(
+        uri,
+        bearer: accessToken,
+        body: jsonEncode(body),
+      );
+      return _parsePostResponse(res, uri, method: 'PUT');
+    } catch (e) {
+      if (e is AuthApiException) rethrow;
+      throw AuthApiException.network(method: 'PUT', url: uri, cause: e);
+    }
+  }
+
   /// `GET /api/blog?status=` — owner's posts by status.
   Future<List<BlogPost>> listMyPosts({
     required String accessToken,
     required String status,
   }) async {
-    final uri = _u('/api/blog').replace(
-      queryParameters: {'status': status},
-    );
+    final uri = _u('/api/blog').replace(queryParameters: {'status': status});
     try {
       final res = await AuthRetry.get(uri, bearer: accessToken);
       return _parsePostListResponse(res, uri);
@@ -901,7 +1007,9 @@ class BlogApi {
         body: text,
       );
     }
-    final data = text.isEmpty ? <String, dynamic>{} : jsonDecode(text) as Map<String, dynamic>;
+    final data = text.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(text) as Map<String, dynamic>;
     if (data['success'] != true) {
       throw AuthApiException.internal(
         context: 'Invalid blog list response',

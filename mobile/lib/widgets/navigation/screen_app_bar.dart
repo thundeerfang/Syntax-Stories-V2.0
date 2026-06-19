@@ -46,6 +46,12 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   double get _bottomHeight => bottomBorderHeight + _extraBottomHeight;
 
+  double get _actionsWidth {
+    final count = actions?.length ?? 0;
+    if (count <= 1) return MainAppBar.sideRailWidth;
+    return MainAppBar.sideRailWidth + ((count - 1) * MainAppBar.iconHitSize);
+  }
+
   @override
   Size get preferredSize => Size.fromHeight(kToolbarHeight + _bottomHeight);
 
@@ -94,7 +100,7 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
       actions: [
         SizedBox(
-          width: MainAppBar.sideRailWidth,
+          width: _actionsWidth,
           child: Padding(
             padding: const EdgeInsets.only(right: MainAppBar.edgePadding),
             child: Row(
@@ -114,7 +120,7 @@ class ScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
               width: double.infinity,
               color: AppNavColors.headerDivider(context),
             ),
-            if (extraBottom != null) extraBottom!,
+            ?extraBottom,
           ],
         ),
       ),

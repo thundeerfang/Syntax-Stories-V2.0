@@ -13,6 +13,8 @@ import { NOTIFICATION_TOASTER_ID } from "@/variable";
 function showNotificationToast(n: AppNotification): void {
   const Icon = notificationIconComponent(n.icon);
   const typeLabel = NOTIFICATION_TYPE_LABELS[n.type] ?? "Alert";
+  const primaryText = n.type === "settings_update" ? n.message : n.title;
+  const secondaryText = n.type === "settings_update" ? n.title : n.message;
   toast("", {
     id: `notif-${n.id}`,
     toasterId: NOTIFICATION_TOASTER_ID,
@@ -22,8 +24,11 @@ function showNotificationToast(n: AppNotification): void {
           {typeLabel}
         </span>
         <Link href={n.href} className="block hover:underline leading-snug">
-          {n.message}
+          {primaryText}
         </Link>
+        <p className="text-xs font-semibold text-muted-foreground">
+          {secondaryText}
+        </p>
       </div>
     ),
     icon: (

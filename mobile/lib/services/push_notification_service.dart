@@ -17,7 +17,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 /// System push (FCM/APNs) + local display for foreground alerts.
 class PushNotificationService {
-  PushNotificationService({NotificationsApi? api}) : _api = api ?? NotificationsApi();
+  PushNotificationService({NotificationsApi? api})
+    : _api = api ?? NotificationsApi();
 
   final NotificationsApi _api;
   final _local = FlutterLocalNotificationsPlugin();
@@ -32,7 +33,9 @@ class PushNotificationService {
       return;
     }
     if (!isConfigured) return;
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     _firebaseReady = true;
   }
 
@@ -61,7 +64,8 @@ class PushNotificationService {
       badge: true,
       sound: true,
     );
-    final allowed = settings.authorizationStatus == AuthorizationStatus.authorized ||
+    final allowed =
+        settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional;
     if (!allowed) return false;
 
@@ -73,7 +77,7 @@ class PushNotificationService {
   }
 
   Future<void> _initLocalNotifications() async {
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('syntax_notification_logo');
     const ios = DarwinInitializationSettings();
     await _local.initialize(
       const InitializationSettings(android: android, iOS: ios),
@@ -81,8 +85,10 @@ class PushNotificationService {
     );
 
     if (Platform.isAndroid) {
-      final androidPlugin = _local.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _local
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       await androidPlugin?.createNotificationChannel(
         const AndroidNotificationChannel(
           _channelId,
@@ -95,8 +101,10 @@ class PushNotificationService {
   }
 
   static Future<void> showLocalFromRemoteMessage(RemoteMessage message) async {
-    final title = message.notification?.title ?? message.data['title']?.toString();
-    final body = message.notification?.body ?? message.data['message']?.toString();
+    final title =
+        message.notification?.title ?? message.data['title']?.toString();
+    final body =
+        message.notification?.body ?? message.data['message']?.toString();
     if (title == null || body == null) return;
 
     final plugin = FlutterLocalNotificationsPlugin();
@@ -105,6 +113,8 @@ class PushNotificationService {
       'Syntax Stories alerts',
       importance: Importance.high,
       priority: Priority.high,
+      icon: 'syntax_notification_logo',
+      largeIcon: DrawableResourceAndroidBitmap('syntax_notification_logo'),
     );
     const iosDetails = DarwinNotificationDetails();
     await plugin.show(
@@ -121,6 +131,10 @@ class PushNotificationService {
       'Syntax Stories alerts',
       importance: Importance.high,
       priority: Priority.high,
+      icon: 'syntax_notification_logo',
+      largeIcon: const DrawableResourceAndroidBitmap(
+        'syntax_notification_logo',
+      ),
     );
     const iosDetails = DarwinNotificationDetails();
     await _local.show(
@@ -175,7 +189,11 @@ class PushNotificationService {
       final token = await fetchDeviceToken();
       if (token == null || token.isEmpty) return;
       final platform = Platform.isIOS ? 'ios' : 'android';
-      await _api.registerDeviceToken(accessToken, token: token, platform: platform);
+      await _api.registerDeviceToken(
+        accessToken,
+        token: token,
+        platform: platform,
+      );
     } catch (e) {
       if (kDebugMode) debugPrint('[push] registerWithServer failed: $e');
     }

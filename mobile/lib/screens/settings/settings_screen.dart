@@ -787,6 +787,8 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
 
   bool _saving = false;
 
+  String _trim(String? value) => (value ?? '').trim();
+
   @override
   void initState() {
     super.initState();
@@ -830,31 +832,63 @@ class _SettingsEditProfileScreenState extends State<SettingsEditProfileScreen> {
     setState(() => _saving = true);
 
     final auth = context.read<AuthState>();
-    final basicErr = await auth.updateProfileSection('basic', {
+    final user = auth.user;
+    final basicPayload = {
       'fullName': _fullName.text.trim(),
       'username': _username.text.trim().toLowerCase(),
       'bio': _bio.text.trim(),
       'portfolioUrl': _portfolio.text.trim(),
-    });
-    if (!mounted) return;
-    if (basicErr != null) {
-      setState(() => _saving = false);
-      AppFeedbackToast.error(context, basicErr);
-      return;
-    }
-
-    final socialErr = await auth.updateProfileSection('social', {
+    };
+    final socialPayload = {
       'linkedin': _linkedin.text.trim(),
       'github': _github.text.trim(),
       'instagram': _instagram.text.trim(),
       'youtube': _youtube.text.trim(),
-    });
-    if (!mounted) return;
-    setState(() => _saving = false);
-    if (socialErr != null) {
-      AppFeedbackToast.error(context, socialErr);
+    };
+    final basicChanged =
+        user == null ||
+        _trim(user.fullName) != basicPayload['fullName'] ||
+        _trim(user.username) != basicPayload['username'] ||
+        _trim(user.bio) != basicPayload['bio'] ||
+        _trim(user.portfolioUrl) != basicPayload['portfolioUrl'];
+    final socialChanged =
+        user == null ||
+        _trim(user.linkedin) != socialPayload['linkedin'] ||
+        _trim(user.github) != socialPayload['github'] ||
+        _trim(user.instagram) != socialPayload['instagram'] ||
+        _trim(user.youtube) != socialPayload['youtube'];
+
+    if (!basicChanged && !socialChanged) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      AppFeedbackToast.error(context, 'No changes to save.');
       return;
     }
+
+    if (basicChanged) {
+      final basicErr = await auth.updateProfileSection('basic', basicPayload);
+      if (!mounted) return;
+      if (basicErr != null) {
+        setState(() => _saving = false);
+        AppFeedbackToast.error(context, basicErr);
+        return;
+      }
+    }
+
+    if (socialChanged) {
+      final socialErr = await auth.updateProfileSection(
+        'social',
+        socialPayload,
+      );
+      if (!mounted) return;
+      if (socialErr != null) {
+        setState(() => _saving = false);
+        AppFeedbackToast.error(context, socialErr);
+        return;
+      }
+    }
+    if (!mounted) return;
+    setState(() => _saving = false);
     AppFeedbackToast.success(context, 'Profile saved.');
   }
 

@@ -57,12 +57,16 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
   String? _coverFileName;
   String? _coverUrl;
 
+  bool get _isEditing => widget.draft.isEditing;
+
   @override
   void initState() {
     super.initState();
     _coverBytes = widget.draft.thumbnailBytes;
     _coverFileName = widget.draft.thumbnailFileName;
     _coverUrl = widget.draft.thumbnailUrl;
+    _categories.addAll(widget.draft.categories);
+    _tags.addAll(widget.draft.tags);
     _categorySearch.addListener(_onCategorySearchChanged);
     _loadTaxonomy();
   }
@@ -78,7 +82,11 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     final q = _categorySearch.text.trim().toLowerCase();
     if (q.isEmpty) return _taxonomy.categories;
     return _taxonomy.categories
-        .where((row) => row.name.toLowerCase().contains(q) || row.slug.toLowerCase().contains(q))
+        .where(
+          (row) =>
+              row.name.toLowerCase().contains(q) ||
+              row.slug.toLowerCase().contains(q),
+        )
         .toList();
   }
 
@@ -97,6 +105,11 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
       if (!mounted) return;
       setState(() {
         _taxonomy = catalog;
+        for (final row in catalog.categories) {
+          if (_categories.contains(row.slug)) {
+            _categoryLabels[row.slug] = row.name;
+          }
+        }
         _loadingTaxonomy = false;
       });
     } catch (e) {
@@ -104,7 +117,9 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
       setState(() => _loadingTaxonomy = false);
       AppFeedbackToast.error(
         context,
-        formatUserMessage(e is AuthApiException ? e.message : kGenericUserError),
+        formatUserMessage(
+          e is AuthApiException ? e.message : kGenericUserError,
+        ),
       );
     }
   }
@@ -150,7 +165,10 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     if (count <= 4) return;
     final maxStart = count - 4;
     setState(() {
-      _categoryPageWindowStart = (_categoryPageWindowStart + delta).clamp(0, maxStart);
+      _categoryPageWindowStart = (_categoryPageWindowStart + delta).clamp(
+        0,
+        maxStart,
+      );
     });
   }
 
@@ -272,7 +290,10 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
     }
 
     if (_categories.length > blogMaxCategories) {
-      AppFeedbackToast.error(context, 'Pick at most $blogMaxCategories categories.');
+      AppFeedbackToast.error(
+        context,
+        'Pick at most $blogMaxCategories categories.',
+      );
       return;
     }
 
@@ -283,25 +304,34 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
 
     try {
       final thumbnailUrl = await _resolveThumbnailUrl(token);
+      final thumbnailForSubmit = _isEditing
+          ? (thumbnailUrl ?? '')
+          : thumbnailUrl;
       final readyBlocks = await prepareBlogBlocksForSubmit(
         widget.draft.blocks,
         accessToken: token,
         uploadApi: _uploadApi,
       );
       final content = serializeBlogBlocks(readyBlocks);
-      final summary = widget.draft.summary.trim().isEmpty ? null : widget.draft.summary.trim();
-      final categories = _categories.isEmpty ? null : List<String>.from(_categories);
+      final summary = widget.draft.summary.trim().isEmpty
+          ? null
+          : widget.draft.summary.trim();
+      final categories = _categories.isEmpty
+          ? null
+          : List<String>.from(_categories);
       final tags = _tags.isEmpty ? null : List<String>.from(_tags);
 
       final BlogPost post;
-      if (publish) {
-        post = await _blogApi.createPost(
+      final status = publish ? 'published' : 'draft';
+      if (_isEditing) {
+        post = await _blogApi.updatePost(
+          postId: widget.draft.editingPostId!,
           accessToken: token,
           title: widget.draft.title,
           content: content,
           summary: summary,
-          thumbnailUrl: thumbnailUrl,
-          status: 'published',
+          thumbnailUrl: thumbnailForSubmit,
+          status: status,
           categories: categories,
           tags: tags,
         );
@@ -311,8 +341,8 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
           title: widget.draft.title,
           content: content,
           summary: summary,
-          thumbnailUrl: thumbnailUrl,
-          status: 'draft',
+          thumbnailUrl: thumbnailForSubmit,
+          status: status,
           categories: categories,
           tags: tags,
         );
@@ -328,7 +358,9 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
       if (!mounted) return;
       AppFeedbackToast.error(
         context,
-        formatUserMessage(e is AuthApiException ? e.message : kGenericUserError),
+        formatUserMessage(
+          e is AuthApiException ? e.message : kGenericUserError,
+        ),
       );
     } finally {
       if (mounted) {
@@ -343,18 +375,23 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final coverUrl = _coverUrl != null ? resolveProfileMediaUrl(_coverUrl) : null;
-    final hasCover = _coverBytes != null || (coverUrl != null && coverUrl.isNotEmpty);
+    final coverUrl = _coverUrl != null
+        ? resolveProfileMediaUrl(_coverUrl)
+        : null;
+    final hasCover =
+        _coverBytes != null || (coverUrl != null && coverUrl.isNotEmpty);
 
     return UnfocusTapRegion(
       child: Scaffold(
         backgroundColor: colors.background,
-        appBar: const ScreenAppBar(title: 'Review Post'),
+        appBar: ScreenAppBar(
+          title: _isEditing ? 'Review Changes' : 'Review Post',
+        ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
             Text(
-              'Classify & publish',
+              _isEditing ? 'Review your changes' : 'Classify & publish',
               style: GoogleFonts.inter(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -364,7 +401,9 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Add an optional cover, then pick a category and tags before saving.',
+              _isEditing
+                  ? 'Confirm cover, category, and tags before updating this post.'
+                  : 'Add an optional cover, then pick a category and tags before saving.',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 color: colors.mutedForeground,
@@ -389,7 +428,9 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                     right: 8,
                     child: IconButton.filled(
                       style: IconButton.styleFrom(
-                        backgroundColor: colors.background.withValues(alpha: 0.92),
+                        backgroundColor: colors.background.withValues(
+                          alpha: 0.92,
+                        ),
                         foregroundColor: colors.foreground,
                       ),
                       onPressed: _removeCover,
@@ -413,7 +454,9 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                     right: 8,
                     child: IconButton.filled(
                       style: IconButton.styleFrom(
-                        backgroundColor: colors.background.withValues(alpha: 0.92),
+                        backgroundColor: colors.background.withValues(
+                          alpha: 0.92,
+                        ),
                         foregroundColor: colors.foreground,
                       ),
                       onPressed: _removeCover,
@@ -429,11 +472,18 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                   onTap: _pickCover,
                   borderRadius: BorderRadius.circular(4),
                   child: DashedBorderBox(
-                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 28,
+                      horizontal: 16,
+                    ),
                     color: colors.border,
                     child: Column(
                       children: [
-                        Icon(Icons.image_outlined, size: 28, color: colors.mutedForeground),
+                        Icon(
+                          Icons.image_outlined,
+                          size: 28,
+                          color: colors.mutedForeground,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'Add cover (optional)',
@@ -479,7 +529,14 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
                   children: [
                     for (final slug in _categories)
                       InputChip(
-                        label: Text(_categoryLabels[slug] ?? slug),
+                        label: Text(
+                          _categoryLabels[slug] ?? slug,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                          side: BorderSide(color: colors.border, width: 1.5),
+                        ),
                         onDeleted: () => _removeCategory(slug),
                         deleteIconColor: colors.mutedForeground,
                       ),
@@ -506,12 +563,18 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
             else if (_taxonomy.categories.isEmpty)
               Text(
                 'No categories available yet.',
-                style: GoogleFonts.inter(fontSize: 12, color: colors.mutedForeground),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: colors.mutedForeground,
+                ),
               )
             else if (_pagedCategoryRows.isEmpty)
               Text(
                 'No categories match your search.',
-                style: GoogleFonts.inter(fontSize: 12, color: colors.mutedForeground),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: colors.mutedForeground,
+                ),
               )
             else
               Wrap(
@@ -603,14 +666,14 @@ class _BlogReviewScreenState extends State<BlogReviewScreen> {
             ],
             const SizedBox(height: 28),
             AuthButton(
-              label: 'Publish',
+              label: _isEditing ? 'Update post' : 'Publish',
               loading: _submitting && _submitAction == 'publish',
-              loadingLabel: 'Publishing…',
+              loadingLabel: _isEditing ? 'Updating…' : 'Publishing…',
               onPressed: _submitting ? null : () => _submit(publish: true),
             ),
             const SizedBox(height: 12),
             AuthButton(
-              label: 'Save as draft',
+              label: _isEditing ? 'Save as draft' : 'Save as draft',
               variant: AuthButtonVariant.secondary,
               loading: _submitting && _submitAction == 'draft',
               loadingLabel: 'Saving…',
@@ -748,7 +811,9 @@ class _PaginationArrow extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             border: Border.all(
-              color: enabled ? colors.border : colors.border.withValues(alpha: 0.45),
+              color: enabled
+                  ? colors.border
+                  : colors.border.withValues(alpha: 0.45),
               width: 2,
             ),
           ),
@@ -787,7 +852,10 @@ class _PageChip extends StatelessWidget {
           height: 36,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            border: Border.all(color: selected ? colors.primary : colors.border, width: 2),
+            border: Border.all(
+              color: selected ? colors.primary : colors.border,
+              width: 2,
+            ),
           ),
           child: Text(
             label,
@@ -821,7 +889,9 @@ class _TagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final background = selected ? colors.primary.withValues(alpha: 0.12) : colors.card;
+    final background = selected
+        ? colors.primary.withValues(alpha: 0.12)
+        : colors.card;
     final borderColor = selected ? colors.primary : colors.border;
     final textColor = selected ? colors.primary : colors.foreground;
 
@@ -892,7 +962,9 @@ class _ChoiceChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: selected ? colors.primary : colors.border),
+            border: Border.all(
+              color: selected ? colors.primary : colors.border,
+            ),
           ),
           child: Text(
             label,

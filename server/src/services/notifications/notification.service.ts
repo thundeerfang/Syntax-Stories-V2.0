@@ -20,6 +20,7 @@ import type {
 import { enqueueNotificationWebhookDelivery } from "./notificationWebhookOutbox.service.js";
 import { sendPushNotificationToUser } from "./pushNotification.service.js";
 const DEFAULT_ICON: NotificationIcon = "bell";
+const SETTINGS_UPDATE_DEDUPE_MS = 5000;
 function formatRelativeTime(date: Date): string {
   const diffMs = Date.now() - date.getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -142,6 +143,15 @@ export async function createNotification(
       metadata: { reason: "prefs_disabled", kind: input.type },
     });
     return null;
+  }
+  if (input.type === "settings_update") {
+    const recentDuplicate = await NotificationModel.exists({
+      userId: new mongoose.Types.ObjectId(input.userId),
+      kind: input.type,
+      href: input.href,
+      createdAt: { $gte: new Date(Date.now() - SETTINGS_UPDATE_DEDUPE_MS) },
+    });
+    if (recentDuplicate) return null;
   }
   const doc = await NotificationModel.create({
     userId: new mongoose.Types.ObjectId(input.userId),

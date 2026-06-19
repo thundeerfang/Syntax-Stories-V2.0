@@ -15,9 +15,9 @@ class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
 
   static void open(BuildContext context) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute<void>(builder: (_) => const AboutScreen()));
   }
 
   @override
@@ -66,7 +66,10 @@ class _AboutScreenState extends State<AboutScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
           children: [
-            _HeroSection(content: _content, onLegacyTap: () => _openUrl(_content.legacyV1Url)),
+            _HeroSection(
+              content: _content,
+              onLegacyTap: () => _openUrl(_content.legacyV1Url),
+            ),
             const SizedBox(height: 40),
             _TeamSection(content: _content, onUrl: _openUrl),
             const SizedBox(height: 40),
@@ -76,15 +79,31 @@ class _AboutScreenState extends State<AboutScreen> {
               loading: _statsLoading,
             ),
             const SizedBox(height: 40),
-            _PillarsSection(pillars: _content.pillars, primary: primary, colors: colors),
+            _PillarsSection(
+              pillars: _content.pillars,
+              primary: primary,
+              colors: colors,
+            ),
             const SizedBox(height: 40),
-            _JourneySection(journey: _content.journey, colors: colors, primary: primary),
+            _JourneySection(
+              journey: _content.journey,
+              colors: colors,
+              primary: primary,
+            ),
             const SizedBox(height: 24),
-            _TechStackSection(tech: _content.techStack, colors: colors, primary: primary),
+            _TechStackSection(
+              tech: _content.techStack,
+              colors: colors,
+              primary: primary,
+            ),
             const SizedBox(height: 40),
             _CtaSection(cta: _content.cta, colors: colors, primary: primary),
             const SizedBox(height: 24),
-            _FooterNote(note: _content.footerNote, colors: colors, primary: primary),
+            _FooterNote(
+              note: _content.footerNote,
+              colors: colors,
+              primary: primary,
+            ),
           ],
         ),
       ),
@@ -117,7 +136,10 @@ class _HeroSection extends StatelessWidget {
               child: InkWell(
                 onTap: onLegacyTap,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: colors.border, width: 3),
                     boxShadow: [
@@ -131,7 +153,11 @@ class _HeroSection extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.terminal_rounded, size: 18, color: colors.foreground),
+                      Icon(
+                        Icons.terminal_rounded,
+                        size: 18,
+                        color: colors.foreground,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'LEGACY V1.0',
@@ -143,7 +169,11 @@ class _HeroSection extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.open_in_new_rounded, size: 14, color: colors.foreground),
+                      Icon(
+                        Icons.open_in_new_rounded,
+                        size: 14,
+                        color: colors.foreground,
+                      ),
                     ],
                   ),
                 ),
@@ -228,7 +258,12 @@ class _TeamSection extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         for (final member in content.team) ...[
-          _TeamMemberCard(member: member, primary: primary, colors: colors, onUrl: onUrl),
+          _TeamMemberCard(
+            member: member,
+            primary: primary,
+            colors: colors,
+            onUrl: onUrl,
+          ),
           const SizedBox(height: 24),
         ],
       ],
@@ -251,7 +286,9 @@ class _TeamMemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final portrait = member.featured ? 200.0 : (member.shadowCard ? 168.0 : 176.0);
+    final portrait = member.featured
+        ? 200.0
+        : (member.shadowCard ? 168.0 : 176.0);
     final borderW = member.featured || member.shadowCard ? 4.0 : 2.0;
 
     return Column(
@@ -283,7 +320,10 @@ class _TeamMemberCard extends StatelessWidget {
                 color: colors.muted.withValues(alpha: 0.2),
               ),
               clipBehavior: Clip.hardEdge,
-              child: _TeamMemberPortrait(imageUrl: member.imageUrl, colors: colors),
+              child: _TeamMemberPortrait(
+                imageUrl: member.imageUrl,
+                colors: colors,
+              ),
             ),
           ],
         ),
@@ -318,12 +358,18 @@ class _TeamMemberCard extends StatelessWidget {
               _SocialIconButton(
                 icon: _GithubGlyph(),
                 onTap: () => onUrl(member.githubUrl!),
+                backgroundColor: Colors.white,
+                borderColor: Colors.white,
               ),
               const SizedBox(width: 8),
             ],
             if (member.linkedinUrl != null) ...[
               _SocialIconButton(
-                icon: SvgPicture.asset('assets/icons/linkedin.svg', width: 16, height: 16),
+                icon: SvgPicture.asset(
+                  'assets/icons/linkedin.svg',
+                  width: 16,
+                  height: 16,
+                ),
                 onTap: () => onUrl(member.linkedinUrl!),
               ),
               if (member.resumeUrl != null) const SizedBox(width: 8),
@@ -375,16 +421,25 @@ class _GithubGlyph extends StatelessWidget {
 }
 
 class _SocialIconButton extends StatelessWidget {
-  const _SocialIconButton({required this.icon, required this.onTap});
+  const _SocialIconButton({
+    required this.icon,
+    required this.onTap,
+    this.backgroundColor,
+    this.borderColor,
+  });
 
   final Widget icon;
   final VoidCallback onTap;
+  final Color? backgroundColor;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
     return _TeamActionButton(
       onTap: onTap,
       square: true,
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
       child: icon,
     );
   }
@@ -426,12 +481,16 @@ class _TeamActionButton extends StatelessWidget {
     required this.child,
     this.padding,
     this.square = false,
+    this.backgroundColor,
+    this.borderColor,
   });
 
   final VoidCallback onTap;
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final bool square;
+  final Color? backgroundColor;
+  final Color? borderColor;
 
   static const _height = 32.0;
 
@@ -439,7 +498,7 @@ class _TeamActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: colors.card,
+      color: backgroundColor ?? colors.card,
       child: InkWell(
         onTap: onTap,
         child: Container(
@@ -448,7 +507,7 @@ class _TeamActionButton extends StatelessWidget {
           padding: padding,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            border: Border.all(color: colors.border, width: 2),
+            border: Border.all(color: borderColor ?? colors.border, width: 2),
           ),
           child: child,
         ),
@@ -480,19 +539,14 @@ class _StatsSection extends StatelessWidget {
       Icons.monitor_heart_outlined,
     ];
 
-    final labels = [
-      'Lines written',
-      'Active Users',
-      'Components',
-      'Uptime',
-    ];
+    final labels = ['Lines written', 'Active Users', 'Components', 'Uptime'];
 
     String formatInt(int? n) {
       if (loading || n == null) return '—';
       return n.toString().replaceAllMapped(
-            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-            (m) => '${m[1]},',
-          );
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (m) => '${m[1]},',
+      );
     }
 
     String formatUptime(double? v) {
@@ -607,20 +661,16 @@ class _PillarCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg, icon) = switch (pillar.variant) {
       AboutPillarVariant.dark => (
-          colors.foreground,
-          colors.background,
-          colors.background,
-        ),
+        colors.foreground,
+        colors.background,
+        colors.background,
+      ),
       AboutPillarVariant.primary => (
-          primary,
-          colors.primaryForeground,
-          colors.primaryForeground,
-        ),
-      AboutPillarVariant.card => (
-          colors.card,
-          colors.foreground,
-          primary,
-        ),
+        primary,
+        colors.primaryForeground,
+        colors.primaryForeground,
+      ),
+      AboutPillarVariant.card => (colors.card, colors.foreground, primary),
     };
 
     final pillarIcon = switch (pillar.icon) {
@@ -772,16 +822,16 @@ class _TechStackSection extends StatelessWidget {
   final Color primary;
 
   IconData _iconFor(String name) => switch (name) {
-        'Globe' => Icons.public_rounded,
-        'Layers' => Icons.layers_outlined,
-        'Terminal' => Icons.terminal_rounded,
-        'Cpu' => Icons.memory_rounded,
-        'Database' => Icons.storage_rounded,
-        'Zap' => Icons.bolt_rounded,
-        'Box' => Icons.widgets_outlined,
-        'Workflow' => Icons.account_tree_outlined,
-        _ => Icons.code_rounded,
-      };
+    'Globe' => Icons.public_rounded,
+    'Layers' => Icons.layers_outlined,
+    'Terminal' => Icons.terminal_rounded,
+    'Cpu' => Icons.memory_rounded,
+    'Database' => Icons.storage_rounded,
+    'Zap' => Icons.bolt_rounded,
+    'Box' => Icons.widgets_outlined,
+    'Workflow' => Icons.account_tree_outlined,
+    _ => Icons.code_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -818,7 +868,10 @@ class _TechStackSection extends StatelessWidget {
             itemBuilder: (context, index) {
               final item = tech[index];
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: colors.border, width: 2),
                   color: colors.background,

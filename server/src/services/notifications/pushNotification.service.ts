@@ -14,7 +14,10 @@ type FirebaseMessaging = {
     apns?: {
       payload: { aps: { sound: string; badge?: number } };
     };
-    android?: { priority: "high" };
+    android?: {
+      priority: "high";
+      notification?: { icon?: string };
+    };
   }): Promise<{
     responses: Array<{ success: boolean; error?: { code?: string } }>;
   }>;
@@ -78,11 +81,15 @@ export async function sendPushNotificationToUser(
   if (!tokens.length) return;
 
   try {
+    const notificationTitle =
+      item.type === "settings_update" ? item.message : item.title;
+    const notificationBody =
+      item.type === "settings_update" ? item.title : item.message;
     const response = await fcm.sendEachForMulticast({
       tokens,
       notification: {
-        title: item.title,
-        body: item.message,
+        title: notificationTitle,
+        body: notificationBody,
       },
       data: {
         id: item.id,
@@ -99,7 +106,10 @@ export async function sendPushNotificationToUser(
           },
         },
       },
-      android: { priority: "high" },
+      android: {
+        priority: "high",
+        notification: { icon: "syntax_notification_logo" },
+      },
     });
 
     const invalid: string[] = [];

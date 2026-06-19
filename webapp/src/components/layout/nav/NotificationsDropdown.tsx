@@ -191,6 +191,10 @@ export function NotificationsDropdown() {
               items.map((n) => {
                 const Icon = notificationIconComponent(n.icon);
                 const typeLabel = NOTIFICATION_TYPE_LABELS[n.type] ?? "Alert";
+                const primaryText =
+                  n.type === "settings_update" ? n.message : n.title;
+                const secondaryText =
+                  n.type === "settings_update" ? n.title : n.message;
                 return (
                   <li key={n.id} role="none">
                     <Link
@@ -228,10 +232,10 @@ export function NotificationsDropdown() {
                           )}
                         </div>
                         <p className="text-sm font-bold text-foreground leading-snug line-clamp-1">
-                          {n.title}
+                          {primaryText}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
-                          {n.message}
+                          {secondaryText}
                         </p>
                         <p className="text-[10px] font-medium text-muted-foreground/80 mt-1.5 uppercase tracking-wide">
                           {n.time}
