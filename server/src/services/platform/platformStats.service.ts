@@ -1,4 +1,8 @@
 import { BlogPostModel } from "../../models/BlogPost.js";
+import {
+  PlatformStatsSnapshotModel,
+  type IPlatformStatsSnapshot,
+} from "../../models/PlatformStatsSnapshot.js";
 import { UserModel } from "../../models/User.js";
 import { measureBlogContent } from "../../modules/blog/contentMetrics.js";
 import { getRedis } from "../../config/redis.js";
@@ -12,10 +16,34 @@ export type PublicPlatformStats = {
   collectedAt: string;
 };
 const CACHE_TTL_SEC = 600;
-async function readCachedStats(): Promise<PublicPlatformStats | null> {
+const PLATFORM_STATS_TIMEZONE = "Asia/Kolkata";
+
+function indiaDayKey(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: PLATFORM_STATS_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function mapSnapshot(doc: IPlatformStatsSnapshot): PublicPlatformStats {
+  return {
+    linesWritten: doc.linesWritten,
+    activeUsers: doc.activeUsers,
+    components: doc.components,
+    uptimePercent: doc.uptimePercent,
+    collectedAt: doc.collectedAt.toISOString(),
+  };
+}
+async function readCachedStats(
+  dayKey: string,
+): Promise<PublicPlatformStats | null> {
   const redis = getRedis();
   if (!redis) return null;
-  const raw = await redis.get(redisKeys.platform.publicStats);
+  const raw = await redis.get(redisKeys.platform.publicStats(dayKey));
   if (!raw) return null;
   try {
     return JSON.parse(raw) as PublicPlatformStats;
@@ -23,11 +51,14 @@ async function readCachedStats(): Promise<PublicPlatformStats | null> {
     return null;
   }
 }
-async function writeCachedStats(stats: PublicPlatformStats): Promise<void> {
+async function writeCachedStats(
+  dayKey: string,
+  stats: PublicPlatformStats,
+): Promise<void> {
   const redis = getRedis();
   if (!redis) return;
   await redis.setEx(
-    redisKeys.platform.publicStats,
+    redisKeys.platform.publicStats(dayKey),
     CACHE_TTL_SEC,
     JSON.stringify(stats),
   );
@@ -62,9 +93,38 @@ async function collectStats(): Promise<PublicPlatformStats> {
   };
 }
 export async function getPublicPlatformStats(): Promise<PublicPlatformStats> {
-  const cached = await readCachedStats();
+  const dayKey = indiaDayKey();
+  const cached = await readCachedStats(dayKey);
   if (cached) return cached;
+  const snapshot = await PlatformStatsSnapshotModel.findOne({ dayKey });
+  if (snapshot) {
+    const stats = mapSnapshot(snapshot);
+    await writeCachedStats(dayKey, stats);
+    return stats;
+  }
   const stats = await collectStats();
-  await writeCachedStats(stats);
-  return stats;
+  const collectedAt = new Date(stats.collectedAt);
+  const doc = await PlatformStatsSnapshotModel.findOneAndUpdate(
+    { dayKey },
+    {
+      $setOnInsert: {
+        dayKey,
+        timezone: PLATFORM_STATS_TIMEZONE,
+        linesWritten: stats.linesWritten,
+        activeUsers: stats.activeUsers,
+        components: stats.components,
+        uptimePercent: stats.uptimePercent,
+        collectedAt,
+      },
+    },
+    { new: true, upsert: true },
+  );
+  const storedStats = doc ? mapSnapshot(doc) : stats;
+  await writeCachedStats(dayKey, storedStats);
+  return storedStats;
 }
+
+export const platformStatsInternals = {
+  indiaDayKey,
+  timezone: PLATFORM_STATS_TIMEZONE,
+};

@@ -19,10 +19,24 @@ export const env = {
   FRONTEND_URL: process.env.FRONTEND_URL,
   BACKEND_URL: (process.env.BACKEND_URL || "").replace(/\/$/, ""),
   EMAIL_USER: process.env.EMAIL_USER,
-  EMAIL_APP_PASSWORD: process.env.EMAIL_APP_PASSWORD ?? process.env.EMAIL_PASS,
+  EMAIL_APP_PASSWORD:
+    process.env.EMAIL_APP_PASSWORD ??
+    process.env.BREVO_SMTP_KEY ??
+    process.env.EMAIL_PASS,
   EMAIL_HOST: process.env.EMAIL_HOST,
   EMAIL_PORT: Number.parseInt(process.env.EMAIL_PORT ?? "587", 10),
   EMAIL_FROM: process.env.EMAIL_FROM,
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
+  BREVO_FROM: process.env.BREVO_FROM,
+  BREVO_SMTP_KEY: process.env.BREVO_SMTP_KEY,
+  GMAIL_EMAIL_USER: process.env.GMAIL_EMAIL_USER,
+  GMAIL_APP_PASSWORD:
+    process.env.GMAIL_APP_PASSWORD ?? process.env.GMAIL_EMAIL_PASS,
+  GMAIL_EMAIL_HOST: process.env.GMAIL_EMAIL_HOST,
+  GMAIL_EMAIL_PORT: Number.parseInt(
+    process.env.GMAIL_EMAIL_PORT ?? "587",
+    10,
+  ),
   EMAIL_API_URL: process.env.EMAIL_API_URL,
   EMAIL_API_KEY: process.env.EMAIL_API_KEY,
   EMAIL_API_AUTH: (process.env.EMAIL_API_AUTH ?? "bearer") as

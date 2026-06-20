@@ -218,6 +218,8 @@ export default function AboutPage() {
                 const hasShadow = dev.featured || dev.shadowCard;
                 const hasPortraitFrame = dev.featured || dev.shadowCard;
                 const isSideCard = dev.shadowCard && !dev.featured;
+                const resumeIsExternal =
+                  dev.resumeUrl?.startsWith("http") ?? false;
 
                 return (
                   <article
@@ -295,7 +297,11 @@ export default function AboutPage() {
                           variant={dev.featured ? "primary" : "outline"}
                           size="sm"
                           href={dev.resumeUrl}
-                          download
+                          target={resumeIsExternal ? "_blank" : undefined}
+                          rel={
+                            resumeIsExternal ? "noopener noreferrer" : undefined
+                          }
+                          download={resumeIsExternal ? undefined : ""}
                           className="font-semibold uppercase"
                         >
                           <Download className="size-4" aria-hidden />
