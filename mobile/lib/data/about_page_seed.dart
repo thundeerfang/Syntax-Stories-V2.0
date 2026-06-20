@@ -82,7 +82,7 @@ AboutPageContent buildAboutPageContent() {
         githubUrl: 'https://github.com/Somya170',
         linkedinUrl: 'https://www.linkedin.com/in/somyajaiswal218',
         resumeUrl:
-            'https://www.dropbox.com/scl/fi/05wy19m5lmkwjjdacq97l/somya.pdf?rlkey=loyugxm1s23jvxrxxpl6w9axd&st=4apd62x9&dl=0',
+            'https://www.dropbox.com/scl/fi/05wy19m5lmkwjjdacq97l/somya.pdf?rlkey=loyugxm1s23jvxrxxpl6w9axd&st=smi8063b&dl=0',
         shadowCard: true,
       ),
       AboutTeamMember(
@@ -103,7 +103,7 @@ AboutPageContent buildAboutPageContent() {
         githubUrl: 'https://github.com/vijaychouhan2211',
         linkedinUrl: 'https://www.linkedin.com/in/vijay-chouhan-09b83a287/',
         resumeUrl:
-            'https://www.dropbox.com/scl/fi/m8xgnkinr2rjvlgcxz2ar/vijay.pdf?rlkey=x4kdsj0gin4dy10qxwyegbb5c&st=io5zfh7z&dl=0',
+            'https://www.dropbox.com/scl/fi/m8xgnkinr2rjvlgcxz2ar/vijay.pdf?rlkey=x4kdsj0gin4dy10qxwyegbb5c&st=bwwx7agy&dl=0',
         shadowCard: true,
       ),
     ],
