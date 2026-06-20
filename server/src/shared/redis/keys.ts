@@ -128,7 +128,7 @@ export const redisKeys = {
     storageReason: "platform:storage:reason",
     storageSince: "platform:storage:since",
     storageAlerted: "platform:storage:alerted",
-    publicStats: "platform:stats:public",
+    publicStats: (dayKey: string) => `platform:stats:public:${dayKey}`,
     uptimeHour: (bucket: string) => `platform:uptime:hour:${bucket}`,
   },
   search: {

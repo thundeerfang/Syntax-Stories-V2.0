@@ -1,11 +1,16 @@
 import { env } from "../../config/env.js";
-import { getSmtpTransporter, sendViaSmtp } from "./provider/smtpProvider.js";
+import { hasSmtpTransporter, sendViaSmtp } from "./provider/smtpProvider.js";
+import { sendViaBrevo } from "./provider/brevoProvider.js";
 import { sendViaResend } from "./provider/resendProvider.js";
 import { isMailSendError, MailSendError } from "./types.js";
 export { MailSendError, isMailSendError } from "./types.js";
 export type { MailErrorKind } from "./types.js";
 export function isAuthEmailConfigured(): boolean {
-  return !!(getSmtpTransporter() || env.RESEND_API_KEY?.trim());
+  return !!(
+    env.BREVO_API_KEY?.trim() ||
+    hasSmtpTransporter() ||
+    env.RESEND_API_KEY?.trim()
+  );
 }
 export async function sendAuthEmail(opts: {
   to: string;
@@ -13,7 +18,16 @@ export async function sendAuthEmail(opts: {
   html: string;
   replyTo?: string;
 }): Promise<void> {
-  const smtp = getSmtpTransporter();
+  let brevoErr: unknown;
+  if (env.BREVO_API_KEY?.trim()) {
+    try {
+      await sendViaBrevo(opts.to, opts.subject, opts.html, opts.replyTo);
+      return;
+    } catch (e) {
+      brevoErr = e;
+    }
+  }
+  const smtp = hasSmtpTransporter();
   let smtpErr: unknown;
   if (smtp) {
     try {
@@ -35,9 +49,13 @@ export async function sendAuthEmail(opts: {
           e,
         );
       }
+      if (brevoErr) {
+        console.error("[sendAuthEmail] Brevo failed, Resend failed:", brevoErr, e);
+      }
       throw e;
     }
   }
+  if (brevoErr) throw brevoErr;
   if (smtpErr) throw smtpErr;
   throw new MailSendError("No email provider configured", "configuration");
 }
