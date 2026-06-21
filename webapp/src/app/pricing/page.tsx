@@ -74,16 +74,13 @@ function PlanCheckoutButton({
 
 function PricingPlansGrid({ plans }: { plans: BillingPlanCatalogItem[] }) {
   return (
-    <div className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-3 xl:gap-8">
-      {plans.map((p, index) => (
+    <div className="grid grid-cols-1 items-stretch gap-5 md:gap-6 xl:grid-cols-3 xl:gap-8">
+      {plans.map((p) => (
         <article
           key={p.key}
           className={cn(
-            "relative flex min-h-0 flex-col border-4 border-border bg-card text-card-foreground shadow",
+            "relative mx-auto flex min-h-0 w-full max-w-2xl flex-col border-4 border-border bg-card text-card-foreground shadow xl:max-w-none",
             p.featured && "border-primary shadow",
-            plans.length % 2 === 1 &&
-              index === plans.length - 1 &&
-              "md:col-span-2 xl:col-span-1",
           )}
         >
           {p.badge ? (
@@ -92,19 +89,19 @@ function PricingPlansGrid({ plans }: { plans: BillingPlanCatalogItem[] }) {
             </div>
           ) : null}
 
-          <div className="flex flex-1 flex-col gap-5 p-5 pt-8 sm:p-6 md:p-5 lg:p-6 xl:p-7">
+          <div className="flex flex-1 flex-col gap-5 p-5 pt-8 sm:p-6 lg:p-7 xl:p-6 2xl:p-7">
             <div className="space-y-1 border-b-2 border-border pb-5 text-left">
               <h3 className="font-mono text-base font-black uppercase tracking-tight text-foreground sm:text-lg">
                 {p.name}
               </h3>
-              <p className="text-sm leading-snug text-muted-foreground md:text-[13px] lg:text-sm">
+              <p className="text-sm leading-snug text-muted-foreground">
                 {p.description}
               </p>
             </div>
 
             <div className="text-left">
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                <span className="text-4xl font-black tabular-nums tracking-tight text-foreground md:text-[2.35rem] lg:text-[2.75rem]">
+                <span className="text-4xl font-black tabular-nums tracking-tight text-foreground sm:text-[2.75rem] xl:text-[2.35rem] 2xl:text-[2.75rem]">
                   {p.amountDisplay}
                 </span>
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -113,11 +110,11 @@ function PricingPlansGrid({ plans }: { plans: BillingPlanCatalogItem[] }) {
               </p>
             </div>
 
-            <ul className="flex flex-1 flex-col gap-3 text-left md:gap-2.5 lg:gap-3">
+            <ul className="flex flex-1 flex-col gap-3 text-left xl:gap-2.5 2xl:gap-3">
               {p.features.map((b) => (
                 <li
                   key={b}
-                  className="flex gap-3 text-sm leading-snug md:text-[13px] lg:text-sm"
+                  className="flex gap-3 text-sm leading-snug xl:text-[13px] 2xl:text-sm"
                 >
                   <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center border-2 border-border bg-muted/40 text-primary shadow">
                     <Check className="size-3.5" strokeWidth={3} aria-hidden />

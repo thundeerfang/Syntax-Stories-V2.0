@@ -23,7 +23,7 @@ import { MOBILE_BROWSER_LOCK_BOOTSTRAP_SCRIPT } from "@/lib/dom/mobileBrowserLoc
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const SITE_URL = "https://syntax-stories.vercel.app";
 const META_IMAGE_URL =
-  "https://res.cloudinary.com/dr2bxpjjz/image/upload/v1781867420/SYNTAX_STORIES_ge81pp.png";
+  "https://res.cloudinary.com/dr2bxpjjz/image/upload/v1782037183/SYNTAX_STORIES_1_l3rw3r.png";
 const SITE_TITLE =
   "Syntax Stories - Developer Blogs, Squads & Coding Community";
 const SITE_DESCRIPTION =

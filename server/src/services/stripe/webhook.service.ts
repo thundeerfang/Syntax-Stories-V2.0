@@ -9,6 +9,7 @@ import {
   sendAuthEmail,
   isAuthEmailConfigured,
 } from "../../infrastructure/mail/sendAuthEmail.js";
+import { buildPaymentFailedEmail } from "../../infrastructure/mail/emailTemplates.js";
 import { SEVEN_DAYS_MS } from "../../constants/durations.js";
 function graceUntilFromInvoice(invoice: Stripe.Invoice): Date {
   const npt = invoice.next_payment_attempt;
@@ -124,8 +125,7 @@ export async function dispatchStripeWebhookEvent(
               await sendAuthEmail({
                 to: user.email,
                 subject: "Payment failed — update your billing method",
-                html: `<p>We could not process a payment for your Syntax Stories subscription.</p>
-                <p>Please update your payment method in the billing portal to keep your access.</p>`,
+                html: buildPaymentFailedEmail(),
               });
             } catch (e) {
               console.warn("[stripe webhook] payment failed email skipped", e);
