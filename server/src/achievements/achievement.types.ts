@@ -90,6 +90,7 @@ export type AchievementEvent =
     }
   | {
       type: "profile_sync";
+      metrics?: AchievementMetric[];
     }
   | {
       type: "cv_parsed";

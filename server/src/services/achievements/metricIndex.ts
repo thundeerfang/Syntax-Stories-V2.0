@@ -20,6 +20,7 @@ export function buildAchievementMetricIndex(
 export function metricsAffectedByEvents(
   events: Array<{
     type: string;
+    metrics?: AchievementMetric[];
   }>,
 ): Set<AchievementMetric> | null {
   const set = new Set<AchievementMetric>();
@@ -27,7 +28,13 @@ export function metricsAffectedByEvents(
   for (const e of events) {
     if (e.type === "respect_given") set.add("respect.given.total");
     if (e.type === "brief_read") set.add("read.brief.total");
-    if (e.type === "profile_sync") profileSync = true;
+    if (e.type === "profile_sync") {
+      if (e.metrics?.length) {
+        for (const metric of e.metrics) set.add(metric);
+      } else {
+        profileSync = true;
+      }
+    }
     if (e.type === "cv_parsed") set.add("profile.has_cv");
     if (e.type === "referral_converted") set.add("referral.converted.total");
   }

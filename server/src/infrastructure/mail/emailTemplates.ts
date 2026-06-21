@@ -54,11 +54,11 @@ export function syntaxStoriesEmailLayout(input: EmailLayoutInput): string {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(input.title)} | Syntax Stories</title>
   </head>
-  <body style="margin:0;padding:0;background:#0f1117;color:#111827;">
+  <body style="margin:0;padding:0;background:transparent;color:#111827;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
       ${escapeHtml(input.previewText ?? input.title)}
     </div>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#0f1117;padding:32px 12px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:transparent;padding:32px 12px;">
       <tr>
         <td align="center">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px;border-collapse:collapse;">

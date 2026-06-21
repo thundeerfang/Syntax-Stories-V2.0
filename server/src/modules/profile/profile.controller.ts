@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import type { AuthUser } from "../../middlewares/auth/index.js";
+import type { AchievementEvent } from "../../achievements/achievement.types.js";
 import { ProfileErrorCode, isProfileUpdateSection } from "./profile.types.js";
 import { profileService } from "./profile.service.js";
 import { attachAchievementsToResponse } from "../../services/achievements/achievementEngine.service.js";
@@ -7,11 +8,12 @@ import { dispatchAchievementEvents } from "../../services/achievements/dispatchA
 async function sendProfileSuccess(
   res: Response,
   user: Record<string, unknown>,
-  userId?: string,
+  userId: string | undefined,
+  achievementEvents: AchievementEvent[],
 ): Promise<void> {
   const newlyUnlocked =
-    userId != null
-      ? await dispatchAchievementEvents(userId, [{ type: "profile_sync" }])
+    userId != null && achievementEvents.length > 0
+      ? await dispatchAchievementEvents(userId, achievementEvents)
       : [];
   res.status(200).json(
     attachAchievementsToResponse(
@@ -93,7 +95,12 @@ export async function updateProfile(
       );
       return;
     }
-    await sendProfileSuccess(res, result.user, String(user._id));
+    await sendProfileSuccess(
+      res,
+      result.user,
+      String(user._id),
+      result.achievementEvents,
+    );
   } catch (err) {
     const code = (
       err as {
@@ -162,7 +169,12 @@ export async function updateProfileSection(
       );
       return;
     }
-    await sendProfileSuccess(res, result.user, String(user._id));
+    await sendProfileSuccess(
+      res,
+      result.user,
+      String(user._id),
+      result.achievementEvents,
+    );
   } catch (err) {
     const code = (
       err as {
