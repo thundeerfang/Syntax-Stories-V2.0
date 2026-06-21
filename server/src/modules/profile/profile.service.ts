@@ -9,6 +9,8 @@ import { normalizeProjectsPrjLog } from "./profile-projects.service.js";
 import { profileRepository } from "./profile.repository.js";
 import type { ProfileSections, ProfileUpdateSection } from "./profile.types.js";
 import { ProfileErrorCode, PROFILE_SECTION_KEYS } from "./profile.types.js";
+import { profileAchievementEventsForUpdates } from "./profile.achievements.js";
+import type { AchievementEvent } from "../../achievements/achievement.types.js";
 const UPDATE_PROFILE_KEYS = [
   "fullName",
   "username",
@@ -52,6 +54,7 @@ export type ProfileServiceError = {
 export type ProfileUpdateOk = {
   ok: true;
   user: Record<string, unknown>;
+  achievementEvents: AchievementEvent[];
 };
 export type ProfileUpdateFail = {
   ok: false;
@@ -151,6 +154,7 @@ async function applyProfileUpdate(
     user: await attachStackAndToolsDisplay(
       toAccountUser(updated as Record<string, unknown>),
     ),
+    achievementEvents: profileAchievementEventsForUpdates(updates),
   };
 }
 export const profileService = {
@@ -169,6 +173,7 @@ export const profileService = {
       user: await attachStackAndToolsDisplay(
         toAccountUser(found as Record<string, unknown>),
       ),
+      achievementEvents: [],
     };
   },
   async updateProfile(
