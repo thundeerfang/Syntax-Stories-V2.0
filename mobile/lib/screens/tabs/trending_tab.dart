@@ -60,8 +60,9 @@ class TrendingTabState extends State<TrendingTab> {
   }
 
   void _onScroll() {
-    if (!_categoriesHasMore || _categoriesLoadingMore || _categoriesLoading)
+    if (!_categoriesHasMore || _categoriesLoadingMore || _categoriesLoading) {
       return;
+    }
     final max = _scrollController.position.maxScrollExtent;
     if (_scrollController.position.pixels >= max - 280) {
       _loadCategories(reset: false);
@@ -207,7 +208,7 @@ class TrendingTabState extends State<TrendingTab> {
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: const AppLoadingCenter(),
+                child: AppLoadingCenter(),
               ),
             ),
           if (!_categoriesLoading &&

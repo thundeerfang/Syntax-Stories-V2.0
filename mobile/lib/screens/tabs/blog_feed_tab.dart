@@ -91,7 +91,7 @@ class BlogFeedTabState extends State<BlogFeedTab> {
           if (_loading)
             const SliverFillRemaining(
               hasScrollBody: false,
-              child: const AppLoadingCenter(),
+              child: AppLoadingCenter(),
             )
           else if (_error != null)
             SliverFillRemaining(

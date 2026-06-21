@@ -178,7 +178,7 @@ const dataDeletionRequestSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     status: {
       type: String,
-      enum: ["requested", "processing", "completed", "rejected"],
+      enum: ["requested", "processing", "completed", "rejected", "cancelled"],
       default: "requested",
     },
     requestedAt: { type: Date, required: true },

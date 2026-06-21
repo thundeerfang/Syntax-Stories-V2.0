@@ -11,6 +11,7 @@ import {
   adminListPolicies,
   adminListRevisions,
   adminPatchPolicy,
+  cancelDataDeletionRequest,
   getMeLegalStatus,
   getPublishedPolicyByKind,
   listMyDeletionRequests,
@@ -42,6 +43,10 @@ legalUserRouter.post("/accept", postAccept);
 legalUserRouter.get("/me/status", getMeLegalStatus);
 legalUserRouter.post("/data-deletion-requests", postDataDeletionRequest);
 legalUserRouter.get("/data-deletion-requests", listMyDeletionRequests);
+legalUserRouter.post(
+  "/data-deletion-requests/:requestId/cancel",
+  cancelDataDeletionRequest,
+);
 export const legalAdminRouter = Router();
 legalAdminRouter.use(...cmsAdminGate("legal:manage"), adminWrite);
 legalAdminRouter.get("/policies", adminListPolicies);

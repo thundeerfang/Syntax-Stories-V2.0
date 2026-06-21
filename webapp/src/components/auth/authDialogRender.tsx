@@ -238,6 +238,8 @@ export type AuthDialogRenderProps = Readonly<{
   handleVerifyCode: (e: FormSubmit) => void | Promise<void>;
   handleVerifyTwoFactor: (e: FormSubmit) => void | Promise<void>;
   altchaOn: boolean;
+  onLoginAltchaPayloadChange: (payload: string | undefined) => void;
+  onSignupAltchaPayloadChange: (payload: string | undefined) => void;
   isLoading: boolean;
   twoFactorActive: boolean;
   otpAttemptsLeft: number | null;
@@ -350,6 +352,7 @@ function renderAuthLoginEmailStep(p: AuthDialogRenderProps): ReactNode {
             floating="bottom"
             floatingAnchor="#auth-login-send-code"
             floatingOffset={8}
+            onPayloadChange={p.onLoginAltchaPayloadChange}
           />
           <Button
             id="auth-login-send-code"
@@ -523,6 +526,7 @@ function renderAuthSignupEmailStep(p: AuthDialogRenderProps): ReactNode {
             floating="bottom"
             floatingAnchor="#auth-signup-create"
             floatingOffset={8}
+            onPayloadChange={p.onSignupAltchaPayloadChange}
           />
           <Button
             id="auth-signup-create"

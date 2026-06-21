@@ -1,6 +1,7 @@
 import type { Request } from "express";
 import { UserModel, type IUser } from "../models/User.js";
 import { newRandomDiceBearAvatarSvgUrl } from "../utils/diceBearAvatarUrl.js";
+import { DEFAULT_PROFILE_BIO } from "../utils/profileBio.js";
 import { SubscriptionModel } from "../models/Subscription.js";
 import { getRedis } from "../config/redis.js";
 import { writeAuditLog } from "../shared/audit/auditLog.js";
@@ -90,6 +91,7 @@ function newUserBaseDoc(
     fullName: n.fullName,
     username,
     email,
+    bio: DEFAULT_PROFILE_BIO,
     profileImg: n.profileImg?.startsWith("http")
       ? n.profileImg
       : newRandomDiceBearAvatarSvgUrl(),

@@ -334,6 +334,7 @@ export async function postDataDeletionRequest(
       const recent = await DataDeletionRequestModel.findOne({
         userId: new mongoose.Types.ObjectId(uid),
         requestedAt: { $gte: since },
+        status: { $ne: "cancelled" },
       }).exec();
       if (recent) {
         const retryAfterSec = Math.ceil(
@@ -374,6 +375,7 @@ export async function postDataDeletionRequest(
           id: doc._id.toString(),
           status: doc.status,
           requestedAt: doc.requestedAt.toISOString(),
+          slaDeadline: doc.slaDeadline?.toISOString() ?? null,
         },
       };
     },
@@ -393,7 +395,7 @@ export async function listMyDeletionRequests(
   })
     .sort({ requestedAt: -1 })
     .limit(limit)
-    .select("status requestedAt completedAt")
+    .select("status requestedAt completedAt slaDeadline")
     .lean();
   res.status(200).json({
     ok: true,
@@ -402,7 +404,75 @@ export async function listMyDeletionRequests(
       status: i.status,
       requestedAt: i.requestedAt?.toISOString(),
       completedAt: i.completedAt?.toISOString() ?? null,
+      slaDeadline: i.slaDeadline?.toISOString() ?? null,
     })),
+  });
+}
+export async function cancelDataDeletionRequest(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const uid = userId(req);
+  const requestId = String(req.params.requestId ?? "");
+  if (!mongoose.Types.ObjectId.isValid(requestId)) {
+    res.status(400).json({
+      ok: false,
+      code: "LEGAL_DELETION_INVALID_ID",
+      message: "Invalid deletion request id.",
+    });
+    return;
+  }
+  const now = await getLegalDbNow();
+  const doc = await DataDeletionRequestModel.findOne({
+    _id: new mongoose.Types.ObjectId(requestId),
+    userId: new mongoose.Types.ObjectId(uid),
+  }).exec();
+  if (!doc) {
+    res.status(404).json({
+      ok: false,
+      code: "LEGAL_DELETION_NOT_FOUND",
+      message: "Deletion request not found.",
+    });
+    return;
+  }
+  if (doc.status === "completed") {
+    res.status(409).json({
+      ok: false,
+      code: "LEGAL_DELETION_ALREADY_COMPLETED",
+      message: "This deletion request has already completed.",
+    });
+    return;
+  }
+  if (doc.status === "cancelled" || doc.status === "rejected") {
+    res.status(200).json({
+      ok: true,
+      id: doc._id.toString(),
+      status: "cancelled",
+      cancelledAt:
+        doc.lastStatusChangeById == null
+          ? now.toISOString()
+          : (doc.completedAt?.toISOString() ?? now.toISOString()),
+    });
+    return;
+  }
+  if (doc.status === "processing" && (!doc.slaDeadline || doc.slaDeadline <= now)) {
+    res.status(409).json({
+      ok: false,
+      code: "LEGAL_DELETION_PROCESSING",
+      message: "This deletion request is already processing and cannot be cancelled.",
+    });
+    return;
+  }
+  doc.status = "cancelled";
+  doc.completedAt = now;
+  doc.lastStatusChangeById = new mongoose.Types.ObjectId(uid);
+  doc.notes = `${doc.notes ? `${doc.notes}\n` : ""}Cancelled by user during grace period.`;
+  await doc.save();
+  res.status(200).json({
+    ok: true,
+    id: doc._id.toString(),
+    status: "cancelled",
+    cancelledAt: now.toISOString(),
   });
 }
 const patchPolicySchema = z.object({

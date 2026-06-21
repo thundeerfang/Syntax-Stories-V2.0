@@ -861,6 +861,55 @@ export default function WriteBlogPage() {
         </div>
       ) : null}
 
+      <div className="border-b-2 border-border bg-card/95 px-3 py-2 xl:hidden">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex shrink-0 items-center gap-1 border-r border-border pr-2">
+            {DEFAULT_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => addBlock(item.id as BlockType)}
+                  className="inline-flex h-9 min-w-9 items-center justify-center gap-1.5 border border-border bg-background px-2 text-[9px] font-black uppercase text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  title={`Add ${item.label}`}
+                  aria-label={`Add ${item.label}`}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="hidden sm:inline">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleSaveDraft()}
+            disabled={submitting || saveDisabledNoEdits}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 border border-border bg-muted px-3 text-[9px] font-black uppercase transition-colors hover:bg-card disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <Save className="h-3.5 w-3.5" aria-hidden />
+            {submitAction === "draft" ? "Saving" : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setThumbnailDialogOpen(true)}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 border border-border bg-background px-3 text-[9px] font-black uppercase transition-colors hover:border-primary hover:text-primary"
+          >
+            <ImageIcon className="h-3.5 w-3.5" aria-hidden />
+            Thumb
+          </button>
+          <button
+            type="button"
+            onClick={openDeployOverlay}
+            disabled={submitting || !title.trim()}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 border-2 border-black bg-primary px-3 text-[9px] font-black uppercase text-primary-foreground shadow transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <Send className="h-3.5 w-3.5" aria-hidden />
+            Deploy
+          </button>
+        </div>
+      </div>
+
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <motion.div
           initial={false}
@@ -868,7 +917,7 @@ export default function WriteBlogPage() {
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className={cn(
             "flex-shrink-0 flex flex-col border-r-2 border-border bg-muted/20 overflow-hidden min-h-full",
-            "hidden lg:flex",
+            "hidden xl:flex",
           )}
         >
           <AnimatePresence mode="wait">
@@ -1004,16 +1053,16 @@ export default function WriteBlogPage() {
         </motion.div>
 
         <div className="flex-1 min-w-0 flex flex-col bg-background overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 ss-center-scroll">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 xl:p-8 ss-center-scroll">
             <div
               className={cn(
                 "mx-auto transition-[max-width] duration-300",
                 centreMaxWidthClass,
               )}
             >
-              <div className="mb-8">
-                <div className="relative mb-8">
-                  <span className="absolute -top-3 -left-3 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black">
+              <div className="mb-6 md:mb-8">
+                <div className="relative mb-6 md:mb-8">
+                  <span className="absolute -top-2 left-0 bg-primary text-primary-foreground text-[8px] font-bold px-1 z-10 border border-black sm:-top-3 sm:-left-3">
                     H1
                   </span>
                   <div className="flex items-center justify-end text-[10px] font-bold text-muted-foreground mb-0.5">
@@ -1062,7 +1111,7 @@ export default function WriteBlogPage() {
                       });
                     }}
                     placeholder="INPUT_TITLE_HERE..."
-                    className="w-full min-h-[3rem] overflow-hidden bg-transparent border-b-2 border-border text-4xl md:text-5xl font-black uppercase tracking-tighter focus:outline-none focus:border-primary placeholder:text-muted-foreground py-4 resize-none"
+                    className="w-full min-h-[3rem] overflow-hidden bg-transparent border-b-2 border-border text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-tighter focus:outline-none focus:border-primary placeholder:text-muted-foreground py-4 resize-none"
                     rows={1}
                   />
                 </div>
@@ -1098,7 +1147,7 @@ export default function WriteBlogPage() {
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className={cn(
             "flex h-full min-h-0 flex-shrink-0 flex-col overflow-hidden border-l-2 border-border bg-card",
-            "hidden lg:flex",
+            "hidden xl:flex",
           )}
         >
           <AnimatePresence mode="wait">

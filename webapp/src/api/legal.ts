@@ -9,6 +9,9 @@ import type {
   PostAcceptResponse,
   PostDataDeletionRequestBody,
   PostDataDeletionRequestResponse,
+  DataDeletionRequestItem,
+  ListDataDeletionRequestsResponse,
+  CancelDataDeletionRequestResponse,
 } from "@contracts/legalApi";
 function legalBase(): string {
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
@@ -136,6 +139,44 @@ export async function postDataDeletionRequest(
   }
   return data;
 }
+export async function listDataDeletionRequests(
+  accessToken: string,
+): Promise<ListDataDeletionRequestsResponse> {
+  const url = resolveSameOriginRequestUrl(
+    `${legalBase()}/data-deletion-requests`,
+  );
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    credentials: "include",
+  });
+  const data = (await res.json()) as ListDataDeletionRequestsResponse & {
+    message?: string;
+  };
+  if (!res.ok) throw new Error(data.message ?? res.statusText);
+  return data;
+}
+export async function cancelDataDeletionRequest(
+  accessToken: string,
+  requestId: string,
+): Promise<CancelDataDeletionRequestResponse> {
+  const url = resolveSameOriginRequestUrl(
+    `${legalBase()}/data-deletion-requests/${requestId}/cancel`,
+  );
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    credentials: "include",
+  });
+  const data = (await res.json()) as CancelDataDeletionRequestResponse & {
+    code?: string;
+    message?: string;
+  };
+  if (!res.ok) {
+    const parts = [data.code, data.message].filter(Boolean);
+    throw new Error(parts.length ? parts.join(": ") : res.statusText);
+  }
+  return data;
+}
 export type {
   LegalPolicyKind,
   PublishedPolicyResponse,
@@ -146,4 +187,7 @@ export type {
   PostAcceptResponse,
   PostDataDeletionRequestBody,
   PostDataDeletionRequestResponse,
+  DataDeletionRequestItem,
+  ListDataDeletionRequestsResponse,
+  CancelDataDeletionRequestResponse,
 } from "@contracts/legalApi";

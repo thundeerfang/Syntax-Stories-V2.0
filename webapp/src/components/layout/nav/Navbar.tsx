@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { useSidebar } from "@/hooks/useSidebar";
+import { useTabletSidebarRailOnly } from "@/hooks/useTabletSidebarRailOnly";
 import { useAuthDialogStore } from "@/store/authDialog";
 import { useSearchDialogStore } from "@/store/searchDialog";
 import {
@@ -27,6 +28,7 @@ export function Navbar() {
   const { isAuthenticated } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { toggle: toggleSidebar } = useSidebar();
+  const tabletSidebarRailOnly = useTabletSidebarRailOnly();
   const openAuthDialog = useAuthDialogStore((s) => s.open);
   const openSearch = useSearchDialogStore((s) => s.open);
   const [bannerDismissed, setBannerDismissed] = useState(true);
@@ -112,15 +114,27 @@ export function Navbar() {
       >
         <div
           className={cn(
-            "relative z-[1] flex h-16 items-center gap-4",
+            "relative z-[1] flex h-16 items-center gap-2 sm:gap-3 xl:gap-4",
             shell.navInner,
           )}
         >
-          <div className="flex flex-1 items-center gap-3">
+          <div className="flex flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
-              onClick={toggleSidebar}
-              className="group relative border-2 border-border bg-card p-2 text-foreground transition-all hover:border-primary active:translate-y-0.5"
+              onClick={() => {
+                if (!tabletSidebarRailOnly) toggleSidebar();
+              }}
+              aria-disabled={tabletSidebarRailOnly}
+              title={
+                tabletSidebarRailOnly
+                  ? "Sidebar stays collapsed on iPad"
+                  : "Toggle sidebar"
+              }
+              className={cn(
+                "group relative border-2 border-border bg-card p-2 text-foreground transition-all hover:border-primary active:translate-y-0.5",
+                tabletSidebarRailOnly &&
+                  "cursor-not-allowed opacity-45 hover:border-border active:translate-y-0",
+              )}
             >
               <Menu
                 className="h-5 w-5 text-foreground transition-colors group-hover:text-primary"
@@ -128,11 +142,15 @@ export function Navbar() {
                 aria-hidden
               />
             </button>
-            <Link href="/" className="shrink-0">
+            <Link
+              href="/"
+              className="flex min-w-0 shrink-0 items-center"
+              aria-label="Syntax Stories home"
+            >
               <img
                 src="/svg/logo_hori.png"
                 alt="Syntax Stories"
-                className="h-6 w-auto object-contain sm:h-9"
+                className="h-6 w-auto max-w-[8.5rem] object-contain sm:h-8 sm:max-w-[10rem] lg:h-7 lg:max-w-[8.25rem] xl:h-9 xl:max-w-none"
               />
             </Link>
           </div>
@@ -181,7 +199,7 @@ export function Navbar() {
           <div className="flex flex-1 items-center justify-end gap-2 sm:gap-4">
             <button
               onClick={openSearch}
-              className="hidden md:flex flex-1 max-w-[240px] items-center justify-between gap-2 border-2 border-border bg-muted/30 px-3 py-1.5 transition-all hover:border-primary hover:bg-background group"
+              className="hidden xl:flex flex-1 max-w-[240px] items-center justify-between gap-2 border-2 border-border bg-muted/30 px-3 py-1.5 transition-all hover:border-primary hover:bg-background group"
             >
               <div className="flex items-center gap-2 text-muted-foreground group-hover:text-foreground">
                 <Search className="h-4 w-4" strokeWidth={2.5} />
@@ -197,7 +215,7 @@ export function Navbar() {
             <button
               type="button"
               onClick={openSearch}
-              className="border-2 border-transparent p-2 text-foreground transition-all hover:border-primary md:hidden"
+              className="flex border-2 border-transparent p-2 text-foreground transition-all hover:border-primary xl:hidden"
             >
               <Search className="h-5 w-5 text-foreground" strokeWidth={2.5} />
             </button>
