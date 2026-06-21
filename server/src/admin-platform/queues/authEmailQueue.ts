@@ -1,6 +1,7 @@
 import { getRedis } from "../../config/redis.js";
 import { redisKeys } from "../../shared/redis/keys.js";
 import { sendAuthEmail } from "../../infrastructure/mail/sendAuthEmail.js";
+import { buildOtpEmail } from "../../infrastructure/mail/emailTemplates.js";
 export type AuthEmailJob = {
   type: "admin_invite_otp";
   email: string;
@@ -23,14 +24,19 @@ async function processAuthEmailJob(job: AuthEmailJob): Promise<void> {
     await sendAuthEmail({
       to: job.email,
       subject: "Verify admin operator email — Syntax Stories",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
-          <h2 style="color: #5f4fe6;">Admin operator verification</h2>
-          <p>Use this code to verify the work email for a new dashboard operator:</p>
-          <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${job.code}</p>
-          <p style="font-size: 14px; color: #666;">Expires in ${job.ttlMin} minute(s).</p>
-        </div>
-      `,
+      html: buildOtpEmail({
+        kicker: "Admin Platform",
+        title: "Operator Verification",
+        intro:
+          "Use this code to verify the work email for a new Syntax Stories dashboard operator.",
+        codeLabel: "Operator Code",
+        code: job.code,
+        ttlMin: job.ttlMin,
+        notice: "This admin verification code expires in",
+        footerNote:
+          "Admin operator codes should only be used in the Syntax Stories admin dashboard.",
+        footerLabel: "Transactional admin email.",
+      }),
     });
   }
 }

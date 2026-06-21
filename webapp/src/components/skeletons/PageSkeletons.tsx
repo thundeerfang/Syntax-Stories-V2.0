@@ -1022,13 +1022,13 @@ function PricingPlanCardSkeleton({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col border-4 border-border bg-card shadow",
+        "mx-auto flex min-h-0 w-full max-w-2xl flex-col border-4 border-border bg-card shadow xl:max-w-none",
         featured && "border-primary",
         className,
       )}
       aria-hidden
     >
-      <div className="flex flex-1 flex-col gap-5 p-5 pt-8 sm:p-6 md:p-5 lg:p-6 xl:p-7">
+      <div className="flex flex-1 flex-col gap-5 p-5 pt-8 sm:p-6 lg:p-7 xl:p-6 2xl:p-7">
         <div className="space-y-2 border-b-2 border-border pb-5">
           <SkBar className="h-5 w-32" />
           <SkBar className="h-3 w-full" />
@@ -1057,12 +1057,12 @@ function PricingPlanCardSkeleton({
 export function PricingPlansGridSkeleton() {
   return (
     <div
-      className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-3 xl:gap-8"
+      className="grid grid-cols-1 items-stretch gap-5 md:gap-6 xl:grid-cols-3 xl:gap-8"
       aria-hidden
     >
       <PricingPlanCardSkeleton />
       <PricingPlanCardSkeleton featured />
-      <PricingPlanCardSkeleton className="md:col-span-2 xl:col-span-1" />
+      <PricingPlanCardSkeleton />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   sendAuthEmail,
   getEmailSendErrorMessage,
 } from "../infrastructure/mail/sendAuthEmail.js";
+import { buildFeedbackNotificationEmail } from "../infrastructure/mail/emailTemplates.js";
 import type { AuthUser } from "../middlewares/auth/verifyToken.js";
 import { parseMultipartFeedback } from "../middlewares/feedback/feedbackMultipart.validation.js";
 import { attachAchievementsToResponse } from "../services/achievements/achievementEngine.service.js";
@@ -32,13 +33,6 @@ function authUserFromRequest(req: Request): AuthUser | undefined {
       user?: AuthUser;
     }
   ).user;
-}
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 function splitFullName(fullName: string): {
   firstName: string;
@@ -99,47 +93,31 @@ function buildFeedbackEmailHtml(params: {
   const metaJson = params.clientMeta
     ? JSON.stringify(params.clientMeta, null, 2)
     : "";
-  const rows: {
-    k: string;
-    v: string;
-  }[] = [
-    { k: "Submitted (IST)", v: escapeHtml(params.submittedAtIst) },
-    { k: "Category", v: escapeHtml(params.categoryLabel) },
-    { k: "Name", v: escapeHtml(`${params.firstName} ${params.lastName}`) },
-    { k: "Email", v: escapeHtml(params.email) },
-    { k: "Subject", v: escapeHtml(params.subject) },
+  const rows: { k: string; v: string }[] = [
+    { k: "Submitted (IST)", v: params.submittedAtIst },
+    { k: "Category", v: params.categoryLabel },
+    { k: "Name", v: `${params.firstName} ${params.lastName}` },
+    { k: "Email", v: params.email },
+    { k: "Subject", v: params.subject },
   ];
   if (params.attachmentUrl) {
-    rows.push({ k: "Attachment", v: escapeHtml(params.attachmentUrl) });
+    rows.push({ k: "Attachment", v: params.attachmentUrl });
   }
   if (params.attachmentTitle) {
-    rows.push({ k: "Attachment title", v: escapeHtml(params.attachmentTitle) });
+    rows.push({ k: "Attachment title", v: params.attachmentTitle });
   }
-  if (params.username)
-    rows.push({ k: "Username", v: escapeHtml(params.username) });
-  if (params.userId) rows.push({ k: "User ID", v: escapeHtml(params.userId) });
-  if (params.ip) rows.push({ k: "IP", v: escapeHtml(params.ip) });
+  if (params.username) rows.push({ k: "Username", v: params.username });
+  if (params.userId) rows.push({ k: "User ID", v: params.userId });
+  if (params.ip) rows.push({ k: "IP", v: params.ip });
   if (params.forwardedFor)
-    rows.push({ k: "X-Forwarded-For", v: escapeHtml(params.forwardedFor) });
+    rows.push({ k: "X-Forwarded-For", v: params.forwardedFor });
   if (params.userAgent)
-    rows.push({ k: "User-Agent", v: escapeHtml(params.userAgent) });
-  const tableRows = rows
-    .map(
-      ({ k, v }) =>
-        `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:bold;width:180px;">${k}</td><td style="padding:8px;border:1px solid #ccc;">${v}</td></tr>`,
-    )
-    .join("");
-  const desc = `<pre style="white-space:pre-wrap;font-family:system-ui,sans-serif;padding:12px;background:#f5f5f5;border:1px solid #ccc;">${escapeHtml(params.description)}</pre>`;
-  const clientBlock = metaJson
-    ? `<h3>Client metadata</h3><pre style="white-space:pre-wrap;font-size:12px;">${escapeHtml(metaJson)}</pre>`
-    : "";
-  return `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;">
-<h2>New feedback — Syntax Stories</h2>
-<table style="border-collapse:collapse;margin-bottom:16px;">${tableRows}</table>
-<h3>Message</h3>
-${desc}
-${clientBlock}
-</body></html>`;
+    rows.push({ k: "User-Agent", v: params.userAgent });
+  return buildFeedbackNotificationEmail({
+    rows,
+    description: params.description,
+    clientMetaJson: metaJson || undefined,
+  });
 }
 export async function listFeedbackCategories(
   _req: Request,
@@ -250,14 +228,9 @@ export async function submitFeedback(
     const forwardedFor = forwardedForHeader(req);
     const userAgent = uaHeader(req);
     const istTimeZone = istTimeZoneLabel();
-    let firstName: string;
-    let lastName: string;
-    let email: string;
     const subject = parsed.data.subject;
     const description = parsed.data.description;
     const clientMeta = parsed.data.clientMeta;
-    let username: string | undefined;
-    let userId: mongoose.Types.ObjectId;
     const u = await UserModel.findById(auth._id)
       .select("fullName email username")
       .lean();
@@ -273,17 +246,17 @@ export async function submitFeedback(
     const split = splitFullName(
       typeof u.fullName === "string" ? u.fullName : "",
     );
-    firstName = split.firstName;
-    lastName = split.lastName;
-    email = typeof u.email === "string" ? u.email : "";
+    const firstName = split.firstName;
+    const lastName = split.lastName;
+    const email = typeof u.email === "string" ? u.email : "";
     if (!email) {
       res
         .status(400)
         .json({ success: false, message: "Account email missing." });
       return;
     }
-    username = typeof u.username === "string" ? u.username : undefined;
-    userId = new mongoose.Types.ObjectId(auth._id);
+    const username = typeof u.username === "string" ? u.username : undefined;
+    const userId = new mongoose.Types.ObjectId(auth._id);
     const attachmentTitleRaw = parsed.data.attachmentTitle?.trim();
     let attachmentTitle =
       attachmentTitleRaw && attachmentTitleRaw.length > 0

@@ -8,6 +8,7 @@ import {
   sendAuthEmail,
   isAuthEmailConfigured,
 } from "../../../infrastructure/mail/sendAuthEmail.js";
+import { buildOtpEmail } from "../../../infrastructure/mail/emailTemplates.js";
 import { redisKeys } from "../../../shared/redis/keys.js";
 import { generateEmailOtpDigits } from "../../../services/emailOtp.service.js";
 import { logSecurityEvent } from "../securityEventLog.js";
@@ -92,12 +93,34 @@ export async function initEmailChange(
     await sendAuthEmail({
       to: currentEmail,
       subject: "Verify your email change – Syntax Stories",
-      html: `<p>Your verification code for changing your email: <strong>${codeCurrent}</strong>. Valid for 10 minutes.</p>`,
+      html: buildOtpEmail({
+        kicker: "Account Security",
+        title: "Confirm Current Email",
+        intro:
+          "Use this code to confirm you own the current email address before changing your account email.",
+        codeLabel: "Current Email Code",
+        code: codeCurrent,
+        ttlMin: Math.ceil(AUTH_TTL.emailChangeSec / 60),
+        notice: "This code is valid for",
+        footerNote:
+          "Changing email requires codes from both current and new inboxes.",
+      }),
     });
     await sendAuthEmail({
       to: newEmail,
       subject: "Verify your new email – Syntax Stories",
-      html: `<p>Your verification code for your new email: <strong>${codeNew}</strong>. Valid for 10 minutes.</p>`,
+      html: buildOtpEmail({
+        kicker: "Account Security",
+        title: "Verify New Email",
+        intro:
+          "Use this code to verify the new email address for your Syntax Stories account.",
+        codeLabel: "New Email Code",
+        code: codeNew,
+        ttlMin: Math.ceil(AUTH_TTL.emailChangeSec / 60),
+        notice: "This code is valid for",
+        footerNote:
+          "If you do not recognize this request, ignore this message.",
+      }),
     });
     res.status(200).json({
       success: true,

@@ -13,6 +13,7 @@ import {
   getEmailSendErrorMessage,
   isMailSendError,
 } from "../../../infrastructure/mail/sendAuthEmail.js";
+import { buildOtpEmail } from "../../../infrastructure/mail/emailTemplates.js";
 import { bumpOtpMetric } from "../../../shared/metrics/otpMetrics.js";
 import { createChallenge } from "altcha-lib";
 import { respondWithSessionAfterEmailAuth } from "../../../services/authLogin.service.js";
@@ -139,14 +140,16 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
     await sendAuthEmail({
       to: normalizedEmail,
       subject: "Your Syntax Stories login code",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
-          <h2 style="color: #5f4fe6;">Your verification code</h2>
-          <p style="font-size: 16px;">Use this code to sign in:</p>
-          <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-          <p style="font-size: 14px; color: #666;">This code expires in ${ttlMin} minute(s).</p>
-        </div>
-      `,
+      html: buildOtpEmail({
+        title: "Your Code Is Ready",
+        intro: "Use this one-time code to continue signing in to Syntax Stories.",
+        codeLabel: "Login Code",
+        code,
+        ttlMin,
+        notice: "This code expires in",
+        footerNote:
+          "Syntax Stories will never ask you to share this code in chat, comments, or support messages.",
+      }),
     });
     await markOtpResendGate("login", normalizedEmail);
     bumpOtpMetric("otp_send_total");
@@ -228,14 +231,16 @@ export async function signupEmail(req: Request, res: Response): Promise<void> {
     await sendAuthEmail({
       to: normalizedEmail,
       subject: "Verify your Syntax Stories account",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; color: #333;">
-          <h2 style="color: #5f4fe6;">Welcome to Syntax Stories</h2>
-          <p style="font-size: 16px;">Your verification code:</p>
-          <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-          <p style="font-size: 14px; color: #666;">This code expires in ${ttlMin} minute(s).</p>
-        </div>
-      `,
+      html: buildOtpEmail({
+        title: "Welcome Aboard",
+        intro:
+          "Welcome to Syntax Stories. Use this one-time code to verify your new account.",
+        codeLabel: "Signup Code",
+        code,
+        ttlMin,
+        notice: "This code expires in",
+        footerNote: "Only enter this code inside Syntax Stories.",
+      }),
     });
     await markOtpResendGate("signup", normalizedEmail);
     bumpOtpMetric("otp_send_total");

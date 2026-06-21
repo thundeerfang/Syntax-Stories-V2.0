@@ -6,6 +6,7 @@ import {
   sendAuthEmail,
   isAuthEmailConfigured,
 } from "../../infrastructure/mail/sendAuthEmail.js";
+import { buildStorageGuardEmail } from "../../infrastructure/mail/emailTemplates.js";
 import { redisKeys } from "../../shared/redis/keys.js";
 import { getDefaultUploadStorage } from "../storage/localDiskUploadStorage.js";
 export type StorageBlockReason = "mongo_quota" | "disk_full" | "manual";
@@ -151,11 +152,12 @@ async function sendStorageAlert(
     await sendAuthEmail({
       to: env.STORAGE_ALERT_EMAIL,
       subject: `[Syntax Stories] Storage full — ${label}`,
-      html: `<p><strong>Syntax Stories storage guard activated.</strong></p>
-<p>Reason: ${label}</p>
-<p>Since: ${since}</p>
-<p>Public writes are blocked. Admin panel remains available.</p>
-<p>To recover: free Mongo/disk space, then set <code>STORAGE_FULL_MODE=force_off</code> and restart, or wait for disk probe auto-recovery.</p>`,
+      html: buildStorageGuardEmail({
+        label,
+        since,
+        recovery:
+          "Public writes are blocked. Admin panel remains available. To recover: free Mongo/disk space, then set STORAGE_FULL_MODE=force_off and restart, or wait for disk probe auto-recovery.",
+      }),
     });
   } catch (e) {
     console.error("[storageGuard] Alert email failed:", e);
