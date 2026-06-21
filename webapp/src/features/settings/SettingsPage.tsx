@@ -119,8 +119,8 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen text-foreground font-sans">
         <div className={shell.contentRail}>
-          <div className="grid items-start gap-6 grid-cols-1 lg:grid-cols-[256px_1fr]">
-            <aside className="overflow-hidden w-64">
+          <div className="grid items-start gap-6 grid-cols-1 md:grid-cols-[236px_minmax(0,1fr)] xl:grid-cols-[256px_minmax(0,1fr)]">
+            <aside className="overflow-hidden w-full max-w-[256px] mx-auto md:mx-0 md:w-auto">
               <SettingsSidebarSkeleton itemCount={totalItems + 1} />
             </aside>
             <main className="min-w-0">
@@ -136,8 +136,8 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen text-foreground font-sans">
       <div className={shell.contentRail}>
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[256px_1fr]">
-          <aside className="w-full max-w-[256px] mx-auto lg:mx-0 space-y-4">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-[236px_minmax(0,1fr)] xl:grid-cols-[256px_minmax(0,1fr)]">
+          <aside className="w-full max-w-[256px] mx-auto space-y-4 md:sticky md:top-[calc(var(--header-height,64px)+1rem)] md:mx-0">
             <div className="border-4 border-border bg-card p-4 flex items-center gap-3 shadow">
               <div className="size-10 border-2 border-border bg-muted overflow-hidden shrink-0">
                 <img

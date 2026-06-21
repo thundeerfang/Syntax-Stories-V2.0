@@ -19,7 +19,7 @@ export const legal = {
   versionBadgeLinePrimary: "legal-version-badge-line-primary",
   versionBadgeLineMuted: "legal-version-badge-line-muted",
   markdownRoot:
-    "prose prose-neutral max-w-none dark:prose-invert prose-p:leading-relaxed prose-headings:scroll-mt-28 prose-headings:font-black prose-a:text-primary prose-h2:mt-10 prose-h2:scroll-mt-28 prose-h2:border-b-2 prose-h2:border-border prose-h2:pb-2 prose-h2:text-xl prose-h3:mt-8 prose-h3:scroll-mt-28 prose-h3:text-base",
+    "prose prose-sm sm:prose-base prose-neutral max-w-none break-words dark:prose-invert prose-p:leading-relaxed prose-headings:scroll-mt-28 prose-headings:font-black prose-a:text-primary prose-a:break-words prose-h2:mt-8 sm:prose-h2:mt-10 prose-h2:scroll-mt-28 prose-h2:border-b-2 prose-h2:border-border prose-h2:pb-2 prose-h2:text-lg sm:prose-h2:text-xl prose-h3:mt-6 sm:prose-h3:mt-8 prose-h3:scroll-mt-28 prose-h3:text-base prose-pre:overflow-x-auto prose-table:block prose-table:overflow-x-auto",
   mainBodyPad: "legal-main-body-pad",
   routeHeaderWrap: "legal-route-header-wrap",
   headerSummary: "legal-header-summary",

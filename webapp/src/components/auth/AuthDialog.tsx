@@ -110,6 +110,15 @@ export function AuthDialog() {
   const [stepBeforeVerify, setStepBeforeVerify] = useState<Step>("login-email");
   const [legalTermsAccepted, setLegalTermsAccepted] = useState(false);
   const [legalPrivacyAccepted, setLegalPrivacyAccepted] = useState(false);
+  const [loginAltchaPayload, setLoginAltchaPayload] = useState<
+    string | undefined
+  >(undefined);
+  const [signupAltchaPayload, setSignupAltchaPayload] = useState<
+    string | undefined
+  >(undefined);
+  const [resendAltchaPayload, setResendAltchaPayload] = useState<
+    string | undefined
+  >(undefined);
   const [welcomeTitle, setWelcomeTitle] =
     useState<AuthWelcomeTitle>("Welcome.");
   const prefersReducedMotion = useReducedMotion();
@@ -176,17 +185,23 @@ export function AuthDialog() {
     if (!isOpen) return;
     setLegalTermsAccepted(false);
     setLegalPrivacyAccepted(false);
+    setLoginAltchaPayload(undefined);
+    setSignupAltchaPayload(undefined);
+    setResendAltchaPayload(undefined);
     clearLegalSignupAckCookie();
   }, [isOpen]);
   const handleSendLoginOtp = async (e: FormSubmit) => {
     e.preventDefault();
-    const altcha = altchaOn ? readAltchaPayload(e.currentTarget) : undefined;
+    const altcha = altchaOn
+      ? loginAltchaPayload ?? readAltchaPayload(e.currentTarget)
+      : undefined;
     if (altchaOn && !altcha) {
       toast.error("Complete the verification check below.");
       return;
     }
     try {
       await sendLoginOtp(email, altcha);
+      setLoginAltchaPayload(undefined);
       setVerifyEmail(email);
       setStepBeforeVerify("login-email");
       setStep("verify-email");
@@ -218,13 +233,16 @@ export function AuthDialog() {
       );
       return;
     }
-    const altcha = altchaOn ? readAltchaPayload(e.currentTarget) : undefined;
+    const altcha = altchaOn
+      ? signupAltchaPayload ?? readAltchaPayload(e.currentTarget)
+      : undefined;
     if (altchaOn && !altcha) {
       toast.error("Complete the verification check below.");
       return;
     }
     try {
       await signUp(name, signupEmail, altcha);
+      setSignupAltchaPayload(undefined);
       setVerifyEmail(signupEmail);
       setStepBeforeVerify("signup-email");
       setStep("verify-email");
@@ -371,6 +389,8 @@ export function AuthDialog() {
                 handleVerifyCode,
                 handleVerifyTwoFactor,
                 altchaOn,
+                onLoginAltchaPayloadChange: setLoginAltchaPayload,
+                onSignupAltchaPayloadChange: setSignupAltchaPayload,
                 isLoading,
                 twoFactorActive,
                 otpAttemptsLeft,
@@ -428,7 +448,9 @@ export function AuthDialog() {
             className="mt-4 space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              void runResendWithOptionalAltcha();
+              void runResendWithOptionalAltcha(
+                resendAltchaPayload ?? readAltchaPayload(e.currentTarget),
+              );
             }}
           >
             <div className="flex w-full flex-col">
@@ -438,6 +460,7 @@ export function AuthDialog() {
                 floating="bottom"
                 floatingAnchor="#auth-resend-send-code"
                 floatingOffset={8}
+                onPayloadChange={setResendAltchaPayload}
               />
               <Button
                 id="auth-resend-send-code"

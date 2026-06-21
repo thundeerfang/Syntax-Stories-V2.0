@@ -55,12 +55,7 @@ function splitFullName(fullName: string): {
 function feedbackNotifyTo(): string | null {
   const a = env.FEEDBACK_NOTIFY_EMAIL?.trim();
   if (a) return a;
-  const b = env.EMAIL_FROM?.trim();
-  if (b) return b;
-  const c = env.EMAIL_USER?.trim();
-  if (c) return c;
-  const d = env.RESEND_FROM?.trim();
-  return d || null;
+  return env.BREVO_FROM?.trim() || null;
 }
 function clientIp(req: Request): string | undefined {
   const xff = req.headers["x-forwarded-for"];
@@ -393,8 +388,7 @@ export async function submitFeedback(
         console.error("[feedback] notify email failed:", e);
       }
     } else {
-      emailError =
-        "No FEEDBACK_NOTIFY_EMAIL / EMAIL_FROM / EMAIL_USER configured.";
+      emailError = "No FEEDBACK_NOTIFY_EMAIL / BREVO_FROM configured.";
     }
     doc.emailDelivered = emailDelivered;
     if (emailError) doc.emailError = emailError;

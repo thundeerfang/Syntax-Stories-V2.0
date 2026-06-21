@@ -110,7 +110,7 @@ function LegalTableOfContentsPanel() {
           </div>
           <div className="min-w-0 pt-0.5">
             <p className={LEGAL_TOC_TITLE}>On this page</p>
-            <p className={LEGAL_TOC_SUB}>
+            <p className={`${LEGAL_TOC_SUB} hidden xl:block`}>
               Headings from this policy become section links here.
             </p>
           </div>

@@ -1012,16 +1012,23 @@ export function ContactPageSkeletonInner() {
   );
 }
 
-function PricingPlanCardSkeleton({ featured = false }: { featured?: boolean }) {
+function PricingPlanCardSkeleton({
+  featured = false,
+  className,
+}: {
+  featured?: boolean;
+  className?: string;
+}) {
   return (
     <div
       className={cn(
         "flex min-h-0 flex-col border-4 border-border bg-card shadow",
         featured && "border-primary",
+        className,
       )}
       aria-hidden
     >
-      <div className="flex flex-1 flex-col gap-5 p-6 pt-8 sm:p-7">
+      <div className="flex flex-1 flex-col gap-5 p-5 pt-8 sm:p-6 md:p-5 lg:p-6 xl:p-7">
         <div className="space-y-2 border-b-2 border-border pb-5">
           <SkBar className="h-5 w-32" />
           <SkBar className="h-3 w-full" />
@@ -1050,12 +1057,12 @@ function PricingPlanCardSkeleton({ featured = false }: { featured?: boolean }) {
 export function PricingPlansGridSkeleton() {
   return (
     <div
-      className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3 md:gap-8"
+      className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-3 xl:gap-8"
       aria-hidden
     >
       <PricingPlanCardSkeleton />
       <PricingPlanCardSkeleton featured />
-      <PricingPlanCardSkeleton />
+      <PricingPlanCardSkeleton className="md:col-span-2 xl:col-span-1" />
     </div>
   );
 }
@@ -1189,8 +1196,8 @@ export function SettingsPageSkeletonInner({
   return (
     <div className="min-h-screen font-sans text-foreground">
       <div className={cn(shell.contentRail, "py-8 md:py-12")}>
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[256px_1fr]">
-          <aside className="mx-auto w-full max-w-[256px] overflow-hidden lg:mx-0">
+        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-[236px_minmax(0,1fr)] xl:grid-cols-[256px_minmax(0,1fr)]">
+          <aside className="mx-auto w-full max-w-[256px] overflow-hidden md:mx-0">
             <SettingsSidebarSkeleton itemCount={navItems} />
           </aside>
           <main className="min-w-0">

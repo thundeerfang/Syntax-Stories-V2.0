@@ -13,6 +13,7 @@ import { bookmarksApi, type BookmarkGroupRow } from "@/api/bookmarks";
 import { SidebarSkeleton } from "@/components/skeletons";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useDesktopShell } from "@/hooks/useDesktopShell";
+import { useTabletSidebarRailOnly } from "@/hooks/useTabletSidebarRailOnly";
 import { SIDEBAR_NAV, type SidebarAccordionId } from "@/lib/shell/sidebarNav";
 import { layout, shell } from "@/lib/styles";
 import { cn } from "@/lib/core/utils";
@@ -29,6 +30,13 @@ function collapsedRailIconClass(isActive: boolean): string {
     isActive
       ? "size-8 bg-primary text-primary-foreground shadow"
       : "size-10 text-foreground/70 hover:bg-muted/45 hover:text-foreground",
+  );
+}
+function collapsedRailLabelClass(): string {
+  return cn(
+    "pointer-events-none absolute left-[calc(100%+0.35rem)] top-1/2 z-30 hidden -translate-y-1/2 whitespace-nowrap",
+    "border-2 border-border bg-card px-2.5 py-1 font-mono text-[9px] font-black uppercase tracking-widest text-foreground shadow",
+    "opacity-0 transition-opacity duration-150 group-hover/sidebar-tip:opacity-100 group-focus-visible/sidebar-tip:opacity-100 md:block xl:hidden",
   );
 }
 function SidebarAccordion({
@@ -192,7 +200,7 @@ function CollapsedSidebarRail({
         variant="primary"
         size="sm"
         shadow="sm"
-        className="mb-2 flex size-10 shrink-0 items-center justify-center gap-0 p-0"
+        className="group/sidebar-tip relative mb-2 flex size-10 shrink-0 items-center justify-center gap-0 p-0"
         onClick={() => {
           setWriteEditorSessionPostId(null);
           onNavigate();
@@ -200,6 +208,7 @@ function CollapsedSidebarRail({
         title="Create New Post"
       >
         <PlusSquare className="size-5 shrink-0" strokeWidth={3} />
+        <span className={collapsedRailLabelClass()}>Create New Post</span>
       </BlockShadowButton>
       <nav className="ss-scrollbar-hide flex min-h-0 w-full flex-1 flex-col items-center gap-1.5 overflow-y-auto overscroll-contain px-1">
         {SIDEBAR_NAV.main.map(({ href, label, icon: Icon }) => {
@@ -210,7 +219,7 @@ function CollapsedSidebarRail({
               href={href}
               title={label}
               onClick={onNavigate}
-              className="relative flex size-10 shrink-0 items-center justify-center border-0 bg-transparent p-0"
+              className="group/sidebar-tip relative flex size-10 shrink-0 items-center justify-center border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <span className={collapsedRailIconClass(isActive)}>
                 <Icon
@@ -218,6 +227,7 @@ function CollapsedSidebarRail({
                   strokeWidth={isActive ? 3 : 2.5}
                 />
               </span>
+              <span className={collapsedRailLabelClass()}>{label}</span>
             </Link>
           );
         })}
@@ -234,7 +244,7 @@ function CollapsedSidebarRail({
               aria-expanded={isActive}
               aria-label={title}
               onClick={() => onAccordionExpand(id)}
-              className="relative flex size-10 shrink-0 items-center justify-center border-0 bg-transparent p-0"
+              className="group/sidebar-tip relative flex size-10 shrink-0 items-center justify-center border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <span className={collapsedRailIconClass(isActive)}>
                 <Icon
@@ -242,6 +252,7 @@ function CollapsedSidebarRail({
                   strokeWidth={isActive ? 3 : 2.5}
                 />
               </span>
+              <span className={collapsedRailLabelClass()}>{title}</span>
             </button>
           );
         })}
@@ -257,7 +268,7 @@ function CollapsedSidebarRail({
                   href={href}
                   title={label}
                   onClick={onNavigate}
-                  className="relative flex size-10 shrink-0 items-center justify-center border-0 bg-transparent p-0"
+                  className="group/sidebar-tip relative flex size-10 shrink-0 items-center justify-center border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   <span className={collapsedRailIconClass(isActive)}>
                     <Icon
@@ -268,6 +279,7 @@ function CollapsedSidebarRail({
                       strokeWidth={isActive ? 3 : 2.5}
                     />
                   </span>
+                  <span className={collapsedRailLabelClass()}>{label}</span>
                 </Link>
               );
             })
@@ -290,12 +302,16 @@ export function SidebarDrawer({
   );
   const [bookmarkGroups, setBookmarkGroups] = useState<BookmarkGroupRow[]>([]);
   const desktop = useDesktopShell();
+  const tabletRailOnly = useTabletSidebarRailOnly();
   const toggleAccordion = (id: SidebarAccordionId) => {
     setOpenAccordion((prev) => (prev === id ? null : id));
   };
   useEffect(() => {
     setMounted(true);
   }, []);
+  useEffect(() => {
+    if (tabletRailOnly && isOpen) close();
+  }, [tabletRailOnly, isOpen, close]);
   useEffect(() => {
     if (!token) {
       setBookmarkGroups([]);
@@ -353,7 +369,7 @@ export function SidebarDrawer({
             openAccordion={openAccordion}
             onAccordionExpand={(id) => {
               setOpenAccordion(id);
-              open();
+              if (!tabletRailOnly) open();
             }}
             hideUtilityLinks={desktop}
           />

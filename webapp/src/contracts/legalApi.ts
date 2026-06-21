@@ -83,4 +83,32 @@ export interface PostDataDeletionRequestResponse {
   id: string;
   status: "requested";
   requestedAt: string;
+  slaDeadline: string | null;
+}
+
+export type DataDeletionRequestStatus =
+  | "requested"
+  | "processing"
+  | "completed"
+  | "rejected"
+  | "cancelled";
+
+export interface DataDeletionRequestItem {
+  id: string;
+  status: DataDeletionRequestStatus;
+  requestedAt: string;
+  completedAt: string | null;
+  slaDeadline: string | null;
+}
+
+export interface ListDataDeletionRequestsResponse {
+  ok: true;
+  items: DataDeletionRequestItem[];
+}
+
+export interface CancelDataDeletionRequestResponse {
+  ok: true;
+  id: string;
+  status: "cancelled";
+  cancelledAt: string;
 }

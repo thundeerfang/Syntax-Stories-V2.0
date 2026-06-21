@@ -115,7 +115,7 @@ export function Footer() {
   return (
     <footer
       id="app-footer"
-      className="relative z-10 w-full shrink-0 overflow-hidden border-t-2 border-border py-6 sm:py-8"
+      className="relative z-10 w-full shrink-0 overflow-hidden border-t-2 border-border py-5 sm:py-6 lg:py-8"
     >
       <div
         aria-hidden
@@ -125,23 +125,30 @@ export function Footer() {
         )}
         style={shell.railFrostStyle}
       />
-      <div className="relative z-[1] mx-auto max-w-[90rem] px-4 sm:px-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="min-w-0 text-xs font-black uppercase tracking-widest text-muted-foreground">
+      <div className="relative z-[1] mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 items-center gap-4 text-center md:grid-cols-[minmax(0,1fr)_auto] md:text-left">
+          <p className="min-w-0 text-[10px] font-black uppercase leading-relaxed tracking-widest text-muted-foreground sm:text-xs">
             © {new Date().getFullYear()} Syntax_Stories_Corp //
             All_Rights_Reserved
           </p>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex flex-col items-center gap-3 md:items-end">
+            <nav
+              className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 md:justify-end lg:gap-x-6"
+              aria-label="Legal links"
+            >
             {LEGAL_FOOTER_LINKS.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
-                className="text-xs font-black uppercase tracking-widest text-muted-foreground underline-offset-4 decoration-2 hover:text-primary hover:underline"
+                className="text-[10px] font-black uppercase tracking-widest text-muted-foreground underline-offset-4 decoration-2 hover:text-primary hover:underline sm:text-xs"
               >
                 {label}
               </Link>
             ))}
-            <OperationalStatusIndicator />
+            </nav>
+            <div className="md:hidden xl:block">
+              <OperationalStatusIndicator />
+            </div>
           </div>
         </div>
       </div>

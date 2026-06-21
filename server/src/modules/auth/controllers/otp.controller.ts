@@ -41,6 +41,7 @@ import { redisKeys } from "../../../shared/redis/keys.js";
 import { logSecurityEvent } from "../securityEventLog.js";
 import { recordSignupLegalAcceptances } from "../../../admin-platform/cms/legal/recordLegalAcceptances.js";
 import { AUTH_TTL } from "../../../config/auth.ttls.js";
+import { DEFAULT_PROFILE_BIO } from "../../../utils/profileBio.js";
 function otpEmailSendFailureMessage(
   err: unknown,
   redisUnavailableMessage: string,
@@ -332,6 +333,7 @@ async function createUserFromEmailSignup(
     fullName: signupFullName,
     username,
     email: normalizedEmail,
+    bio: DEFAULT_PROFILE_BIO,
     profileImg: newRandomDiceBearAvatarSvgUrl(),
     isGoogleAccount: false,
     isGitAccount: false,

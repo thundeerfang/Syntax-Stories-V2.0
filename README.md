@@ -78,7 +78,6 @@
 | moment                 | ^2.30.1      | Library for date and time manipulation.                                     |
 | mongoose               | ^8.9.0       | MongoDB object modeling for Node.js.                                        |
 | multer                 | ^1.4.5-lts.1 | Middleware for handling `multipart/form-data`, for file uploads.            |
-| nodemailer             | ^6.9.16      | Module for sending emails.                                                  |
 | passport               | ^0.7.0       | Middleware for authentication.                                              |
 | passport-github2       | ^0.1.12      | Passport strategy for GitHub OAuth authentication.                          |
 | passport-google-oauth20| ^2.0.0       | Passport strategy for Google OAuth 2.0 authentication.                      |
@@ -103,9 +102,8 @@
       PORT=7373
       GOOGLE_CLOUD_COMPUTING=YOUR-GOOGLE-ID-OUTH
       GOOGLE_CLOUD_SECRET=YOUR-GOOGLE-CLOUD-SECRET
-      EMAIL_SERVICE=Gmail
-      EMAIL_USER=YOUR-GMAIL-ID
-      EMAIL_PASS=YOUR-APP-PASS-GMAIL
+      BREVO_API_KEY=YOUR-BREVO-API-KEY
+      BREVO_FROM="Syntax Stories <no-reply@example.com>"
       GITHUB_CLIENT_ID=YOUR-GIT-CLOUD-ID
       GITHUB_CLOUD_SECRET=YOUR-GIT-CLOUD-SECRET
       RESET_TOKEN_EXPIRY=3600

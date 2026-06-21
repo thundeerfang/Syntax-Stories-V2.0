@@ -1155,18 +1155,18 @@ export function BlogWriteTopNav({
 }: BlogWriteTopNavProps) {
   const activeLabel = focusContextLabel(focusChrome, activeBodyBlock);
   return (
-    <div className="flex-shrink-0 bg-card px-4 py-2 flex items-center gap-3 z-50 border-b border-border min-w-0">
-      <div className="flex items-center gap-4 shrink-0 min-w-0">
+    <div className="flex-shrink-0 bg-card px-2 py-2 sm:px-4 flex items-center gap-2 sm:gap-3 z-50 border-b border-border min-w-0">
+      <div className="flex items-center gap-2 sm:gap-4 shrink min-w-0">
         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter min-w-0">
           <FileText className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
           <span className="shrink-0">Workspace</span>
           <ChevronRight className="h-3 w-3 opacity-30 shrink-0" />
-          <span className="text-primary text-[9px] font-semibold shrink-0">
+          <span className="hidden text-primary text-[9px] font-semibold shrink-0 sm:inline">
             {username}
           </span>
-          <ChevronRight className="h-3 w-3 opacity-30 shrink-0" />
+          <ChevronRight className="hidden h-3 w-3 opacity-30 shrink-0 sm:block" />
           <span
-            className="bg-muted px-2 border border-border truncate max-w-[120px] sm:max-w-[200px] md:max-w-[280px]"
+            className="bg-muted px-2 border border-border truncate max-w-[8rem] sm:max-w-[12rem] md:max-w-[18rem]"
             title={title.trim() || "new_entry.log"}
           >
             {title.trim()
@@ -1176,7 +1176,7 @@ export function BlogWriteTopNav({
         </div>
       </div>
 
-      <div className="hidden min-w-0 flex-1 flex-col gap-0.5 border-l border-border pl-3 sm:flex">
+      <div className="hidden min-w-0 flex-1 flex-col gap-0.5 border-l border-border pl-3 md:flex">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
             Active
@@ -1194,7 +1194,7 @@ export function BlogWriteTopNav({
         <button
           type="button"
           onClick={onToggleLeft}
-          className="p-1.5 border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+          className="hidden p-1.5 border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground xl:inline-flex"
           title={leftSidebarOpen ? "Close left panel" : "Open left panel"}
           aria-label={leftSidebarOpen ? "Close left panel" : "Open left panel"}
         >
@@ -1207,7 +1207,7 @@ export function BlogWriteTopNav({
         <button
           type="button"
           onClick={onToggleRight}
-          className="p-1.5 border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+          className="hidden p-1.5 border border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground xl:inline-flex"
           title={rightSidebarOpen ? "Close right panel" : "Open right panel"}
           aria-label={
             rightSidebarOpen ? "Close right panel" : "Open right panel"
@@ -1219,8 +1219,8 @@ export function BlogWriteTopNav({
             <PanelRight className="h-4 w-4" />
           )}
         </button>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-[8px] font-medium text-muted-foreground">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden items-center gap-2 text-[8px] font-medium text-muted-foreground sm:flex">
             <Activity className="h-2.5 w-2.5 text-green-500 animate-pulse" />
             <span>Uptime: 99.9%</span>
           </div>

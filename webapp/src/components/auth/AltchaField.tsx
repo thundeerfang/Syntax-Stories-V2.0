@@ -9,6 +9,21 @@ import {
 function isAltchaBusyState(state: string): boolean {
   return state === "verifying" || state === "code";
 }
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+function readPayloadFromWidget(
+  el: HTMLElement & { value?: unknown; payload?: unknown },
+  detail?: unknown,
+): string | undefined {
+  const detailPayload =
+    detail != null && typeof detail === "object" && "payload" in detail
+      ? (detail as { payload?: unknown }).payload
+      : detail;
+  return (
+    stringValue(detailPayload) ?? stringValue(el.value) ?? stringValue(el.payload)
+  );
+}
 type Props = {
   enabled?: boolean;
   className?: string;
@@ -16,6 +31,7 @@ type Props = {
   floating?: "auto" | "top" | "bottom";
   floatingAnchor?: string;
   floatingOffset?: number;
+  onPayloadChange?: (payload: string | undefined) => void;
 };
 export function AltchaField({
   enabled = true,
@@ -24,16 +40,20 @@ export function AltchaField({
   floating,
   floatingAnchor,
   floatingOffset,
+  onPayloadChange,
 }: Readonly<Props>) {
   const ref = useRef<
     HTMLElement & {
       reset?: () => void;
+      value?: unknown;
+      payload?: unknown;
     }
   >(null);
   const altchaHoldRef = useRef(false);
   const prevAltchaStateRef = useRef<string | null>(null);
   const url = getAltchaChallengeUrl();
   const [sdkReady, setSdkReady] = useState(false);
+  const [payload, setPayload] = useState("");
   useEffect(() => {
     if (!enabled || !url) return;
     let cancelled = false;
@@ -47,14 +67,25 @@ export function AltchaField({
   useEffect(() => {
     const el = ref.current;
     if (!sdkReady || !el || typeof el.reset !== "function") return;
+    setPayload("");
+    onPayloadChange?.(undefined);
     el.reset();
-  }, [url, enabled, sdkReady]);
+  }, [url, enabled, sdkReady, onPayloadChange]);
   useEffect(() => {
     const el = ref.current;
     if (!enabled || !url || !sdkReady || !el) return;
+    const setResolvedPayload = (next: string | undefined) => {
+      setPayload(next ?? "");
+      onPayloadChange?.(next);
+    };
+    const onVerified = (ev: Event) => {
+      const ce = ev as CustomEvent<unknown>;
+      setResolvedPayload(readPayloadFromWidget(el, ce.detail));
+    };
     const onStateChange = (ev: Event) => {
       const ce = ev as CustomEvent<{
         state?: string;
+        payload?: unknown;
       }>;
       const state = ce.detail?.state;
       if (!state) return;
@@ -69,9 +100,16 @@ export function AltchaField({
         releaseGlobalAltchaBusy();
         altchaHoldRef.current = false;
       }
+      if (state === "verified") {
+        setResolvedPayload(readPayloadFromWidget(el, ce.detail));
+      } else if (state === "unverified" || state === "error" || state === "expired") {
+        setResolvedPayload(undefined);
+      }
     };
+    el.addEventListener("verified", onVerified);
     el.addEventListener("statechange", onStateChange);
     return () => {
+      el.removeEventListener("verified", onVerified);
       el.removeEventListener("statechange", onStateChange);
       if (altchaHoldRef.current) {
         releaseGlobalAltchaBusy();
@@ -79,7 +117,7 @@ export function AltchaField({
       }
       prevAltchaStateRef.current = null;
     };
-  }, [enabled, url, sdkReady]);
+  }, [enabled, url, sdkReady, onPayloadChange]);
   if (!enabled || !url || !sdkReady) return null;
   const useFloating = floating != null;
   const useOverlay = Boolean(overlay) && !useFloating;
@@ -101,6 +139,7 @@ export function AltchaField({
         {...(useOverlay ? { overlay: true } : {})}
         {...floatingProps}
       />
+      <input type="hidden" name="altcha" value={payload} readOnly />
     </div>
   );
 }

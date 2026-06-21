@@ -1,7 +1,6 @@
-export const DEFAULT_PROFILE_BIO =
-  "Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀";
+export const DEFAULT_PROFILE_BIO = "Hey There Welcome To Syntax Stories";
 const PLACEHOLDER_PROFILE_BIOS = new Set([
-  DEFAULT_PROFILE_BIO,
+  "Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀",
   "Welcome to Syntax Stories 🧑🏻‍💻",
 ]);
 export function isPlaceholderProfileBio(bio: unknown): boolean {

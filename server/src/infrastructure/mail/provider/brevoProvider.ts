@@ -2,11 +2,7 @@ import { env } from "../../../config/env.js";
 import { MailSendError } from "../types.js";
 
 function mailFrom(): { email: string; name?: string } {
-  const raw =
-    env.BREVO_FROM?.trim() ||
-    env.EMAIL_FROM?.trim() ||
-    env.EMAIL_USER?.trim() ||
-    "";
+  const raw = env.BREVO_FROM?.trim() || "";
   const match = raw.match(/^(.*?)\s*<([^>]+)>$/);
   if (match) {
     const name = match[1]?.trim().replace(/^"|"$/g, "");
@@ -32,7 +28,7 @@ export async function sendViaBrevo(
   const sender = mailFrom();
   if (!sender.email) {
     throw new MailSendError(
-      "Brevo sender missing (BREVO_FROM or EMAIL_FROM)",
+      "Brevo sender missing (BREVO_FROM)",
       "configuration",
     );
   }

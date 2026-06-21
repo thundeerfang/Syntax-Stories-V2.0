@@ -560,7 +560,7 @@ class _BlogPostDetailScreenState extends State<BlogPostDetailScreen> {
                     ] else if (_loading)
                       const Padding(
                         padding: EdgeInsets.all(24),
-                        child: const AppLoadingCenter(),
+                        child: AppLoadingCenter(),
                       ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),

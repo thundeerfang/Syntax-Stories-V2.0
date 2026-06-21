@@ -18,31 +18,8 @@ export const env = {
   SESSION_SECRET: process.env.SESSION_SECRET || process.env.JWT_SECRET,
   FRONTEND_URL: process.env.FRONTEND_URL,
   BACKEND_URL: (process.env.BACKEND_URL || "").replace(/\/$/, ""),
-  EMAIL_USER: process.env.EMAIL_USER,
-  EMAIL_APP_PASSWORD:
-    process.env.EMAIL_APP_PASSWORD ??
-    process.env.BREVO_SMTP_KEY ??
-    process.env.EMAIL_PASS,
-  EMAIL_HOST: process.env.EMAIL_HOST,
-  EMAIL_PORT: Number.parseInt(process.env.EMAIL_PORT ?? "587", 10),
-  EMAIL_FROM: process.env.EMAIL_FROM,
   BREVO_API_KEY: process.env.BREVO_API_KEY,
   BREVO_FROM: process.env.BREVO_FROM,
-  BREVO_SMTP_KEY: process.env.BREVO_SMTP_KEY,
-  GMAIL_EMAIL_USER: process.env.GMAIL_EMAIL_USER,
-  GMAIL_APP_PASSWORD:
-    process.env.GMAIL_APP_PASSWORD ?? process.env.GMAIL_EMAIL_PASS,
-  GMAIL_EMAIL_HOST: process.env.GMAIL_EMAIL_HOST,
-  GMAIL_EMAIL_PORT: Number.parseInt(
-    process.env.GMAIL_EMAIL_PORT ?? "587",
-    10,
-  ),
-  EMAIL_API_URL: process.env.EMAIL_API_URL,
-  EMAIL_API_KEY: process.env.EMAIL_API_KEY,
-  EMAIL_API_AUTH: (process.env.EMAIL_API_AUTH ?? "bearer") as
-    | "bearer"
-    | "header",
-  EMAIL_API_HEADER_NAME: process.env.EMAIL_API_HEADER_NAME,
   GOOGLE_CLIENT_ID:
     process.env.GOOGLE_CLOUD_COMPUTING ?? process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET:
@@ -90,8 +67,6 @@ export const env = {
   ),
   ALTCHA_HMAC_KEY: process.env.ALTCHA_HMAC_KEY,
   ALTCHA_REQUIRED: (process.env.ALTCHA_REQUIRED ?? "").toLowerCase() === "true",
-  RESEND_API_KEY: process.env.RESEND_API_KEY,
-  RESEND_FROM: process.env.RESEND_FROM,
   FEEDBACK_NOTIFY_EMAIL: process.env.FEEDBACK_NOTIFY_EMAIL,
   CLAMAV_HOST: process.env.CLAMAV_HOST,
   CLAMAV_PORT: Number.parseInt(process.env.CLAMAV_PORT ?? "3310", 10),

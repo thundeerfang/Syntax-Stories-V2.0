@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 import { BIO_MAX_LENGTH, DEFAULT_AVATAR_SEED } from "../variable/constants.js";
 import { diceBearAvatarSvgUrl } from "../utils/diceBearAvatarUrl.js";
 import { ensureOpaqueDiceBearDataUri } from "../utils/diceBearSvgBackground.js";
+import { DEFAULT_PROFILE_BIO } from "../utils/profileBio.js";
 export const DEFAULT_AVATAR_URL = diceBearAvatarSvgUrl(DEFAULT_AVATAR_SEED);
 export function normalizeProfileImg(profileImg: string | undefined): string {
   if (!profileImg?.trim()) return DEFAULT_AVATAR_URL;
@@ -270,6 +271,7 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
       maxlength: BIO_MAX_LENGTH,
+      default: DEFAULT_PROFILE_BIO,
     },
     portfolioUrl: { type: String, trim: true, maxlength: 500 },
     linkedin: { type: String },
