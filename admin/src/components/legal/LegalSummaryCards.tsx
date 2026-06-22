@@ -2,12 +2,12 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import Grid from '@mui/material/Grid2';
 import {
   Box,
   Card,
   CardActionArea,
   CardContent,
-  Grid,
   IconButton,
   Stack,
   Typography,
