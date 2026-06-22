@@ -16,7 +16,9 @@ server/.env
 
 privateKey.pem
 publicKey.pem
-keys/
+keys/*
+!keys/.gitignore
+!keys/.gitkeep
 keys/privateKey.pem
 keys/publicKey.pem
 keys/privateKey.pem.pub
