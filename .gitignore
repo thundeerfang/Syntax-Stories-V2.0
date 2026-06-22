@@ -32,6 +32,9 @@ server/keys/privateKey.pem.pub
 server/keys/publicKey.pem.pub
 server/keys/privateKey.pem.pub
 
+build
+/build
+
 server/node_modules
 webapp/node_modules
 webapp/.next
