@@ -166,6 +166,7 @@ export async function cancelDataDeletionRequest(
 }
 export type {
   LegalPolicyKind,
+  AcceptPolicyKind,
   PublishedPolicyResponse,
   LegalMeStatusResponse,
   PostAcceptIntentBody,

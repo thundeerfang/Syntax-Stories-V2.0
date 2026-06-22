@@ -61,6 +61,7 @@ export function profileSectionMinVisible(
   return Math.max(prior ?? floor, floor);
 }
 const PLACEHOLDER_PROFILE_BIOS = new Set([
+  "Hey There Welcome To Syntax Stories",
   "Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀",
   "Welcome to Syntax Stories 🧑🏻‍💻",
 ]);

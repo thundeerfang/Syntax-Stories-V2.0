@@ -55,6 +55,20 @@ const EMPTY_PROFILE: AdminUserProfile = {
   readStreakLongest: 0,
 };
 
+function normalizeProfile(profile: AdminUserProfile | undefined): AdminUserProfile {
+  return {
+    ...EMPTY_PROFILE,
+    ...profile,
+    stackAndTools: profile?.stackAndTools ?? [],
+    workExperiences: profile?.workExperiences ?? [],
+    education: profile?.education ?? [],
+    certifications: profile?.certifications ?? [],
+    projects: profile?.projects ?? [],
+    openSourceContributions: profile?.openSourceContributions ?? [],
+    mySetup: profile?.mySetup ?? [],
+  };
+}
+
 function ListBlock({ children }: { children: ReactNode }) {
   return <Stack spacing={1.5}>{children}</Stack>;
 }
@@ -78,7 +92,7 @@ function ItemBox({ children }: { children: ReactNode }) {
 
 export function UserProfilePanel({ user }: { user: AdminUserDetail }) {
   const theme = useTheme();
-  const p: AdminUserProfile = user.profile ?? EMPTY_PROFILE;
+  const p = normalizeProfile(user.profile);
   const emailDisplay = emailVerificationDisplay(user);
   const coverSrc = resolveProfileMediaUrl(p.coverBanner, user.username);
   const avatarSrc = resolveProfileMediaUrl(p.profileImg ?? user.profileImg, user.username);

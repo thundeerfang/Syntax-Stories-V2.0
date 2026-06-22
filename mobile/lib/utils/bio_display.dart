@@ -3,6 +3,7 @@ const kDefaultProfileBio =
     'Welcome to Syntax Stories 🧑🏻‍💻, you can add your bio you want..🚀';
 
 const kPlaceholderProfileBios = {
+  'Hey There Welcome To Syntax Stories',
   kDefaultProfileBio,
   'Welcome to Syntax Stories 🧑🏻‍💻',
 };

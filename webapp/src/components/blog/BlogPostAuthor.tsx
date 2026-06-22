@@ -144,6 +144,9 @@ export function BlogPostAuthor({
             role="tooltip"
             onMouseEnter={cancelClose}
             onMouseLeave={scheduleClose}
+            onPointerDownCapture={cancelClose}
+            onClickCapture={cancelClose}
+            onContextMenuCapture={cancelClose}
           >
             <MentionPopoverCard
               username={author.username}
