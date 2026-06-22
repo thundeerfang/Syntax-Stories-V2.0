@@ -43,6 +43,18 @@ import { logSecurityEvent } from "../securityEventLog.js";
 import { recordSignupLegalAcceptances } from "../../../admin-platform/cms/legal/recordLegalAcceptances.js";
 import { AUTH_TTL } from "../../../config/auth.ttls.js";
 import { DEFAULT_PROFILE_BIO } from "../../../utils/profileBio.js";
+function isPlayReviewerEmail(normalizedEmail: string): boolean {
+  return (
+    env.PLAY_REVIEWER_EMAIL.length > 0 &&
+    env.PLAY_REVIEWER_OTP.length === 6 &&
+    normalizedEmail === env.PLAY_REVIEWER_EMAIL
+  );
+}
+function isPlayReviewerOtp(normalizedEmail: string, otpCode: string): boolean {
+  return (
+    isPlayReviewerEmail(normalizedEmail) && otpCode === env.PLAY_REVIEWER_OTP
+  );
+}
 function otpEmailSendFailureMessage(
   err: unknown,
   redisUnavailableMessage: string,
@@ -112,6 +124,19 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await UserModel.findOne({ email: normalizedEmail });
     if (!existing) {
+      if (isPlayReviewerEmail(normalizedEmail)) {
+        res.setHeader(
+          "X-OTP-Expires-In-Seconds",
+          String(authConfig.OTP_LOGIN_TTL_SECONDS),
+        );
+        res.status(200).json({
+          message: "Reviewer verification code ready.",
+          success: true,
+          otpVersion: 0,
+          expiresInSeconds: authConfig.OTP_LOGIN_TTL_SECONDS,
+        });
+        return;
+      }
       bumpOtpMetric("otp_send_rejected_total");
       res.status(404).json({
         message: "No account found with this email. Please sign up first.",
@@ -142,7 +167,8 @@ export async function sendOtp(req: Request, res: Response): Promise<void> {
       subject: "Your Syntax Stories login code",
       html: buildOtpEmail({
         title: "Your Code Is Ready",
-        intro: "Use this one-time code to continue signing in to Syntax Stories.",
+        intro:
+          "Use this one-time code to continue signing in to Syntax Stories.",
         codeLabel: "Login Code",
         code,
         ttlMin,
@@ -432,6 +458,27 @@ async function resolveUserAfterOtpVerified(
     .json({ message: "No account found. Sign up first.", success: false });
   return null;
 }
+async function resolvePlayReviewerUser(
+  req: Request,
+  userPrecheck: InstanceType<typeof UserModel> | null,
+  normalizedEmail: string,
+): Promise<{
+  user: InstanceType<typeof UserModel>;
+  isNewUser: boolean;
+}> {
+  if (userPrecheck) {
+    await logSecurityEvent(String(userPrecheck._id), "login_success", req, {
+      source: "play_reviewer_otp",
+    });
+    return { user: userPrecheck, isNewUser: false };
+  }
+  const created = await createUserFromEmailSignup(
+    req,
+    normalizedEmail,
+    "Google Play Reviewer",
+  );
+  return { user: created.user, isNewUser: created.isNewUser };
+}
 export async function verifyOtp(req: Request, res: Response): Promise<void> {
   try {
     const { email, code, otpVersion } = req.body as {
@@ -454,6 +501,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
     if (await rejectVerifyIfOtpRateLimited(redis, normalizedEmail, res)) return;
     const userPrecheck = await UserModel.findOne({ email: normalizedEmail });
     const purpose: EmailOtpPurpose = userPrecheck ? "login" : "signup";
+    const reviewerOtpValid = isPlayReviewerOtp(normalizedEmail, otpCode);
     const stored =
       purpose === "login"
         ? await getStoredLoginOtp(normalizedEmail)
@@ -464,7 +512,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       !versionBad &&
       verifyEmailOtpHash(stored.h, normalizedEmail, otpCode)
     );
-    if (versionBad) {
+    if (!reviewerOtpValid && versionBad) {
       await failOtpVerification(
         req,
         res,
@@ -474,7 +522,7 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
       );
       return;
     }
-    if (!otpValid) {
+    if (!reviewerOtpValid && !otpValid) {
       await failOtpVerification(
         req,
         res,
@@ -500,23 +548,33 @@ export async function verifyOtp(req: Request, res: Response): Promise<void> {
         return;
       }
     }
-    await deleteEmailOtp(purpose, normalizedEmail);
+    if (!reviewerOtpValid) {
+      await deleteEmailOtp(purpose, normalizedEmail);
+    }
     if (redis) {
       await redis.del(redisKeys.auth.otpAttempts(normalizedEmail));
     }
-    const resolved = await resolveUserAfterOtpVerified(
-      req,
-      res,
-      userPrecheck,
-      purpose,
-      stored,
-      normalizedEmail,
-    );
+    const resolved = reviewerOtpValid
+      ? await resolvePlayReviewerUser(req, userPrecheck, normalizedEmail)
+      : stored
+        ? await resolveUserAfterOtpVerified(
+            req,
+            res,
+            userPrecheck,
+            purpose,
+            stored,
+            normalizedEmail,
+          )
+        : null;
     if (!resolved) return;
     bumpOtpMetric("otp_verify_success_total");
     void writeAuditLog(req, AuditAction.OTP_VERIFIED, {
       actorId: String(resolved.user._id),
-      metadata: { email: normalizedEmail, purpose },
+      metadata: {
+        email: normalizedEmail,
+        purpose,
+        ...(reviewerOtpValid ? { source: "play_reviewer_otp" } : {}),
+      },
     });
     await respondWithSessionAfterEmailAuth(
       req,

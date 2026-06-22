@@ -65,6 +65,12 @@ export const env = {
     process.env.OTP_MIN_RESEND_SECONDS ?? "60",
     10,
   ),
+  PLAY_REVIEWER_EMAIL: (process.env.PLAY_REVIEWER_EMAIL ?? "")
+    .trim()
+    .toLowerCase(),
+  PLAY_REVIEWER_OTP: (process.env.PLAY_REVIEWER_OTP ?? "")
+    .replaceAll(/\D/g, "")
+    .slice(0, 6),
   ALTCHA_HMAC_KEY: process.env.ALTCHA_HMAC_KEY,
   ALTCHA_REQUIRED: (process.env.ALTCHA_REQUIRED ?? "").toLowerCase() === "true",
   FEEDBACK_NOTIFY_EMAIL: process.env.FEEDBACK_NOTIFY_EMAIL,
