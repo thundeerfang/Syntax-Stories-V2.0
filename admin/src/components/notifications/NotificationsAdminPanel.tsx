@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Grid from '@mui/material/Grid2';
 import {
   Alert,
   Box,
@@ -9,14 +10,11 @@ import {
   CardContent,
   Chip,
   FormControlLabel,
-  Grid,
   Stack,
   Switch,
   TextField,
   Typography,
 } from '@mui/material';
-import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
-import WebhookRoundedIcon from '@mui/icons-material/WebhookRounded';
 import { AdminBlinkSectionHeader } from '@/components/ui/AdminBlinkSectionHeader';
 import { AdminDataTable } from '@/components/ui/AdminDataTable';
 import { AdminFeedbackMessage } from '@/components/ui/AdminFeedbackMessage';
@@ -190,10 +188,7 @@ export function NotificationsAdminPanel({ token, canManage }: NotificationsAdmin
       {error ? <AdminFeedbackMessage severity="error" message={error} /> : null}
       {success ? <AdminFeedbackMessage severity="success" message={success} /> : null}
 
-      <AdminBlinkSectionHeader
-        title="Delivery overview"
-        icon={<NotificationsActiveRoundedIcon fontSize="small" />}
-      />
+      <AdminBlinkSectionHeader title="Delivery overview" />
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard label="Total inbox rows" value={stats?.totalNotifications ?? 0} />
@@ -211,8 +206,7 @@ export function NotificationsAdminPanel({ token, canManage }: NotificationsAdmin
 
       <AdminBlinkSectionHeader
         title="Platform webhook"
-        icon={<WebhookRoundedIcon fontSize="small" />}
-        action={
+        right={
           config?.updatedAt ? (
             <Chip size="small" label={`Updated ${new Date(config.updatedAt).toLocaleString()}`} />
           ) : null

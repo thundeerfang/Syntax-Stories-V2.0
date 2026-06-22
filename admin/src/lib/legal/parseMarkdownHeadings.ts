@@ -2,6 +2,7 @@ export type MarkdownHeading = {
   id: string;
   level: number;
   text: string;
+  line: number;
 };
 
 function slugifyHeading(text: string): string {
@@ -19,7 +20,7 @@ export function parseMarkdownHeadings(markdown: string): MarkdownHeading[] {
   const counts = new Map<string, number>();
   const out: MarkdownHeading[] = [];
 
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
     const m = /^(#{1,6})\s+(.+)$/.exec(line.trim());
     if (!m) continue;
     const level = m[1].length;
@@ -29,7 +30,7 @@ export function parseMarkdownHeadings(markdown: string): MarkdownHeading[] {
     const n = (counts.get(id) ?? 0) + 1;
     counts.set(id, n);
     if (n > 1) id = `${id}-${n}`;
-    out.push({ id, level, text });
+    out.push({ id, level, text, line: index + 1 });
   }
 
   return out;

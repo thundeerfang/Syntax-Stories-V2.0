@@ -43,7 +43,7 @@ export function AdminTeamPanel({ token }: { token: string | null }) {
 
   useAdminStepUpRetry(refresh);
 
-  async function toggleActive(row: AdminOperatorRow, next: boolean) {
+  const toggleActive = useCallback(async (row: AdminOperatorRow, next: boolean) => {
     if (!isAdminAuthActive(token, httpOnlyCookies)) return;
     setBusyId(row.id);
     setError(null);
@@ -55,11 +55,11 @@ export function AdminTeamPanel({ token }: { token: string | null }) {
     } finally {
       setBusyId(null);
     }
-  }
+  }, [apiToken, httpOnlyCookies, refresh, token]);
 
   const columns = useMemo(
     () => adminTeamColumns(busyId, (row, next) => void toggleActive(row, next)),
-    [busyId]
+    [busyId, toggleActive]
   );
 
   if (!isAdminAuthActive(token, httpOnlyCookies)) return null;

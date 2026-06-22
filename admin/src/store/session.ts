@@ -111,6 +111,8 @@ type SessionState = {
   temporalPermissionsEnabled: boolean;
   rebacEnabled: boolean;
   passkeyStepUpFeature: boolean;
+  passkeyStepUpEnabled: boolean;
+  passkeyRegistered: boolean;
   stepUpRequired: boolean;
   idleDeadlineAt: number | null;
   stepUpGraceDeadlineAt: number | null;
@@ -151,6 +153,8 @@ export const useSessionStore = create<SessionState>()(
       temporalPermissionsEnabled: false,
       rebacEnabled: false,
       passkeyStepUpFeature: true,
+      passkeyStepUpEnabled: false,
+      passkeyRegistered: false,
       stepUpRequired: false,
       idleDeadlineAt: null,
       stepUpGraceDeadlineAt: null,
@@ -201,6 +205,8 @@ export const useSessionStore = create<SessionState>()(
           roleName: null,
           permVersion: null,
           twoFactorSetupRequired: false,
+          passkeyStepUpEnabled: false,
+          passkeyRegistered: false,
           stepUpRequired: false,
           idleDeadlineAt: null,
           stepUpGraceDeadlineAt: null,

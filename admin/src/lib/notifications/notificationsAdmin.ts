@@ -26,6 +26,11 @@ export type NotificationAuditRow = {
   metadata: Record<string, unknown> | null;
   timestamp: string | null;
 };
+type PlatformNotificationConfigPatch = Partial<
+  Pick<PlatformNotificationConfig, 'webhookEnabled' | 'webhookUrl'>
+> & {
+  webhookSecret?: string | null;
+};
 
 type AdminOk<T> = { success?: boolean; data?: T; error?: { message?: string }; message?: string };
 
@@ -42,7 +47,7 @@ export async function getAdminNotificationConfig(token: string): Promise<Platfor
 
 export async function patchAdminNotificationConfig(
   token: string,
-  patch: Partial<Pick<PlatformNotificationConfig, 'webhookEnabled' | 'webhookUrl' | 'webhookSecret'>>
+  patch: PlatformNotificationConfigPatch
 ): Promise<PlatformNotificationConfig> {
   const res = await adminAuthenticatedFetch(`${MGMT}/notifications/config`, {
     token,
