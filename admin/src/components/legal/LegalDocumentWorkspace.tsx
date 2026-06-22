@@ -130,7 +130,25 @@ export function LegalDocumentWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [apiToken, kind, mode, revisionId, locked, startDraft, readOnly, cachedPolicy]);
+  }, [
+    apiToken,
+    kind,
+    mode,
+    revisionId,
+    locked,
+    startDraft,
+    readOnly,
+    cachedPolicy,
+    setLoading,
+    setError,
+    setPolicy,
+    setTitle,
+    setSummary,
+    setBody,
+    setStatusLabel,
+    setVersionNumber,
+    setVersionLabel,
+  ]);
 
   useEffect(() => {
     void load();

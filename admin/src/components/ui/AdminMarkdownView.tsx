@@ -1,11 +1,18 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Box, Link, Typography, alpha, useTheme } from '@mui/material';
 import { parseMarkdownHeadings } from '@/lib/legal/parseMarkdownHeadings';
 
 const HEADING_VARIANTS = ['h3', 'h4', 'h5', 'h6', 'subtitle1', 'subtitle2'] as const;
+type MarkdownAstNode = {
+  position?: {
+    start?: {
+      line?: number;
+    };
+  };
+};
 
 function headingVariant(level: number) {
   return HEADING_VARIANTS[Math.min(Math.max(level - 1, 0), HEADING_VARIANTS.length - 1)];
@@ -14,17 +21,17 @@ function headingVariant(level: number) {
 export function AdminMarkdownView({ markdown }: { markdown: string }) {
   const theme = useTheme();
   const headings = useMemo(() => parseMarkdownHeadings(markdown), [markdown]);
-  const headingIndex = useRef(0);
-
-  headingIndex.current = 0;
+  const headingIdsByLine = useMemo(
+    () => new Map(headings.map((heading) => [heading.line, heading.id])),
+    [headings]
+  );
 
   const borderColor = alpha(theme.palette.divider, 0.9);
   const codeBg = alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.08 : 0.05);
 
-  function nextHeadingId() {
-    const h = headings[headingIndex.current];
-    headingIndex.current += 1;
-    return h?.id;
+  function headingIdFromNode(node: unknown) {
+    const line = (node as MarkdownAstNode | undefined)?.position?.start?.line;
+    return typeof line === 'number' ? headingIdsByLine.get(line) : undefined;
   }
 
   return (
@@ -83,9 +90,9 @@ export function AdminMarkdownView({ markdown }: { markdown: string }) {
     >
       <ReactMarkdown
         components={{
-          h1: ({ children }) => (
+          h1: ({ node, children }) => (
             <Typography
-              id={nextHeadingId()}
+              id={headingIdFromNode(node)}
               variant={headingVariant(1)}
               component="h1"
               fontWeight={800}
@@ -95,9 +102,9 @@ export function AdminMarkdownView({ markdown }: { markdown: string }) {
               {children}
             </Typography>
           ),
-          h2: ({ children }) => (
+          h2: ({ node, children }) => (
             <Typography
-              id={nextHeadingId()}
+              id={headingIdFromNode(node)}
               variant={headingVariant(2)}
               component="h2"
               fontWeight={700}
@@ -107,9 +114,9 @@ export function AdminMarkdownView({ markdown }: { markdown: string }) {
               {children}
             </Typography>
           ),
-          h3: ({ children }) => (
+          h3: ({ node, children }) => (
             <Typography
-              id={nextHeadingId()}
+              id={headingIdFromNode(node)}
               variant={headingVariant(3)}
               component="h3"
               fontWeight={700}
@@ -119,9 +126,9 @@ export function AdminMarkdownView({ markdown }: { markdown: string }) {
               {children}
             </Typography>
           ),
-          h4: ({ children }) => (
+          h4: ({ node, children }) => (
             <Typography
-              id={nextHeadingId()}
+              id={headingIdFromNode(node)}
               variant={headingVariant(4)}
               component="h4"
               fontWeight={600}
@@ -131,9 +138,9 @@ export function AdminMarkdownView({ markdown }: { markdown: string }) {
               {children}
             </Typography>
           ),
-          h5: ({ children }) => (
+          h5: ({ node, children }) => (
             <Typography
-              id={nextHeadingId()}
+              id={headingIdFromNode(node)}
               variant={headingVariant(5)}
               component="h5"
               fontWeight={600}
@@ -143,9 +150,9 @@ export function AdminMarkdownView({ markdown }: { markdown: string }) {
               {children}
             </Typography>
           ),
-          h6: ({ children }) => (
+          h6: ({ node, children }) => (
             <Typography
-              id={nextHeadingId()}
+              id={headingIdFromNode(node)}
               variant={headingVariant(6)}
               component="h6"
               fontWeight={600}

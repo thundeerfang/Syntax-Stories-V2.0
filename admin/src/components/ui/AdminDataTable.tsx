@@ -70,10 +70,13 @@ export function AdminDataTable<TData>({
   totalTextOverride,
   showTotal = true,
 }: AdminDataTableProps<TData>) {
+  'use no memo';
+
   const theme = useTheme();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table intentionally returns stateful helpers for table rendering.
   const table = useReactTable({
     data,
     columns,

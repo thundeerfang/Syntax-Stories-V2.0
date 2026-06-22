@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import type { AuthUser } from "../middlewares/auth/index.js";
@@ -8,9 +7,49 @@ import {
   validateBlogPostContent,
 } from "../modules/blog/blogContentValidation.js";
 import { BlogPostModel, type IBlogPost } from "../models/BlogPost.js";
-import { BlogReadDayModel } from "../models/BlogReadDay.js";
 import { UserModel, normalizeProfileImg } from "../models/User.js";
 import { normalizeTaxonomyInput } from "../modules/blog/postTaxonomy.js";
+import {
+  mapLastEditor,
+  mapLeanPostToFeedListItem,
+  mapLeanSquadForFeed,
+  mapTaxonomyFromDoc,
+  normalizeBlogCounter,
+  type FeedListItem,
+  type TaxonomyFields,
+} from "../modules/blog/blogFeed.mapper.js";
+import {
+  applyEditablePostFields,
+  applyRequestedSquadAssignment,
+  createPostWithSlugRetries,
+  ensureSquadPostAllowed,
+  forkPublishedPostToDraft,
+  hasBlogTaxonomyKeys,
+  isDuplicateKeyError,
+  isEligibleForPublicRespect,
+  mapWritePostResponse,
+  parseNullableSquadId,
+  postSquadId,
+  publishedToDraftForkRequested,
+  resolveSlugForTitleUpdate,
+  slugify,
+  slugWithCollisionSuffix,
+  syncPostEngagementEligibility,
+  taxonomyWriteFields,
+} from "../modules/blog/blogWrite.helpers.js";
+import {
+  commitReadViewInRedis,
+  createReadViewSession,
+  findPublishedReadPost,
+  findReadViewAuthor,
+  handleInvalidReadViewCommit,
+  handleMissingReadViewSession,
+  readViewPathParams,
+  readViewSessionId,
+  upsertReadDayAndBumpLongest,
+  validateReadViewDwell,
+  validateReadViewSessionOwnership,
+} from "../modules/blog/blogReadView.helpers.js";
 import { getRedis } from "../config/redis.js";
 import { redisKeys } from "../shared/redis/keys.js";
 import { NOT_DELETED_FILTER } from "../shared/db/notDeleted.js";
@@ -21,20 +60,11 @@ import {
 } from "../streak/calendarUtc.js";
 import {
   MIN_READ_COMMIT_DWELL_MS,
-  READ_VIEW_ACK_TTL_SEC,
-  READ_VIEW_SESSION_TTL_SEC,
   SOFT_DELETE_RETENTION_MS,
 } from "../variable/constants.js";
-import { bumpReadStreakLongestFromMongo } from "../services/readStreakDurability.service.js";
 import { incrementReadStreakMetric } from "../services/readStreakMetrics.js";
 import { consumeReadViewStartRateLimit } from "../services/readStreakRateLimit.js";
-import {
-  readDayZsetScoreMs,
-  readDaysTrimMinRetainMsUtc,
-} from "../services/readStreakZset.js";
 import { syncReadStreakRedisAfterMongoUpsert } from "../services/readStreakRedis.js";
-import { evalReadViewCommitMerged } from "../services/readViewCommitRedis.js";
-import { assertCanPostOrShareToSquad } from "../services/squad.service.js";
 import {
   deleteAllBookmarksForPost,
   deleteAllRepostsForPost,
@@ -83,247 +113,9 @@ function paramString(v: string | string[] | undefined): string | undefined {
   if (Array.isArray(v)) return v[0];
   return v;
 }
-function normalizeBlogCounter(raw: unknown): number {
-  if (typeof raw === "number" && Number.isFinite(raw))
-    return Math.max(0, Math.floor(raw));
-  return 0;
-}
-const SLUG_MAX_LEN = BLOG_LIMITS.slugMaxLen;
 const SUMMARY_MAX_LEN = BLOG_LIMITS.summaryMaxLen;
-function isEligibleForPublicRespect(doc: {
-  status?: string;
-  deletedAt?: Date | null;
-}): boolean {
-  return (
-    doc.status === "published" &&
-    (doc.deletedAt == null || doc.deletedAt === undefined)
-  );
-}
 function optionalViewerId(req: Request): string | undefined {
   return (req as RequestWithOptionalAuth).authUser?._id;
-}
-function mapLastEditor(raw: unknown):
-  | {
-      username: string;
-      fullName: string;
-    }
-  | undefined {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-  const u = raw as {
-    username?: string;
-    fullName?: string;
-  };
-  const username = typeof u.username === "string" ? u.username.trim() : "";
-  if (!username) return undefined;
-  const fullName =
-    typeof u.fullName === "string" && u.fullName.trim()
-      ? u.fullName.trim()
-      : username;
-  return { username, fullName };
-}
-function slugify(text: string): string {
-  return (
-    text
-      .trim()
-      .toLowerCase()
-      .replaceAll(/\s+/g, "-")
-      .replaceAll(/[^\w-]/g, "")
-      .replaceAll(/-+/g, "-")
-      .replaceAll(/^-+/g, "")
-      .replaceAll(/-+$/g, "")
-      .slice(0, 200) || "post"
-  );
-}
-type TaxonomyFields = {
-  category?: string;
-  categories?: string[];
-  tags?: string[];
-  language?: string;
-};
-function mapTaxonomyFromDoc(p: TaxonomyFields): {
-  category?: string;
-  categories?: string[];
-  tags?: string[];
-  language?: string;
-} {
-  const categories =
-    Array.isArray(p.categories) && p.categories.length
-      ? p.categories
-      : undefined;
-  const category =
-    typeof p.category === "string" && p.category.trim()
-      ? p.category.trim()
-      : categories?.[0];
-  const tags = Array.isArray(p.tags) && p.tags.length ? p.tags : undefined;
-  const language =
-    typeof p.language === "string" && p.language.trim()
-      ? p.language.trim().toLowerCase()
-      : "en";
-  return { category, categories, tags, language };
-}
-function taxonomyWriteFields(tax: {
-  category?: string;
-  categories?: string[];
-  tags?: string[];
-  language?: string;
-}) {
-  return {
-    category: tax.categories?.length ? tax.categories[0] : tax.category,
-    categories: tax.categories?.length ? tax.categories : undefined,
-    tags: tax.tags?.length ? tax.tags : undefined,
-    language: tax.language ?? "en",
-  };
-}
-type FeedListItem = {
-  _id: string;
-  title: string;
-  slug: string;
-  summary: string;
-  thumbnailUrl?: string;
-  updatedAt: Date;
-  createdAt: Date;
-  lastEditedAt?: string;
-  lastEditedBy?: {
-    username: string;
-    fullName: string;
-  };
-  respectCount: number;
-  repostCount: number;
-  bookmarkCount: number;
-  commentCount: number;
-  viewCount: number;
-  readTimeMinutes: number;
-  author: {
-    username: string;
-    fullName: string;
-    profileImg: string;
-  };
-  category?: string;
-  tags?: string[];
-  language?: string;
-  viewerHasRespected?: boolean;
-  viewerHasReposted?: boolean;
-  viewerHasBookmarked?: boolean;
-  squad?: {
-    slug: string;
-    name: string;
-    iconUrl?: string;
-    coverBannerUrl?: string;
-    visibility: "public" | "private";
-    memberCount?: number;
-  };
-};
-function mapLeanSquadForFeed(
-  squadRaw: unknown,
-): NonNullable<FeedListItem["squad"]> | undefined {
-  if (!squadRaw || typeof squadRaw !== "object" || Array.isArray(squadRaw))
-    return undefined;
-  const s = squadRaw as {
-    slug?: string;
-    name?: string;
-    iconUrl?: string;
-    visibility?: string;
-    coverBannerUrl?: string;
-    memberCount?: number;
-  };
-  if (typeof s.slug !== "string" || !s.slug.trim()) return undefined;
-  const slug = s.slug.trim();
-  return {
-    slug,
-    name: typeof s.name === "string" && s.name.trim() ? s.name.trim() : slug,
-    iconUrl:
-      typeof s.iconUrl === "string" && s.iconUrl.trim()
-        ? s.iconUrl.trim()
-        : undefined,
-    coverBannerUrl:
-      typeof s.coverBannerUrl === "string" && s.coverBannerUrl.trim()
-        ? s.coverBannerUrl.trim()
-        : undefined,
-    visibility: s.visibility === "private" ? "private" : "public",
-    memberCount:
-      typeof s.memberCount === "number" && Number.isFinite(s.memberCount)
-        ? s.memberCount
-        : undefined,
-  };
-}
-function mapLeanPostToFeedListItem(p: unknown): FeedListItem | null {
-  if (!p || typeof p !== "object" || Array.isArray(p)) return null;
-  const doc = p as Record<string, unknown>;
-  const authorRaw = doc.authorId;
-  if (!authorRaw || typeof authorRaw !== "object" || Array.isArray(authorRaw)) {
-    return null;
-  }
-  const a = authorRaw as {
-    username?: string;
-    fullName?: string;
-    profileImg?: string;
-  };
-  if (typeof a.username !== "string" || !a.username.trim()) {
-    return null;
-  }
-  const leAt = doc.lastEditedAt as Date | undefined;
-  const leBy = mapLastEditor(doc.lastEditedById);
-  const summary = typeof doc.summary === "string" ? doc.summary : "";
-  const content = typeof doc.content === "string" ? doc.content : "";
-  const squad = mapLeanSquadForFeed(doc.squadId);
-  return {
-    _id: String(doc._id),
-    title: String(doc.title ?? ""),
-    slug: String(doc.slug ?? ""),
-    summary,
-    thumbnailUrl:
-      typeof doc.thumbnailUrl === "string" ? doc.thumbnailUrl : undefined,
-    updatedAt: doc.updatedAt as Date,
-    createdAt: doc.createdAt as Date,
-    lastEditedAt: leAt ? leAt.toISOString() : undefined,
-    lastEditedBy: leBy,
-    respectCount: normalizeRespectCount(
-      (
-        doc as {
-          respectCount?: number;
-        }
-      ).respectCount,
-    ),
-    repostCount: normalizeBlogCounter(
-      (
-        doc as {
-          repostCount?: number;
-        }
-      ).repostCount,
-    ),
-    bookmarkCount: normalizeBlogCounter(
-      (
-        doc as {
-          bookmarkCount?: number;
-        }
-      ).bookmarkCount,
-    ),
-    commentCount: normalizeBlogCounter(
-      (
-        doc as {
-          commentCount?: number;
-        }
-      ).commentCount,
-    ),
-    viewCount: normalizeBlogCounter(
-      (
-        doc as {
-          viewCount?: number;
-        }
-      ).viewCount,
-    ),
-    readTimeMinutes: estimateReadMinutesFromBlogFields(content, summary),
-    author: {
-      username: a.username.trim(),
-      fullName:
-        typeof a.fullName === "string" && a.fullName.trim()
-          ? a.fullName.trim()
-          : a.username.trim(),
-      profileImg: normalizeProfileImg(a.profileImg),
-    },
-    ...mapTaxonomyFromDoc(doc as TaxonomyFields),
-    ...(squad ? { squad } : {}),
-  };
 }
 function engagementCountsFromPostDoc(doc: Record<string, unknown>) {
   return {
@@ -419,12 +211,6 @@ async function applyViewerStateToFeedItems(
     viewerHasBookmarked: !!bookmarkMap[it._id],
   }));
 }
-function slugWithCollisionSuffix(base: string, attempt: number): string {
-  if (attempt <= 0) return base.slice(0, SLUG_MAX_LEN);
-  const suf = `-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  const room = SLUG_MAX_LEN - suf.length;
-  return `${base.slice(0, Math.max(1, room))}${suf}`;
-}
 export async function createPost(req: Request, res: Response): Promise<void> {
   try {
     const user = (
@@ -486,26 +272,17 @@ export async function createPost(req: Request, res: Response): Promise<void> {
     ).squadId;
     let squadOid: mongoose.Types.ObjectId | undefined;
     if (rawSquad != null && rawSquad !== "") {
-      if (!mongoose.Types.ObjectId.isValid(String(rawSquad))) {
+      const parsedSquad = parseNullableSquadId(rawSquad);
+      if (!parsedSquad.ok || parsedSquad.value == null) {
         res.status(400).json({ success: false, message: "Invalid squadId" });
         return;
       }
-      squadOid = new mongoose.Types.ObjectId(String(rawSquad));
-      const gate = await assertCanPostOrShareToSquad({
-        squadId: squadOid,
-        userId: user._id,
-      });
-      if (!gate.ok) {
-        res.status(gate.status).json({ success: false, message: gate.message });
-        return;
-      }
+      squadOid = parsedSquad.value;
+      if (!(await ensureSquadPostAllowed(res, squadOid, user._id))) return;
     }
-    let post = null;
-    let lastErr: unknown;
-    for (let attempt = 0; attempt < 12; attempt++) {
-      const slug = slugWithCollisionSuffix(baseSlug, attempt);
-      try {
-        post = await BlogPostModel.create({
+    const { post, lastErr } = await createPostWithSlugRetries(
+      baseSlug,
+      (slug) => ({
           authorId: user._id,
           title: titleStr,
           slug,
@@ -516,22 +293,10 @@ export async function createPost(req: Request, res: Response): Promise<void> {
           ...(finalStatus === "published" ? { publishedAt: new Date() } : {}),
           ...taxonomyWriteFields(tax),
           ...(squadOid ? { squadId: squadOid } : {}),
-        });
-        break;
-      } catch (err) {
-        lastErr = err;
-        const e = err as {
-          code?: number;
-        };
-        if (e.code === 11000) continue;
-        throw err;
-      }
-    }
+        }),
+    );
     if (!post) {
-      const e = lastErr as {
-        code?: number;
-      };
-      if (e?.code === 11000) {
+      if (isDuplicateKeyError(lastErr)) {
         res.status(409).json({
           success: false,
           message:
@@ -541,11 +306,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
       }
       throw lastErr;
     }
-    const pSquad = (
-      post as {
-        squadId?: mongoose.Types.ObjectId;
-      }
-    ).squadId;
+    const pSquad = postSquadId(post);
     if (finalStatus === "published") {
       void fanoutNewPublishedPost({
         postId: String(post._id),
@@ -559,19 +320,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
     }
     res.status(201).json({
       success: true,
-      post: {
-        _id: post._id,
-        title: post.title,
-        slug: post.slug,
-        summary: post.summary,
-        content: post.content,
-        thumbnailUrl: post.thumbnailUrl,
-        status: post.status,
-        createdAt: post.createdAt,
-        updatedAt: post.updatedAt,
-        ...(pSquad ? { squadId: String(pSquad) } : {}),
-        ...mapTaxonomyFromDoc(post as TaxonomyFields),
-      },
+      post: mapWritePostResponse(post),
     });
   } catch (err) {
     console.error(err);
@@ -596,22 +345,16 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       thumbnailUrl?: string;
     };
     const rawBody = req.body as Record<string, unknown>;
-    const hasTaxonomyKeys =
-      "category" in rawBody ||
-      "categories" in rawBody ||
-      "tags" in rawBody ||
-      "language" in rawBody;
+    const hasTaxonomyKeys = hasBlogTaxonomyKeys(rawBody);
     const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
     let draftSquadId: mongoose.Types.ObjectId | null | undefined = undefined;
     if ("squadId" in rawBody) {
-      const v = rawBody.squadId;
-      if (v === null || v === "") draftSquadId = null;
-      else if (typeof v === "string" && mongoose.Types.ObjectId.isValid(v)) {
-        draftSquadId = new mongoose.Types.ObjectId(v);
-      } else {
+      const parsedSquad = parseNullableSquadId(rawBody.squadId);
+      if (!parsedSquad.ok) {
         res.status(400).json({ success: false, message: "Invalid squadId" });
         return;
       }
+      draftSquadId = parsedSquad.value;
     }
     const titleStr = typeof title === "string" ? title.trim() : "";
     const contentStr = typeof content === "string" ? content : "";
@@ -645,18 +388,7 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       ).squadId;
       const effectiveSq: mongoose.Types.ObjectId | null | undefined =
         draftSquadId !== undefined ? draftSquadId : (prevSq ?? null);
-      if (effectiveSq) {
-        const gate = await assertCanPostOrShareToSquad({
-          squadId: effectiveSq as mongoose.Types.ObjectId,
-          userId: user._id,
-        });
-        if (!gate.ok) {
-          res
-            .status(gate.status)
-            .json({ success: false, message: gate.message });
-          return;
-        }
-      }
+      if (!(await ensureSquadPostAllowed(res, effectiveSq, user._id))) return;
       const patch: Record<string, unknown> = {
         title: finalTitle,
         slug,
@@ -675,39 +407,13 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
         res.status(404).json({ success: false, message: "Draft not found" });
         return;
       }
-      const uSq = (
-        updated as {
-          squadId?: mongoose.Types.ObjectId | null;
-        }
-      ).squadId;
       res.status(200).json({
         success: true,
-        post: {
-          _id: updated._id,
-          title: updated.title,
-          slug: updated.slug,
-          summary: updated.summary,
-          content: updated.content,
-          thumbnailUrl: updated.thumbnailUrl,
-          status: updated.status,
-          createdAt: updated.createdAt,
-          updatedAt: updated.updatedAt,
-          ...(uSq ? { squadId: String(uSq) } : {}),
-          ...mapTaxonomyFromDoc(updated as TaxonomyFields),
-        },
+        post: mapWritePostResponse(updated as unknown as Record<string, unknown>),
       });
       return;
     }
-    if (draftSquadId) {
-      const gate = await assertCanPostOrShareToSquad({
-        squadId: draftSquadId,
-        userId: user._id,
-      });
-      if (!gate.ok) {
-        res.status(gate.status).json({ success: false, message: gate.message });
-        return;
-      }
-    }
+    if (!(await ensureSquadPostAllowed(res, draftSquadId, user._id))) return;
     const uniqueSlug = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const created = await BlogPostModel.create({
       authorId: user._id,
@@ -720,26 +426,9 @@ export async function upsertDraft(req: Request, res: Response): Promise<void> {
       ...(draftSquadId ? { squadId: draftSquadId } : {}),
       ...(tax ? taxonomyWriteFields(tax) : { language: "en" }),
     });
-    const cSq = (
-      created as {
-        squadId?: mongoose.Types.ObjectId | null;
-      }
-    ).squadId;
     res.status(201).json({
       success: true,
-      post: {
-        _id: created._id,
-        title: created.title,
-        slug: created.slug,
-        summary: created.summary,
-        content: created.content,
-        thumbnailUrl: created.thumbnailUrl,
-        status: created.status,
-        createdAt: created.createdAt,
-        updatedAt: created.updatedAt,
-        ...(cSq ? { squadId: String(cSq) } : {}),
-        ...mapTaxonomyFromDoc(created as TaxonomyFields),
-      },
+      post: mapWritePostResponse(created as unknown as Record<string, unknown>),
     });
   } catch (err) {
     const e = err as {
@@ -1165,49 +854,30 @@ export async function recordBlogReadDay(
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const usernameParam = paramString(req.params.username);
-    const slug = paramString(req.params.slug);
+    const { usernameParam, slug } = readViewPathParams(req);
     if (!usernameParam || !slug) {
       res.status(400).json({ success: false, message: "Invalid path" });
       return;
     }
-    const author = await UserModel.findOne({
-      username: new RegExp(`^${escapeRegex(usernameParam)}$`, "i"),
-    })
-      .select("_id")
-      .lean();
+    const author = await findReadViewAuthor(usernameParam);
     if (!author) {
       res.status(404).json({ success: false, message: "Author not found" });
       return;
     }
     const readerId = new mongoose.Types.ObjectId(authUser._id);
-    const authorId = author._id as mongoose.Types.ObjectId;
+    const authorId = author._id;
     if (readerId.equals(authorId)) {
       res.status(200).json({ success: true, counted: false, reason: "self" });
       return;
     }
-    const post = await BlogPostModel.findOne({
-      authorId,
-      slug,
-      status: "published",
-      ...NOT_DELETED_FILTER,
-    })
-      .select("_id")
-      .lean();
+    const post = await findPublishedReadPost({ authorId, slug });
     if (!post) {
       res.status(404).json({ success: false, message: "Post not found" });
       return;
     }
     const now = new Date();
     const dayBucket = streakUtcDayBucket(now);
-    await BlogReadDayModel.updateOne(
-      { readerId, dayBucket },
-      { $set: { updatedAt: now } },
-      { upsert: true },
-    );
-    void bumpReadStreakLongestFromMongo(readerId, now).catch((e) =>
-      console.error("[read-streak] bump longest", e),
-    );
+    await upsertReadDayAndBumpLongest(readerId, dayBucket, now);
     const redis = getRedis();
     if (redis) {
       void syncReadStreakRedisAfterMongoUpsert({
@@ -1246,23 +916,18 @@ export async function startBlogReadView(
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const usernameParam = paramString(req.params.username);
-    const slug = paramString(req.params.slug);
+    const { usernameParam, slug } = readViewPathParams(req);
     if (!usernameParam || !slug) {
       res.status(400).json({ success: false, message: "Invalid path" });
       return;
     }
-    const author = await UserModel.findOne({
-      username: new RegExp(`^${escapeRegex(usernameParam)}$`, "i"),
-    })
-      .select("_id")
-      .lean();
+    const author = await findReadViewAuthor(usernameParam);
     if (!author) {
       res.status(404).json({ success: false, message: "Author not found" });
       return;
     }
     const readerId = new mongoose.Types.ObjectId(authUser._id);
-    const authorId = author._id as mongoose.Types.ObjectId;
+    const authorId = author._id;
     if (readerId.equals(authorId)) {
       res.status(200).json({
         success: true,
@@ -1272,14 +937,7 @@ export async function startBlogReadView(
       });
       return;
     }
-    const post = await BlogPostModel.findOne({
-      authorId,
-      slug,
-      status: "published",
-      ...NOT_DELETED_FILTER,
-    })
-      .select("_id")
-      .lean();
+    const post = await findPublishedReadPost({ authorId, slug });
     if (!post) {
       res.status(404).json({ success: false, message: "Post not found" });
       return;
@@ -1297,15 +955,11 @@ export async function startBlogReadView(
       });
       return;
     }
-    const sessionId = randomUUID();
-    const key = redisKeys.readStreak.viewSession(sessionId);
-    await redis.hSet(key, {
-      userId: String(readerId),
-      postId: String(post._id),
-      startTime: String(Date.now()),
-      used: "0",
+    const sessionId = await createReadViewSession({
+      redis,
+      readerId,
+      postId: post._id,
     });
-    await redis.expire(key, READ_VIEW_SESSION_TTL_SEC);
     res
       .status(200)
       .json({ success: true, sessionId, minDwellMs: MIN_READ_COMMIT_DWELL_MS });
@@ -1339,39 +993,21 @@ export async function commitBlogReadView(
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const usernameParam = paramString(req.params.username);
-    const slug = paramString(req.params.slug);
-    const sessionId =
-      typeof (
-        req.body as {
-          sessionId?: unknown;
-        }
-      )?.sessionId === "string"
-        ? String(
-            (
-              req.body as {
-                sessionId: string;
-              }
-            ).sessionId,
-          ).trim()
-        : "";
+    const { usernameParam, slug } = readViewPathParams(req);
+    const sessionId = readViewSessionId(req.body);
     if (!usernameParam || !slug || !sessionId) {
       res
         .status(400)
         .json({ success: false, message: "Invalid path or sessionId" });
       return;
     }
-    const author = await UserModel.findOne({
-      username: new RegExp(`^${escapeRegex(usernameParam)}$`, "i"),
-    })
-      .select("_id")
-      .lean();
+    const author = await findReadViewAuthor(usernameParam);
     if (!author) {
       res.status(404).json({ success: false, message: "Author not found" });
       return;
     }
     const readerId = new mongoose.Types.ObjectId(authUser._id);
-    const authorId = author._id as mongoose.Types.ObjectId;
+    const authorId = author._id;
     if (readerId.equals(authorId)) {
       res.status(200).json({ success: true, counted: false, reason: "self" });
       return;
@@ -1387,58 +1023,16 @@ export async function commitBlogReadView(
       redis.hGet(sk, "startTime"),
     ]);
     if (!su || !sp) {
-      const ackHit = await redis.get(ackKey);
-      const now = new Date();
-      const dayBucket = streakUtcDayBucket(now);
-      if (ackHit) {
-        res
-          .status(200)
-          .json({
-            success: true,
-            counted: true,
-            alreadyProcessed: true,
-            dayBucket,
-          });
-        return;
-      }
-      const mongoHit = await BlogReadDayModel.exists({ readerId, dayBucket });
-      if (mongoHit) {
-        res
-          .status(200)
-          .json({
-            success: true,
-            counted: true,
-            alreadyProcessed: true,
-            dayBucket,
-          });
-        return;
-      }
-      res.status(400).json({ success: false, reason: "invalid_session" });
+      await handleMissingReadViewSession({ res, redis, ackKey, readerId });
       return;
     }
-    if (su !== String(readerId)) {
-      res.status(403).json({ success: false, message: "Session mismatch" });
+    if (!validateReadViewSessionOwnership({ res, sessionUserId: su, readerId })) {
       return;
     }
-    const startMs = Number.parseInt(startTimeRaw ?? "", 10);
-    const elapsed = Date.now() - startMs;
-    if (!Number.isFinite(elapsed) || elapsed < MIN_READ_COMMIT_DWELL_MS) {
-      res.status(400).json({
-        success: false,
-        reason: "dwell_too_short",
-        minDwellMs: MIN_READ_COMMIT_DWELL_MS,
-      });
+    if (!validateReadViewDwell(res, startTimeRaw ?? undefined)) {
       return;
     }
-    const postOk = await BlogPostModel.findOne({
-      _id: new mongoose.Types.ObjectId(sp),
-      authorId,
-      slug,
-      status: "published",
-      ...NOT_DELETED_FILTER,
-    })
-      .select("_id")
-      .lean();
+    const postOk = await findPublishedReadPost({ authorId, slug, postId: sp });
     if (!postOk) {
       res.status(400).json({ success: false, reason: "invalid_post" });
       return;
@@ -1460,31 +1054,22 @@ export async function commitBlogReadView(
         .json({ success: false, code: "STREAK_MONOTONICITY_BROKEN" });
       return;
     }
-    await BlogReadDayModel.updateOne(
-      { readerId, dayBucket: today },
-      { $set: { updatedAt: now } },
-      { upsert: true },
-    );
-    await bumpReadStreakLongestFromMongo(readerId, now).catch((e) =>
-      console.error("[read-streak] bump longest", e),
-    );
+    await upsertReadDayAndBumpLongest(readerId, today, now);
     const zKey = redisKeys.readStreak.readDaysZset(String(readerId));
     let out;
     try {
-      out = await evalReadViewCommitMerged(
+      out = await commitReadViewInRedis({
         redis,
-        [sk, streakKey, zKey, ackKey],
-        {
-          today,
-          yesterday,
-          zsetScoreMs: readDayZsetScoreMs(today),
-          trimMinScoreStr: String(readDaysTrimMinRetainMsUtc(now)),
-          lastUpdatedMs: String(now.getTime()),
-          userId: String(readerId),
-          postId: sp,
-          ackTtlSeconds: READ_VIEW_ACK_TTL_SEC,
-        },
-      );
+        sessionKey: sk,
+        streakKey,
+        zKey,
+        ackKey,
+        today,
+        yesterday,
+        now,
+        readerId,
+        postId: sp,
+      });
     } catch (e) {
       console.error("[read-streak] merged lua failed after mongo upsert", e);
       incrementReadStreakMetric("readViewCommitRedisFail");
@@ -1529,22 +1114,7 @@ export async function commitBlogReadView(
       return;
     }
     if (out.status === -1) {
-      const mongoHit = await BlogReadDayModel.exists({
-        readerId,
-        dayBucket: today,
-      });
-      if (mongoHit) {
-        res
-          .status(200)
-          .json({
-            success: true,
-            counted: true,
-            alreadyProcessed: true,
-            dayBucket: today,
-          });
-        return;
-      }
-      res.status(400).json({ success: false, reason: "invalid_session" });
+      await handleInvalidReadViewCommit({ res, readerId, dayBucket: today });
       return;
     }
     res
@@ -1824,11 +1394,7 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
     const wasEligibleRespect = isEligibleForPublicRespect(existing);
     const wasPublishedBefore = existing.status === "published";
     const rawBody = req.body as Record<string, unknown>;
-    const hasTaxonomyKeys =
-      "category" in rawBody ||
-      "categories" in rawBody ||
-      "tags" in rawBody ||
-      "language" in rawBody;
+    const hasTaxonomyKeys = hasBlogTaxonomyKeys(rawBody);
     const tax = hasTaxonomyKeys ? normalizeTaxonomyInput(rawBody) : null;
     const { title, summary, content, thumbnailUrl, status, silent } =
       req.body as {
@@ -1856,57 +1422,28 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
         ? summary.trim().slice(0, SUMMARY_MAX_LEN)
         : (existing.summary ?? "") || "";
     if (
-      status === "draft" &&
-      existing.status === "published" &&
-      silent !== true
+      publishedToDraftForkRequested({
+        status,
+        existingStatus: existing.status,
+        silent,
+      })
     ) {
       const thumb =
         thumbnailUrl !== undefined
           ? sanitizeThumbnailUrl(thumbnailUrl)
           : existing.thumbnailUrl;
-      const exDoc = existing as IBlogPost;
-      const forkCategory = hasTaxonomyKeys ? tax?.category : exDoc.category;
-      const forkTags = hasTaxonomyKeys
-        ? tax?.tags?.length
-          ? tax.tags
-          : undefined
-        : exDoc.tags;
-      const forkLang = hasTaxonomyKeys
-        ? (tax?.language ?? exDoc.language ?? "en")
-        : (exDoc.language ?? "en");
-      const baseSlug = slugify(titleStr);
-      let newPost: IBlogPost | null = null;
-      let lastErr: unknown;
-      for (let attempt = 0; attempt < 12; attempt++) {
-        const cand = slugWithCollisionSuffix(baseSlug, attempt);
-        try {
-          newPost = (await BlogPostModel.create({
-            authorId: user._id as unknown as mongoose.Types.ObjectId,
-            title: titleStr,
-            slug: cand,
-            summary: summaryStr || undefined,
-            content: contentCheck.normalizedJson,
-            thumbnailUrl: thumb ?? undefined,
-            status: "draft",
-            ...(forkCategory ? { category: forkCategory } : {}),
-            ...(forkTags?.length ? { tags: forkTags } : {}),
-            language: forkLang,
-          })) as IBlogPost;
-          break;
-        } catch (err) {
-          lastErr = err;
-          const e = err as {
-            code?: number;
-          };
-          if (e.code === 11000) continue;
-          throw err;
-        }
-      }
+      const { post: newPost, lastErr } = await forkPublishedPostToDraft({
+        userId: user._id,
+        existing,
+        title: titleStr,
+        summary: summaryStr,
+        content: contentCheck.normalizedJson,
+        thumbnailUrl: thumb,
+        tax,
+        hasTaxonomyKeys,
+      });
       if (!newPost) {
-        const e = lastErr as {
-          code?: number;
-        };
-        if (e?.code === 11000) {
+        if (isDuplicateKeyError(lastErr)) {
           res.status(409).json({
             success: false,
             message:
@@ -1919,170 +1456,55 @@ export async function updateMyPost(req: Request, res: Response): Promise<void> {
       res.status(201).json({
         success: true,
         forkedFromPublished: true,
-        post: {
-          _id: newPost._id,
-          title: newPost.title,
-          slug: newPost.slug,
-          summary: newPost.summary,
-          content: newPost.content,
-          thumbnailUrl: newPost.thumbnailUrl,
-          status: newPost.status,
-          createdAt: newPost.createdAt,
-          updatedAt: newPost.updatedAt,
-          ...mapTaxonomyFromDoc(newPost),
-        },
+        post: mapWritePostResponse(newPost),
       });
       return;
     }
-    if ("squadId" in rawBody) {
-      const v = rawBody.squadId;
-      let nextSquadId: mongoose.Types.ObjectId | null;
-      if (v === null || v === "") {
-        nextSquadId = null;
-      } else if (typeof v === "string" && mongoose.Types.ObjectId.isValid(v)) {
-        nextSquadId = new mongoose.Types.ObjectId(v);
-      } else {
-        res.status(400).json({ success: false, message: "Invalid squadId" });
-        return;
-      }
-      const prevSquad =
-        (
-          existing as {
-            squadId?: mongoose.Types.ObjectId | null;
-          }
-        ).squadId ?? null;
-      const unchanged =
-        (prevSquad == null && nextSquadId == null) ||
-        (prevSquad != null &&
-          nextSquadId != null &&
-          String(prevSquad) === String(nextSquadId));
-      if (!unchanged) {
-        if (wasPublishedBefore && prevSquad) {
-          res.status(409).json({
-            success: false,
-            message: "Squad assignment cannot be changed on a published post",
-          });
-          return;
-        }
-        existing.set("squadId", nextSquadId);
-      }
-    }
-    let nextSlug = existing.slug;
-    if (
-      typeof title === "string" &&
-      title.trim() &&
-      titleStr !== existing.title
-    ) {
-      const base = slugify(titleStr);
-      for (let attempt = 0; attempt < 12; attempt++) {
-        const cand = slugWithCollisionSuffix(base, attempt);
-        const clash = await BlogPostModel.findOne({
-          authorId: user._id,
-          slug: cand,
-          _id: { $ne: existing._id },
-        })
-          .select("_id")
-          .lean();
-        if (!clash) {
-          nextSlug = cand;
-          break;
-        }
-      }
-    }
-    existing.title = titleStr;
-    existing.slug = nextSlug;
-    existing.summary = summaryStr || undefined;
-    existing.content = contentCheck.normalizedJson;
-    if (thumbnailUrl !== undefined) {
-      existing.thumbnailUrl = sanitizeThumbnailUrl(thumbnailUrl) ?? undefined;
-    }
-    if (status === "draft" || status === "published") {
-      existing.status = status;
-      if (status === "published") {
-        existing.suspendedAt = undefined;
-        existing.suspendedById = undefined;
-      }
-    }
-    if (tax) {
-      const fields = taxonomyWriteFields(tax);
-      existing.category = fields.category;
-      existing.categories = fields.categories;
-      existing.tags = fields.tags;
-      existing.language = fields.language ?? "en";
-    }
-    if (!wasPublishedBefore && existing.status === "published") {
-      const ex = existing as IBlogPost;
-      if (
-        !(ex.publishedAt instanceof Date) ||
-        Number.isNaN(ex.publishedAt.getTime())
-      ) {
-        ex.publishedAt = new Date();
-      }
-    }
-    if (silent !== true && wasPublishedBefore) {
-      existing.lastEditedById = user._id as unknown as mongoose.Types.ObjectId;
-      existing.lastEditedAt = new Date();
-    }
-    const exSquad = (
-      existing as {
-        squadId?: mongoose.Types.ObjectId | null;
-      }
-    ).squadId;
-    if (exSquad) {
-      const gate = await assertCanPostOrShareToSquad({
-        squadId: exSquad as mongoose.Types.ObjectId,
-        userId: user._id,
+    const squadAssignment = applyRequestedSquadAssignment({
+      existing,
+      rawBody,
+      wasPublishedBefore,
+    });
+    if (!squadAssignment.ok) {
+      res.status(squadAssignment.status).json({
+        success: false,
+        message: squadAssignment.message,
       });
-      if (!gate.ok) {
-        res.status(gate.status).json({ success: false, message: gate.message });
-        return;
-      }
+      return;
     }
+    const nextSlug = await resolveSlugForTitleUpdate({
+      existing,
+      userId: user._id,
+      title,
+      titleStr,
+    });
+    applyEditablePostFields({
+      existing,
+      userId: user._id,
+      title: titleStr,
+      slug: nextSlug,
+      summary: summaryStr,
+      content: contentCheck.normalizedJson,
+      thumbnailUrl,
+      status,
+      silent,
+      wasPublishedBefore,
+      tax,
+    });
+    if (!(await ensureSquadPostAllowed(res, postSquadId(existing), user._id)))
+      return;
     const willBeEligibleRespect = isEligibleForPublicRespect(existing);
     await existing.save();
-    if (wasEligibleRespect && !willBeEligibleRespect) {
-      await Promise.all([
-        suspendRespectContributionsForPost(
-          existing._id as mongoose.Types.ObjectId,
-          existing.authorId as mongoose.Types.ObjectId,
-        ),
-        suspendRepostBookmarkContributionsForPost(
-          existing._id as mongoose.Types.ObjectId,
-        ),
-      ]);
-    }
-    if (!wasEligibleRespect && willBeEligibleRespect) {
-      await Promise.all([
-        resumeRespectContributionsForPost(
-          existing._id as mongoose.Types.ObjectId,
-          existing.authorId as mongoose.Types.ObjectId,
-        ),
-        resumeRepostBookmarkContributionsForPost(
-          existing._id as mongoose.Types.ObjectId,
-        ),
-      ]);
-    }
-    const outSquad = (
-      existing as {
-        squadId?: mongoose.Types.ObjectId | null;
-      }
-    ).squadId;
+    await syncPostEngagementEligibility(
+      existing,
+      wasEligibleRespect,
+      willBeEligibleRespect,
+    );
+    const outSquad = postSquadId(existing);
     const firstPublish = !wasPublishedBefore && existing.status === "published";
     const postBody = {
       success: true,
-      post: {
-        _id: existing._id,
-        title: existing.title,
-        slug: existing.slug,
-        summary: existing.summary,
-        content: existing.content,
-        thumbnailUrl: existing.thumbnailUrl,
-        status: existing.status,
-        createdAt: existing.createdAt,
-        updatedAt: existing.updatedAt,
-        ...(outSquad ? { squadId: String(outSquad) } : {}),
-        ...mapTaxonomyFromDoc(existing as TaxonomyFields),
-      },
+      post: mapWritePostResponse(existing),
     };
     if (firstPublish) {
       void fanoutNewPublishedPost({

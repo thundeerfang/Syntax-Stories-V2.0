@@ -209,7 +209,7 @@ export const SubscriptionPlansPanel = forwardRef<
     }
   }
 
-  async function onToggleMostPopular(row: AdminBillingPlanItem, next: boolean) {
+  const onToggleMostPopular = useCallback(async (row: AdminBillingPlanItem, next: boolean) => {
     if (!token || !canManage) return;
     setTogglingPopularId(row.id);
     setError(null);
@@ -239,7 +239,7 @@ export const SubscriptionPlansPanel = forwardRef<
     } finally {
       setTogglingPopularId(null);
     }
-  }
+  }, [canManage, load, token]);
 
   async function confirmDelete() {
     if (!token || !canManage || !trashTarget) return;
@@ -278,7 +278,7 @@ export const SubscriptionPlansPanel = forwardRef<
             onDelete: () => {},
             onToggleMostPopular: () => {},
           }).filter((c) => c.id !== 'actions' && c.id !== 'mostPopular'),
-    [canManage, deletingId, togglingPopularId, items]
+    [canManage, deletingId, togglingPopularId, onToggleMostPopular]
   );
 
   const addPlanDisabled = availableKeys.length === 0;

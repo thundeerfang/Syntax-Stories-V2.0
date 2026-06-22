@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Box, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Typography, alpha, useTheme, type Theme } from '@mui/material';
 
 export type AdminStatusBadgeTone =
   | 'success'
@@ -21,7 +21,7 @@ export type AdminStatusBadgeProps = {
 
 function resolveToneColor(
   tone: AdminStatusBadgeTone,
-  palette: ReturnType<typeof useTheme>['palette']
+  palette: Theme['palette']
 ): string {
   switch (tone) {
     case 'success':
