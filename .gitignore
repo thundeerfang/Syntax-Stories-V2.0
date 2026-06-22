@@ -39,6 +39,10 @@ admin/.next
 admin/node_modules
 server/coverage/
 
+# Android release signing secrets
+mobile/android/key.properties
+mobile/android/*.jks
+
 # Mobile APK output (built via mobile/scripts/build_apk.sh)
 build/apk/*.apk
 buiild/apk/*.aab

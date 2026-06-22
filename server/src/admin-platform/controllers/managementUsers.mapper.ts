@@ -63,6 +63,8 @@ export function toUserProfileDto(
     _id: {
       toString(): string;
     };
+    workExperiences?: unknown[];
+    education?: unknown[];
   },
 ) {
   return {
@@ -80,6 +82,8 @@ export function toUserProfileDto(
     github: user.github?.trim() || null,
     youtube: user.youtube?.trim() || null,
     stackAndTools: user.stackAndTools ?? [],
+    workExperiences: user.workExperiences ?? [],
+    education: user.education ?? [],
     certifications: user.certifications ?? [],
     projects: user.projects ?? [],
     openSourceContributions: user.openSourceContributions ?? [],

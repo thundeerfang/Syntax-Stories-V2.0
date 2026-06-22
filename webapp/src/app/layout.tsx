@@ -17,6 +17,7 @@ import {
   AchievementRealtimeBridge,
 } from "@/components/achievements";
 import { NavigationRecovery } from "@/components/shell/NavigationRecovery";
+import { LegalReconsentGate } from "@/components/legal/LegalReconsentGate";
 
 import { MOBILE_BROWSER_LOCK_BOOTSTRAP_SCRIPT } from "@/lib/dom/mobileBrowserLockBootstrap";
 
@@ -127,6 +128,7 @@ export default function RootLayout({
           <SearchDialogWrapper />
           <SonnerToaster />
           <NotificationRealtimeBridge />
+          <LegalReconsentGate />
           <LayoutShell>{children}</LayoutShell>
           <AchievementCelebrationHost />
           <AchievementRealtimeBridge />

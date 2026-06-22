@@ -30,6 +30,13 @@ export function NotificationsDropdown() {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
+  useEffect(() => {
+    if (token) return;
+    setItems([]);
+    setLoading(false);
+    setMarkingRead(false);
+    setUnreadCount(0);
+  }, [token, setUnreadCount]);
   const load = useCallback(async () => {
     if (!token) {
       setItems([]);
@@ -59,7 +66,9 @@ export function NotificationsDropdown() {
     if (!token || isOpen) return;
     void load();
   }, [bumpVersion, token, isOpen, load]);
-  const unreadCount = storeUnread || items.filter((n) => n.unread).length;
+  const unreadCount = token
+    ? storeUnread || items.filter((n) => n.unread).length
+    : 0;
   const unreadLabel = unreadCount > 99 ? "99+" : String(unreadCount);
   const handleMarkAllRead = async () => {
     if (!token || unreadCount === 0) return;
