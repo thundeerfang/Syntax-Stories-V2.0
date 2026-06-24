@@ -192,7 +192,7 @@ export default function PublicProfilePage() {
       if (following) {
         await followApi.unfollow(username, token);
         setFollowing(false);
-        setFollowingCount((c) => Math.max(0, c - 1));
+        setFollowersCount((c) => Math.max(0, c - 1));
         toast.success("Unfollowed");
       } else {
         await followApi.follow(username, token);
