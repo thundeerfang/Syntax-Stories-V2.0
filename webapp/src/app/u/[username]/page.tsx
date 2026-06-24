@@ -587,13 +587,11 @@ export default function PublicProfilePage() {
           </div>
 
           <div className="lg:col-span-4 space-y-6">
-            <BlockShadowButton
+            <button
               type="button"
-              variant="outline"
-              fullWidth
               onClick={() => setDialogOpen(true)}
               aria-label="Open followers and following"
-              className="h-auto border-4 p-4 text-left normal-case tracking-normal"
+              className="w-full border-4 border-border bg-card p-4 shadow text-left transition-transform active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
@@ -622,7 +620,7 @@ export default function PublicProfilePage() {
                   <ChevronRight className="size-4 text-foreground" />
                 </span>
               </div>
-            </BlockShadowButton>
+            </button>
 
             <ProfileSquadsCategoriesCard
               username={username}
